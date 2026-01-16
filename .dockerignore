@@ -1,0 +1,42 @@
+# Node modules (will be installed in container)
+**/node_modules
+**/npm-debug.log
+**/.npm
+
+# Build artifacts (will be built in container)
+**/dist
+**/build
+
+# Development files
+**/.git
+**/.gitignore
+**/.env
+**/.env.local
+**/.vscode
+**/.idea
+
+# Testing
+**/coverage
+**/.nyc_output
+**/test
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+
+# Documentation
+**/*.md
+!README.md
+
+# Temporary files
+**/tmp
+**/temp
+**/.cache
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Logs
+**/logs
+**/*.log
