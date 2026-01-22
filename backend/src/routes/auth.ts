@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuthService } from '../services/AuthService';
 import { ActivityService } from '../services/ActivityService';
 import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
 import { z } from 'zod';
 
 const router = Router();
@@ -33,6 +34,8 @@ router.post('/login', async (req, res, next) => {
     const credentials = loginSchema.parse(req.body);
     const ipAddress = req.ip || '';
 
+    logger.info(`[Auth] Login attempt for user: ${credentials.username} from ${ipAddress}`);
+
     const result = await authService.login(credentials, ipAddress);
 
     // Log activity
@@ -45,11 +48,20 @@ router.post('/login', async (req, res, next) => {
       userAgent: req.headers['user-agent']
     });
 
+    logger.info(`[Auth] Login successful for user: ${credentials.username}`);
     res.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      logger.warn(`[Auth] Validation error during login: ${error.errors[0].message}`);
       return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
     }
+
+    // Log the error with full details before passing to error handler
+    logger.error(`[Auth] Login failed for user: ${req.body.username}`, {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
     next(error);
   }
 });
@@ -61,6 +73,8 @@ router.post('/login', async (req, res, next) => {
 router.post('/register', async (req, res, next) => {
   try {
     const data = registerSchema.parse(req.body);
+
+    logger.info(`[Auth] Registration attempt for user: ${data.username}`);
 
     const result = await authService.register(data);
 
@@ -74,11 +88,19 @@ router.post('/register', async (req, res, next) => {
       userAgent: req.headers['user-agent']
     });
 
+    logger.info(`[Auth] Registration successful for user: ${data.username}`);
     res.status(201).json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      logger.warn(`[Auth] Validation error during registration: ${error.errors[0].message}`);
       return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
     }
+
+    logger.error(`[Auth] Registration failed for user: ${req.body.username}`, {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+
     next(error);
   }
 });

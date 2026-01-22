@@ -8,9 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "typecheck": "tsc --noEmit",
-    "copy-ruffle": "shx mkdir -p public/ruffle && shx cp -r node_modules/@ruffle-rs/ruffle/* public/ruffle/",
-    "postinstall": "npm run copy-ruffle"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -28,18 +26,19 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
-    "@ruffle-rs/ruffle": "^0.2.0-nightly.2026.1.9",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.28.9",
     "@tanstack/react-table": "^8.21.3",
-    "@tanstack/react-virtual": "^3.2.0",
     "axios": "^1.6.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "framer-motion": "^12.27.0",
     "lucide-react": "^0.358.0",
     "next-themes": "^0.4.6",
     "react": "^18.3.1",
@@ -65,10 +64,8 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
     "postcss": "^8.4.38",
-    "shx": "^0.3.4",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.4.2",
-    "vite": "^5.2.0",
-    "vite-plugin-static-copy": "^3.1.4"
+    "vite": "^5.2.0"
   }
 }

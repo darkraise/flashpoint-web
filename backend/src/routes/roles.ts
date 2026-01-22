@@ -56,7 +56,7 @@ router.get(
   requirePermission('roles.read'),
   async (req, res, next) => {
     try {
-      const permissions = roleService.getPermissions();
+      const permissions = await roleService.getPermissions();
       res.json(permissions);
     } catch (error) {
       next(error);
@@ -164,7 +164,8 @@ router.put(
       const id = parseInt(req.params.id);
       const data = updatePermissionsSchema.parse(req.body);
 
-      const role = await roleService.updateRolePermissions(id, data.permissionIds);
+      await roleService.updateRolePermissions(id, data.permissionIds);
+      const role = await roleService.getRoleById(id);
 
       res.json(role);
     } catch (error) {

@@ -18,8 +18,8 @@ export interface JWTPayload {
  */
 export function generateAccessToken(payload: JWTPayload): string {
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn
-  });
+    expiresIn: config.jwtExpiresIn as string | number
+  } as jwt.SignOptions);
 }
 
 /**

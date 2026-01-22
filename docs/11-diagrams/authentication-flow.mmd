@@ -1,0 +1,236 @@
+%% Authentication Flow Diagrams
+%% Complete authentication lifecycle: login, token refresh, logout
+
+---
+title: User Login Flow
+---
+sequenceDiagram
+    participant User
+    participant LoginForm
+    participant AuthStore
+    participant API
+    participant Backend
+    participant AuthService
+    participant UserDB
+    participant ThemeStore
+
+    User->>LoginForm: Enter username/password
+    User->>LoginForm: Click "Login"
+
+    LoginForm->>LoginForm: Validate form inputs
+    LoginForm->>API: authApi.login(credentials)
+    API->>Backend: POST /api/auth/login
+
+    Backend->>AuthService: login(username, password)
+    AuthService->>UserDB: SELECT * FROM users<br/>WHERE username = ?
+
+    alt User not found
+        UserDB-->>AuthService: NULL
+        AuthService-->>Backend: Error 401
+        Backend-->>API: {error: "Invalid credentials"}
+        API-->>LoginForm: Show error toast
+        LoginForm-->>User: Display error message
+    else User found
+        UserDB-->>AuthService: User record + password_hash
+        AuthService->>AuthService: bcrypt.compare(password, hash)
+
+        alt Password invalid
+            AuthService-->>Backend: Error 401
+            Backend-->>API: {error: "Invalid credentials"}
+            API-->>LoginForm: Show error
+        else Password valid
+            AuthService->>UserDB: UPDATE users<br/>SET last_login_at = NOW()<br/>WHERE id = ?
+
+            AuthService->>UserDB: SELECT role_permissions
+            UserDB-->>AuthService: Permissions array
+
+            AuthService->>AuthService: Generate JWT access token<br/>expires in 15 minutes
+            AuthService->>AuthService: Generate JWT refresh token<br/>expires in 7 days
+
+            AuthService-->>Backend: {user, accessToken, refreshToken}
+            Backend-->>API: 200 OK with tokens
+
+            API->>AuthStore: setAuth(user, tokens)
+            AuthStore->>AuthStore: Store in localStorage
+
+            par Load user preferences
+                AuthStore->>ThemeStore: loadUserTheme()
+                ThemeStore->>API: GET /api/users/me/settings
+                API->>Backend: Request user settings
+                Backend-->>API: Theme settings
+                ThemeStore->>ThemeStore: Apply theme
+            end
+
+            API-->>LoginForm: Success
+            LoginForm->>User: Redirect to /browse
+        end
+    end
+
+---
+title: Token Refresh Flow
+---
+sequenceDiagram
+    participant Component
+    participant APIClient
+    participant Interceptor
+    participant AuthStore
+    participant Backend
+    participant AuthService
+    participant UserDB
+
+    Component->>APIClient: gamesApi.search(filters)
+    APIClient->>Interceptor: Request interceptor
+    Interceptor->>AuthStore: getState().accessToken
+    AuthStore-->>Interceptor: Expired access token
+
+    Interceptor->>Backend: GET /api/games?filters<br/>Authorization: Bearer {expired-token}
+    Backend->>Backend: Verify JWT signature
+    Backend->>Backend: Check token expiration
+    Backend-->>Interceptor: 401 Unauthorized<br/>{error: "Token expired"}
+
+    Interceptor->>Interceptor: Response interceptor<br/>Detect 401 status
+    Interceptor->>Interceptor: Check !originalRequest._retry
+
+    Interceptor->>AuthStore: getState().refreshToken
+
+    alt No refresh token
+        AuthStore-->>Interceptor: NULL
+        Interceptor->>AuthStore: clearAuth()
+        Interceptor->>Component: Redirect to /login
+    else Has refresh token
+        AuthStore-->>Interceptor: Refresh token
+
+        Interceptor->>Backend: POST /api/auth/refresh<br/>{refreshToken}
+        Backend->>AuthService: refreshAccessToken(token)
+        AuthService->>AuthService: Verify refresh token
+
+        alt Invalid refresh token
+            AuthService-->>Backend: Error 401
+            Backend-->>Interceptor: {error: "Invalid refresh token"}
+            Interceptor->>AuthStore: clearAuth()
+            Interceptor->>Component: Redirect to /login
+        else Valid refresh token
+            AuthService->>UserDB: SELECT user permissions
+            UserDB-->>AuthService: User data
+
+            AuthService->>AuthService: Generate new access token
+            AuthService->>AuthService: Generate new refresh token
+            AuthService-->>Backend: {accessToken, refreshToken}
+
+            Backend-->>Interceptor: 200 OK with new tokens
+            Interceptor->>AuthStore: updateTokens(newTokens)
+            AuthStore->>AuthStore: Update localStorage
+
+            Interceptor->>Interceptor: Set originalRequest._retry = true
+            Interceptor->>Interceptor: Update Authorization header
+            Interceptor->>Backend: Retry original request
+            Backend-->>APIClient: 200 OK with data
+            APIClient-->>Component: Update component state
+        end
+    end
+
+---
+title: Protected Request with RBAC
+---
+sequenceDiagram
+    participant Component
+    participant APIClient
+    participant Backend
+    participant AuthMiddleware
+    participant RBACMiddleware
+    participant GameService
+    participant FlashpointDB
+
+    Component->>APIClient: gamesApi.getById(gameId)
+    APIClient->>Backend: GET /api/games/:id<br/>Authorization: Bearer {token}
+
+    Backend->>AuthMiddleware: authenticate()
+    AuthMiddleware->>AuthMiddleware: Extract Bearer token
+    AuthMiddleware->>AuthMiddleware: jwt.verify(token, secret)
+
+    alt Invalid token
+        AuthMiddleware-->>Backend: Error 401
+        Backend-->>APIClient: {error: "Invalid token"}
+        APIClient-->>Component: Show error
+    else Valid token
+        AuthMiddleware->>AuthMiddleware: Decode JWT payload
+        AuthMiddleware->>Backend: Set req.user = payload
+
+        Backend->>RBACMiddleware: requirePermission('games.read')
+        RBACMiddleware->>RBACMiddleware: Check req.user.permissions
+
+        alt Missing permission
+            RBACMiddleware-->>Backend: Error 403
+            Backend-->>APIClient: {error: "Permission denied"}
+            APIClient-->>Component: Show forbidden error
+        else Has permission
+            RBACMiddleware->>GameService: getGameById(id)
+            GameService->>FlashpointDB: SELECT * FROM game WHERE id = ?
+            FlashpointDB-->>GameService: Game data
+            GameService-->>Backend: Game object
+            Backend-->>APIClient: 200 OK with game
+            APIClient-->>Component: Render game details
+        end
+    end
+
+---
+title: User Logout Flow
+---
+sequenceDiagram
+    participant User
+    participant Header
+    participant AuthStore
+    participant API
+    participant Backend
+    participant UserDB
+    participant Router
+
+    User->>Header: Click "Logout" button
+    Header->>AuthStore: getState().refreshToken
+    AuthStore-->>Header: Refresh token
+
+    par Server-side cleanup
+        Header->>API: authApi.logout(refreshToken)
+        API->>Backend: POST /api/auth/logout
+        Backend->>Backend: Verify refresh token
+        Backend->>UserDB: UPDATE refresh_tokens<br/>SET revoked_at = NOW()<br/>WHERE token = ?
+        UserDB-->>Backend: Token revoked
+        Backend-->>API: 200 OK
+    and Client-side cleanup
+        Header->>AuthStore: clearAuth()
+        AuthStore->>AuthStore: Clear localStorage
+        AuthStore->>AuthStore: Reset state to initial
+        Note over AuthStore: {<br/>  user: null,<br/>  accessToken: null,<br/>  refreshToken: null,<br/>  isAuthenticated: false<br/>}
+    end
+
+    API-->>Header: Logout complete
+    Header->>Router: navigate('/login')
+    Router->>User: Display login page
+
+---
+title: Guest Mode Flow (Optional Authentication)
+---
+sequenceDiagram
+    participant User
+    participant App
+    participant AuthStore
+    participant Backend
+    participant AuthSettings
+
+    User->>App: Visit application URL
+    App->>Backend: GET /api/settings/auth
+    Backend->>AuthSettings: SELECT guest_access_enabled
+    AuthSettings-->>Backend: {guestAccessEnabled: true}
+    Backend-->>App: Auth settings
+
+    alt Guest access enabled
+        App->>AuthStore: setGuestMode()
+        AuthStore->>AuthStore: Create guest user object
+        Note over AuthStore: {<br/>  id: 0,<br/>  username: "Guest",<br/>  role: "guest",<br/>  permissions: ["games.read"],<br/>  isGuest: true<br/>}
+        AuthStore-->>App: Guest mode active
+        App->>User: Allow browsing (limited features)
+        Note over User: Can browse games<br/>Cannot play or create playlists
+    else Guest access disabled
+        App->>User: Redirect to /login
+        Note over User: Must authenticate<br/>to access application
+    end

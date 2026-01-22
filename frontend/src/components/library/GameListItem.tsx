@@ -4,18 +4,28 @@ import { Game } from '@/types/game';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ImageIcon, Play, ListPlus, Heart, CheckCircle2, Download } from 'lucide-react';
+import { ImageIcon, Play, ListPlus, Heart } from 'lucide-react';
+import { FavoriteButton } from '@/components/common/FavoriteButton';
+import { RemoveFavoriteButton } from '@/components/common/RemoveFavoriteButton';
+import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
+import { useAuthStore } from '@/store/auth';
+import { toast } from 'sonner';
 
 interface GameListItemProps {
   game: Game;
-  onAddToPlaylist?: (gameId: string) => void;
-  onToggleFavorite?: (gameId: string) => void;
-  isFavorited?: boolean;
-  showFavoriteOnHoverOnly?: boolean;
+  showFavoriteButton?: boolean;
+  showRemoveButton?: boolean;
+  showFavoriteIndicator?: boolean;
+  showAddToPlaylistButton?: boolean;
+  favoriteGameIds?: Set<string>; // Optional: for performance optimization
+  isFavoritePage?: boolean;
 }
 
-export function GameListItem({ game, onAddToPlaylist, onToggleFavorite, isFavorited, showFavoriteOnHoverOnly = false }: GameListItemProps) {
+export function GameListItem({ game, showFavoriteButton = true, showRemoveButton = false, showFavoriteIndicator = false, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false }: GameListItemProps) {
   const [imageError, setImageError] = useState(false);
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+
+  const { isAuthenticated } = useAuthStore();
 
   // Prefer logo over screenshot for list view
   const imagePath = game.logoPath || game.screenshotPath;
@@ -26,6 +36,7 @@ export function GameListItem({ game, onAddToPlaylist, onToggleFavorite, isFavori
     ? game.tagsStr.split(';').map(t => t.trim()).filter(Boolean).slice(0, 3)
     : [];
 
+  const isFavorited = favoriteGameIds?.has(game.id) ?? false;
   const isPlayable = game.platformName === 'Flash' || game.platformName === 'HTML5';
 
   return (
@@ -63,24 +74,6 @@ export function GameListItem({ game, onAddToPlaylist, onToggleFavorite, isFavori
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="secondary">{game.platformName}</Badge>
 
-              {/* Availability Indicator */}
-              {(game.platformName === 'Flash' || game.platformName === 'HTML5') && (
-                <>
-                  {(game.presentOnDisk === 1 || game.presentOnDisk === null) && (
-                    <div className="flex items-center gap-1 text-green-500 text-xs" title="Available - Ready to play">
-                      <CheckCircle2 size={14} />
-                      <span>Available</span>
-                    </div>
-                  )}
-                  {game.presentOnDisk === 0 && (
-                    <div className="flex items-center gap-1 text-yellow-500 text-xs" title="Download Required">
-                      <Download size={14} />
-                      <span>Download Required</span>
-                    </div>
-                  )}
-                </>
-              )}
-
               {tags.map((tag, index) => (
                 <Badge key={index} variant="outline" className="text-xs">
                   {tag}
@@ -99,39 +92,50 @@ export function GameListItem({ game, onAddToPlaylist, onToggleFavorite, isFavori
 
           {/* Action Buttons */}
           <div className="flex-shrink-0 flex items-center gap-2">
-            {onToggleFavorite && (
-              <Button
-                size="sm"
-                variant={isFavorited ? "default" : "ghost"}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggleFavorite(game.id);
-                }}
-                className={`h-9 w-9 p-0 transition-opacity ${
-                  showFavoriteOnHoverOnly
-                    ? 'opacity-0 group-hover:opacity-100'
-                    : isFavorited
-                      ? 'bg-rose-500 hover:bg-rose-600'
-                      : ''
-                }`}
-                title={isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}
-              >
-                <Heart size={18} fill={isFavorited ? "currentColor" : "none"} />
-              </Button>
+            {/* Favorite Indicator (non-clickable, always visible if favorited) */}
+            {showFavoriteIndicator && isFavorited && !isFavoritePage && (
+              <div className="h-9 w-9 flex items-center justify-center">
+                <Heart size={18} fill="currentColor" className="text-primary" />
+              </div>
             )}
 
-            {onAddToPlaylist && (
+            {/* Remove from Favorites Button (Favorites page only) */}
+            {showRemoveButton && isFavoritePage && (
+              <RemoveFavoriteButton
+                gameId={game.id}
+                size="sm"
+                className="h-9 w-9 p-0"
+              />
+            )}
+
+            {/* Add to Favorites Button (other pages, when not favorited) */}
+            {showFavoriteButton && !isFavoritePage && !isFavorited && (
+              <FavoriteButton
+                gameId={game.id}
+                isFavorited={false}
+                size="sm"
+                variant="ghost"
+                className="h-9 w-9 p-0"
+                showOnHoverOnly={false}
+              />
+            )}
+
+            {showAddToPlaylistButton && (
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onAddToPlaylist(game.id);
+                  if (!isAuthenticated) {
+                    toast.error("Please log in to add games to playlists");
+                    return;
+                  }
+                  setIsPlaylistModalOpen(true);
                 }}
                 className="h-9 w-9 p-0"
                 title="Add to Playlist"
+                aria-label="Add to Playlist"
               >
                 <ListPlus size={18} />
               </Button>
@@ -145,6 +149,7 @@ export function GameListItem({ game, onAddToPlaylist, onToggleFavorite, isFavori
                 <Link
                   to={`/games/${game.id}/play`}
                   title="Play Game"
+                  aria-label="Play Game"
                 >
                   <Play size={18} />
                 </Link>
@@ -153,6 +158,14 @@ export function GameListItem({ game, onAddToPlaylist, onToggleFavorite, isFavori
           </div>
         </div>
       </CardContent>
+
+      {/* Add to Playlist Modal */}
+      <AddToPlaylistModal
+        isOpen={isPlaylistModalOpen}
+        onClose={() => setIsPlaylistModalOpen(false)}
+        gameId={game.id}
+        gameTitle={game.title}
+      />
     </Card>
   );
 }

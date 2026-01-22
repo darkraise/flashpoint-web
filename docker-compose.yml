@@ -10,12 +10,12 @@ services:
     container_name: flashpoint-backend
     restart: unless-stopped
     ports:
-      - "${API_PORT:-3001}:3001"
+      - "${API_PORT:-3100}:3100"
     volumes:
       - ${FLASHPOINT_HOST_PATH:-D:/Flashpoint}:/data/flashpoint:ro
     environment:
       - NODE_ENV=${NODE_ENV:-production}
-      - PORT=3001
+      - PORT=3100
       - HOST=0.0.0.0
       - FLASHPOINT_PATH=/data/flashpoint
       - FLASHPOINT_DB_PATH=/data/flashpoint/Data/flashpoint.sqlite
@@ -32,7 +32,7 @@ services:
     depends_on:
       - game-service
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3100/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -83,7 +83,7 @@ services:
     ports:
       - "${WEB_PORT:-80}:80"
     environment:
-      - VITE_API_URL=http://localhost:${API_PORT:-3001}
+      - VITE_API_URL=http://localhost:${API_PORT:-3100}
     depends_on:
       - backend
     networks:
@@ -98,7 +98,7 @@ networks:
 # =============================================================================
 #
 # This configuration runs all three services:
-# - backend: REST API (port 3001)
+# - backend: REST API (port 3100)
 # - game-service: Proxy and ZIP server (ports 22500, 22501)
 # - frontend: Web UI (port 80)
 #
@@ -132,7 +132,7 @@ networks:
 # Access:
 # -------
 # - Frontend: http://localhost
-# - Backend API: http://localhost:3001
+# - Backend API: http://localhost:3100
 # - Game Proxy: http://localhost:22500
 # - GameZip: http://localhost:22501
 #
@@ -142,7 +142,7 @@ networks:
 # NODE_ENV - Environment (development/production, default: production)
 # LOG_LEVEL - Logging level (error/warn/info/debug, default: info)
 # WEB_PORT - Frontend port (default: 80)
-# API_PORT - Backend API port (default: 3001)
+# API_PORT - Backend API port (default: 3100)
 # PROXY_PORT - Game proxy port (default: 22500)
 # GAMEZIP_PORT - GameZip server port (default: 22501)
 # CORS_ORIGIN - CORS origin for API (default: http://localhost)

@@ -1,15 +1,18 @@
 import React, { createContext, useContext, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/auth';
 import { authApi } from '../lib/api';
 import { LoginCredentials, RegisterData } from '../types/auth';
+import axios from 'axios';
 
 interface AuthContextType {
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials, redirectPath?: string) => Promise<void>;
   loginAsGuest: () => void;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
+  checkMaintenanceMode: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -19,21 +22,75 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { setAuth, setGuestMode, clearAuth, refreshToken, updateAccessToken } = useAuthStore();
+  const { setAuth, setGuestMode, clearAuth, refreshToken, updateAccessToken, setMaintenanceMode } = useAuthStore();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  /**
+   * Check if maintenance mode is enabled
+   * Uses React Query cache to avoid duplicate API calls
+   */
+  const checkMaintenanceMode = useCallback(async (): Promise<boolean> => {
+    try {
+      // Get from React Query cache instead of making a new API call
+      const cachedData = queryClient.getQueryData(['system-settings', 'public']) as any;
+
+      if (cachedData) {
+        console.log('[AuthContext] Using cached maintenance mode data');
+        const isMaintenanceActive = cachedData.app?.maintenanceMode === true;
+        setMaintenanceMode(isMaintenanceActive);
+        return isMaintenanceActive;
+      }
+
+      // Fallback: if not in cache, fetch it (shouldn't happen with prefetch)
+      console.warn('[AuthContext] Cache miss! Making direct axios call to /api/settings/public');
+      const response = await axios.get('/api/settings/public');
+      const isMaintenanceActive = response.data.app?.maintenanceMode === true;
+      setMaintenanceMode(isMaintenanceActive);
+      return isMaintenanceActive;
+    } catch (error) {
+      console.error('Failed to check maintenance mode:', error);
+      return false;
+    }
+  }, [setMaintenanceMode, queryClient]);
 
   /**
    * Login function
    */
-  const login = useCallback(async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials, redirectPath?: string) => {
     try {
       const result = await authApi.login(credentials);
+
+      // Clear all cached queries EXCEPT public settings when user logs in
+      // Public settings are not user-specific and should persist across sessions
+      queryClient.removeQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          // Keep public settings in cache
+          return !(queryKey[0] === 'system-settings' && queryKey[1] === 'public');
+        }
+      });
+
       setAuth(result.user, result.tokens);
+
+      // Check maintenance mode after login
+      const isMaintenanceActive = await checkMaintenanceMode();
+
+      // If maintenance mode is active and user is not admin, redirect to maintenance page
+      const isAdmin = result.user.permissions?.includes('settings.update');
+
+      if (isMaintenanceActive && !isAdmin) {
+        navigate('/maintenance', { replace: true });
+        return;
+      }
+
+      // Normal login - redirect to requested page or home
+      navigate(redirectPath || '/', { replace: true });
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
     }
-  }, [setAuth]);
+  }, [setAuth, queryClient, checkMaintenanceMode, navigate]);
 
   /**
    * Login as guest function (temporary session)
@@ -68,10 +125,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      // Clear all cached queries EXCEPT public settings when user logs out
+      // Public settings are not user-specific and should persist across sessions
+      queryClient.removeQueries({
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          // Keep public settings in cache
+          return !(queryKey[0] === 'system-settings' && queryKey[1] === 'public');
+        }
+      });
       clearAuth();
       navigate('/login');
     }
-  }, [refreshToken, clearAuth, navigate]);
+  }, [refreshToken, clearAuth, navigate, queryClient]);
 
   /**
    * Refresh access token function
@@ -87,11 +153,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       updateAccessToken(tokens.accessToken);
     } catch (error) {
       console.error('Token refresh failed:', error);
+      // The axios interceptor will handle logout and redirect
+      // Just clear auth here to ensure clean state
       clearAuth();
-      navigate('/login');
       throw error;
     }
-  }, [refreshToken, updateAccessToken, clearAuth, navigate]);
+  }, [refreshToken, updateAccessToken, clearAuth]);
 
   /**
    * Set up token refresh interval (refresh every 50 minutes)
@@ -117,7 +184,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loginAsGuest,
     register,
     logout,
-    refreshAccessToken
+    refreshAccessToken,
+    checkMaintenanceMode
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

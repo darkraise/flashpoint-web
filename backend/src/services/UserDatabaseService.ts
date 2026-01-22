@@ -52,7 +52,7 @@ export class UserDatabaseService {
    */
   private static async createTables(): Promise<void> {
     try {
-      const schemaPath = path.join(__dirname, '../migrations/user-schema.sql');
+      const schemaPath = path.join(__dirname, '../migrations/001_user-schema.sql');
 
       if (!fs.existsSync(schemaPath)) {
         throw new Error(`Schema file not found: ${schemaPath}`);
@@ -73,29 +73,117 @@ export class UserDatabaseService {
    */
   private static async runMigrations(): Promise<void> {
     try {
-      const tableInfo = this.db!.pragma('table_info(users)');
+      const tableInfo = this.db!.pragma('table_info(users)') as any[];
 
-      // Check if theme_color column exists
-      const hasThemeColor = tableInfo.some((col: any) => col.name === 'theme_color');
-      if (!hasThemeColor) {
-        logger.info('[UserDB] Running migration: add-theme-color');
-        const migrationPath = path.join(__dirname, '../migrations/add-theme-color.sql');
+      // Migration 002: Create user_settings table
+      const tables = this.db!.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='user_settings'
+      `).all();
+
+      if (tables.length === 0) {
+        logger.info('[UserDB] Running migration: 002_create-user-settings');
+        const migrationPath = path.join(__dirname, '../migrations/002_create-user-settings.sql');
         if (fs.existsSync(migrationPath)) {
           const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
           this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: add-theme-color');
+          logger.info('[UserDB] Migration completed: 002_create-user-settings');
         }
       }
 
-      // Check if surface_color column exists
-      const hasSurfaceColor = tableInfo.some((col: any) => col.name === 'surface_color');
-      if (!hasSurfaceColor) {
-        logger.info('[UserDB] Running migration: add-surface-color');
-        const migrationPath = path.join(__dirname, '../migrations/add-surface-color.sql');
+      // Migration 003: Create system_settings table
+      const systemSettingsTables = this.db!.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='system_settings'
+      `).all();
+
+      if (systemSettingsTables.length === 0) {
+        logger.info('[UserDB] Running migration: 003_create-system-settings');
+        const migrationPath = path.join(__dirname, '../migrations/003_create-system-settings.sql');
         if (fs.existsSync(migrationPath)) {
           const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
           this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: add-surface-color');
+          logger.info('[UserDB] Migration completed: 003_create-system-settings');
+        }
+      }
+
+      // Migration 004: Add validation schemas
+      const hasValidationSchemas = this.db!.prepare(`
+        SELECT validation_schema FROM system_settings
+        WHERE key = 'auth.user_registration_enabled'
+      `).get() as { validation_schema: string | null } | undefined;
+
+      if (systemSettingsTables.length > 0 && (!hasValidationSchemas || !hasValidationSchemas.validation_schema)) {
+        logger.info('[UserDB] Running migration: 004_add-validation-schemas');
+        const migrationPath = path.join(__dirname, '../migrations/004_add-validation-schemas.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 004_add-validation-schemas');
+        }
+      }
+
+      // Migration 005: User playlists and favorites
+      const userPlaylistsTables = this.db!.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='user_playlists'
+      `).all();
+
+      if (userPlaylistsTables.length === 0) {
+        logger.info('[UserDB] Running migration: 005_user-playlists-and-favorites');
+        const migrationPath = path.join(__dirname, '../migrations/005_user-playlists-and-favorites.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 005_user-playlists-and-favorites');
+        }
+      }
+
+      // Migration 006: Jobs settings
+      const hasJobsSettings = this.db!.prepare(`
+        SELECT COUNT(*) as count FROM system_settings
+        WHERE category = 'jobs'
+      `).get() as { count: number } | undefined;
+
+      if (systemSettingsTables.length > 0 && (!hasJobsSettings || hasJobsSettings.count === 0)) {
+        logger.info('[UserDB] Running migration: 006_create-jobs-settings');
+        const migrationPath = path.join(__dirname, '../migrations/006_create-jobs-settings.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 006_create-jobs-settings');
+        }
+      }
+
+      // Migration 007: Job execution logs
+      const jobExecutionLogsTables = this.db!.prepare(`
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='job_execution_logs'
+      `).all();
+
+      if (jobExecutionLogsTables.length === 0) {
+        logger.info('[UserDB] Running migration: 007_create-job-execution-logs');
+        const migrationPath = path.join(__dirname, '../migrations/007_create-job-execution-logs.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 007_create-job-execution-logs');
+        }
+      }
+
+      // Migration 008: Convert interval to cron
+      const hasCronSchedule = this.db!.prepare(`
+        SELECT COUNT(*) as count FROM system_settings
+        WHERE key = 'jobs.metadata_sync_schedule'
+      `).get() as { count: number } | undefined;
+
+      if (systemSettingsTables.length > 0 && (!hasCronSchedule || hasCronSchedule.count === 0)) {
+        logger.info('[UserDB] Running migration: 008_convert-interval-to-cron');
+        const migrationPath = path.join(__dirname, '../migrations/008_convert-interval-to-cron.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 008_convert-interval-to-cron');
         }
       }
     } catch (error) {

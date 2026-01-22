@@ -1,4 +1,4 @@
-import { Gamepad2, Film, Layers, Heart, FolderOpen, BarChart3 } from 'lucide-react';
+import { Gamepad2, Film, Layers, FolderOpen, BarChart3, Tags } from 'lucide-react';
 import { useStatistics } from '@/hooks/useStatistics';
 import { UserStatsPanel } from '@/components/stats/UserStatsPanel';
 
@@ -85,20 +85,7 @@ export function DashboardView() {
               </div>
             </div>
 
-            {/* Favorites */}
-            <div className="bg-accent rounded-lg p-4 border border-border">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-red-600 rounded-lg text-white">
-                  <Heart size={20} fill="currentColor" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{statistics.favoritesCount.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground">Favorites</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Playlists */}
+            {/* Flashpoint Playlists */}
             <div className="bg-accent rounded-lg p-4 border border-border">
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-yellow-600 rounded-lg text-white">
@@ -106,7 +93,20 @@ export function DashboardView() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{statistics.totalPlaylists}</p>
-                  <p className="text-sm text-muted-foreground">Playlists</p>
+                  <p className="text-sm text-muted-foreground">Flashpoint Playlists</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="bg-accent rounded-lg p-4 border border-border">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-orange-600 rounded-lg text-white">
+                  <Tags size={20} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{statistics.totalTags.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">Tags</p>
                 </div>
               </div>
             </div>

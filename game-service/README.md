@@ -83,7 +83,7 @@ npm start
 
 The backend API proxies game content requests to this service:
 
-- **Backend** (port 3001): REST API for game metadata, downloads
+- **Backend** (port 3100): REST API for game metadata, downloads
 - **game-service** (ports 22500, 22501): Proxy and ZIP file server
 
 Backend routes like `/game-files/*` and `/proxy/*` forward requests to this service.

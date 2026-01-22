@@ -1,56 +1,40 @@
-import { useState, useMemo } from 'react';
-import { GameGrid } from '@/components/library/GameGrid';
-import { GameList } from '@/components/library/GameList';
-import { CardSizeControl } from '@/components/common/CardSizeControl';
-import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
-import { useUIStore } from '@/store/ui';
-import { useFavoritesPlaylist, useRemoveFromFavorites } from '@/hooks/usePlaylists';
-import { useDialog } from '@/contexts/DialogContext';
-import { Heart } from 'lucide-react';
+import { useMemo, useState } from "react";
+import { GameGrid } from "@/components/library/GameGrid";
+import { GameList } from "@/components/library/GameList";
+import { CardSizeControl } from "@/components/common/CardSizeControl";
+import { useUIStore } from "@/store/ui";
+import { useFavoriteGames } from "@/hooks/useFavorites";
+import { Heart, ArrowDownAZ, Calendar } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 export function FavoritesView() {
   const viewMode = useUIStore((state) => state.viewMode);
-  const [isAddToPlaylistModalOpen, setIsAddToPlaylistModalOpen] = useState(false);
-  const [selectedGameIds, setSelectedGameIds] = useState<string[]>([]);
-  const { showConfirm, showToast } = useDialog();
+  const [sortBy, setSortBy] = useState<'title' | 'dateAdded'>('dateAdded');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const { data: favoritesPlaylist, isLoading, error } = useFavoritesPlaylist();
-  const removeFromFavorites = useRemoveFromFavorites();
+  const { data: games = [], isLoading, error } = useFavoriteGames(undefined, undefined, sortBy, sortOrder);
 
-  // Create a Set of all favorited game IDs
-  const favoritedGameIds = useMemo(() => {
-    if (!favoritesPlaylist?.games) return new Set<string>();
-    return new Set(favoritesPlaylist.games.map(game => game.id));
-  }, [favoritesPlaylist]);
-
-  const handleAddToPlaylist = (gameId: string) => {
-    setSelectedGameIds([gameId]);
-    setIsAddToPlaylistModalOpen(true);
+  // Handle sort change - combined value like "title-asc" or "dateAdded-desc"
+  const handleSortChange = (value: string) => {
+    const [newSortBy, newSortOrder] = value.split('-') as ['title' | 'dateAdded', 'asc' | 'desc'];
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
   };
 
-  const handleToggleFavorite = async (gameId: string) => {
-    // Show confirmation dialog before removing
-    const gameName = favoritesPlaylist?.games?.find(g => g.id === gameId)?.title || 'this game';
-    const confirmed = await showConfirm({
-      title: 'Remove from Favorites',
-      message: `Are you sure you want to remove "${gameName}" from your favorites?`,
-      confirmText: 'Remove',
-      cancelText: 'Cancel',
-      variant: 'danger'
-    });
+  const currentSortValue = `${sortBy}-${sortOrder}`;
 
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await removeFromFavorites.mutateAsync(gameId);
-      showToast('Game removed from favorites', 'success');
-    } catch (error) {
-      console.error('Failed to remove from favorites:', error);
-      showToast('Failed to remove from favorites. Please try again.', 'error');
-    }
-  };
+  // All games in this view are favorites by definition
+  const favoriteGameIds = useMemo(
+    () => new Set(games.map((game) => game.id)),
+    [games],
+  );
 
   if (isLoading) {
     return (
@@ -64,31 +48,71 @@ export function FavoritesView() {
   if (error) {
     return (
       <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300">
-        Error loading favorites: {error.message}
+        Error loading favorites: {(error as Error).message}
       </div>
     );
   }
-
-  const games = favoritesPlaylist?.games || [];
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-rose-500 rounded-lg">
-            <Heart size={32} fill="currentColor" />
+          <div className="p-3 border border-primary rounded-lg">
+            <Heart size={32} className="text-primary" />
           </div>
           <div>
             <h1 className="text-3xl font-bold">Favorites</h1>
             <p className="text-muted-foreground mt-1">
-              {games.length} {games.length === 1 ? 'game' : 'games'} in your favorites
+              {games.length} {games.length === 1 ? "game" : "games"} in your
+              favorites
             </p>
           </div>
         </div>
 
-        {/* View Mode Controls */}
-        <div className="flex items-center gap-2">
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Sort Dropdown */}
+          {games.length > 0 && (
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Label htmlFor="sort-select" className="text-sm whitespace-nowrap hidden sm:inline">
+                Sort by:
+              </Label>
+              <Select value={currentSortValue} onValueChange={handleSortChange}>
+                <SelectTrigger id="sort-select" className="w-full sm:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dateAdded-desc">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} />
+                      <span>Date Added (Newest)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="dateAdded-asc">
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} />
+                      <span>Date Added (Oldest)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="title-asc">
+                    <div className="flex items-center gap-2">
+                      <ArrowDownAZ size={14} />
+                      <span>Title (A-Z)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="title-desc">
+                    <div className="flex items-center gap-2">
+                      <ArrowDownAZ size={14} className="rotate-180" />
+                      <span>Title (Z-A)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* View Mode Controls */}
           <CardSizeControl />
         </div>
       </div>
@@ -101,39 +125,27 @@ export function FavoritesView() {
           </div>
           <h2 className="text-2xl font-semibold mb-2">No Favorites Yet</h2>
           <p className="text-muted-foreground mb-6">
-            Start adding games to your favorites by clicking the heart icon on any game
+            Start adding games to your favorites by clicking the heart icon on
+            any game
           </p>
         </div>
       ) : (
         <>
-          {viewMode === 'grid' ? (
+          {viewMode === "grid" ? (
             <GameGrid
               games={games}
-              onAddToPlaylist={handleAddToPlaylist}
-              onToggleFavorite={handleToggleFavorite}
-              favoritedGameIds={favoritedGameIds}
-              showFavoriteOnHoverOnly={true}
+              favoriteGameIds={favoriteGameIds}
+              isFavoritePage={true}
             />
           ) : (
             <GameList
               games={games}
-              onAddToPlaylist={handleAddToPlaylist}
-              onToggleFavorite={handleToggleFavorite}
-              favoritedGameIds={favoritedGameIds}
-              showFavoriteOnHoverOnly={true}
+              favoriteGameIds={favoriteGameIds}
+              isFavoritePage={true}
             />
           )}
         </>
       )}
-
-      <AddToPlaylistModal
-        isOpen={isAddToPlaylistModalOpen}
-        onClose={() => {
-          setIsAddToPlaylistModalOpen(false);
-          setSelectedGameIds([]);
-        }}
-        gameIds={selectedGameIds}
-      />
     </div>
   );
 }

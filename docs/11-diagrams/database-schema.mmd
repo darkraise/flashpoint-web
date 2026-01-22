@@ -1,0 +1,338 @@
+%% Database Schema - Entity Relationship Diagrams
+%% Both flashpoint.sqlite (read-only) and user.db (application)
+
+---
+title: Flashpoint Database Schema (flashpoint.sqlite)
+---
+erDiagram
+    game ||--o{ game_tags_tag : has
+    game ||--o{ game_data : has
+    game ||--o{ playlist_game : "appears in"
+    tag ||--o{ game_tags_tag : "tagged to"
+    platform ||--o| game : categorizes
+    playlist ||--o{ playlist_game : contains
+
+    game {
+        TEXT id PK "UUID"
+        TEXT parentGameId FK "Parent game"
+        TEXT title "Game title"
+        TEXT alternateTitles "Alternate names"
+        TEXT series "Game series"
+        TEXT developer "Developer name"
+        TEXT publisher "Publisher name"
+        TEXT platformName "Platform name"
+        INTEGER platformId FK "Platform ID"
+        TEXT playMode "Single/Multi player"
+        BOOLEAN broken "Is broken"
+        BOOLEAN extreme "Adult content"
+        TEXT notes "Game notes"
+        TEXT tagsStr "Semicolon-delimited"
+        TEXT source "Source URL"
+        TEXT applicationPath "Launch app"
+        TEXT launchCommand "Launch command"
+        TEXT releaseDate "YYYY-MM-DD"
+        TEXT version "Game version"
+        TEXT originalDescription "Description"
+        TEXT language "Language"
+        TEXT library "arcade/theatre"
+        TEXT orderTitle "Sort title"
+        TEXT dateAdded "Added timestamp"
+        TEXT dateModified "Modified timestamp"
+        INTEGER playtime "Total seconds"
+        INTEGER playCounter "Play count"
+        TEXT lastPlayed "Last played"
+        INTEGER archiveState "Archive status"
+        TEXT logoPath "Logo path"
+        TEXT screenshotPath "Screenshot path"
+    }
+
+    platform {
+        INTEGER id PK
+        TEXT name UK "Platform name"
+    }
+
+    tag {
+        INTEGER id PK
+        TEXT name "Tag name"
+        TEXT category "Tag category"
+    }
+
+    game_tags_tag {
+        TEXT gameId FK
+        INTEGER tagId FK
+    }
+
+    game_data {
+        INTEGER id PK
+        TEXT gameId FK
+        TEXT title "Data title"
+        TEXT dateAdded "Added date"
+        TEXT sha256 "File hash"
+        INTEGER crc32 "CRC32 checksum"
+        INTEGER presentOnDisk "Download status"
+        TEXT path "File path"
+        INTEGER size "File size bytes"
+        TEXT parameters "URL params"
+        TEXT applicationPath "Launch app"
+        TEXT launchCommand "Launch command"
+    }
+
+    playlist {
+        INTEGER id PK
+        TEXT title "Playlist name"
+        TEXT description "Description"
+        TEXT author "Creator"
+        TEXT library "Library filter"
+        TEXT icon "Icon path"
+    }
+
+    playlist_game {
+        INTEGER id PK
+        INTEGER playlistId FK
+        TEXT gameId FK
+        INTEGER order_ "Display order"
+        TEXT notes "Entry notes"
+    }
+
+---
+title: User Database Schema - Authentication & Authorization
+---
+erDiagram
+    users ||--o{ user_roles : has
+    users ||--o{ refresh_tokens : has
+    users ||--o{ login_attempts : tracks
+    users ||--o{ activity_logs : creates
+    roles ||--o{ user_roles : "assigned to"
+    roles ||--o{ role_permissions : has
+    permissions ||--o{ role_permissions : "granted via"
+
+    users {
+        INTEGER id PK
+        TEXT username UK "Unique username"
+        TEXT email UK "Unique email"
+        TEXT password_hash "bcrypt hash"
+        INTEGER role_id FK "Default role"
+        BOOLEAN is_active "Account active"
+        TEXT created_at "Created timestamp"
+        TEXT updated_at "Updated timestamp"
+        TEXT last_login_at "Last login"
+    }
+
+    roles {
+        INTEGER id PK
+        TEXT name UK "Role name"
+        TEXT description "Role description"
+        INTEGER priority "Power level"
+        TEXT created_at
+        TEXT updated_at
+    }
+
+    permissions {
+        INTEGER id PK
+        TEXT name UK "Permission name"
+        TEXT description "Description"
+        TEXT resource "Resource type"
+        TEXT action "Action type"
+        TEXT created_at
+    }
+
+    role_permissions {
+        INTEGER id PK
+        INTEGER role_id FK
+        INTEGER permission_id FK
+        TEXT created_at
+    }
+
+    user_roles {
+        INTEGER id PK
+        INTEGER user_id FK
+        INTEGER role_id FK
+        TEXT assigned_at
+        INTEGER assigned_by FK
+    }
+
+    refresh_tokens {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT token UK "JWT token"
+        TEXT expires_at "Expiry timestamp"
+        TEXT created_at
+        TEXT revoked_at "Revoked timestamp"
+    }
+
+    login_attempts {
+        INTEGER id PK
+        TEXT username "Username tried"
+        TEXT ip_address "IP address"
+        BOOLEAN success "Login success"
+        TEXT attempted_at "Attempt time"
+    }
+
+    activity_logs {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT username "Username"
+        TEXT action "Action type"
+        TEXT resource "Resource type"
+        TEXT resource_id "Resource ID"
+        TEXT details "JSON details"
+        TEXT ip_address "IP address"
+        TEXT user_agent "User agent"
+        TEXT created_at
+    }
+
+---
+title: User Database Schema - Play Tracking & Statistics
+---
+erDiagram
+    users ||--o{ user_game_plays : "plays games"
+    users ||--|| user_stats : "has stats"
+    users ||--o{ user_game_stats : "tracks per-game"
+
+    users {
+        INTEGER id PK
+        TEXT username
+    }
+
+    user_game_plays {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT game_id FK "Flashpoint game.id"
+        TEXT game_title "Game name"
+        TEXT started_at "Session start"
+        TEXT ended_at "Session end"
+        INTEGER duration_seconds "Duration"
+        TEXT session_id UK "Session UUID"
+        BOOLEAN abandoned "Cleanup flag"
+    }
+
+    user_game_stats {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT game_id FK "Flashpoint game.id"
+        TEXT game_title
+        INTEGER total_plays "Total sessions"
+        INTEGER total_playtime_seconds "Total time"
+        TEXT first_played_at "First session"
+        TEXT last_played_at "Last session"
+    }
+
+    user_stats {
+        INTEGER user_id PK
+        INTEGER total_games_played "Unique games"
+        INTEGER total_playtime_seconds "Total time"
+        INTEGER total_sessions "Total sessions"
+        TEXT first_play_at "First ever play"
+        TEXT last_play_at "Last play"
+        TEXT updated_at
+    }
+
+---
+title: User Database Schema - User Settings & Preferences
+---
+erDiagram
+    users ||--o{ user_settings : configures
+    users ||--o{ user_playlists : creates
+    users ||--o{ user_favorites : favorites
+
+    users {
+        INTEGER id PK
+        TEXT username
+    }
+
+    user_settings {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT setting_key "Setting name"
+        TEXT setting_value "Setting value"
+        TEXT updated_at
+    }
+
+    user_playlists {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT title "Playlist name"
+        TEXT description "Description"
+        TEXT icon "Icon path"
+        TEXT created_at
+        TEXT updated_at
+    }
+
+    user_favorites {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT game_id FK "Flashpoint game.id"
+        TEXT game_title "Game name"
+        TEXT added_at
+    }
+
+---
+title: Cross-Database Relationships
+---
+graph TB
+    subgraph "Flashpoint Database (flashpoint.sqlite)"
+        Game[game table<br/>Read-Only]
+    end
+
+    subgraph "User Database (user.db)"
+        Plays[user_game_plays<br/>Read-Write]
+        Stats[user_game_stats<br/>Read-Write]
+        Favorites[user_favorites<br/>Read-Write]
+    end
+
+    Plays -.Soft FK: game_id.-> Game
+    Stats -.Soft FK: game_id.-> Game
+    Favorites -.Soft FK: game_id.-> Game
+
+    Game -->|Update playCounter| Game
+    Game -->|Update playtime| Game
+    Game -->|Update lastPlayed| Game
+
+    Plays -->|Aggregate| Stats
+
+    style Game fill:#ff9999,stroke:#333,stroke-width:2px
+    style Plays fill:#90ee90,stroke:#333,stroke-width:2px
+    style Stats fill:#90ee90,stroke:#333,stroke-width:2px
+    style Favorites fill:#90ee90,stroke:#333,stroke-width:2px
+
+    note1[Note: Soft foreign keys<br/>No DB-level constraint<br/>Enforced by application]
+    note1 -.-> Plays
+
+---
+title: Database Access Patterns
+---
+graph LR
+    subgraph "Backend Services"
+        GameService[GameService]
+        UserService[UserService]
+        PlayTrackingService[PlayTrackingService]
+    end
+
+    subgraph "Database Services"
+        DBService[DatabaseService<br/>Flashpoint DB]
+        UserDBService[UserDatabaseService<br/>User DB]
+    end
+
+    subgraph "Databases"
+        FlashpointDB[(flashpoint.sqlite<br/>READ-ONLY)]
+        UserDB[(user.db<br/>READ-WRITE)]
+    end
+
+    GameService -->|Read games| DBService
+    PlayTrackingService -->|Read games| DBService
+    PlayTrackingService -->|Update stats| DBService
+
+    UserService -->|CRUD users| UserDBService
+    PlayTrackingService -->|Track plays| UserDBService
+
+    DBService -->|SELECT| FlashpointDB
+    DBService -->|UPDATE stats| FlashpointDB
+
+    UserDBService -->|SELECT/INSERT/UPDATE/DELETE| UserDB
+
+    DBService -.File Watcher.-> FlashpointDB
+
+    style FlashpointDB fill:#ff9999,stroke:#333,stroke-width:2px
+    style UserDB fill:#90ee90,stroke:#333,stroke-width:2px
+    style DBService fill:#61dafb,stroke:#333,stroke-width:2px
+    style UserDBService fill:#61dafb,stroke:#333,stroke-width:2px

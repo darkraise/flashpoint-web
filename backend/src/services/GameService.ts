@@ -3,7 +3,12 @@ import { logger } from '../utils/logger';
 
 export interface GameSearchQuery {
   search?: string;
-  platform?: string;
+  platforms?: string[]; // Array of platforms for OR condition
+  series?: string[]; // Array of series for OR condition
+  developers?: string[]; // Array of developers for OR condition
+  publishers?: string[]; // Array of publishers for OR condition
+  playModes?: string[]; // Array of play modes for OR condition
+  languages?: string[]; // Array of languages for OR condition
   library?: string;
   tags?: string[];
   yearFrom?: number;
@@ -14,7 +19,7 @@ export interface GameSearchQuery {
   limit: number;
   showBroken: boolean;
   showExtreme: boolean;
-  webPlayableOnly: boolean; // Only show HTML5 and Flash games (web-playable with Ruffle)
+  fields?: 'list' | 'detail'; // Column selection: 'list' for minimal columns, 'detail' for all columns
 }
 
 export interface Game {
@@ -63,32 +68,93 @@ export interface PaginatedResult<T> {
 }
 
 export class GameService {
+  /**
+   * Get column list based on field selection mode
+   * OPTIMIZATION: Reduce payload size for list views by selecting only essential columns
+   */
+  private getColumnSelection(fields?: 'list' | 'detail'): string {
+    if (fields === 'list') {
+      // Minimal columns for list views (14 essential fields)
+      return `
+        g.id, g.title, g.developer, g.publisher, g.platformName,
+        g.library, g.orderTitle, g.releaseDate, g.tagsStr,
+        g.logoPath, g.screenshotPath, g.broken, g.extreme, g.series
+      `;
+    }
+
+    // Default: All columns for detail views
+    return `
+      g.id, g.parentGameId, g.title, g.alternateTitles, g.series,
+      g.developer, g.publisher, g.platformName, g.platformsStr, g.platformId,
+      g.playMode, g.status, g.broken, g.extreme, g.notes, g.tagsStr,
+      g.source, g.applicationPath, g.launchCommand, g.releaseDate,
+      g.version, g.originalDescription, g.language,
+      g.library, g.orderTitle, g.dateAdded, g.dateModified,
+      g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
+      g.logoPath, g.screenshotPath
+    `;
+  }
+
   async searchGames(query: GameSearchQuery): Promise<PaginatedResult<Game>> {
     try {
       const offset = (query.page - 1) * query.limit;
 
+      // Get column selection based on fields parameter
+      const columns = this.getColumnSelection(query.fields);
+
+      // OPTIMIZATION: Build query WITHOUT LEFT JOIN to avoid row explosion
+      // We'll fetch presentOnDisk separately and merge results
       let sql = `
         SELECT
-          g.id, g.parentGameId, g.title, g.alternateTitles, g.series,
-          g.developer, g.publisher, g.platformName, g.platformsStr, g.platformId,
-          g.playMode, g.status, g.broken, g.extreme, g.notes, g.tagsStr,
-          g.source, g.applicationPath, g.launchCommand, g.releaseDate,
-          g.version, g.originalDescription, g.language,
-          g.library, g.orderTitle, g.dateAdded, g.dateModified,
-          g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
-          g.logoPath, g.screenshotPath,
-          MAX(gd.presentOnDisk) as presentOnDisk
+          ${columns},
+          COUNT(*) OVER() as total_count
         FROM game g
-        LEFT JOIN game_data gd ON gd.gameId = g.id
         WHERE 1=1
       `;
 
       const params: any[] = [];
 
       // Apply filters
-      if (query.platform) {
-        sql += ` AND g.platformName = ?`;
-        params.push(query.platform);
+      if (query.platforms && query.platforms.length > 0) {
+        // Use OR condition for multiple platforms
+        const platformPlaceholders = query.platforms.map(() => '?').join(', ');
+        sql += ` AND g.platformName IN (${platformPlaceholders})`;
+        params.push(...query.platforms);
+      }
+
+      if (query.series && query.series.length > 0) {
+        // Use OR condition for multiple series
+        const seriesPlaceholders = query.series.map(() => '?').join(', ');
+        sql += ` AND g.series IN (${seriesPlaceholders})`;
+        params.push(...query.series);
+      }
+
+      if (query.developers && query.developers.length > 0) {
+        // Use OR condition for multiple developers
+        const developerPlaceholders = query.developers.map(() => '?').join(', ');
+        sql += ` AND g.developer IN (${developerPlaceholders})`;
+        params.push(...query.developers);
+      }
+
+      if (query.publishers && query.publishers.length > 0) {
+        // Use OR condition for multiple publishers
+        const publisherPlaceholders = query.publishers.map(() => '?').join(', ');
+        sql += ` AND g.publisher IN (${publisherPlaceholders})`;
+        params.push(...query.publishers);
+      }
+
+      if (query.playModes && query.playModes.length > 0) {
+        // Use OR condition for multiple play modes
+        const playModePlaceholders = query.playModes.map(() => '?').join(', ');
+        sql += ` AND g.playMode IN (${playModePlaceholders})`;
+        params.push(...query.playModes);
+      }
+
+      if (query.languages && query.languages.length > 0) {
+        // Use OR condition for multiple languages
+        const languagePlaceholders = query.languages.map(() => '?').join(', ');
+        sql += ` AND g.language IN (${languagePlaceholders})`;
+        params.push(...query.languages);
       }
 
       if (query.library) {
@@ -96,22 +162,25 @@ export class GameService {
         params.push(query.library);
       }
 
+      // OPTIMIZATION: Use INSTR instead of LIKE for tag matching (faster in SQLite)
       if (query.tags && query.tags.length > 0) {
-        // Check if tags are in tagsStr field
-        const tagConditions = query.tags.map(() => `g.tagsStr LIKE ?`).join(' AND ');
-        sql += ` AND (${tagConditions})`;
-        query.tags.forEach(tag => params.push(`%${tag}%`));
+        // Check if tags are in tagsStr field using INSTR with semicolon boundaries
+        query.tags.forEach(tag => {
+          sql += ` AND INSTR(';' || g.tagsStr || ';', ?) > 0`;
+          params.push(`;${tag};`);
+        });
       }
 
+      // OPTIMIZATION: Use full date string comparison instead of SUBSTR/CAST
+      // This leverages the releaseDate index (YYYY-MM-DD format is lexicographically sortable)
       if (query.yearFrom !== undefined) {
-        // Extract year from releaseDate (format: YYYY-MM-DD)
-        sql += ` AND CAST(SUBSTR(g.releaseDate, 1, 4) AS INTEGER) >= ?`;
-        params.push(query.yearFrom);
+        sql += ` AND g.releaseDate >= ?`;
+        params.push(`${query.yearFrom}-01-01`);
       }
 
       if (query.yearTo !== undefined) {
-        sql += ` AND CAST(SUBSTR(g.releaseDate, 1, 4) AS INTEGER) <= ?`;
-        params.push(query.yearTo);
+        sql += ` AND g.releaseDate <= ?`;
+        params.push(`${query.yearTo}-12-31`);
       }
 
       if (!query.showBroken) {
@@ -120,12 +189,6 @@ export class GameService {
 
       if (!query.showExtreme) {
         sql += ` AND (g.extreme = 0 OR g.extreme IS NULL)`;
-      }
-
-      if (query.webPlayableOnly) {
-        // Only show HTML5 and Flash games (web-playable with Ruffle)
-        sql += ` AND g.platformName IN (?, ?)`;
-        params.push('HTML5', 'Flash');
       }
 
       if (query.search) {
@@ -139,17 +202,6 @@ export class GameService {
         params.push(searchTerm, searchTerm, searchTerm, searchTerm);
       }
 
-      // Count total (need to count distinct games since we're joining game_data)
-      const countSql = sql.replace(
-        /SELECT[\s\S]+?FROM game g/,
-        'SELECT COUNT(DISTINCT g.id) as count FROM game g'
-      );
-      const countResult = DatabaseService.get(countSql, params) as { count: number };
-      const total = countResult.count;
-
-      // Group by game ID since we're joining game_data (a game can have multiple data entries)
-      sql += ` GROUP BY g.id`;
-
       // Apply sorting
       const sortColumn = this.getSortColumn(query.sortBy);
       sql += ` ORDER BY ${sortColumn} ${query.sortOrder.toUpperCase()}`;
@@ -158,10 +210,44 @@ export class GameService {
       sql += ` LIMIT ? OFFSET ?`;
       params.push(query.limit, offset);
 
-      const games = DatabaseService.all(sql, params) as Game[];
+      // OPTIMIZATION: Single query execution with window function for count
+      const games = DatabaseService.all(sql, params) as (Game & { total_count: number })[];
+
+      // Extract total from first row (window function provides same count for all rows)
+      const total = games.length > 0 ? games[0].total_count : 0;
+
+      // OPTIMIZATION: Fetch presentOnDisk separately for returned games (post-processing pattern)
+      // This avoids the LEFT JOIN row explosion and GROUP BY aggregation
+      if (games.length > 0) {
+        const gameIds = games.map(g => g.id);
+        const placeholders = gameIds.map(() => '?').join(', ');
+
+        const presentOnDiskSql = `
+          SELECT gameId, MAX(presentOnDisk) as presentOnDisk
+          FROM game_data
+          WHERE gameId IN (${placeholders})
+          GROUP BY gameId
+        `;
+
+        const presentOnDiskResults = DatabaseService.all(presentOnDiskSql, gameIds) as Array<{
+          gameId: string;
+          presentOnDisk: number;
+        }>;
+
+        // Create a map for O(1) lookup
+        const presentOnDiskMap = new Map(
+          presentOnDiskResults.map(r => [r.gameId, r.presentOnDisk])
+        );
+
+        // Merge presentOnDisk into game objects and remove total_count
+        games.forEach((game: any) => {
+          game.presentOnDisk = presentOnDiskMap.get(game.id) || 0;
+          delete game.total_count;
+        });
+      }
 
       return {
-        data: games,
+        data: games as Game[],
         total,
         page: query.page,
         limit: query.limit,
@@ -196,6 +282,45 @@ export class GameService {
       return game;
     } catch (error) {
       logger.error('Error getting game by ID:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get multiple games by their IDs
+   * Returns games in the same order as the input IDs
+   */
+  async getGamesByIds(ids: string[]): Promise<Game[]> {
+    try {
+      if (ids.length === 0) {
+        return [];
+      }
+
+      const placeholders = ids.map(() => '?').join(', ');
+      const sql = `
+        SELECT
+          g.id, g.parentGameId, g.title, g.alternateTitles, g.series,
+          g.developer, g.publisher, g.platformName, g.platformsStr, g.platformId,
+          g.playMode, g.status, g.broken, g.extreme, g.notes, g.tagsStr,
+          g.source, g.applicationPath, g.launchCommand, g.releaseDate,
+          g.version, g.originalDescription, g.language,
+          g.library, g.orderTitle, g.dateAdded, g.dateModified,
+          g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
+          g.logoPath, g.screenshotPath,
+          MAX(gd.presentOnDisk) as presentOnDisk
+        FROM game g
+        LEFT JOIN game_data gd ON gd.gameId = g.id
+        WHERE g.id IN (${placeholders})
+        GROUP BY g.id
+      `;
+
+      const games = DatabaseService.all(sql, ids) as Game[];
+
+      // Sort games to match the order of input IDs
+      const gamesMap = new Map(games.map(g => [g.id, g]));
+      return ids.map(id => gamesMap.get(id)).filter((g): g is Game => g !== undefined);
+    } catch (error) {
+      logger.error('Error getting games by IDs:', error);
       throw error;
     }
   }
@@ -344,5 +469,262 @@ export class GameService {
       developer: 'g.developer'
     };
     return columnMap[sortBy] || 'g.orderTitle';
+  }
+
+  /**
+   * Get all filter options for dropdowns in a single call
+   * Returns: series, developers, publishers, playModes, languages, tags, platforms, yearRange
+   */
+  async getFilterOptions(): Promise<{
+    series: Array<{ name: string; count: number }>;
+    developers: Array<{ name: string; count: number }>;
+    publishers: Array<{ name: string; count: number }>;
+    playModes: Array<{ name: string; count: number }>;
+    languages: Array<{ name: string; count: number }>;
+    tags: Array<{ name: string; count: number }>;
+    platforms: Array<{ name: string; count: number }>;
+    yearRange: { min: number; max: number };
+  }> {
+    try {
+      // Fetch all filter options in parallel for performance
+      const [series, developers, publishers, playModes, languages, tags, platforms, yearRange] =
+        await Promise.all([
+          this.getSeriesOptions(),
+          this.getDeveloperOptions(),
+          this.getPublisherOptions(),
+          this.getPlayModeOptions(),
+          this.getLanguageOptions(),
+          this.getTagOptions(),
+          this.getPlatformOptions(),
+          this.getYearRange(),
+        ]);
+
+      return {
+        series,
+        developers,
+        publishers,
+        playModes,
+        languages,
+        tags,
+        platforms,
+        yearRange,
+      };
+    } catch (error) {
+      logger.error('Error getting filter options:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get distinct series with game counts
+   * Applies default filters: excludes broken/extreme games
+   */
+  getSeriesOptions(): Array<{ name: string; count: number }> {
+    try {
+      const sql = `
+        SELECT series as name, COUNT(*) as count
+        FROM game
+        WHERE series IS NOT NULL AND series != ''
+          AND (broken = 0 OR broken IS NULL)
+          AND (extreme = 0 OR extreme IS NULL)
+        GROUP BY series
+        ORDER BY count DESC, series ASC
+        LIMIT 100
+      `;
+
+      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
+      return results;
+    } catch (error) {
+      logger.error('Error getting series options:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get distinct developers with game counts
+   * Applies default filters: excludes broken/extreme games
+   */
+  getDeveloperOptions(): Array<{ name: string; count: number }> {
+    try {
+      const sql = `
+        SELECT developer as name, COUNT(*) as count
+        FROM game
+        WHERE developer IS NOT NULL AND developer != ''
+          AND (broken = 0 OR broken IS NULL)
+          AND (extreme = 0 OR extreme IS NULL)
+        GROUP BY developer
+        ORDER BY count DESC, developer ASC
+        LIMIT 100
+      `;
+
+      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
+      return results;
+    } catch (error) {
+      logger.error('Error getting developer options:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get distinct publishers with game counts
+   * Applies default filters: excludes broken/extreme games
+   */
+  getPublisherOptions(): Array<{ name: string; count: number }> {
+    try {
+      const sql = `
+        SELECT publisher as name, COUNT(*) as count
+        FROM game
+        WHERE publisher IS NOT NULL AND publisher != ''
+          AND (broken = 0 OR broken IS NULL)
+          AND (extreme = 0 OR extreme IS NULL)
+        GROUP BY publisher
+        ORDER BY count DESC, publisher ASC
+        LIMIT 100
+      `;
+
+      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
+      return results;
+    } catch (error) {
+      logger.error('Error getting publisher options:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get distinct play modes with game counts
+   * Applies default filters: excludes broken/extreme games
+   */
+  getPlayModeOptions(): Array<{ name: string; count: number }> {
+    try {
+      const sql = `
+        SELECT playMode as name, COUNT(*) as count
+        FROM game
+        WHERE playMode IS NOT NULL AND playMode != ''
+          AND (broken = 0 OR broken IS NULL)
+          AND (extreme = 0 OR extreme IS NULL)
+        GROUP BY playMode
+        ORDER BY count DESC, playMode ASC
+      `;
+
+      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
+      return results;
+    } catch (error) {
+      logger.error('Error getting play mode options:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get distinct languages with game counts
+   * Applies default filters: excludes broken/extreme games
+   */
+  getLanguageOptions(): Array<{ name: string; count: number }> {
+    try {
+      const sql = `
+        SELECT language as name, COUNT(*) as count
+        FROM game
+        WHERE language IS NOT NULL AND language != ''
+          AND (broken = 0 OR broken IS NULL)
+          AND (extreme = 0 OR extreme IS NULL)
+        GROUP BY language
+        ORDER BY count DESC, language ASC
+        LIMIT 100
+      `;
+
+      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
+      return results;
+    } catch (error) {
+      logger.error('Error getting language options:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get distinct tags with game counts (reusing existing logic from tags route)
+   * Applies default filters: excludes broken/extreme games
+   */
+  getTagOptions(): Array<{ name: string; count: number }> {
+    try {
+      const sql = `
+        SELECT DISTINCT tagsStr
+        FROM game
+        WHERE tagsStr IS NOT NULL AND tagsStr != ''
+          AND (broken = 0 OR broken IS NULL)
+          AND (extreme = 0 OR extreme IS NULL)
+      `;
+
+      const results = DatabaseService.all(sql, []) as Array<{ tagsStr: string }>;
+
+      // Parse pipe-delimited tags and count occurrences
+      const tagCounts = new Map<string, number>();
+
+      for (const row of results) {
+        const tags = row.tagsStr.split(';').map(tag => tag.trim()).filter(tag => tag);
+        for (const tag of tags) {
+          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+        }
+      }
+
+      // Convert to array and sort
+      const tagOptions = Array.from(tagCounts.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+        .slice(0, 100); // Limit to top 100
+
+      return tagOptions;
+    } catch (error) {
+      logger.error('Error getting tag options:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get distinct platforms with game counts
+   * Applies default filters: excludes broken/extreme games
+   */
+  getPlatformOptions(): Array<{ name: string; count: number }> {
+    try {
+      const sql = `
+        SELECT DISTINCT platformName as name, COUNT(*) as count
+        FROM game
+        WHERE platformName IS NOT NULL AND platformName != ''
+          AND (broken = 0 OR broken IS NULL)
+          AND (extreme = 0 OR extreme IS NULL)
+        GROUP BY platformName
+        ORDER BY platformName ASC
+      `;
+
+      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
+      return results;
+    } catch (error) {
+      logger.error('Error getting platform options:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get year range from release dates
+   * Applies default filters: excludes broken/extreme games
+   */
+  getYearRange(): { min: number; max: number } {
+    try {
+      const sql = `
+        SELECT
+          MIN(CAST(SUBSTR(releaseDate, 1, 4) AS INTEGER)) as min,
+          MAX(CAST(SUBSTR(releaseDate, 1, 4) AS INTEGER)) as max
+        FROM game
+        WHERE releaseDate IS NOT NULL
+          AND releaseDate != ''
+          AND LENGTH(releaseDate) >= 4
+          AND (broken = 0 OR broken IS NULL)
+          AND (extreme = 0 OR extreme IS NULL)
+      `;
+
+      const result = DatabaseService.get(sql, []) as { min: number; max: number } | null;
+      return result || { min: 1970, max: new Date().getFullYear() };
+    } catch (error) {
+      logger.error('Error getting year range:', error);
+      return { min: 1970, max: new Date().getFullYear() };
+    }
   }
 }

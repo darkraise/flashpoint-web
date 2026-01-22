@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
+import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 import { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
@@ -9,12 +10,13 @@ interface ProtectedRouteProps {
   requirePermissions?: string[];
   requireAllPermissions?: boolean;
   requireRole?: string;
+  requireFeature?: 'enablePlaylists' | 'enableFavorites' | 'enableStatistics';
   fallbackPath?: string;
 }
 
 /**
  * ProtectedRoute component
- * Protects routes based on authentication, permissions, and roles
+ * Protects routes based on authentication, permissions, roles, and feature flags
  */
 export function ProtectedRoute({
   children,
@@ -23,10 +25,12 @@ export function ProtectedRoute({
   requirePermissions,
   requireAllPermissions = false,
   requireRole,
+  requireFeature,
   fallbackPath = '/login'
 }: ProtectedRouteProps) {
   const location = useLocation();
   const { isAuthenticated, isGuest, hasPermission, hasAnyPermission, hasAllPermissions: hasAll, hasRole } = useAuthStore();
+  const featureFlags = useFeatureFlags();
 
   // Check authentication - allow guests if not strictly requiring auth
   if (requireAuth && !isAuthenticated && !isGuest) {
@@ -34,9 +38,32 @@ export function ProtectedRoute({
     return <Navigate to={fallbackPath} state={{ from: location }} replace />;
   }
 
+  // Check feature flag
+  if (requireFeature && !featureFlags[requireFeature]) {
+    return (
+      <Navigate
+        to="/unauthorized"
+        state={{
+          requiredFeature: requireFeature,
+          fromPath: location.pathname
+        }}
+        replace
+      />
+    );
+  }
+
   // Check single permission
   if (requirePermission && !hasPermission(requirePermission)) {
-    return <Navigate to="/unauthorized" replace />;
+    return (
+      <Navigate
+        to="/unauthorized"
+        state={{
+          requiredPermission: requirePermission,
+          fromPath: location.pathname
+        }}
+        replace
+      />
+    );
   }
 
   // Check multiple permissions (any or all)
@@ -46,13 +73,31 @@ export function ProtectedRoute({
       : hasAnyPermission(requirePermissions);
 
     if (!hasRequiredPermissions) {
-      return <Navigate to="/unauthorized" replace />;
+      return (
+        <Navigate
+          to="/unauthorized"
+          state={{
+            requiredPermission: requirePermissions.join(', '),
+            fromPath: location.pathname
+          }}
+          replace
+        />
+      );
     }
   }
 
   // Check role
   if (requireRole && !hasRole(requireRole)) {
-    return <Navigate to="/unauthorized" replace />;
+    return (
+      <Navigate
+        to="/unauthorized"
+        state={{
+          requiredPermission: `role:${requireRole}`,
+          fromPath: location.pathname
+        }}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;

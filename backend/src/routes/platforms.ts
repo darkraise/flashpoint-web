@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { DatabaseService } from '../services/DatabaseService';
+import { optionalAuth } from '../middleware/auth';
 
 const router = Router();
+
+// Apply optional auth middleware to all routes
+router.use(optionalAuth);
 
 // GET /api/platforms - List all platforms
 router.get('/', async (req, res, next) => {

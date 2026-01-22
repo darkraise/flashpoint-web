@@ -1,22 +1,37 @@
-import { UserDatabaseService } from './UserDatabaseService';
+import { CachedSystemSettingsService } from './CachedSystemSettingsService';
 import { AuthSettings } from '../types/auth';
 
+/**
+ * Auth Settings Service
+ * Provides typed interface for auth-related settings from system_settings table
+ * Uses CachedSystemSettingsService for performance optimization
+ */
 export class AuthSettingsService {
+  private systemSettings: CachedSystemSettingsService;
+
+  constructor() {
+    // Use cached version for better performance (auth settings accessed frequently)
+    this.systemSettings = new CachedSystemSettingsService(60000); // 1 minute TTL
+  }
+
   /**
    * Get auth settings
    */
   getSettings(): AuthSettings {
-    const settings = UserDatabaseService.get('SELECT * FROM auth_settings WHERE id = 1', []);
+    const authSettings = this.systemSettings.getCategory('auth');
+
+    // Get the latest updated_at and updated_by from any auth setting
+    const latestUpdate = this.getLatestUpdate();
 
     return {
-      guestAccessEnabled: settings.guest_access_enabled === 1,
-      userRegistrationEnabled: settings.user_registration_enabled === 1,
-      requireEmailVerification: settings.require_email_verification === 1,
-      sessionTimeoutMinutes: settings.session_timeout_minutes,
-      maxLoginAttempts: settings.max_login_attempts,
-      lockoutDurationMinutes: settings.lockout_duration_minutes,
-      updatedAt: settings.updated_at,
-      updatedBy: settings.updated_by
+      guestAccessEnabled: authSettings.guestAccessEnabled ?? true,
+      userRegistrationEnabled: authSettings.userRegistrationEnabled ?? true,
+      requireEmailVerification: authSettings.requireEmailVerification ?? false,
+      sessionTimeoutMinutes: authSettings.sessionTimeoutMinutes ?? 60,
+      maxLoginAttempts: authSettings.maxLoginAttempts ?? 5,
+      lockoutDurationMinutes: authSettings.lockoutDurationMinutes ?? 15,
+      updatedAt: latestUpdate.updatedAt,
+      updatedBy: latestUpdate.updatedBy
     };
   }
 
@@ -24,53 +39,39 @@ export class AuthSettingsService {
    * Update auth settings
    */
   updateSettings(data: Partial<AuthSettings>, updatedBy: number): AuthSettings {
-    const updates: string[] = [];
-    const params: any[] = [];
+    // Filter out non-setting fields (updatedAt, updatedBy)
+    const { updatedAt, updatedBy: _, ...settingsToUpdate } = data;
 
-    if (data.guestAccessEnabled !== undefined) {
-      updates.push('guest_access_enabled = ?');
-      params.push(data.guestAccessEnabled ? 1 : 0);
-    }
-
-    if (data.userRegistrationEnabled !== undefined) {
-      updates.push('user_registration_enabled = ?');
-      params.push(data.userRegistrationEnabled ? 1 : 0);
-    }
-
-    if (data.requireEmailVerification !== undefined) {
-      updates.push('require_email_verification = ?');
-      params.push(data.requireEmailVerification ? 1 : 0);
-    }
-
-    if (data.sessionTimeoutMinutes !== undefined) {
-      updates.push('session_timeout_minutes = ?');
-      params.push(data.sessionTimeoutMinutes);
-    }
-
-    if (data.maxLoginAttempts !== undefined) {
-      updates.push('max_login_attempts = ?');
-      params.push(data.maxLoginAttempts);
-    }
-
-    if (data.lockoutDurationMinutes !== undefined) {
-      updates.push('lockout_duration_minutes = ?');
-      params.push(data.lockoutDurationMinutes);
-    }
-
-    if (updates.length === 0) {
+    if (Object.keys(settingsToUpdate).length === 0) {
       return this.getSettings();
     }
 
-    updates.push("updated_at = datetime('now')");
-    updates.push('updated_by = ?');
-    params.push(updatedBy);
-    params.push(1); // WHERE id = 1
-
-    UserDatabaseService.run(
-      `UPDATE auth_settings SET ${updates.join(', ')} WHERE id = ?`,
-      params
-    );
+    // Update each setting individually to track updated_by
+    this.systemSettings.updateCategory('auth', settingsToUpdate, updatedBy);
 
     return this.getSettings();
+  }
+
+  /**
+   * Get the latest update timestamp and user from auth settings
+   */
+  private getLatestUpdate(): { updatedAt: string; updatedBy: number | undefined } {
+    const row = this.systemSettings.get('auth.user_registration_enabled');
+
+    // Get metadata for the most recently updated auth setting
+    const query = `
+      SELECT updated_at, updated_by
+      FROM system_settings
+      WHERE category = 'auth'
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `;
+
+    const result = require('./UserDatabaseService').UserDatabaseService.get(query, []);
+
+    return {
+      updatedAt: result?.updated_at || new Date().toISOString(),
+      updatedBy: result?.updated_by
+    };
   }
 }

@@ -34,6 +34,11 @@ const updateThemeSchema = z.object({
   surfaceColor: z.string().min(1).optional()
 });
 
+const updateThemeSettingsSchema = z.object({
+  mode: z.enum(['light', 'dark', 'system']),
+  primaryColor: z.string().min(1)
+});
+
 /**
  * GET /api/users
  * List all users with pagination
@@ -195,8 +200,9 @@ router.post(
 );
 
 /**
- * GET /api/users/me/theme
- * Get current user's theme preference
+ * GET /api/users/me/theme (DEPRECATED - redirects to new endpoint)
+ * Legacy endpoint for backward compatibility
+ * @deprecated Use GET /api/users/me/settings/theme instead
  */
 router.get(
   '/me/theme',
@@ -204,15 +210,12 @@ router.get(
   async (req, res, next) => {
     try {
       const userId = req.user!.id;
-      const user = await userService.getUserById(userId);
+      const themeSettings = await userService.getThemeSettings(userId);
 
-      if (!user) {
-        throw new AppError(404, 'User not found');
-      }
-
+      // Return in old format for compatibility
       res.json({
-        themeColor: user.themeColor || 'blue-500',
-        surfaceColor: user.surfaceColor || 'slate-700'
+        themeColor: `${themeSettings.primaryColor}-500`,
+        surfaceColor: 'slate-700'
       });
     } catch (error) {
       next(error);
@@ -221,8 +224,9 @@ router.get(
 );
 
 /**
- * PATCH /api/users/me/theme
- * Update current user's theme preference
+ * PATCH /api/users/me/theme (DEPRECATED - redirects to new endpoint)
+ * Legacy endpoint for backward compatibility
+ * @deprecated Use PATCH /api/users/me/settings/theme instead
  */
 router.patch(
   '/me/theme',
@@ -233,17 +237,114 @@ router.patch(
       const userId = req.user!.id;
       const data = updateThemeSchema.parse(req.body);
 
-      await userService.updateUserTheme(userId, data.themeColor, data.surfaceColor);
+      // Extract color name from format like 'blue-500' -> 'blue'
+      const primaryColor = data.themeColor.split('-')[0];
+
+      // Update using new settings table
+      await userService.updateThemeSettings(userId, 'dark', primaryColor);
 
       res.json({
         success: true,
         themeColor: data.themeColor,
-        surfaceColor: data.surfaceColor
+        surfaceColor: data.surfaceColor || 'slate-700'
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
       }
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/users/me/settings/theme (DEPRECATED)
+ * Get current user's theme settings from user_settings table
+ * @deprecated Use GET /api/users/me/settings instead and extract theme_mode and primary_color
+ */
+router.get(
+  '/me/settings/theme',
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const themeSettings = await userService.getThemeSettings(userId);
+      res.json(themeSettings);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * PATCH /api/users/me/settings/theme (DEPRECATED)
+ * Update current user's theme settings in user_settings table
+ * @deprecated Use PATCH /api/users/me/settings with theme_mode and primary_color keys instead
+ */
+router.patch(
+  '/me/settings/theme',
+  authenticate,
+  logActivity('users.updateThemeSettings', 'users'),
+  async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const validated = updateThemeSettingsSchema.parse(req.body);
+
+      await userService.updateThemeSettings(
+        userId,
+        validated.mode,
+        validated.primaryColor
+      );
+
+      const updated = await userService.getThemeSettings(userId);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
+      }
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /api/users/me/settings
+ * Get all settings for current user
+ */
+router.get(
+  '/me/settings',
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const settings = await userService.getUserSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * PATCH /api/users/me/settings
+ * Update multiple settings for current user
+ */
+router.patch(
+  '/me/settings',
+  authenticate,
+  logActivity('users.updateSettings', 'users'),
+  async (req, res, next) => {
+    try {
+      const userId = req.user!.id;
+      const settings = req.body as Record<string, string>;
+
+      for (const [key, value] of Object.entries(settings)) {
+        await userService.setUserSetting(userId, key, value);
+      }
+
+      const updated = await userService.getUserSettings(userId);
+      res.json(updated);
+    } catch (error) {
       next(error);
     }
   }

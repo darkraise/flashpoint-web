@@ -1,4 +1,5 @@
 import { UserDatabaseService } from './UserDatabaseService';
+import { DatabaseService } from './DatabaseService';
 import { logger } from '../utils/logger';
 import { randomBytes } from 'crypto';
 
@@ -43,7 +44,7 @@ export class PlayTrackingService {
       // Insert play session
       UserDatabaseService.run(
         `INSERT INTO user_game_plays (user_id, game_id, game_title, session_id, started_at)
-         VALUES (?, ?, ?, ?, datetime('now'))`,
+         VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
         [userId, gameId, gameTitle, sessionId]
       );
 
@@ -83,7 +84,7 @@ export class PlayTrackingService {
       // Update session
       UserDatabaseService.run(
         `UPDATE user_game_plays
-         SET ended_at = datetime('now'), duration_seconds = ?
+         SET ended_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), duration_seconds = ?
          WHERE session_id = ?`,
         [durationSeconds, sessionId]
       );
@@ -91,6 +92,9 @@ export class PlayTrackingService {
       // Update aggregated stats
       await this.updateGameStats(session.user_id, session.game_id, session.game_title, durationSeconds);
       await this.updateUserStats(session.user_id, durationSeconds);
+
+      // Update aggregate stats in Flashpoint database for compatibility with Launcher
+      await this.updateFlashpointGameStats(session.game_id, durationSeconds);
 
       logger.info(`Play session ended: sessionId=${sessionId}, duration=${durationSeconds}s`);
     } catch (error) {
@@ -121,7 +125,7 @@ export class PlayTrackingService {
           `UPDATE user_game_stats
            SET total_plays = total_plays + 1,
                total_playtime_seconds = total_playtime_seconds + ?,
-               last_played_at = datetime('now')
+               last_played_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
            WHERE user_id = ? AND game_id = ?`,
           [durationSeconds, userId, gameId]
         );
@@ -129,7 +133,7 @@ export class PlayTrackingService {
         // Insert new stats
         UserDatabaseService.run(
           `INSERT INTO user_game_stats (user_id, game_id, game_title, total_plays, total_playtime_seconds, first_played_at, last_played_at)
-           VALUES (?, ?, ?, 1, ?, datetime('now'), datetime('now'))`,
+           VALUES (?, ?, ?, 1, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
           [userId, gameId, gameTitle, durationSeconds]
         );
       }
@@ -168,8 +172,8 @@ export class PlayTrackingService {
            SET total_games_played = ?,
                total_playtime_seconds = total_playtime_seconds + ?,
                total_sessions = ?,
-               last_play_at = datetime('now'),
-               updated_at = datetime('now')
+               last_play_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
            WHERE user_id = ?`,
           [gamesPlayed?.count || 0, durationSeconds, totalSessions?.count || 0, userId]
         );
@@ -177,12 +181,58 @@ export class PlayTrackingService {
         // Insert new stats
         UserDatabaseService.run(
           `INSERT INTO user_stats (user_id, total_games_played, total_playtime_seconds, total_sessions, first_play_at, last_play_at)
-           VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+           VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
           [userId, gamesPlayed?.count || 0, durationSeconds, totalSessions?.count || 0]
         );
       }
     } catch (error) {
       logger.error('Failed to update user stats:', error);
+    }
+  }
+
+  /**
+   * Update aggregate play statistics in Flashpoint database
+   * This maintains compatibility with Flashpoint Launcher
+   */
+  private async updateFlashpointGameStats(gameId: string, sessionDuration: number): Promise<void> {
+    try {
+      // Get aggregate stats across ALL users for this game
+      const aggregateStats = UserDatabaseService.get(
+        `SELECT
+          COUNT(*) as totalPlays,
+          SUM(duration_seconds) as totalPlaytime,
+          MAX(ended_at) as lastPlayed
+        FROM user_game_plays
+        WHERE game_id = ? AND ended_at IS NOT NULL`,
+        [gameId]
+      ) as { totalPlays: number; totalPlaytime: number; lastPlayed: string } | undefined;
+
+      if (!aggregateStats) {
+        logger.warn(`No aggregate stats found for game ${gameId}`);
+        return;
+      }
+
+      // Update the game table in flashpoint.sqlite
+      DatabaseService.run(
+        `UPDATE game
+        SET lastPlayed = ?,
+            playtime = ?,
+            playCounter = ?
+        WHERE id = ?`,
+        [
+          aggregateStats.lastPlayed,
+          aggregateStats.totalPlaytime,
+          aggregateStats.totalPlays,
+          gameId
+        ]
+      );
+
+      logger.info(
+        `Updated Flashpoint DB stats for game ${gameId}: ${aggregateStats.totalPlays} plays, ${aggregateStats.totalPlaytime}s total`
+      );
+    } catch (error) {
+      // Log but don't throw - Flashpoint DB might be locked by Launcher
+      logger.warn(`Failed to update Flashpoint DB stats for game ${gameId}:`, error);
     }
   }
 
@@ -382,7 +432,7 @@ export class PlayTrackingService {
         // End the session
         UserDatabaseService.run(
           `UPDATE user_game_plays
-           SET ended_at = datetime(started_at, '+4 hours'),
+           SET ended_at = strftime('%Y-%m-%dT%H:%M:%fZ', started_at, '+4 hours'),
                duration_seconds = ?
            WHERE session_id = ?`,
           [duration, session.session_id]
@@ -391,6 +441,7 @@ export class PlayTrackingService {
         // Update stats
         await this.updateGameStats(session.user_id, session.game_id, session.game_title, duration);
         await this.updateUserStats(session.user_id, duration);
+        await this.updateFlashpointGameStats(session.game_id, duration);
       }
 
       if (abandoned.length > 0) {

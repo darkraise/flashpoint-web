@@ -1,0 +1,280 @@
+%% Service Communication Patterns
+%% How the three services communicate with each other
+
+---
+title: Service Communication Overview
+---
+graph TB
+    subgraph "Frontend :5173"
+        Components[React Components]
+        Hooks[Custom Hooks]
+        APIClient[API Client<br/>Axios]
+        Stores[Zustand Stores]
+    end
+
+    subgraph "Backend :3100"
+        Routes[Express Routes]
+        Services[Service Layer]
+        Databases[(SQLite DBs)]
+    end
+
+    subgraph "Game Service :22500/:22501"
+        Proxy[HTTP Proxy]
+        ZipServer[ZIP Server]
+    end
+
+    Components -->|Use| Hooks
+    Hooks -->|Call| APIClient
+    Hooks -->|Read/Write| Stores
+
+    APIClient -->|REST API| Routes
+    Routes -->|Business Logic| Services
+    Services -->|Query| Databases
+
+    APIClient -.Direct HTTP.-> Proxy
+    Components -.Load Games.-> Proxy
+
+    Routes -.Delegate Files.-> Proxy
+    Routes -.Mount ZIPs.-> ZipServer
+
+    style APIClient fill:#61dafb,stroke:#333,stroke-width:2px
+    style Routes fill:#90ee90,stroke:#333,stroke-width:2px
+    style Proxy fill:#ffd700,stroke:#333,stroke-width:2px
+    style ZipServer fill:#ffd700,stroke:#333,stroke-width:2px
+
+---
+title: Frontend to Backend Communication
+---
+sequenceDiagram
+    participant Component
+    participant Hook
+    participant TanStackQuery
+    participant APIClient
+    participant Interceptor
+    participant Backend
+
+    Component->>Hook: useGames({filters})
+    Hook->>TanStackQuery: useQuery(['games', filters])
+
+    alt Cache hit
+        TanStackQuery-->>Hook: Cached data
+        Hook-->>Component: Return games
+    else Cache miss or stale
+        TanStackQuery->>APIClient: gamesApi.search(filters)
+
+        APIClient->>Interceptor: Request interceptor
+        Interceptor->>Interceptor: Add Authorization header
+        Interceptor->>Interceptor: Add request ID
+
+        Interceptor->>Backend: GET /api/games?filters
+        Note over Interceptor,Backend: Headers:<br/>Authorization: Bearer {token}<br/>X-Request-ID: {uuid}
+
+        Backend->>Backend: Process request
+        Backend-->>Interceptor: Response
+
+        Interceptor->>Interceptor: Response interceptor
+        Interceptor->>Interceptor: Handle errors
+
+        Interceptor-->>APIClient: Data or error
+        APIClient-->>TanStackQuery: Result
+
+        TanStackQuery->>TanStackQuery: Update cache
+        TanStackQuery-->>Hook: Fresh data
+        Hook-->>Component: Render with data
+    end
+
+---
+title: Backend to Game Service Communication
+---
+sequenceDiagram
+    participant Backend
+    participant HTTPClient
+    participant GameService
+    participant ProxyServer
+    participant ZipServer
+
+    Note over Backend,GameService: ZIP Mounting Request
+
+    Backend->>HTTPClient: Prepare mount request
+    HTTPClient->>ZipServer: POST http://localhost:22501/mount
+    Note over HTTPClient,ZipServer: {<br/>  gameId: "abc-123",<br/>  zipPath: "D:/.../.zip"<br/>}
+
+    ZipServer->>ZipServer: Validate and mount ZIP
+    ZipServer-->>HTTPClient: {success: true, mountPoint}
+    HTTPClient-->>Backend: Mount result
+
+    Note over Backend,GameService: File Serving (Delegation)
+
+    Backend->>Backend: Construct proxy URL
+    Note over Backend: contentUrl = http://localhost:22500/{url}
+
+    Backend-->>Frontend: Return contentUrl in response
+    Note over Frontend: Frontend directly loads<br/>files from game service
+
+---
+title: Frontend Direct Communication with Game Service
+---
+sequenceDiagram
+    participant Browser
+    participant Ruffle
+    participant ProxyServer
+    participant FileSystem
+    participant ZipServer
+
+    Browser->>Ruffle: Load game in Ruffle player
+    Ruffle->>Ruffle: Parse contentUrl
+
+    Ruffle->>ProxyServer: GET http://localhost:22500/http://example.com/game.swf
+
+    ProxyServer->>ProxyServer: Parse requested URL
+    ProxyServer->>FileSystem: Check local files
+
+    alt File found locally
+        FileSystem-->>ProxyServer: File bytes
+        ProxyServer-->>Ruffle: Response with CORS headers
+    else File in ZIP
+        ProxyServer->>ZipServer: Request file from mounted ZIP
+        ZipServer->>ZipServer: Read from ZIP archive
+        ZipServer-->>ProxyServer: File bytes
+        ProxyServer-->>Ruffle: Response with CORS headers
+    end
+
+    Ruffle->>Ruffle: Execute game
+
+    loop Asset loading
+        Ruffle->>ProxyServer: GET /assets/image.png
+        ProxyServer-->>Ruffle: Asset bytes
+    end
+
+---
+title: Error Handling and Retry Logic
+---
+sequenceDiagram
+    participant Frontend
+    participant APIClient
+    participant Backend
+    participant GameService
+
+    Frontend->>APIClient: Request data
+    APIClient->>Backend: HTTP request
+
+    alt Backend error (5xx)
+        Backend-->>APIClient: 500 Internal Server Error
+        APIClient->>APIClient: Retry logic (3 attempts)
+
+        loop Retry attempts
+            APIClient->>Backend: Retry request
+
+            alt Success
+                Backend-->>APIClient: 200 OK
+                APIClient-->>Frontend: Data
+            else Still failing
+                Note over APIClient: Exponential backoff<br/>1s, 2s, 4s delays
+            end
+        end
+
+        alt All retries failed
+            APIClient-->>Frontend: Error with retry count
+            Frontend->>Frontend: Show error toast
+        end
+
+    else Game service unavailable
+        Frontend->>GameService: Load game file
+        GameService-->>Frontend: Connection refused
+
+        Frontend->>Frontend: Show fallback UI
+        Note over Frontend: "Game service unavailable<br/>Please try again later"
+
+    else Token expired
+        APIClient->>Backend: Request with expired token
+        Backend-->>APIClient: 401 Unauthorized
+
+        APIClient->>APIClient: Auto-refresh token
+        APIClient->>Backend: POST /api/auth/refresh
+        Backend-->>APIClient: New tokens
+
+        APIClient->>Backend: Retry original request
+        Backend-->>APIClient: Success
+        APIClient-->>Frontend: Data (transparent to user)
+    end
+
+---
+title: State Synchronization Pattern
+---
+graph LR
+    subgraph "Server State (TanStack Query)"
+        ServerCache[Query Cache]
+        Games[Games Data]
+        User[User Data]
+        Playlists[Playlists Data]
+    end
+
+    subgraph "Client State (Zustand)"
+        AuthStore[Auth Store]
+        ThemeStore[Theme Store]
+        UIStore[UI Store]
+    end
+
+    subgraph "URL State (React Router)"
+        SearchParams[Search Params]
+        RouteParams[Route Params]
+    end
+
+    subgraph "Backend Database"
+        FlashpointDB[(flashpoint.sqlite)]
+        UserDB[(user.db)]
+    end
+
+    Backend[Backend API] -->|Fetch| ServerCache
+    ServerCache -->|Sync| Games
+    ServerCache -->|Sync| User
+    ServerCache -->|Sync| Playlists
+
+    Games -.Cache.-> FlashpointDB
+    User -.Cache.-> UserDB
+    Playlists -.Cache.-> UserDB
+
+    AuthStore -.Persist.-> LocalStorage[localStorage]
+    ThemeStore -.Persist.-> LocalStorage
+
+    SearchParams -->|Drive| ServerCache
+    Components[React Components] -->|Read| ServerCache
+    Components -->|Read| AuthStore
+    Components -->|Read| ThemeStore
+    Components -->|Read| UIStore
+    Components -->|Navigate| SearchParams
+
+    style ServerCache fill:#61dafb,stroke:#333,stroke-width:2px
+    style AuthStore fill:#90ee90,stroke:#333,stroke-width:2px
+    style FlashpointDB fill:#ff9999,stroke:#333,stroke-width:2px
+    style UserDB fill:#ff9999,stroke:#333,stroke-width:2px
+
+---
+title: WebSocket Alternative (Future Enhancement)
+---
+sequenceDiagram
+    participant Frontend
+    participant WebSocket
+    participant Backend
+    participant Database
+
+    Note over Frontend,Backend: Current: Polling for updates
+
+    Frontend->>Backend: GET /api/games (every 30s)
+    Backend->>Database: Query games
+    Database-->>Backend: Game list
+    Backend-->>Frontend: Games data
+
+    Note over Frontend,Backend: Future: WebSocket for real-time updates
+
+    Frontend->>WebSocket: Connect to ws://localhost:3100
+    WebSocket->>Backend: Establish connection
+    Backend-->>WebSocket: Connection established
+
+    Backend->>Backend: Database change detected
+    Backend->>WebSocket: Emit 'games:updated' event
+    WebSocket-->>Frontend: Real-time update
+    Frontend->>Frontend: Invalidate TanStack Query cache
+    Frontend->>Frontend: Refetch and re-render
+
+    Note over Frontend: No polling needed<br/>Instant updates

@@ -3,6 +3,9 @@ import { DownloadManager } from '../services/DownloadManager';
 import { PreferencesService } from '../services/PreferencesService';
 import { GameDatabaseUpdater } from '../services/GameDatabaseUpdater';
 import { GameService } from '../services/GameService';
+import { authenticate } from '../middleware/auth';
+import { requirePermission } from '../middleware/rbac';
+import { logActivity } from '../middleware/activityLogger';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -15,13 +18,22 @@ const gameService = new GameService();
  * Request body: { gameDataId?: number }
  * - If gameDataId not provided, uses game.activeDataId
  *
+ * Requires: games.download permission
+ *
  * Responses:
  * - 200: Download started successfully
+ * - 401: Not authenticated
+ * - 403: Insufficient permissions
  * - 404: Game not found or has no game data
  * - 409: Game data already downloaded
  * - 500: Download failed
  */
-router.post('/:id/download', async (req: Request, res: Response) => {
+router.post(
+  '/:id/download',
+  authenticate,
+  requirePermission('games.download'),
+  logActivity('games.download', 'games'),
+  async (req: Request, res: Response) => {
   try {
     const gameId = req.params.id;
     const { gameDataId: requestedGameDataId } = req.body;
@@ -108,7 +120,8 @@ router.post('/:id/download', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+  }
+);
 
 /**
  * GET /api/games/:id/download/progress
@@ -116,6 +129,8 @@ router.post('/:id/download', async (req: Request, res: Response) => {
  *
  * Streams progress updates for active download.
  * Closes connection when download completes or errors.
+ *
+ * Requires: games.download permission
  *
  * Event data format:
  * {
@@ -125,7 +140,11 @@ router.post('/:id/download', async (req: Request, res: Response) => {
  *   error?: string
  * }
  */
-router.get('/:id/download/progress', async (req: Request, res: Response) => {
+router.get(
+  '/:id/download/progress',
+  authenticate,
+  requirePermission('games.download'),
+  async (req: Request, res: Response) => {
   try {
     const gameId = req.params.id;
 
@@ -221,18 +240,28 @@ router.get('/:id/download/progress', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+  }
+);
 
 /**
  * DELETE /api/games/:id/download
  * Cancel an active download.
  *
+ * Requires: games.download permission
+ *
  * Responses:
  * - 200: Download cancelled successfully
+ * - 401: Not authenticated
+ * - 403: Insufficient permissions
  * - 404: No active download found
  * - 500: Error cancelling download
  */
-router.delete('/:id/download', async (req: Request, res: Response) => {
+router.delete(
+  '/:id/download',
+  authenticate,
+  requirePermission('games.download'),
+  logActivity('games.download_cancel', 'games'),
+  async (req: Request, res: Response) => {
   try {
     const gameId = req.params.id;
 
@@ -277,6 +306,7 @@ router.delete('/:id/download', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+  }
+);
 
 export default router;

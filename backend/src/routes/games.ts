@@ -2,10 +2,14 @@ import { Router } from 'express';
 import { GameService } from '../services/GameService';
 import { gameDataService } from '../services/GameDataService';
 import { AppError } from '../middleware/errorHandler';
+import { optionalAuth } from '../middleware/auth';
 import { z } from 'zod';
 
 const router = Router();
 const gameService = new GameService();
+
+// Apply optional auth middleware to all routes
+router.use(optionalAuth);
 
 // Custom boolean parser that handles string 'false' correctly
 const booleanSchema = z.preprocess((val) => {
@@ -17,7 +21,12 @@ const booleanSchema = z.preprocess((val) => {
 // Validation schemas
 const searchQuerySchema = z.object({
   search: z.string().optional(),
-  platform: z.string().optional(),
+  platform: z.string().optional(), // Comma-separated platforms
+  series: z.string().optional(), // Comma-separated series
+  developers: z.string().optional(), // Comma-separated developers
+  publishers: z.string().optional(), // Comma-separated publishers
+  playModes: z.string().optional(), // Comma-separated play modes
+  languages: z.string().optional(), // Comma-separated languages
   library: z.enum(['arcade', 'theatre']).optional(),
   tags: z.string().optional(),
   yearFrom: z.coerce.number().int().min(1970).max(2100).optional(),
@@ -27,8 +36,7 @@ const searchQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   showBroken: booleanSchema.default(false),
-  showExtreme: booleanSchema.default(false),
-  webPlayableOnly: booleanSchema.default(true) // Default to HTML5 + Flash games (Ruffle support)
+  showExtreme: booleanSchema.default(false)
 });
 
 // GET /api/games - List games with pagination and filters
@@ -38,7 +46,12 @@ router.get('/', async (req, res, next) => {
 
     const result = await gameService.searchGames({
       search: query.search,
-      platform: query.platform,
+      platforms: query.platform?.split(',').filter(Boolean),
+      series: query.series?.split(',').filter(Boolean),
+      developers: query.developers?.split(',').filter(Boolean),
+      publishers: query.publishers?.split(',').filter(Boolean),
+      playModes: query.playModes?.split(',').filter(Boolean),
+      languages: query.languages?.split(',').filter(Boolean),
       library: query.library,
       tags: query.tags?.split(',').filter(Boolean),
       yearFrom: query.yearFrom,
@@ -48,8 +61,7 @@ router.get('/', async (req, res, next) => {
       page: query.page,
       limit: query.limit,
       showBroken: query.showBroken,
-      showExtreme: query.showExtreme,
-      webPlayableOnly: query.webPlayableOnly
+      showExtreme: query.showExtreme
     });
 
     res.json(result);
@@ -57,6 +69,16 @@ router.get('/', async (req, res, next) => {
     if (error instanceof z.ZodError) {
       return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
     }
+    next(error);
+  }
+});
+
+// GET /api/games/filter-options - Get all filter options for dropdowns
+router.get('/filter-options', async (req, res, next) => {
+  try {
+    const filterOptions = await gameService.getFilterOptions();
+    res.json(filterOptions);
+  } catch (error) {
     next(error);
   }
 });
@@ -169,9 +191,13 @@ router.get('/:id/launch', async (req, res, next) => {
       }
     }
 
-    // Check if game is web-playable (Flash/HTML5) AND has a launch command or game data
-    const isWebPlayablePlatform = game.platformName === 'Flash' || game.platformName === 'HTML5';
     const hasContent = launchCommand.trim().length > 0;
+
+    // Game can be played in browser if:
+    // 1. It's a web-playable platform (Flash or HTML5)
+    // 2. It has content (launch command)
+    const isWebPlayablePlatform = game.platformName === 'Flash' || game.platformName === 'HTML5';
+    const canPlayInBrowser = isWebPlayablePlatform && hasContent;
 
     res.json({
       gameId: game.id,
@@ -181,7 +207,7 @@ router.get('/:id/launch', async (req, res, next) => {
       contentUrl,
       applicationPath: game.applicationPath,
       playMode: game.playMode,
-      canPlayInBrowser: isWebPlayablePlatform && hasContent
+      canPlayInBrowser
     });
   } catch (error) {
     next(error);

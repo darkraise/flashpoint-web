@@ -1,4 +1,7 @@
 import { UserDatabaseService } from './UserDatabaseService';
+import { SystemSettingsService } from './SystemSettingsService';
+import { CachedSystemSettingsService } from './CachedSystemSettingsService';
+import { PermissionCache } from './PermissionCache';
 import { logger } from '../utils/logger';
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils/jwt';
 import { hashPassword, verifyPassword } from '../utils/password';
@@ -6,62 +9,80 @@ import { AppError } from '../middleware/errorHandler';
 import { LoginCredentials, RegisterData, AuthTokens, AuthUser } from '../types/auth';
 
 export class AuthService {
+  private systemSettings: SystemSettingsService;
+  private cachedSystemSettings: CachedSystemSettingsService;
+
+  constructor() {
+    this.systemSettings = new SystemSettingsService();
+    this.cachedSystemSettings = new CachedSystemSettingsService();
+  }
+
   /**
    * Login user with username/password
    */
   async login(credentials: LoginCredentials, ipAddress: string): Promise<{ user: AuthUser; tokens: AuthTokens }> {
-    const { username, password } = credentials;
+    try {
+      const { username, password } = credentials;
 
-    // Check login attempts and lockout
-    await this.checkLoginAttempts(username, ipAddress);
+      // Check login attempts and lockout
+      await this.checkLoginAttempts(username, ipAddress);
 
-    // Find user
-    const user = UserDatabaseService.get(
-      `SELECT u.*, r.name as role_name, r.priority
-       FROM users u
-       JOIN roles r ON u.role_id = r.id
-       WHERE u.username = ? AND u.is_active = 1`,
-      [username]
-    );
+      // Find user
+      const user = UserDatabaseService.get(
+        `SELECT u.*, r.name as role_name, r.priority
+         FROM users u
+         JOIN roles r ON u.role_id = r.id
+         WHERE u.username = ? AND u.is_active = 1`,
+        [username]
+      );
 
-    if (!user) {
-      await this.recordLoginAttempt(username, ipAddress, false);
-      throw new AppError(401, 'Invalid username or password');
+      if (!user) {
+        await this.recordLoginAttempt(username, ipAddress, false);
+        throw new AppError(401, 'Invalid username or password');
+      }
+
+      // Verify password
+      const isValid = await verifyPassword(password, user.password_hash);
+      if (!isValid) {
+        await this.recordLoginAttempt(username, ipAddress, false);
+        throw new AppError(401, 'Invalid username or password');
+      }
+
+      // Record successful login
+      await this.recordLoginAttempt(username, ipAddress, true);
+
+      // Update last login
+      UserDatabaseService.run(
+        "UPDATE users SET last_login_at = datetime('now') WHERE id = ?",
+        [user.id]
+      );
+
+      // Get user permissions
+      const permissions = this.getUserPermissions(user.id);
+      logger.debug(`[AuthService] User ${username} has ${permissions.length} permissions`);
+
+      // Generate tokens
+      const tokens = await this.generateTokens(user);
+
+      const authUser: AuthUser = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role_name,
+        permissions,
+        themeColor: user.theme_color || 'blue-500',
+        surfaceColor: user.surface_color || 'slate-700'
+      };
+
+      return { user: authUser, tokens };
+    } catch (error) {
+      logger.error('[AuthService] Login error:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        username: credentials.username
+      });
+      throw error;
     }
-
-    // Verify password
-    const isValid = await verifyPassword(password, user.password_hash);
-    if (!isValid) {
-      await this.recordLoginAttempt(username, ipAddress, false);
-      throw new AppError(401, 'Invalid username or password');
-    }
-
-    // Record successful login
-    await this.recordLoginAttempt(username, ipAddress, true);
-
-    // Update last login
-    UserDatabaseService.run(
-      "UPDATE users SET last_login_at = datetime('now') WHERE id = ?",
-      [user.id]
-    );
-
-    // Get user permissions
-    const permissions = this.getUserPermissions(user.id);
-
-    // Generate tokens
-    const tokens = await this.generateTokens(user);
-
-    const authUser: AuthUser = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role_name,
-      permissions,
-      themeColor: user.theme_color || 'blue-500',
-      surfaceColor: user.surface_color || 'slate-700'
-    };
-
-    return { user: authUser, tokens };
   }
 
   /**
@@ -103,6 +124,21 @@ export class AuthService {
 
     const userId = result.lastInsertRowid as number;
 
+    // Apply default theme and primary color from system settings
+    const appSettings = this.cachedSystemSettings.getCategory('app');
+    const defaultTheme = appSettings.defaultTheme || 'dark';
+    const defaultPrimaryColor = appSettings.defaultPrimaryColor || 'blue';
+
+    // Insert default user settings
+    UserDatabaseService.run(
+      `INSERT INTO user_settings (user_id, setting_key, setting_value) VALUES
+       (?, 'theme_mode', ?),
+       (?, 'primary_color', ?)`,
+      [userId, defaultTheme, userId, defaultPrimaryColor]
+    );
+
+    logger.info(`[AuthService] Created user ${data.username} with default theme: ${defaultTheme}, primary color: ${defaultPrimaryColor}`);
+
     // Get created user
     const user = UserDatabaseService.get(
       `SELECT u.*, r.name as role_name
@@ -142,6 +178,19 @@ export class AuthService {
   }
 
   /**
+   * Revoke all refresh tokens for a user
+   * Useful when user permissions change, account is disabled, or password is reset
+   */
+  async revokeAllUserTokens(userId: number): Promise<void> {
+    UserDatabaseService.run(
+      "UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE user_id = ? AND revoked_at IS NULL",
+      [userId]
+    );
+
+    logger.info(`[AuthService] Revoked all refresh tokens for user ${userId}`);
+  }
+
+  /**
    * Refresh access token using refresh token
    */
   async refreshToken(refreshToken: string): Promise<AuthTokens> {
@@ -168,6 +217,14 @@ export class AuthService {
     if (!user) {
       throw new AppError(401, 'User not found or inactive');
     }
+
+    // Revoke the old refresh token (security best practice)
+    UserDatabaseService.run(
+      "UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE token = ?",
+      [refreshToken]
+    );
+
+    logger.debug(`[AuthService] Revoked old refresh token for user ${user.id}`);
 
     // Generate new tokens
     return this.generateTokens(user);
@@ -208,9 +265,16 @@ export class AuthService {
   }
 
   /**
-   * Get user permissions
+   * Get user permissions (with caching)
    */
   private getUserPermissions(userId: number): string[] {
+    // Try to get from cache first
+    const cached = PermissionCache.getUserPermissions(userId);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Cache miss - query database
     const permissions = UserDatabaseService.all(
       `SELECT DISTINCT p.name
        FROM permissions p
@@ -220,7 +284,12 @@ export class AuthService {
       [userId]
     );
 
-    return permissions.map(p => p.name);
+    const permissionNames = permissions.map(p => p.name);
+
+    // Store in cache
+    PermissionCache.setUserPermissions(userId, permissionNames);
+
+    return permissionNames;
   }
 
   /**
@@ -287,15 +356,29 @@ export class AuthService {
   }
 
   /**
-   * Get auth settings
+   * Get auth settings from system_settings
    */
   private getAuthSettings(): any {
-    return UserDatabaseService.get('SELECT * FROM auth_settings WHERE id = 1', []) || {
-      guest_access_enabled: 1,
-      user_registration_enabled: 1,
-      max_login_attempts: 5,
-      lockout_duration_minutes: 15
-    };
+    try {
+      const authSettings = this.systemSettings.getCategory('auth');
+
+      // Return settings with defaults if not found
+      return {
+        guest_access_enabled: authSettings.guestAccessEnabled !== undefined ? (authSettings.guestAccessEnabled ? 1 : 0) : 1,
+        user_registration_enabled: authSettings.userRegistrationEnabled !== undefined ? (authSettings.userRegistrationEnabled ? 1 : 0) : 1,
+        max_login_attempts: authSettings.maxLoginAttempts || 5,
+        lockout_duration_minutes: authSettings.lockoutDurationMinutes || 15
+      };
+    } catch (error) {
+      logger.error('Failed to get auth settings, using defaults:', error);
+      // Return defaults if settings can't be retrieved
+      return {
+        guest_access_enabled: 1,
+        user_registration_enabled: 1,
+        max_login_attempts: 5,
+        lockout_duration_minutes: 15
+      };
+    }
   }
 
   /**

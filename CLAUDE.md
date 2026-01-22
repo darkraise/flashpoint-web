@@ -2,11 +2,56 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Documentation-First Approach
+
+**IMPORTANT:** This project has comprehensive documentation in the `docs/` directory (100+ files). When handling requests:
+
+1. **Use Documentation Instead of Context**: Always reference the relevant documentation files instead of repeating information in responses. This prevents filling up context windows with redundant information.
+
+2. **Point to Documentation**: When answering questions, provide the path to the relevant documentation file (e.g., "See `docs/04-frontend/architecture.md` for details on frontend architecture").
+
+3. **Read Documentation When Needed**: Use the Read tool to check documentation files when you need specific information about:
+   - Architecture: `docs/02-architecture/`
+   - Backend: `docs/03-backend/`
+   - Frontend: `docs/04-frontend/`
+   - Game Service: `docs/05-game-service/`
+   - API Reference: `docs/06-api-reference/`
+   - Design System: `docs/07-design-system/`
+   - Development: `docs/08-development/`
+   - Deployment: `docs/09-deployment/`
+   - Features: `docs/10-features/`
+   - Diagrams: `docs/11-diagrams/`
+   - Reference: `docs/12-reference/`
+
+4. **Update Documentation After Changes**: After completing any feature, enhancement, bug fix, or significant code change, **ALWAYS ask the user**:
+   > "I've completed the changes. Should I update the relevant documentation in the `docs/` folder to reflect these changes?"
+
+   Then update the appropriate documentation files to keep them in sync with the codebase.
+
+### Quick Documentation Reference
+
+**For Common Questions, Point Users/Read From:**
+
+| Question | Documentation File |
+|----------|-------------------|
+| How do I set up the project? | `docs/08-development/setup-guide.md` |
+| What commands are available? | `docs/08-development/commands.md` |
+| How does authentication work? | `docs/10-features/authentication-authorization.md` |
+| What are all the API endpoints? | `docs/06-api-reference/README.md` |
+| What's the database schema? | `docs/12-reference/database-schema-reference.md` |
+| How do components work? | `docs/04-frontend/components/component-overview.md` |
+| How do I deploy? | `docs/09-deployment/README.md` |
+| What's the architecture? | `docs/02-architecture/system-architecture.md` |
+| Design system/theming? | `docs/07-design-system/theme-system.md` |
+| Common errors/pitfalls? | `docs/08-development/common-pitfalls.md` |
+| TypeScript types? | `docs/12-reference/type-definitions.md` |
+| Environment variables? | `docs/09-deployment/environment-variables.md` |
+
 ## Project Overview
 
 Flashpoint Web is a self-hosted web application for browsing and playing games from the Flashpoint Archive. The project is a monorepo containing three independent services:
 
-- **backend**: REST API server (Express/TypeScript, port 3001)
+- **backend**: REST API server (Express/TypeScript, port 3100)
 - **frontend**: React web UI (Vite/React/TypeScript, port 5173)
 - **game-service**: Game content proxy and ZIP server (Express/TypeScript, ports 22500/22501)
 
@@ -130,7 +175,7 @@ Set `FLASHPOINT_HOST_PATH` environment variable to point to your Flashpoint inst
 
 ## Architecture
 
-### Backend Service (Port 3001)
+### Backend Service (Port 3100)
 
 The backend is a REST API built with Express and TypeScript. It manages two separate SQLite databases:
 
@@ -251,7 +296,7 @@ LOG_LEVEL=info
 Environment variables are injected at build time via Vite:
 
 ```bash
-VITE_API_URL=http://localhost:3001
+VITE_API_URL=http://localhost:3100
 ```
 
 Vite proxy configuration in `vite.config.ts` handles `/api/*` and `/proxy/*` routing to backend.
@@ -282,7 +327,7 @@ Application-specific SQLite database. Schema managed via migrations in `backend/
 - `user_playlists`: User-created playlists
 - `user_favorites`: Favorited games per user
 - `play_sessions`: Game play tracking with duration, completion status
-- `auth_settings`: Global authentication configuration
+- `system_settings`: Global system-wide configuration (auth, app, metadata, features, game, storage, rate limiting)
 
 Migrations run automatically on server startup via UserDatabaseService.
 
@@ -367,7 +412,7 @@ Background job runs every 6 hours to clean up abandoned sessions.
 
 1. **Flashpoint path not found**: Verify `FLASHPOINT_PATH` in .env points to valid Flashpoint installation
 2. **Database locked errors**: Flashpoint Launcher may lock flashpoint.sqlite - close it before migrations
-3. **Port conflicts**: Ports 3001, 5173, 22500, 22501 must be available
+3. **Port conflicts**: Ports 3100, 5173, 22500, 22501 must be available
 4. **Game files not loading**: Ensure game-service is running before backend
 5. **JWT secret in production**: Change default JWT_SECRET in production environments
 6. **Ruffle files missing**: Run `npm run copy-ruffle` in frontend if Ruffle doesn't load
@@ -379,4 +424,18 @@ Background job runs every 6 hours to clean up abandoned sessions.
 
 ## Flashpoint App Reference: D:\FP_Data\Flashpoint
 
-## Make sure that there is no build error after modified
+## Documentation Maintenance
+
+**After ANY code change, always:**
+1. Verify no build errors: `npm run typecheck` and `npm run build`
+2. Check if documentation needs updates
+3. Ask the user if relevant documentation should be updated
+4. Update the following docs as needed:
+   - Architecture changes → `docs/02-architecture/`
+   - New/modified API endpoints → `docs/06-api-reference/`
+   - Database schema changes → `docs/12-reference/database-schema-reference.md`
+   - New features → `docs/10-features/`
+   - Component changes → `docs/04-frontend/components/`
+   - Configuration changes → `docs/03-backend/configuration.md` or `docs/09-deployment/environment-variables.md`
+
+**Documentation is a first-class concern** - keeping it current ensures the project remains maintainable.

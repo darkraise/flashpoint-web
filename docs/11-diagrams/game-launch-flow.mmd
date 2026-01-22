@@ -1,0 +1,250 @@
+%% Game Launch Flow Diagram
+%% Complete game launch sequence from click to play
+
+---
+title: Complete Game Launch Flow
+---
+sequenceDiagram
+    participant User
+    participant GameCard
+    participant GamePlayerView
+    participant API
+    participant Backend
+    participant GameService
+    participant GameDataService
+    participant ZipServer
+    participant FlashpointDB
+    participant ProxyServer
+    participant Ruffle
+
+    User->>GameCard: Click "Play Game"
+    GameCard->>GamePlayerView: navigate('/play/:gameId')
+
+    GamePlayerView->>API: gamesApi.getLaunchData(gameId)
+    API->>Backend: GET /api/games/{id}/launch<br/>Authorization: Bearer {token}
+
+    Backend->>GameService: getGameById(gameId)
+    GameService->>FlashpointDB: SELECT * FROM game<br/>WHERE id = ?
+    FlashpointDB-->>GameService: Game metadata
+    GameService-->>Backend: Game object
+
+    Backend->>Backend: Check presentOnDisk field
+
+    alt Game has downloadable content
+        Backend->>GameDataService: getGameData(gameId)
+        GameDataService->>FlashpointDB: SELECT * FROM game_data<br/>WHERE gameId = ?
+        FlashpointDB-->>GameDataService: Game data record
+
+        alt ZIP file present
+            GameDataService->>GameDataService: Resolve ZIP path<br/>D:/Flashpoint/Data/Games/{letter}/{id}.zip
+
+            GameDataService->>ZipServer: POST /mount<br/>{gameId, zipPath}
+            ZipServer->>ZipServer: Check if already mounted
+
+            alt Not yet mounted
+                ZipServer->>ZipServer: fs.existsSync(zipPath)
+                ZipServer->>ZipServer: new StreamZip.async({file: zipPath})
+                ZipServer->>ZipServer: Store in mounts Map
+                Note over ZipServer: mounts.set(gameId, zipInstance)
+                ZipServer-->>GameDataService: {success: true, mountPoint}
+            else Already mounted
+                ZipServer-->>GameDataService: {success: true, cached}
+            end
+
+            GameDataService-->>Backend: ZIP mounted
+        else No ZIP file
+            GameDataService-->>Backend: Use URL-based launch
+        end
+    end
+
+    Backend->>Backend: Construct contentUrl
+    Note over Backend: http://localhost:22500/{launchCommand}
+
+    Backend-->>API: Launch data response
+    Note over API: {<br/>  gameId,<br/>  title,<br/>  platform,<br/>  contentUrl,<br/>  canPlayInBrowser<br/>}
+
+    API-->>GamePlayerView: Launch data
+
+    GamePlayerView->>GamePlayerView: Determine player type<br/>based on platform
+
+    alt Flash game
+        GamePlayerView->>GamePlayerView: Initialize Ruffle player
+        GamePlayerView->>Ruffle: window.RufflePlayer.newest()
+        Ruffle-->>GamePlayerView: Player instance
+
+        GamePlayerView->>Ruffle: player.load(contentUrl)
+
+        Ruffle->>ProxyServer: GET /{contentUrl}
+        Note over Ruffle,ProxyServer: Example: GET /http://example.com/game.swf
+
+        ProxyServer->>ProxyServer: Parse URL from path
+        ProxyServer->>ProxyServer: Check local htdocs
+
+        alt File in htdocs
+            ProxyServer->>ProxyServer: fs.readFile(htdocsPath)
+            ProxyServer-->>Ruffle: SWF bytes + MIME type
+        else Not in htdocs
+            ProxyServer->>ProxyServer: Check game data directory
+
+            alt File in game data
+                ProxyServer-->>Ruffle: File bytes
+            else Not in game data
+                ProxyServer->>ZipServer: Query mounted ZIPs
+                ZipServer->>ZipServer: zip.entryData(filePath)
+                ZipServer-->>ProxyServer: File from ZIP
+                ProxyServer-->>Ruffle: File bytes
+            end
+        end
+
+        Ruffle->>Ruffle: Parse and execute SWF
+        Ruffle->>GamePlayerView: Render game
+        GamePlayerView->>User: Game playing
+
+        loop Asset loading
+            Ruffle->>ProxyServer: GET /assets/sprite.png
+            ProxyServer-->>Ruffle: Asset bytes
+        end
+
+    else HTML5 game
+        GamePlayerView->>GamePlayerView: Create iframe element
+        GamePlayerView->>GamePlayerView: Set src = contentUrl
+
+        Note over GamePlayerView: iframe loads HTML5 game<br/>All assets loaded via ProxyServer
+
+        GamePlayerView->>User: Game playing in iframe
+    else Unsupported platform
+        GamePlayerView->>User: Show "Cannot play in browser"<br/>Download instructions
+    end
+
+---
+title: ZIP Mounting Process
+---
+sequenceDiagram
+    participant Backend
+    participant GameDataService
+    participant ZipServer
+    participant ZipManager
+    participant FileSystem
+
+    Backend->>GameDataService: mountGameZip(gameId)
+    GameDataService->>FlashpointDB: SELECT path FROM game_data<br/>WHERE gameId = ?
+    FlashpointDB-->>GameDataService: ZIP file path
+
+    GameDataService->>FileSystem: Resolve absolute path
+    Note over FileSystem: D:/Flashpoint/Data/Games/A/abc-123.zip
+    FileSystem-->>GameDataService: Absolute path
+
+    GameDataService->>ZipServer: POST /mount
+    Note over GameDataService,ZipServer: {<br/>  gameId: "abc-123",<br/>  zipPath: "D:/.../.../abc-123.zip"<br/>}
+
+    ZipServer->>ZipManager: Check if mounted
+
+    alt Already mounted
+        ZipManager-->>ZipServer: Mount exists
+        ZipManager->>ZipManager: Update lastAccess timestamp
+        ZipServer-->>GameDataService: {success: true, cached: true}
+    else Not mounted
+        ZipServer->>FileSystem: fs.existsSync(zipPath)
+
+        alt File not found
+            FileSystem-->>ZipServer: false
+            ZipServer-->>GameDataService: Error: ZIP file not found
+        else File exists
+            FileSystem-->>ZipServer: true
+
+            ZipServer->>ZipManager: mount(gameId, zipPath)
+            ZipManager->>ZipManager: new StreamZip.async({file})
+            ZipManager->>ZipManager: await zip.entries()
+            Note over ZipManager: Verify ZIP is valid
+
+            ZipManager->>ZipManager: Store in mounts Map
+            ZipManager->>ZipManager: Set lastAccess = Date.now()
+            Note over ZipManager: mounts.set(gameId, zipInstance)<br/>lastAccess.set(gameId, timestamp)
+
+            ZipManager-->>ZipServer: Mount successful
+            ZipServer-->>GameDataService: {success: true, mountPoint: "/gamedata/abc-123"}
+        end
+    end
+
+    GameDataService-->>Backend: Mount result
+
+---
+title: HTTP Proxy Request Resolution
+---
+graph TB
+    Start[Incoming Request<br/>GET /{url}]
+    Parse[Parse URL from path]
+    HTDocs{Check Local htdocs}
+    GameData{Check Game Data Dir}
+    ZIPCheck{Query Mounted ZIPs}
+    CDNCheck{Try CDN Fallback}
+    Cache[Cache File Locally]
+    Return[Return File<br/>with MIME type]
+    NotFound[Return 404]
+
+    Start --> Parse
+    Parse --> HTDocs
+
+    HTDocs -->|Found| Return
+    HTDocs -->|Not Found| GameData
+
+    GameData -->|Found| Return
+    GameData -->|Not Found| ZIPCheck
+
+    ZIPCheck -->|Found in ZIP| Return
+    ZIPCheck -->|Not Found| CDNCheck
+
+    CDNCheck -->|Found on CDN| Cache
+    Cache --> Return
+    CDNCheck -->|Not Found| NotFound
+
+    style Return fill:#90ee90,stroke:#333,stroke-width:2px
+    style NotFound fill:#ffcccb,stroke:#333,stroke-width:2px
+    style HTDocs fill:#ffd700,stroke:#333,stroke-width:2px
+    style GameData fill:#ffd700,stroke:#333,stroke-width:2px
+    style ZIPCheck fill:#ffd700,stroke:#333,stroke-width:2px
+    style CDNCheck fill:#87ceeb,stroke:#333,stroke-width:2px
+
+---
+title: Ruffle Player Initialization
+---
+sequenceDiagram
+    participant GamePlayer
+    participant Ruffle
+    participant RuffleConfig
+    participant ProxyServer
+
+    GamePlayer->>GamePlayer: Create container div
+    GamePlayer->>Ruffle: Load /ruffle/ruffle.js
+    Ruffle-->>GamePlayer: Script loaded
+
+    GamePlayer->>Ruffle: window.RufflePlayer.newest()
+    Ruffle-->>GamePlayer: RufflePlayer instance
+
+    GamePlayer->>Ruffle: ruffle.createPlayer()
+    Ruffle-->>GamePlayer: Player instance
+
+    GamePlayer->>RuffleConfig: Configure player
+    Note over RuffleConfig: {<br/>  allowScriptAccess: true,<br/>  autoplay: "auto",<br/>  backgroundColor: "#000000",<br/>  letterbox: "on",<br/>  scale: "showall",<br/>  quality: "high",<br/>  logLevel: "warn"<br/>}
+
+    GamePlayer->>GamePlayer: Append player to container
+
+    GamePlayer->>Ruffle: player.load(contentUrl)
+    Note over GamePlayer,Ruffle: contentUrl: http://localhost:22500/...
+
+    Ruffle->>ProxyServer: Fetch SWF file
+    ProxyServer-->>Ruffle: SWF bytes
+
+    Ruffle->>Ruffle: Parse SWF header
+    Ruffle->>Ruffle: Initialize Flash VM
+    Ruffle->>Ruffle: Execute ActionScript
+    Ruffle->>Ruffle: Render frames
+
+    Ruffle-->>GamePlayer: Game loaded and playing
+
+    loop Game runtime
+        Ruffle->>Ruffle: Process frame
+        Ruffle->>ProxyServer: Load additional assets
+        ProxyServer-->>Ruffle: Asset bytes
+        Ruffle->>Ruffle: Render to canvas
+    end

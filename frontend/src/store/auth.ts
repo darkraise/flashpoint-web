@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { User, AuthTokens } from '../types/auth';
+import { useThemeStore } from './theme';
 
 interface AuthState {
   user: User | null;
@@ -8,6 +9,7 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isGuest: boolean;
+  isMaintenanceMode: boolean;
 
   // Actions
   setAuth: (user: User, tokens: AuthTokens) => void;
@@ -15,6 +17,7 @@ interface AuthState {
   clearAuth: () => void;
   updateAccessToken: (token: string) => void;
   updateUser: (user: User) => void;
+  setMaintenanceMode: (isActive: boolean) => void;
 
   // Permission helpers
   hasPermission: (permission: string) => boolean;
@@ -31,6 +34,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isGuest: false,
+      isMaintenanceMode: false,
 
       setAuth: (user: User, tokens: AuthTokens) => {
         set({
@@ -40,6 +44,14 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
           isGuest: false
         });
+
+        // Load theme settings from server after successful login (not guest)
+        if (user.role !== 'guest') {
+          const themeStore = useThemeStore.getState();
+          themeStore.loadThemeFromServer().catch((error) => {
+            console.debug('Failed to load theme settings after login:', error);
+          });
+        }
       },
 
       setGuestMode: () => {
@@ -49,7 +61,7 @@ export const useAuthStore = create<AuthState>()(
           username: 'Guest',
           email: 'guest@flashpoint.local',
           role: 'guest',
-          permissions: ['games.read', 'games.play']
+          permissions: ['games.read', 'playlists.read']
         };
         set({
           user: guestUser,
@@ -76,6 +88,10 @@ export const useAuthStore = create<AuthState>()(
 
       updateUser: (user: User) => {
         set({ user });
+      },
+
+      setMaintenanceMode: (isActive: boolean) => {
+        set({ isMaintenanceMode: isActive });
       },
 
       hasPermission: (permission: string) => {

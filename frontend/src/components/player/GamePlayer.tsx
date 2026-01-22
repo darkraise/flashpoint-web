@@ -47,6 +47,9 @@ export function GamePlayer({
   const [isFullscreen, setIsFullscreen] = useState(initialFullscreen);
   const [iframeError, setIframeError] = useState<string | null>(null);
 
+  // Default scale mode for Ruffle player (hardcoded)
+  const defaultScaleMode = 'showall';
+
   const toggleFullscreen = () => {
     const newFullscreenState = !isFullscreen;
     setIsFullscreen(newFullscreenState);
@@ -86,29 +89,32 @@ export function GamePlayer({
 
   if (!canPlayInBrowser) {
     const isWebPlatform = platform === 'Flash' || platform === 'HTML5';
-    const reason = isWebPlatform && !launchCommand
-      ? 'This game is missing content data and cannot be played.'
-      : `The ${platform} platform requires the Flashpoint Launcher.`;
+
+    // Determine the reason why the game cannot be played
+    let reason: string;
+    let details: string;
+
+    if (isWebPlatform && !launchCommand) {
+      // Missing content data
+      reason = 'This game is missing content data and cannot be played.';
+      details = 'This game entry is incomplete. Try launching it from the Flashpoint Launcher instead.';
+    } else {
+      // Not a web platform
+      reason = `The ${platform} platform requires the Flashpoint Launcher.`;
+      details = 'Only Flash and HTML5 games with valid content can be played in the browser.';
+    }
 
     return (
-      <div className={`flex items-center justify-center bg-gray-800 rounded-lg p-8 ${className}`}>
+      <div className={`flex items-center justify-center bg-card border border-border rounded-lg p-8 ${className}`}>
         <div className="text-center">
           <AlertCircle size={48} className="text-yellow-500 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Cannot Play in Browser</h3>
-          <p className="text-gray-400 mb-4">{reason}</p>
-          <div className="bg-gray-900 rounded p-4">
-            <p className="text-sm text-gray-300">
+          <p className="text-muted-foreground mb-4">{reason}</p>
+          <div className="bg-muted rounded p-4">
+            <p className="text-sm">
               <span className="font-semibold">Platform:</span> {platform}
             </p>
-            {isWebPlatform && !launchCommand ? (
-              <p className="text-sm text-gray-300 mt-2">
-                This game entry is incomplete. Try launching it from the Flashpoint Launcher instead.
-              </p>
-            ) : (
-              <p className="text-sm text-gray-300 mt-2">
-                Only Flash and HTML5 games with valid content can be played in the browser.
-              </p>
-            )}
+            <p className="text-sm mt-2">{details}</p>
           </div>
         </div>
       </div>
@@ -126,14 +132,14 @@ export function GamePlayer({
     <div className={`${containerClasses} ${isAspectVideo ? 'flex flex-col' : ''}`}>
       {/* Player Controls */}
       {showControls && (
-        <div className="flex items-center justify-between bg-gray-800/90 backdrop-blur-sm px-4 py-3 flex-shrink-0">
+        <div className="flex items-center justify-between bg-card/90 backdrop-blur-sm px-4 py-3 flex-shrink-0 border-b border-border">
           <div className="flex items-center gap-3">
-            <Play size={18} className="text-primary-500" />
+            <Play size={18} className="text-primary" />
             <div>
               <span className="text-sm font-medium block">
                 {platform === 'Flash' ? 'Flash Player (Ruffle)' : platform}
               </span>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted-foreground">
                 {isFullscreen ? 'Press ESC to exit fullscreen' : 'Click maximize for fullscreen'}
               </span>
             </div>
@@ -141,7 +147,7 @@ export function GamePlayer({
           {allowFullscreen && (
             <button
               onClick={toggleFullscreen}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg transition-colors"
               title={isFullscreen ? 'Exit Fullscreen (ESC)' : 'Enter Fullscreen'}
             >
               {isFullscreen ? (
@@ -176,6 +182,7 @@ export function GamePlayer({
             width="100%"
             height="100%"
             className="w-full h-full"
+            scaleMode={defaultScaleMode}
             onLoadError={(error) => {
               console.error('Ruffle load error:', error);
             }}
@@ -201,17 +208,17 @@ export function GamePlayer({
               }}
             />
             {iframeError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90 z-10">
+              <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-10">
                 <div className="text-center max-w-md p-6">
                   <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">Failed to Load Game</h3>
-                  <p className="text-gray-300 mb-4">{iframeError}</p>
-                  <div className="bg-gray-800 rounded p-3 mb-4">
-                    <p className="text-sm text-gray-400 text-left">
+                  <h3 className="text-xl font-bold mb-2">Failed to Load Game</h3>
+                  <p className="mb-4">{iframeError}</p>
+                  <div className="bg-card rounded p-3 mb-4 border border-border">
+                    <p className="text-sm text-muted-foreground text-left">
                       <strong>URL:</strong> {contentUrl}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     Check the browser console for more details.
                   </p>
                 </div>
@@ -222,8 +229,8 @@ export function GamePlayer({
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <AlertCircle size={48} className="text-yellow-500 mx-auto mb-4" />
-              <p className="text-gray-300">No content URL available for this game</p>
-              <p className="text-sm text-gray-500 mt-2">
+              <p>No content URL available for this game</p>
+              <p className="text-sm text-muted-foreground mt-2">
                 Launch command: {launchCommand || 'N/A'}
               </p>
             </div>

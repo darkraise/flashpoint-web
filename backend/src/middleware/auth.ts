@@ -77,3 +77,36 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
+/**
+ * Soft authentication - populates req.user if token exists, otherwise leaves undefined
+ * Does NOT throw errors - just silently sets req.user or leaves it undefined
+ * Used for middleware that needs to check user identity but doesn't require auth
+ * Perfect for maintenance mode checks that need to identify admins without blocking others
+ */
+export const softAuth = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Token provided - try to verify it
+      const token = authHeader.substring(7);
+      try {
+        const user = await authService.verifyAccessToken(token);
+        req.user = user;
+      } catch (error) {
+        // Invalid/expired token - just leave req.user undefined
+        req.user = undefined;
+      }
+    } else {
+      // No token - leave req.user undefined
+      req.user = undefined;
+    }
+
+    next(); // Always continue, never throw errors
+  } catch (error) {
+    // Unexpected error - continue anyway with undefined user
+    req.user = undefined;
+    next();
+  }
+};

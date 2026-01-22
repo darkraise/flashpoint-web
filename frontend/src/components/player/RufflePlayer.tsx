@@ -1,21 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 export interface RufflePlayerProps {
   swfUrl: string;
   width?: string | number;
   height?: string | number;
   className?: string;
+  scaleMode?: "exactfit" | "noborder" | "showall" | "noscale";
   onLoadError?: (error: Error) => void;
   onLoadSuccess?: () => void;
 }
 
 export function RufflePlayer({
   swfUrl,
-  width = '100%',
-  height = '100%',
-  className = '',
+  width = "100%",
+  height = "100%",
+  className = "",
+  scaleMode = "showall",
   onLoadError,
-  onLoadSuccess
+  onLoadSuccess,
 }: RufflePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rufflePlayerRef = useRef<any>(null);
@@ -39,7 +41,7 @@ export function RufflePlayer({
 
     const initRuffle = async () => {
       if (!containerRef.current || isInitializingRef.current) {
-        console.log('[Ruffle] Already initializing or no container, skipping');
+        console.log("[Ruffle] Already initializing or no container, skipping");
         return;
       }
 
@@ -51,8 +53,8 @@ export function RufflePlayer({
 
         // Give Ruffle time to clean up from previous instance (especially after navigation)
         // This ensures Ruffle's internal registry is fully cleared
-        console.log('[Ruffle] Waiting for any previous cleanup to complete...');
-        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log("[Ruffle] Waiting for any previous cleanup to complete...");
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         if (!mounted) {
           isInitializingRef.current = false;
@@ -62,23 +64,23 @@ export function RufflePlayer({
         // Clean up any existing player before creating a new one
         if (rufflePlayerRef.current) {
           try {
-            console.log('[Ruffle] Cleaning up existing player instance');
+            console.log("[Ruffle] Cleaning up existing player instance");
             // Try to destroy the player more thoroughly
             const oldPlayer = rufflePlayerRef.current;
             rufflePlayerRef.current = null;
 
             // Call destroy if available, otherwise remove
-            if (typeof oldPlayer.destroy === 'function') {
+            if (typeof oldPlayer.destroy === "function") {
               oldPlayer.destroy();
             } else {
               oldPlayer.remove();
             }
 
             // Give Ruffle additional time to clean up internal state
-            console.log('[Ruffle] Waiting for cleanup to complete...');
-            await new Promise(resolve => setTimeout(resolve, 200));
+            console.log("[Ruffle] Waiting for cleanup to complete...");
+            await new Promise((resolve) => setTimeout(resolve, 200));
           } catch (err) {
-            console.warn('[Ruffle] Error cleaning up existing player:', err);
+            console.warn("[Ruffle] Error cleaning up existing player:", err);
           }
         }
 
@@ -89,16 +91,19 @@ export function RufflePlayer({
 
         // Load Ruffle script from self-hosted location (only if not already loaded)
         if (!(window as any).RufflePlayer) {
-          const existingScript = document.querySelector('script[src="/ruffle/ruffle.js"]');
+          const existingScript = document.querySelector(
+            'script[src="/ruffle/ruffle.js"]',
+          );
 
           if (!existingScript) {
-            const script = document.createElement('script');
-            script.src = '/ruffle/ruffle.js';
+            const script = document.createElement("script");
+            script.src = "/ruffle/ruffle.js";
 
             // Wait for script to load
             await new Promise<void>((resolve, reject) => {
               script.onload = () => resolve();
-              script.onerror = () => reject(new Error('Failed to load Ruffle script'));
+              script.onerror = () =>
+                reject(new Error("Failed to load Ruffle script"));
               document.head.appendChild(script);
             });
           }
@@ -107,27 +112,29 @@ export function RufflePlayer({
         if (!mounted) return;
 
         // Wait for Ruffle to initialize
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
 
         // Access Ruffle from window
         const RufflePlayer = (window as any).RufflePlayer;
 
         if (!RufflePlayer) {
-          throw new Error('RufflePlayer not found. The Ruffle library may not have loaded correctly.');
+          throw new Error(
+            "RufflePlayer not found. The Ruffle library may not have loaded correctly.",
+          );
         }
 
         // Get the newest version
         const ruffle = RufflePlayer.newest();
 
         if (!ruffle) {
-          throw new Error('Could not initialize Ruffle player.');
+          throw new Error("Could not initialize Ruffle player.");
         }
 
         // Create player instance
         player = ruffle.createPlayer();
 
         if (!player) {
-          throw new Error('Could not create Ruffle player instance.');
+          throw new Error("Could not create Ruffle player instance.");
         }
 
         // Store reference
@@ -135,38 +142,44 @@ export function RufflePlayer({
 
         // Configure player for better scaling
         player.config = {
-          autoplay: 'auto',
-          backgroundColor: '#000000',
-          letterbox: 'on',  // Add letterboxing to properly frame content
-          unmuteOverlay: 'visible',
+          autoplay: "auto",
+          backgroundColor: "#000000",
+          letterbox: "on", // Add letterboxing to properly frame content
+          unmuteOverlay: "visible",
           contextMenu: true,
           showSwfDownload: false,
-          upgradeToHttps: window.location.protocol === 'https:',
+          upgradeToHttps: window.location.protocol === "https:",
           warnOnUnsupportedContent: true,
-          logLevel: 'error',
-          publicPath: '/ruffle/',
-          scale: 'showAll',  // Show all content while maintaining aspect ratio
-          forceScale: true,  // Prevent SWF from changing scale mode at runtime
-          quality: 'high',
-          allowScriptAccess: 'sameDomain',
-          salign: '',  // Default alignment (center)
-          wmode: 'opaque',  // Opaque mode to prevent transparency issues
+          logLevel: "error",
+          publicPath: "/ruffle/",
+          scale: scaleMode, // Use scale mode from props (from system settings)
+          forceScale: true, // Prevent SWF from changing scale mode at runtime
+          quality: "high",
+          allowScriptAccess: "sameDomain",
+          salign: "", // Default alignment (center)
+          wmode: "opaque", // Opaque mode to prevent transparency issues
         };
 
+
         // Set explicit size to fill container with overflow clipping
-        player.style.width = '100%';
-        player.style.height = '100%';
-        player.style.display = 'block';
-        player.style.overflow = 'hidden';  // Clip any content extending beyond player bounds
+        player.style.width = "100%";
+        player.style.height = "100%";
+        player.style.display = "block";
+        player.style.overflow = "hidden"; // Clip any content extending beyond player bounds
 
         // Add player to container (only if still mounted and container exists)
         if (!mounted || !containerRef.current) {
-          console.log('[Ruffle] Component unmounted during initialization, aborting');
+          console.log(
+            "[Ruffle] Component unmounted during initialization, aborting",
+          );
           if (player) {
             try {
               player.remove();
             } catch (err) {
-              console.error('[Ruffle] Error removing player during abort:', err);
+              console.error(
+                "[Ruffle] Error removing player during abort:",
+                err,
+              );
             }
           }
           isInitializingRef.current = false;
@@ -181,34 +194,40 @@ export function RufflePlayer({
 
         // Load SWF (check mounted again before async operation)
         if (!mounted) {
-          console.log('[Ruffle] Component unmounted before load, aborting');
+          console.log("[Ruffle] Component unmounted before load, aborting");
           if (player) {
             try {
               player.remove();
             } catch (err) {
-              console.error('[Ruffle] Error removing player during abort:', err);
+              console.error(
+                "[Ruffle] Error removing player during abort:",
+                err,
+              );
             }
           }
           isInitializingRef.current = false;
           return;
         }
 
-        console.log('[Ruffle] Loading SWF:', swfUrl);
+        console.log("[Ruffle] Loading SWF:", swfUrl);
         await player.load(swfUrl);
 
         if (mounted) {
           setIsLoading(false);
           onLoadSuccessRef.current?.();
-          console.log('[Ruffle] SWF loaded successfully');
+          console.log("[Ruffle] SWF loaded successfully");
         }
       } catch (err) {
-        console.error('[Ruffle] Error loading SWF:', err);
+        console.error("[Ruffle] Error loading SWF:", err);
 
         if (mounted) {
-          const errorMsg = err instanceof Error ? err.message : 'Failed to load Flash content';
+          const errorMsg =
+            err instanceof Error ? err.message : "Failed to load Flash content";
           setError(errorMsg);
           setIsLoading(false);
-          onLoadErrorRef.current?.(err instanceof Error ? err : new Error(errorMsg));
+          onLoadErrorRef.current?.(
+            err instanceof Error ? err : new Error(errorMsg),
+          );
         }
       } finally {
         isInitializingRef.current = false;
@@ -219,7 +238,7 @@ export function RufflePlayer({
 
     // Cleanup
     return () => {
-      console.log('[Ruffle] Cleanup: Component unmounting');
+      console.log("[Ruffle] Cleanup: Component unmounting");
       mounted = false;
       isInitializingRef.current = false;
 
@@ -227,15 +246,15 @@ export function RufflePlayer({
       const playerToCleanup = player || rufflePlayerRef.current;
       if (playerToCleanup) {
         try {
-          console.log('[Ruffle] Cleanup: Removing player instance');
+          console.log("[Ruffle] Cleanup: Removing player instance");
           // Try destroy first if available, otherwise remove
-          if (typeof playerToCleanup.destroy === 'function') {
+          if (typeof playerToCleanup.destroy === "function") {
             playerToCleanup.destroy();
           } else {
             playerToCleanup.remove();
           }
         } catch (err) {
-          console.error('[Ruffle] Error removing player:', err);
+          console.error("[Ruffle] Error removing player:", err);
         }
       }
       rufflePlayerRef.current = null;
@@ -247,21 +266,36 @@ export function RufflePlayer({
             containerRef.current.removeChild(containerRef.current.firstChild);
           }
         } catch (err) {
-          console.error('[Ruffle] Error clearing container:', err);
+          console.error("[Ruffle] Error clearing container:", err);
         }
       }
     };
   }, [swfUrl]); // Only depend on swfUrl - callbacks are stable or for logging only
 
+  // Update scale mode when it changes (requires reloading the SWF)
+  useEffect(() => {
+    if (rufflePlayerRef.current && scaleMode) {
+      const player = rufflePlayerRef.current;
+      if (player.config) {
+        player.config.scale = scaleMode;
+        player.config.forceScale = true;
+        console.log("[Ruffle] Scale mode updated to:", scaleMode);
+        // Note: Scale mode changes may require reloading the SWF to take effect
+      }
+    }
+  }, [scaleMode]);
+
   return (
-    <div className={`ruffle-player-container relative h-full overflow-hidden ${className}`}>
+    <div
+      className={`ruffle-player-container relative h-full overflow-hidden ${className}`}
+    >
       <div
         ref={containerRef}
         style={{
-          width: typeof width === 'number' ? `${width}px` : width,
-          height: typeof height === 'number' ? `${height}px` : height,
-          position: 'relative',
-          overflow: 'hidden',  // Clip any content that extends beyond container bounds
+          width: typeof width === "number" ? `${width}px` : width,
+          height: typeof height === "number" ? `${height}px` : height,
+          position: "relative",
+          overflow: "hidden", // Clip any content that extends beyond container bounds
         }}
         className="ruffle-player-wrapper"
       />
@@ -280,7 +314,9 @@ export function RufflePlayer({
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-10">
           <div className="text-center max-w-md p-6">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h3 className="text-xl font-bold text-white mb-2">Failed to Load Game</h3>
+            <h3 className="text-xl font-bold text-white mb-2">
+              Failed to Load Game
+            </h3>
             <p className="text-gray-300 mb-4">{error}</p>
             <div className="bg-gray-800 rounded p-3 mb-4">
               <p className="text-sm text-gray-400 text-left">
@@ -288,7 +324,8 @@ export function RufflePlayer({
               </p>
             </div>
             <p className="text-sm text-gray-400">
-              This game may require additional files or may not be compatible with Ruffle yet.
+              This game may require additional files or may not be compatible
+              with Ruffle yet.
             </p>
           </div>
         </div>

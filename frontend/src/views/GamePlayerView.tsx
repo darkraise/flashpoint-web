@@ -1,15 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useGame, useGameLaunchData } from '@/hooks/useGames';
 import { GamePlayer } from '@/components/player';
 import { Badge } from '@/components/ui/badge';
 import { usePlaySession } from '@/hooks/usePlayTracking';
+import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 
 export function GamePlayerView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
+  const [logoLoading, setLogoLoading] = useState(true);
 
   const { data: game, isLoading: gameLoading, error: gameError } = useGame(id!);
   const { data: launchData, isLoading: launchLoading, error: launchError } = useGameLaunchData(id!);
@@ -27,6 +30,12 @@ export function GamePlayerView() {
     }
   }, [launchData?.platform, launchData?.canPlayInBrowser]);
 
+  // Reset logo loading states when game changes
+  useEffect(() => {
+    setLogoLoading(true);
+    setLogoError(false);
+  }, [id]);
+
   // Memoize player props to prevent unnecessary re-renders
   const playerProps = useMemo(() => ({
     title: game?.title || '',
@@ -34,14 +43,20 @@ export function GamePlayerView() {
     contentUrl: launchData?.contentUrl,
     launchCommand: launchData?.launchCommand,
     canPlayInBrowser: launchData?.canPlayInBrowser || false,
-  }), [game?.title, launchData?.platform, launchData?.contentUrl, launchData?.launchCommand, launchData?.canPlayInBrowser]);
+  }), [
+    game?.title,
+    launchData?.platform,
+    launchData?.contentUrl,
+    launchData?.launchCommand,
+    launchData?.canPlayInBrowser,
+  ]);
 
   if (gameLoading || launchLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading game...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading game...</p>
         </div>
       </div>
     );
@@ -53,12 +68,12 @@ export function GamePlayerView() {
         <div className="text-center max-w-md p-6">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Failed to Load Game</h2>
-          <p className="text-gray-400 mb-6">
+          <p className="text-muted-foreground mb-6">
             {gameError?.message || launchError?.message || 'Game not found'}
           </p>
           <button
             onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-lg"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 rounded-lg"
           >
             Go Back
           </button>
@@ -75,7 +90,7 @@ export function GamePlayerView() {
       {!isFullscreen && (
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft size={20} />
           Back
@@ -83,19 +98,37 @@ export function GamePlayerView() {
       )}
 
       {/* Game Player Card - adjusts styling based on fullscreen */}
-      <div className={isFullscreen ? 'w-full h-full' : 'bg-gray-800 rounded-lg overflow-hidden shadow-xl'}>
+      <div className={isFullscreen ? 'w-full h-full' : 'bg-card rounded-lg overflow-hidden shadow-xl border border-border'}>
         {/* Game Header - only shown in normal mode */}
         {!isFullscreen && (
-          <div className="px-6 py-4 border-b border-gray-700">
-            <div className="flex items-start justify-between gap-4">
-              <div>
+          <div className="px-6 py-4 border-b border-border">
+            <div className="flex items-start gap-4">
+              {/* Game Logo */}
+              {game.logoPath && !logoError && (
+                <div className="flex-shrink-0 w-16 h-16 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-1.5 relative">
+                  {logoLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
+                      <Loader2 size={16} className="text-muted-foreground animate-spin" />
+                    </div>
+                  )}
+                  <img
+                    src={`/proxy/images/${game.logoPath}`}
+                    alt={`${game.title} logo`}
+                    className="w-full h-full object-contain relative z-10"
+                    onLoad={() => setLogoLoading(false)}
+                    onError={() => {
+                      setLogoError(true);
+                      setLogoLoading(false);
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="flex-1">
                 <h1 className="text-2xl font-bold mb-1">{game.title}</h1>
                 {game.developer && (
-                  <p className="text-gray-400 text-sm">by {game.developer}</p>
+                  <p className="text-muted-foreground text-sm">by {game.developer}</p>
                 )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="platform">{launchData.platform}</Badge>
               </div>
             </div>
           </div>
@@ -118,31 +151,14 @@ export function GamePlayerView() {
         {/* Game Info Below Player - only shown in normal mode */}
         {!isFullscreen && (
           <div className="px-6 py-6 space-y-6">
-            {/* Quick Info Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-gray-700">
-              <div>
-                <dt className="text-sm text-gray-400 mb-1">Developer</dt>
-                <dd className="font-medium text-sm">{game.developer || 'Unknown'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-400 mb-1">Publisher</dt>
-                <dd className="font-medium text-sm">{game.publisher || 'Unknown'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-400 mb-1">Play Mode</dt>
-                <dd className="font-medium text-sm">{launchData.playMode || 'Single Player'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-400 mb-1">Released</dt>
-                <dd className="font-medium text-sm">{game.releaseDate || 'Unknown'}</dd>
-              </div>
-            </div>
+            {/* Game Info Grid */}
+            <GameInfoGrid game={game} launchData={launchData} />
 
             {/* Description */}
             {game.originalDescription && (
               <div>
                 <h2 className="text-lg font-semibold mb-2">Description</h2>
-                <p className="text-gray-300 leading-relaxed">{game.originalDescription}</p>
+                <p className="leading-relaxed">{game.originalDescription}</p>
               </div>
             )}
 
@@ -160,9 +176,9 @@ export function GamePlayerView() {
 
             {/* Notes */}
             {game.notes && (
-              <div className="bg-gray-900/50 rounded p-4">
-                <h3 className="text-sm font-semibold text-gray-400 mb-1">Notes</h3>
-                <p className="text-sm text-gray-300">{game.notes}</p>
+              <div className="bg-muted/50 rounded p-4">
+                <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
+                <p className="text-sm">{game.notes}</p>
               </div>
             )}
           </div>

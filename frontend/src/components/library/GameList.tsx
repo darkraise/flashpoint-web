@@ -4,13 +4,13 @@ import { useUIStore } from '@/store/ui';
 
 interface GameListProps {
   games: Game[];
-  onAddToPlaylist?: (gameId: string) => void;
-  onToggleFavorite?: (gameId: string) => void;
-  favoritedGameIds?: Set<string>;
-  showFavoriteOnHoverOnly?: boolean;
+  showFavoriteButton?: boolean;
+  showAddToPlaylistButton?: boolean;
+  favoriteGameIds?: Set<string>; // Optional: for performance optimization
+  isFavoritePage?: boolean;
 }
 
-export function GameList({ games, onAddToPlaylist, onToggleFavorite, favoritedGameIds, showFavoriteOnHoverOnly = false }: GameListProps) {
+export function GameList({ games, showFavoriteButton = true, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false }: GameListProps) {
   const listColumns = useUIStore((state) => state.listColumns);
 
   if (games.length === 0) {
@@ -23,10 +23,10 @@ export function GameList({ games, onAddToPlaylist, onToggleFavorite, favoritedGa
 
   // Dynamic grid classes based on column count
   const gridClasses = {
-    1: 'grid grid-cols-1 gap-2',
-    2: 'grid grid-cols-1 md:grid-cols-2 gap-2',
-    3: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2',
-    4: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2'
+    1: 'grid grid-cols-1 gap-3',
+    2: 'grid grid-cols-1 md:grid-cols-2 gap-3',
+    3: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3',
+    4: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
   };
 
   return (
@@ -35,10 +35,12 @@ export function GameList({ games, onAddToPlaylist, onToggleFavorite, favoritedGa
         <GameListItem
           key={game.id}
           game={game}
-          onAddToPlaylist={onAddToPlaylist}
-          onToggleFavorite={onToggleFavorite}
-          isFavorited={favoritedGameIds?.has(game.id) || false}
-          showFavoriteOnHoverOnly={showFavoriteOnHoverOnly}
+          showFavoriteButton={showFavoriteButton}
+          showRemoveButton={isFavoritePage}
+          showFavoriteIndicator={!isFavoritePage}
+          showAddToPlaylistButton={showAddToPlaylistButton}
+          favoriteGameIds={favoriteGameIds}
+          isFavoritePage={isFavoritePage}
         />
       ))}
     </div>

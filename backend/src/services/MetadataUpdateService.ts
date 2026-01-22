@@ -71,14 +71,18 @@ export class MetadataUpdateService {
 
       // Get ACTUAL update counts from FPFSS API (like the Launcher does)
       const gamesUpdateCount = await this.getUpdateCount(source, 'games');
-      const tagsUpdateCount = await this.getUpdateCount(source, 'tags');
+
+      // Note: Tags are embedded in game records (game.tagsStr), not separate entities
+      // The tags/updates endpoint may not exist or may not be reliable
+      // For now, we skip tag update checks as they're synced via game data
+      const tagsUpdateCount = 0;
 
       const gamesUpdateAvailable = gamesUpdateCount > 0;
       const tagsUpdateAvailable = tagsUpdateCount > 0;
       const hasUpdates = gamesUpdateAvailable || tagsUpdateAvailable;
 
       logger.info(`[MetadataUpdate] Games: ${gamesUpdateCount} updates available`);
-      logger.info(`[MetadataUpdate] Tags: ${tagsUpdateCount} updates available`);
+      logger.info(`[MetadataUpdate] Tags: ${tagsUpdateCount} updates available (synced via game records)`);
 
       return {
         hasUpdates,

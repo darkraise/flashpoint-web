@@ -3,6 +3,9 @@ import { updateService } from '../services/UpdateService';
 import { MetadataUpdateService } from '../services/MetadataUpdateService';
 import { MetadataSyncService } from '../services/MetadataSyncService';
 import { SyncStatusService } from '../services/SyncStatusService';
+import { authenticate } from '../middleware/auth';
+import { requirePermission } from '../middleware/rbac';
+import { logActivity } from '../middleware/activityLogger';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -27,31 +30,47 @@ router.get('/check', async (req, res, next) => {
 /**
  * POST /api/updates/install
  * Install available updates
+ *
+ * Requires: Admin permission (settings.update)
  */
-router.post('/install', async (req, res, next) => {
-  try {
-    logger.info('[Updates API] Installing updates...');
-    const result = await updateService.installUpdates();
-    res.json(result);
-  } catch (error) {
-    logger.error('[Updates API] Error installing updates:', error);
-    next(error);
+router.post(
+  '/install',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('updates.install', 'system'),
+  async (req, res, next) => {
+    try {
+      logger.info(`[Updates API] Installing updates (requested by ${req.user?.username})...`);
+      const result = await updateService.installUpdates();
+      res.json(result);
+    } catch (error) {
+      logger.error('[Updates API] Error installing updates:', error);
+      next(error);
+    }
   }
-});
+);
 
 /**
  * GET /api/updates/system-info
  * Get system information for debugging
+ *
+ * Requires: Admin permission (settings.update)
  */
-router.get('/system-info', async (req, res, next) => {
-  try {
-    const systemInfo = await updateService.getSystemInfo();
-    res.json(systemInfo);
-  } catch (error) {
-    logger.error('[Updates API] Error getting system info:', error);
-    next(error);
+router.get(
+  '/system-info',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('updates.system_info', 'system'),
+  async (req, res, next) => {
+    try {
+      const systemInfo = await updateService.getSystemInfo();
+      res.json(systemInfo);
+    } catch (error) {
+      logger.error('[Updates API] Error getting system info:', error);
+      next(error);
+    }
   }
-});
+);
 
 /**
  * GET /api/updates/metadata
@@ -74,39 +93,47 @@ router.get('/metadata', async (req, res, next) => {
  * Start metadata sync in background (non-blocking)
  * Returns immediately with sync started status
  * Frontend should poll /api/updates/metadata/sync/status for progress
+ *
+ * Requires: Admin permission (settings.update)
  */
-router.post('/metadata/sync', async (req, res, next) => {
-  try {
-    const syncStatus = SyncStatusService.getInstance();
+router.post(
+  '/metadata/sync',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('updates.metadata_sync', 'system'),
+  async (req, res, next) => {
+    try {
+      const syncStatus = SyncStatusService.getInstance();
 
-    // Check if sync is already running
-    if (syncStatus.isRunning()) {
-      return res.status(409).json({
-        success: false,
-        error: 'Sync already in progress',
+      // Check if sync is already running
+      if (syncStatus.isRunning()) {
+        return res.status(409).json({
+          success: false,
+          error: 'Sync already in progress',
+          status: syncStatus.getStatus()
+        });
+      }
+
+      logger.info(`[Updates API] Starting metadata sync in background (requested by ${req.user?.username})...`);
+
+      // Start sync in background (don't await - let it run async)
+      metadataSyncService.syncMetadata()
+        .catch((error) => {
+          logger.error('[Updates API] Background sync error:', error);
+        });
+
+      // Return immediately
+      res.json({
+        success: true,
+        message: 'Sync started',
         status: syncStatus.getStatus()
       });
+    } catch (error) {
+      logger.error('[Updates API] Error starting metadata sync:', error);
+      next(error);
     }
-
-    logger.info('[Updates API] Starting metadata sync in background...');
-
-    // Start sync in background (don't await - let it run async)
-    metadataSyncService.syncMetadata()
-      .catch((error) => {
-        logger.error('[Updates API] Background sync error:', error);
-      });
-
-    // Return immediately
-    res.json({
-      success: true,
-      message: 'Sync started',
-      status: syncStatus.getStatus()
-    });
-  } catch (error) {
-    logger.error('[Updates API] Error starting metadata sync:', error);
-    next(error);
   }
-});
+);
 
 /**
  * GET /api/updates/metadata/sync/status

@@ -5,7 +5,7 @@ dotenv.config();
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parseInt(process.env.PORT || '3100', 10),
   host: process.env.HOST || '0.0.0.0',
 
   // Flashpoint paths

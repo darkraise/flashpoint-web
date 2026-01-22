@@ -35,7 +35,7 @@ export const logActivity = (action: string, resource?: string) => {
       });
 
       // Call original end function
-      return originalEnd.apply(this, args);
+      return originalEnd.apply(this, args as any);
     };
 
     next();

@@ -11,18 +11,34 @@ import statisticsRouter from './statistics';
 import downloadsRouter from './downloads';
 import databaseRouter from './database';
 import authRouter from './auth';
+import errorsRouter from './errors';
 import usersRouter from './users';
 import rolesRouter from './roles';
 import activitiesRouter from './activities';
 import authSettingsRouter from './auth-settings';
+import systemSettingsRouter from './system-settings';
+import jobsRouter from './jobs';
 import playTrackingRouter from './play-tracking';
+import userPlaylistsRouter from './user-playlists';
+import favoritesRouter from './favorites';
+import ruffleRouter from './ruffle';
 
 export function setupRoutes(app: Express): void {
   // Authentication routes
   app.use('/api/auth', authRouter);
 
+  // Error reporting routes
+  app.use('/api/errors', errorsRouter);
+
   // Settings routes
   app.use('/api/settings/auth', authSettingsRouter);
+  app.use('/api/settings', systemSettingsRouter);
+
+  // Ruffle management routes
+  app.use('/api/ruffle', ruffleRouter);
+
+  // Jobs routes
+  app.use('/api/jobs', jobsRouter);
 
   // User management routes
   app.use('/api/users', usersRouter);
@@ -31,6 +47,10 @@ export function setupRoutes(app: Express): void {
 
   // Play tracking routes
   app.use('/api/play', playTrackingRouter);
+
+  // User playlists and favorites
+  app.use('/api/user-playlists', userPlaylistsRouter);
+  app.use('/api/favorites', favoritesRouter);
 
   // API routes
   app.use('/api/games', gamesRouter);

@@ -40,7 +40,7 @@ router.patch(
   '/',
   authenticate,
   requirePermission('settings.update'),
-  logActivity('settings.update', 'auth_settings'),
+  logActivity('settings.update', 'system_settings'),
   async (req, res, next) => {
     try {
       const data = updateSettingsSchema.parse(req.body);

@@ -1,177 +1,196 @@
-import { useState, useMemo, useEffect } from 'react';
-import { ListPlus, Check } from 'lucide-react';
-import { usePlaylists, useAddGamesToPlaylist, FAVORITES_PLAYLIST_ID } from '@/hooks/usePlaylists';
-import { useDialog } from '@/contexts/DialogContext';
+import { useState } from 'react';
+import { Plus, ListVideo } from 'lucide-react';
+import { useUserPlaylists, useAddGamesToUserPlaylist } from '@/hooks/useUserPlaylists';
+import { useAuthStore } from '@/store/auth';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
+  DialogBody,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { CreateUserPlaylistDialog } from './CreateUserPlaylistDialog';
+import { UserPlaylist } from '@/types/playlist';
+import { toast } from 'sonner';
 
 interface AddToPlaylistModalProps {
   isOpen: boolean;
   onClose: () => void;
-  gameIds: string[];
+  gameId: string;
+  gameTitle?: string;
 }
 
-export function AddToPlaylistModal({ isOpen, onClose, gameIds }: AddToPlaylistModalProps) {
-  const [selectedPlaylists, setSelectedPlaylists] = useState<string[]>([]);
-  const { data: allPlaylists, isLoading } = usePlaylists();
-  const addGames = useAddGamesToPlaylist();
-  const { showToast } = useDialog();
+export function AddToPlaylistModal({
+  isOpen,
+  onClose,
+  gameId,
+  gameTitle,
+}: AddToPlaylistModalProps) {
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+  const [selectedPlaylists, setSelectedPlaylists] = useState<Set<number>>(new Set());
 
-  // Reset selection when gameIds change
-  useEffect(() => {
-    setSelectedPlaylists([]);
-  }, [gameIds]);
+  const { isAuthenticated } = useAuthStore();
+  // Only fetch playlists when modal is open to avoid unnecessary API calls
+  const { data: playlists = [], isLoading } = useUserPlaylists(isOpen);
+  const addGamesMutation = useAddGamesToUserPlaylist();
 
-  // Filter out playlists that already contain all the selected games
-  // Also filter out the Favorites playlist
-  const availablePlaylists = useMemo(() => {
-    if (!allPlaylists) return [];
-
-    return allPlaylists.filter(playlist => {
-      // Exclude Favorites playlist
-      if (playlist.id === FAVORITES_PLAYLIST_ID) return false;
-
-      // Get playlist's game IDs
-      const playlistGameIds = new Set(playlist.gameIds || []);
-
-      // For single game: exclude if playlist already contains it
-      if (gameIds.length === 1) {
-        return !playlistGameIds.has(gameIds[0]);
+  // Initialize state when opening
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      // Check authentication
+      if (!isAuthenticated) {
+        toast.error('Please log in to add games to playlists');
+        onClose();
+        return;
       }
 
-      // For multiple games: exclude if playlist already contains ALL of them
-      const allGamesInPlaylist = gameIds.every(gameId => playlistGameIds.has(gameId));
-      return !allGamesInPlaylist;
-    });
-  }, [allPlaylists, gameIds]);
+      // Reset selected playlists
+      setSelectedPlaylists(new Set());
+    }
+    if (!open) {
+      onClose();
+    }
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const togglePlaylist = (playlistId: number) => {
+    const newSelected = new Set(selectedPlaylists);
 
-    if (selectedPlaylists.length === 0) {
-      showToast('Please select at least one playlist', 'info');
+    if (newSelected.has(playlistId)) {
+      newSelected.delete(playlistId);
+    } else {
+      newSelected.add(playlistId);
+    }
+
+    setSelectedPlaylists(newSelected);
+  };
+
+  const handleSave = async () => {
+    if (selectedPlaylists.size === 0) {
+      toast.info('Please select at least one playlist');
       return;
     }
 
     try {
-      // Add games to all selected playlists
-      for (const playlistId of selectedPlaylists) {
-        await addGames.mutateAsync({
-          playlistId,
-          gameIds
-        });
-      }
+      const promises = Array.from(selectedPlaylists).map((playlistId) =>
+        addGamesMutation.mutateAsync({ id: playlistId, gameIds: [gameId] })
+      );
 
-      setSelectedPlaylists([]);
+      await Promise.all(promises);
+
+      toast.success(`Added to ${selectedPlaylists.size} playlist${selectedPlaylists.size > 1 ? 's' : ''}`);
+
       onClose();
-
-      showToast(`Successfully added ${gameIds.length} game(s) to ${selectedPlaylists.length} playlist(s)`, 'success');
-    } catch (error) {
-      console.error('Failed to add games to playlist:', error);
-      showToast('Failed to add games to playlist. Please try again.', 'error');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error?.message || 'Failed to add to playlists');
     }
   };
 
+  const handleCreatePlaylistSuccess = (playlist: UserPlaylist) => {
+    setIsCreatingPlaylist(false);
+    // Automatically select the newly created playlist
+    const newSelected = new Set(selectedPlaylists);
+    newSelected.add(playlist.id);
+    setSelectedPlaylists(newSelected);
+
+    toast.success('Playlist created');
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <ListPlus size={24} className="text-primary-400" />
+    <>
+      <Dialog open={isOpen && !isCreatingPlaylist} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
             <DialogTitle>Add to Playlist</DialogTitle>
-          </div>
-          <DialogDescription>
-            Adding {gameIds.length} game{gameIds.length !== 1 ? 's' : ''} to playlist
-          </DialogDescription>
-        </DialogHeader>
+            <DialogDescription>
+              {gameTitle ? `Select playlists to add "${gameTitle}" to` : 'Select playlists for this game'}
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Select Playlist
-            </label>
+          <DialogBody className="space-y-4">
+            {/* Create New Playlist Button */}
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => setIsCreatingPlaylist(true)}
+            >
+              <Plus size={18} />
+              Create New Playlist
+            </Button>
 
+            {/* Playlists List */}
             {isLoading ? (
-              <div className="text-center py-4 text-gray-400">Loading playlists...</div>
-            ) : availablePlaylists.length > 0 ? (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {availablePlaylists.map((playlist) => {
-                  const isSelected = selectedPlaylists.includes(playlist.id);
-
-                  return (
-                    <label
-                      key={playlist.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        isSelected
-                          ? 'bg-primary-600'
-                          : 'bg-gray-700 hover:bg-gray-600'
-                      }`}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked: boolean) => {
-                          if (checked) {
-                            setSelectedPlaylists([...selectedPlaylists, playlist.id]);
-                          } else {
-                            setSelectedPlaylists(selectedPlaylists.filter(id => id !== playlist.id));
-                          }
-                        }}
-                      />
-                      <div className="flex-1 flex items-center justify-between">
-                        <p className="font-medium">{playlist.title}</p>
-                        <p className="text-xs text-gray-400">
-                          {playlist.gameIds?.length || 0} games
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <Check size={18} className="text-white flex-shrink-0" />
-                      )}
-                    </label>
-                  );
-                })}
+              <div className="text-center py-8 text-muted-foreground">
+                Loading playlists...
+              </div>
+            ) : playlists.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ListVideo size={48} className="mx-auto mb-2 opacity-50" />
+                <p>No playlists yet</p>
+                <p className="text-sm">Create your first playlist to get started</p>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-400">
-                <p>
-                  {gameIds.length === 1
-                    ? 'This game is already in all your playlists'
-                    : 'These games are already in all your playlists'}
-                </p>
-                <p className="text-sm mt-1">Create a new playlist to add them</p>
-              </div>
-            )}
-          </div>
+              <ScrollArea className="h-[300px] pr-4">
+                <div className="space-y-2">
+                  {playlists.map((playlist) => {
+                    const isSelected = selectedPlaylists.has(playlist.id);
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={selectedPlaylists.length === 0 || addGames.isPending}
-            >
-              {addGames.isPending
-                ? 'Adding...'
-                : selectedPlaylists.length > 0
-                  ? `Add to ${selectedPlaylists.length} Playlist${selectedPlaylists.length !== 1 ? 's' : ''}`
-                  : 'Add to Playlist'
-              }
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+                    return (
+                      <div
+                        key={playlist.id}
+                        className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer"
+                        onClick={() => togglePlaylist(playlist.id)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => togglePlaylist(playlist.id)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {playlist.title}
+                          </p>
+                          {playlist.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {playlist.description}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={selectedPlaylists.size === 0 || addGamesMutation.isPending}
+              >
+                {addGamesMutation.isPending ? 'Adding...' : 'Add to Playlists'}
+              </Button>
+            </div>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Playlist Dialog */}
+      <CreateUserPlaylistDialog
+        isOpen={isCreatingPlaylist}
+        onClose={() => setIsCreatingPlaylist(false)}
+        onSuccess={handleCreatePlaylistSuccess}
+      />
+    </>
   );
 }

@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
-import { Header } from './Header';
-import { Sidebar } from './Sidebar';
-import { useUIStore } from '@/store/ui';
+import { ReactNode } from "react";
+import { Header } from "./Header";
+import { Sidebar } from "./Sidebar";
+import { useUIStore } from "@/store/ui";
 
 interface AppShellProps {
   children: ReactNode;
@@ -17,7 +17,7 @@ export function AppShell({ children }: AppShellProps) {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar isOpen={sidebarOpen} />
 
-        <main className="flex-1 overflow-auto bg-background pt-6">
+        <main className="flex-1 overflow-auto bg-background p-6">
           {children}
         </main>
       </div>

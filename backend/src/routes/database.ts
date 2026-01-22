@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { DatabaseService } from '../services/DatabaseService';
+import { authenticate } from '../middleware/auth';
+import { requirePermission } from '../middleware/rbac';
+import { logActivity } from '../middleware/activityLogger';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -12,11 +15,20 @@ const router = Router();
  * and you want to see changes immediately without waiting
  * for the automatic file watcher.
  *
+ * Requires: Admin permission (settings.update)
+ *
  * Responses:
  * - 200: Database reloaded successfully
+ * - 401: Not authenticated
+ * - 403: Insufficient permissions
  * - 500: Failed to reload database
  */
-router.post('/reload', async (req: Request, res: Response) => {
+router.post(
+  '/reload',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('database.reload', 'database'),
+  async (req: Request, res: Response) => {
   try {
     logger.info('Manual database reload requested');
 
@@ -33,7 +45,8 @@ router.post('/reload', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+  }
+);
 
 /**
  * GET /api/database/status
@@ -42,11 +55,20 @@ router.post('/reload', async (req: Request, res: Response) => {
  * Returns information about the database connection,
  * file size, and last modification time.
  *
+ * Requires: Admin permission (settings.update)
+ *
  * Responses:
  * - 200: Status information
+ * - 401: Not authenticated
+ * - 403: Insufficient permissions
  * - 500: Error getting status
  */
-router.get('/status', async (req: Request, res: Response) => {
+router.get(
+  '/status',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('database.status', 'database'),
+  async (req: Request, res: Response) => {
   try {
     const fs = require('fs');
     const { config } = require('../config');
@@ -69,6 +91,7 @@ router.get('/status', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+  }
+);
 
 export default router;

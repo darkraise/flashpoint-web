@@ -46,6 +46,11 @@ export interface PaginatedResult<T> {
 export interface GameFilters {
   search?: string;
   platform?: string;
+  series?: string;        // Comma-separated series
+  developers?: string;    // Comma-separated developers
+  publishers?: string;    // Comma-separated publishers
+  playModes?: string;     // Comma-separated play modes
+  languages?: string;     // Comma-separated languages
   library?: string;
   tags?: string;
   yearFrom?: number;
@@ -54,7 +59,17 @@ export interface GameFilters {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
-  webPlayableOnly?: boolean;
+}
+
+export interface FilterOptions {
+  series: Array<{ name: string; count: number }>;
+  developers: Array<{ name: string; count: number }>;
+  publishers: Array<{ name: string; count: number }>;
+  playModes: Array<{ name: string; count: number }>;
+  languages: Array<{ name: string; count: number }>;
+  tags: Array<{ name: string; count: number }>;
+  platforms: Array<{ name: string; count: number }>;
+  yearRange: { min: number; max: number };
 }
 
 export interface Playlist {

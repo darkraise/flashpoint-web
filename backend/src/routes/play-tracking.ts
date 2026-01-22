@@ -1,14 +1,20 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { PlayTrackingService } from '../services/PlayTrackingService';
 import { authenticate } from '../middleware/auth';
+import { requirePermission } from '../middleware/rbac';
+import { requireFeature } from '../middleware/featureFlags';
 import { AppError } from '../middleware/errorHandler';
 import { logActivity } from '../middleware/activityLogger';
 
 const router = Router();
 const playTrackingService = new PlayTrackingService();
 
-// All routes require authentication
+// Apply feature flag check to all routes in this router
+router.use(requireFeature('enableStatistics'));
+
+// All routes require authentication and games.play permission
 router.use(authenticate);
+router.use(requirePermission('games.play'));
 
 /**
  * POST /api/play/start

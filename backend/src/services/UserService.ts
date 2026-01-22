@@ -1,8 +1,10 @@
 import { UserDatabaseService } from './UserDatabaseService';
+import { PermissionCache } from './PermissionCache';
 import { hashPassword } from '../utils/password';
 import { AppError } from '../middleware/errorHandler';
 import { User, CreateUserData, UpdateUserData } from '../types/auth';
 import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../utils/pagination';
+import { logger } from '../utils/logger';
 
 export class UserService {
   /**
@@ -14,8 +16,7 @@ export class UserService {
     const users = UserDatabaseService.all(
       `SELECT u.id, u.username, u.email, u.role_id as roleId, r.name as roleName,
               u.is_active as isActive, u.created_at as createdAt,
-              u.updated_at as updatedAt, u.last_login_at as lastLoginAt,
-              u.theme_color as themeColor, u.surface_color as surfaceColor
+              u.updated_at as updatedAt, u.last_login_at as lastLoginAt
        FROM users u
        JOIN roles r ON u.role_id = r.id
        ORDER BY u.created_at DESC
@@ -35,8 +36,7 @@ export class UserService {
     const user = UserDatabaseService.get(
       `SELECT u.id, u.username, u.email, u.role_id as roleId, r.name as roleName,
               u.is_active as isActive, u.created_at as createdAt,
-              u.updated_at as updatedAt, u.last_login_at as lastLoginAt,
-              u.theme_color as themeColor, u.surface_color as surfaceColor
+              u.updated_at as updatedAt, u.last_login_at as lastLoginAt
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ?`,
@@ -131,6 +131,12 @@ export class UserService {
       params
     );
 
+    // Invalidate permission cache if role changed
+    if (data.roleId !== undefined) {
+      PermissionCache.invalidateUser(id);
+      logger.info(`[UserService] User ${id} role changed, permission cache invalidated`);
+    }
+
     return (await this.getUserById(id))!;
   }
 
@@ -189,24 +195,89 @@ export class UserService {
   }
 
   /**
-   * Update user theme color
+   * Update user theme color (DEPRECATED - columns removed)
+   * This method is kept for backward compatibility but does nothing
+   * Use updateThemeSettings() instead which stores in user_settings table
+   * @deprecated Use updateThemeSettings() instead
    */
   async updateUserTheme(id: number, themeColor: string, surfaceColor?: string): Promise<void> {
     const user = await this.getUserById(id);
     if (!user) {
       throw new AppError(404, 'User not found');
     }
+    // No-op: theme_color and surface_color columns no longer exist
+    // Theme settings are now stored in user_settings table
+  }
 
-    if (surfaceColor !== undefined) {
-      UserDatabaseService.run(
-        "UPDATE users SET theme_color = ?, surface_color = ?, updated_at = datetime('now') WHERE id = ?",
-        [themeColor, surfaceColor, id]
-      );
-    } else {
-      UserDatabaseService.run(
-        "UPDATE users SET theme_color = ?, updated_at = datetime('now') WHERE id = ?",
-        [themeColor, id]
-      );
+  /**
+   * Get user setting by key
+   */
+  async getUserSetting(userId: number, key: string): Promise<string | null> {
+    const result = UserDatabaseService.get(
+      `SELECT setting_value FROM user_settings
+       WHERE user_id = ? AND setting_key = ?`,
+      [userId, key]
+    );
+    return result?.setting_value ?? null;
+  }
+
+  /**
+   * Get all settings for a user
+   */
+  async getUserSettings(userId: number): Promise<Record<string, string>> {
+    const results = UserDatabaseService.all(
+      `SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?`,
+      [userId]
+    );
+
+    return results.reduce((acc: Record<string, string>, row: any) => {
+      acc[row.setting_key] = row.setting_value;
+      return acc;
+    }, {} as Record<string, string>);
+  }
+
+  /**
+   * Set user setting (upsert)
+   */
+  async setUserSetting(userId: number, key: string, value: string): Promise<void> {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new AppError(404, 'User not found');
     }
+
+    UserDatabaseService.run(
+      `INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at)
+       VALUES (?, ?, ?, datetime('now'))
+       ON CONFLICT(user_id, setting_key)
+       DO UPDATE SET setting_value = excluded.setting_value,
+                     updated_at = datetime('now')`,
+      [userId, key, value]
+    );
+  }
+
+  /**
+   * Update theme settings in user_settings table
+   */
+  async updateThemeSettings(userId: number, mode: string, primaryColor: string): Promise<void> {
+    const user = await this.getUserById(userId);
+    if (!user) {
+      throw new AppError(404, 'User not found');
+    }
+
+    await this.setUserSetting(userId, 'theme_mode', mode);
+    await this.setUserSetting(userId, 'primary_color', primaryColor);
+  }
+
+  /**
+   * Get theme settings from user_settings table
+   */
+  async getThemeSettings(userId: number): Promise<{ mode: string; primaryColor: string }> {
+    const mode = await this.getUserSetting(userId, 'theme_mode');
+    const primaryColor = await this.getUserSetting(userId, 'primary_color');
+
+    return {
+      mode: mode || 'dark',
+      primaryColor: primaryColor || 'blue'
+    };
   }
 }

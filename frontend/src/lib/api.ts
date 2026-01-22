@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Game, PaginatedResult, GameFilters, Playlist, GameLaunchData } from '@/types/game';
+import { Game, PaginatedResult, GameFilters, FilterOptions, Playlist, GameLaunchData } from '@/types/game';
 import {
   LoginCredentials,
   RegisterData,
@@ -30,6 +30,24 @@ import {
   PlayActivityData,
   GameDistribution
 } from '@/types/play-tracking';
+import {
+  UserPlaylist,
+  CreatePlaylistData,
+  UpdatePlaylistData,
+  PlaylistStats
+} from '@/types/playlist';
+import {
+  Favorite,
+  FavoriteGame,
+  FavoriteGameIdsResponse,
+  FavoritesStats,
+  ToggleFavoriteResponse,
+  AddFavoriteResponse,
+  BatchAddFavoritesResponse,
+  BatchRemoveFavoritesResponse,
+  ClearAllFavoritesResponse
+} from '@/types/favorite';
+import { JobStatusEnriched, JobLogsResponse } from '@/types/jobs';
 import { useAuthStore } from '@/store/auth';
 
 const api = axios.create({
@@ -42,6 +60,11 @@ const api = axios.create({
 export const gamesApi = {
   search: async (filters: GameFilters): Promise<PaginatedResult<Game>> => {
     const { data } = await api.get<PaginatedResult<Game>>('/games', { params: filters });
+    return data;
+  },
+
+  getFilterOptions: async (): Promise<FilterOptions> => {
+    const { data } = await api.get<FilterOptions>('/games/filter-options');
     return data;
   },
 
@@ -223,6 +246,7 @@ export const usersApi = {
     return data;
   },
 
+  // Legacy theme methods (kept for backward compatibility)
   getTheme: async (): Promise<{ themeColor: string; surfaceColor: string }> => {
     const { data } = await api.get('/users/me/theme');
     return data;
@@ -230,6 +254,34 @@ export const usersApi = {
 
   updateTheme: async (themeColor: string, surfaceColor: string): Promise<{ success: boolean; themeColor: string; surfaceColor: string }> => {
     const { data } = await api.patch('/users/me/theme', { themeColor, surfaceColor });
+    return data;
+  },
+
+  // Theme settings methods (uses generic settings endpoint)
+  getThemeSettings: async (): Promise<{ mode: string; primaryColor: string }> => {
+    const settings = await usersApi.getAllSettings();
+    return {
+      mode: settings.theme_mode || 'dark',
+      primaryColor: settings.primary_color || 'blue'
+    };
+  },
+
+  updateThemeSettings: async (mode: string, primaryColor: string): Promise<{ mode: string; primaryColor: string }> => {
+    await usersApi.updateSettings({
+      theme_mode: mode,
+      primary_color: primaryColor
+    });
+    return { mode, primaryColor };
+  },
+
+  // Generic settings methods for future extensibility
+  getAllSettings: async (): Promise<Record<string, string>> => {
+    const { data } = await api.get('/users/me/settings');
+    return data;
+  },
+
+  updateSettings: async (settings: Record<string, string>): Promise<Record<string, string>> => {
+    const { data } = await api.patch('/users/me/settings', settings);
     return data;
   }
 };
@@ -305,6 +357,52 @@ export const authSettingsApi = {
 };
 
 // ===================================
+// System Settings API
+// ===================================
+
+export const systemSettingsApi = {
+  getAll: async (): Promise<Record<string, Record<string, any>>> => {
+    const { data } = await api.get('/settings');
+    return data;
+  },
+
+  getPublic: async (): Promise<Record<string, any>> => {
+    const { data } = await api.get('/settings/public');
+    return data;
+  },
+
+  getCategory: async (category: string): Promise<Record<string, any>> => {
+    const { data } = await api.get(`/settings/${category}`);
+    return data;
+  },
+
+  updateCategory: async (category: string, settings: Record<string, any>): Promise<Record<string, any>> => {
+    const { data } = await api.patch(`/settings/${category}`, settings);
+    return data;
+  },
+
+  getSetting: async (category: string, key: string): Promise<{ value: any }> => {
+    const { data } = await api.get(`/settings/${category}/${key}`);
+    return data;
+  },
+
+  updateSetting: async (category: string, key: string, value: any): Promise<{ value: any }> => {
+    const { data } = await api.patch(`/settings/${category}/${key}`, { value });
+    return data;
+  },
+
+  getCacheStats: async (): Promise<{ keyCount: number; categoryCount: number; hitRate: number; size: number }> => {
+    const { data } = await api.get('/settings/_cache/stats');
+    return data;
+  },
+
+  clearCache: async (category?: string): Promise<{ message: string }> => {
+    const { data } = await api.post('/settings/_cache/clear', { category });
+    return data;
+  }
+};
+
+// ===================================
 // Play Tracking API
 // ===================================
 
@@ -366,6 +464,201 @@ export const playTrackingApi = {
 };
 
 // ===================================
+// User Playlists API
+// ===================================
+
+export const userPlaylistsApi = {
+  getAll: async (): Promise<UserPlaylist[]> => {
+    const { data } = await api.get<UserPlaylist[]>('/user-playlists');
+    return data;
+  },
+
+  getStats: async (): Promise<PlaylistStats> => {
+    const { data } = await api.get<PlaylistStats>('/user-playlists/stats');
+    return data;
+  },
+
+  getById: async (id: number): Promise<UserPlaylist> => {
+    const { data } = await api.get<UserPlaylist>(`/user-playlists/${id}`);
+    return data;
+  },
+
+  getGames: async (id: number): Promise<Game[]> => {
+    const { data } = await api.get<Game[]>(`/user-playlists/${id}/games`);
+    return data;
+  },
+
+  create: async (playlistData: CreatePlaylistData): Promise<UserPlaylist> => {
+    const { data } = await api.post<UserPlaylist>('/user-playlists', playlistData);
+    return data;
+  },
+
+  update: async (id: number, playlistData: UpdatePlaylistData): Promise<UserPlaylist> => {
+    const { data } = await api.patch<UserPlaylist>(`/user-playlists/${id}`, playlistData);
+    return data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/user-playlists/${id}`);
+  },
+
+  addGames: async (id: number, gameIds: string[]): Promise<void> => {
+    await api.post(`/user-playlists/${id}/games`, { gameIds });
+  },
+
+  removeGames: async (id: number, gameIds: string[]): Promise<void> => {
+    await api.delete(`/user-playlists/${id}/games`, { data: { gameIds } });
+  },
+
+  reorderGames: async (id: number, gameIdOrder: string[]): Promise<void> => {
+    await api.put(`/user-playlists/${id}/games/reorder`, { gameIdOrder });
+  },
+
+  copyFlashpointPlaylist: async (flashpointPlaylistId: string, newTitle?: string): Promise<UserPlaylist> => {
+    const { data } = await api.post<UserPlaylist>('/user-playlists/copy-flashpoint', {
+      flashpointPlaylistId,
+      newTitle
+    });
+    return data;
+  }
+};
+
+// ===================================
+// Favorites API
+// ===================================
+
+export const favoritesApi = {
+  getAll: async (limit?: number, offset?: number): Promise<Favorite[]> => {
+    const { data } = await api.get<Favorite[]>('/favorites', {
+      params: { limit, offset }
+    });
+    return data;
+  },
+
+  getGameIds: async (): Promise<string[]> => {
+    const { data } = await api.get<FavoriteGameIdsResponse>('/favorites/game-ids');
+    return data.gameIds;
+  },
+
+  getGames: async (limit?: number, offset?: number, sortBy?: 'title' | 'dateAdded', sortOrder?: 'asc' | 'desc'): Promise<FavoriteGame[]> => {
+    const { data } = await api.get<FavoriteGame[]>('/favorites/games', {
+      params: { limit, offset, sortBy, sortOrder }
+    });
+    return data;
+  },
+
+  getStats: async (): Promise<FavoritesStats> => {
+    const { data } = await api.get<FavoritesStats>('/favorites/stats');
+    return data;
+  },
+
+  toggle: async (gameId: string): Promise<boolean> => {
+    const { data } = await api.post<ToggleFavoriteResponse>('/favorites/toggle', { gameId });
+    return data.isFavorited;
+  },
+
+  add: async (gameId: string): Promise<boolean> => {
+    const { data } = await api.post<AddFavoriteResponse>('/favorites', { gameId });
+    return data.success;
+  },
+
+  remove: async (gameId: string): Promise<void> => {
+    await api.delete(`/favorites/${gameId}`);
+  },
+
+  batchAdd: async (gameIds: string[]): Promise<number> => {
+    const { data } = await api.post<BatchAddFavoritesResponse>('/favorites/batch', { gameIds });
+    return data.added;
+  },
+
+  batchRemove: async (gameIds: string[]): Promise<number> => {
+    const { data } = await api.delete<BatchRemoveFavoritesResponse>('/favorites/batch', {
+      data: { gameIds }
+    });
+    return data.removed;
+  },
+
+  clearAll: async (): Promise<number> => {
+    const { data } = await api.delete<ClearAllFavoritesResponse>('/favorites');
+    return data.removed;
+  }
+};
+
+// ===================================
+// Jobs API
+// ===================================
+
+export const jobsApi = {
+  getAll: async (): Promise<JobStatusEnriched[]> => {
+    const { data } = await api.get<JobStatusEnriched[]>('/jobs');
+    return data;
+  },
+
+  getById: async (jobId: string): Promise<JobStatusEnriched> => {
+    const { data } = await api.get<JobStatusEnriched>(`/jobs/${jobId}`);
+    return data;
+  },
+
+  start: async (jobId: string): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post(`/jobs/${jobId}/start`);
+    return data;
+  },
+
+  stop: async (jobId: string): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post(`/jobs/${jobId}/stop`);
+    return data;
+  },
+
+  trigger: async (jobId: string): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post(`/jobs/${jobId}/trigger`);
+    return data;
+  },
+
+  getLogs: async (jobId: string, limit = 50, offset = 0): Promise<JobLogsResponse> => {
+    const { data } = await api.get<JobLogsResponse>(`/jobs/${jobId}/logs`, {
+      params: { limit, offset }
+    });
+    return data;
+  },
+
+  getAllLogs: async (limit = 100, offset = 0): Promise<JobLogsResponse> => {
+    const { data } = await api.get<JobLogsResponse>('/jobs/logs/all', {
+      params: { limit, offset }
+    });
+    return data;
+  }
+};
+
+// ===================================
+// Ruffle Management API
+// ===================================
+
+export const ruffleApi = {
+  getVersion: async (): Promise<{ currentVersion: string | null; isInstalled: boolean }> => {
+    const { data } = await api.get('/ruffle/version');
+    return data;
+  },
+
+  checkUpdate: async (): Promise<{
+    currentVersion: string | null;
+    latestVersion: string;
+    updateAvailable: boolean;
+  }> => {
+    const { data } = await api.get('/ruffle/check-update');
+    return data;
+  },
+
+  update: async (): Promise<{
+    success: boolean;
+    version: string;
+    message: string;
+  }> => {
+    const { data } = await api.post('/ruffle/update');
+    return data;
+  }
+};
+
+// ===================================
 // Axios Interceptors
 // ===================================
 
@@ -389,8 +682,38 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle network errors (no response from server)
+    if (!error.response) {
+      const { toast } = await import('sonner');
+      toast.error('Network error. Please check your connection.');
+      return Promise.reject(error);
+    }
+
+    const status = error.response.status;
+
+    // Handle 404 errors - show toast notification
+    if (status === 404) {
+      const { toast } = await import('sonner');
+      toast.error('Resource not found');
+    }
+
+    // Handle 500+ errors (server errors) - show toast notification
+    if (status >= 500) {
+      const { toast } = await import('sonner');
+      toast.error('Server error occurred. Please try again later.');
+    }
+
     // If error is 401 and we haven't retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (status === 401 && !originalRequest._retry) {
+      // Don't retry the refresh endpoint itself (prevents infinite loop)
+      if (originalRequest.url?.includes('/auth/refresh')) {
+        const { toast } = await import('sonner');
+        toast.error('Session expired. Please login again.');
+        useAuthStore.getState().clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       try {
@@ -398,7 +721,10 @@ api.interceptors.response.use(
 
         if (!refreshToken) {
           // No refresh token available, clear auth and redirect to login
+          const { toast } = await import('sonner');
+          toast.error('Session expired. Please login again.');
           useAuthStore.getState().clearAuth();
+          window.location.href = '/login';
           return Promise.reject(error);
         }
 
@@ -413,7 +739,10 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         // Refresh failed, clear auth and redirect to login
+        const { toast } = await import('sonner');
+        toast.error('Session expired. Please login again.');
         useAuthStore.getState().clearAuth();
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }

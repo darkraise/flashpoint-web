@@ -18,6 +18,14 @@ import {
 } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 const roleSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters').max(50, 'Name must be at most 50 characters'),
@@ -90,15 +98,15 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
   const mutation = isEditMode ? updateMutation : createMutation;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background-secondary rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-border sticky top-0 bg-background-secondary z-10">
-          <h3 className="text-lg font-semibold text-white">
+    <Dialog open={true} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
             {isEditMode ? 'Edit Role' : 'Create New Role'}
-          </h3>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
-        <div className="px-6 py-4">
+        <DialogBody>
           {mutation.isError && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
@@ -236,10 +244,10 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                 </Alert>
               )}
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-border sticky bottom-0 bg-background-secondary">
+              <DialogFooter>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={onClose}
                 >
                   Cancel
@@ -250,11 +258,11 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                 >
                   {mutation.isPending ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </Form>
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }

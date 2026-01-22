@@ -25,6 +25,14 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 const createUserSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username must be at most 50 characters'),
@@ -58,7 +66,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
 
   const form = useForm<CreateUserFormValues | UpdateUserFormValues>({
     resolver: zodResolver(isEditMode ? updateUserSchema : createUserSchema),
-    defaultValues: isEditMode
+    defaultValues: isEditMode && user
       ? {
           email: user.email,
           roleId: user.roleId,
@@ -85,10 +93,10 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
 
   const onSubmit = async (values: CreateUserFormValues | UpdateUserFormValues) => {
     try {
-      if (isEditMode) {
+      if (isEditMode && user) {
         const updateData: UpdateUserData = values as UpdateUserFormValues;
         await updateMutation.mutateAsync({ id: user.id, userData: updateData });
-      } else {
+      } else if (!isEditMode) {
         const createData: CreateUserData = values as CreateUserFormValues;
         await createMutation.mutateAsync(createData);
       }
@@ -102,15 +110,15 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
   const mutation = isEditMode ? updateMutation : createMutation;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background-secondary rounded-lg shadow-xl max-w-md w-full">
-        <div className="px-6 py-4 border-b border-border">
-          <h3 className="text-lg font-semibold text-white">
+    <Dialog open={true} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
             {isEditMode ? 'Edit User' : 'Create New User'}
-          </h3>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
-        <div className="px-6 py-4">
+        <DialogBody>
           {mutation.isError && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
@@ -141,8 +149,10 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
               )}
 
               {isEditMode && user && (
-                <div>
-                  <FormLabel>Username</FormLabel>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Username
+                  </label>
                   <Input
                     value={user.username}
                     disabled
@@ -239,10 +249,10 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                 )}
               />
 
-              <div className="flex justify-end space-x-3 pt-4">
+              <DialogFooter>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={onClose}
                 >
                   Cancel
@@ -253,11 +263,11 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                 >
                   {mutation.isPending ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </Form>
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }

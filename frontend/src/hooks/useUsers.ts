@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../lib/api';
 import { CreateUserData, UpdateUserData, ChangePasswordData } from '../types/auth';
+import { useDialog } from '@/contexts/DialogContext';
 
 /**
  * Hook to fetch all users with pagination
@@ -29,69 +30,116 @@ export function useUser(id: number) {
 
 /**
  * Hook to create a new user
+ * Uses cache updates for immediate UI feedback
  */
 export function useCreateUser() {
   const queryClient = useQueryClient();
+  const { showToast } = useDialog();
 
   return useMutation({
     mutationFn: (userData: CreateUserData) => usersApi.create(userData),
-    onSuccess: () => {
-      // Invalidate users list to refetch
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+    onSuccess: (newUser) => {
+      // Add to single-item cache
+      queryClient.setQueryData(['users', newUser.id], newUser);
+
+      // Invalidate paginated lists (safer for paginated data)
+      queryClient.invalidateQueries({ queryKey: ['users'], exact: false });
+
+      showToast('User created successfully', 'success');
     },
-    onError: (error) => {
-      console.error('Create user error:', error);
+    onError: (err: any) => {
+      const message = err?.response?.data?.error?.message || 'Failed to create user';
+      showToast(message, 'error');
     }
   });
 }
 
 /**
  * Hook to update an existing user
+ * Uses cache updates for immediate UI feedback
  */
 export function useUpdateUser() {
   const queryClient = useQueryClient();
+  const { showToast } = useDialog();
 
   return useMutation({
     mutationFn: ({ id, userData }: { id: number; userData: UpdateUserData }) =>
       usersApi.update(id, userData),
-    onSuccess: (data) => {
-      // Invalidate users list and specific user query
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.setQueryData(['users', data.id], data);
+    onSuccess: (updatedUser) => {
+      // Update single-item cache
+      queryClient.setQueryData(['users', updatedUser.id], updatedUser);
+
+      // Invalidate paginated lists (safer for paginated data)
+      queryClient.invalidateQueries({ queryKey: ['users'], exact: false });
+
+      showToast('User updated successfully', 'success');
     },
-    onError: (error) => {
-      console.error('Update user error:', error);
+    onError: (err: any) => {
+      const message = err?.response?.data?.error?.message || 'Failed to update user';
+      showToast(message, 'error');
     }
   });
 }
 
 /**
  * Hook to delete a user
+ * Uses optimistic updates for immediate UI feedback
  */
 export function useDeleteUser() {
   const queryClient = useQueryClient();
+  const { showToast } = useDialog();
 
   return useMutation({
     mutationFn: (id: number) => usersApi.delete(id),
-    onSuccess: () => {
-      // Invalidate users list to refetch
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['users'] });
+
+      // Store snapshot for rollback (paginated queries)
+      const previousQueries = queryClient.getQueriesData({ queryKey: ['users'] });
+
+      return { previousQueries };
     },
-    onError: (error) => {
-      console.error('Delete user error:', error);
+
+    onError: (err: any, id, context) => {
+      if (context?.previousQueries) {
+        // Restore all user queries
+        context.previousQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+      const message = err?.response?.data?.error?.message || 'Failed to delete user';
+      showToast(message, 'error');
+    },
+
+    onSuccess: (_, id) => {
+      // Remove single-item cache
+      queryClient.removeQueries({ queryKey: ['users', id] });
+
+      // Invalidate paginated lists to refetch
+      queryClient.invalidateQueries({ queryKey: ['users'], exact: false });
+
+      showToast('User deleted successfully', 'success');
     }
   });
 }
 
 /**
  * Hook to change user password
+ * Uses toast notifications for feedback
  */
 export function useChangePassword() {
+  const { showToast } = useDialog();
+
   return useMutation({
     mutationFn: ({ id, passwordData }: { id: number; passwordData: ChangePasswordData }) =>
       usersApi.changePassword(id, passwordData),
-    onError: (error) => {
-      console.error('Change password error:', error);
+    onSuccess: () => {
+      showToast('Password changed successfully', 'success');
+    },
+    onError: (err: any) => {
+      const message = err?.response?.data?.error?.message || 'Failed to change password';
+      showToast(message, 'error');
     }
   });
 }

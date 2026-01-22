@@ -2,9 +2,13 @@ import { Router } from 'express';
 import { ActivityService } from '../services/ActivityService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
+import { requireFeature } from '../middleware/featureFlags';
 
 const router = Router();
 const activityService = new ActivityService();
+
+// Apply feature flag check to all routes in this router
+router.use(requireFeature('enableActivityLog'));
 
 /**
  * GET /api/activities

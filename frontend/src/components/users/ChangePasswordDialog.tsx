@@ -19,6 +19,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
 } from '@/components/ui/dialog';
 
@@ -77,7 +78,7 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
           </DialogTitle>
         </DialogHeader>
 
-        <div>
+        <DialogBody>
           {changePasswordMutation.isError && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
@@ -159,7 +160,7 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
               </DialogFooter>
             </form>
           </Form>
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

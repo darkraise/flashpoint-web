@@ -24,7 +24,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Server runs on http://localhost:3001
+Server runs on http://localhost:3100
 
 ## API Endpoints
 
@@ -77,7 +77,7 @@ Required:
 - `FLASHPOINT_DB_PATH` - Path to SQLite database
 
 Optional:
-- `PORT` - Server port (default: 3001)
+- `PORT` - Server port (default: 3100)
 - `NODE_ENV` - Environment (development/production)
 - `GAME_SERVER_URL` - Game Server URL (default: http://localhost:22500)
 - `CORS_ORIGIN` - Frontend origin (default: http://localhost:5173)

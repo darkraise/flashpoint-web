@@ -10,6 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogBody,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,7 +118,7 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
 
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
+      <DialogContent className="max-w-4xl flex flex-col">
         {/* Header */}
         <DialogHeader>
           <div className="flex items-center gap-2">
@@ -129,8 +130,9 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
           </DialogDescription>
         </DialogHeader>
 
-        {/* Filters */}
-        <div className="flex gap-3 mb-4">
+        <DialogBody className="flex flex-col">
+          {/* Filters */}
+          <div className="flex gap-3 mb-4">
           <div className="flex-1">
             <Select
               value={selectedCategory}
@@ -157,10 +159,10 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
               className="pl-10"
             />
           </div>
-        </div>
+          </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto space-y-3">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto space-y-3">
           {/* Loading State */}
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-12">
@@ -224,17 +226,18 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Footer Info */}
-        {!isLoading && !error && filteredPlaylists.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-700">
-            <p className="text-sm text-gray-400 text-center">
-              Showing {filteredPlaylists.length} playlist{filteredPlaylists.length !== 1 ? 's' : ''}
-              {selectedCategory !== 'all' && ` in ${selectedCategory}`}
-            </p>
           </div>
-        )}
+
+          {/* Footer Info */}
+          {!isLoading && !error && filteredPlaylists.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-700">
+              <p className="text-sm text-gray-400 text-center">
+                Showing {filteredPlaylists.length} playlist{filteredPlaylists.length !== 1 ? 's' : ''}
+                {selectedCategory !== 'all' && ` in ${selectedCategory}`}
+              </p>
+            </div>
+          )}
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

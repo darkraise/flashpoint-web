@@ -1,9 +1,8 @@
 import { useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Filter, Monitor, X, ChevronDown, Calendar } from 'lucide-react';
-import { useTags } from '@/hooks/useTags';
+import { Filter, X, ChevronDown, Calendar, Gamepad2, Tv, User, Building2, Users, Globe, ArrowUpDown } from 'lucide-react';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Toggle } from '@/components/ui/toggle';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,11 @@ import { Badge } from '@/components/ui/badge';
 interface FilterPanelProps {
   filters: {
     platform?: string;
+    series?: string;
+    developers?: string;
+    publishers?: string;
+    playModes?: string;
+    languages?: string;
     tags?: string;
     yearFrom?: number;
     yearTo?: number;
@@ -20,12 +24,37 @@ interface FilterPanelProps {
     sortOrder?: string;
     webPlayableOnly?: boolean;
   };
+  showPlatformFilter?: boolean;
 }
 
-export function FilterPanel({ filters }: FilterPanelProps) {
+export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showTagDropdown, setShowTagDropdown] = useState(false);
-  const { data: allTags = [] } = useTags();
+
+  // Dropdown state for each filter
+  const [showTagDropdownDesktop, setShowTagDropdownDesktop] = useState(false);
+  const [showTagDropdownMobile, setShowTagDropdownMobile] = useState(false);
+  const [showPlatformDropdownDesktop, setShowPlatformDropdownDesktop] = useState(false);
+  const [showPlatformDropdownMobile, setShowPlatformDropdownMobile] = useState(false);
+  const [showSeriesDropdownDesktop, setShowSeriesDropdownDesktop] = useState(false);
+  const [showSeriesDropdownMobile, setShowSeriesDropdownMobile] = useState(false);
+  const [showDeveloperDropdownDesktop, setShowDeveloperDropdownDesktop] = useState(false);
+  const [showDeveloperDropdownMobile, setShowDeveloperDropdownMobile] = useState(false);
+  const [showPublisherDropdownDesktop, setShowPublisherDropdownDesktop] = useState(false);
+  const [showPublisherDropdownMobile, setShowPublisherDropdownMobile] = useState(false);
+  const [showPlayModeDropdownDesktop, setShowPlayModeDropdownDesktop] = useState(false);
+  const [showPlayModeDropdownMobile, setShowPlayModeDropdownMobile] = useState(false);
+  const [showLanguageDropdownDesktop, setShowLanguageDropdownDesktop] = useState(false);
+  const [showLanguageDropdownMobile, setShowLanguageDropdownMobile] = useState(false);
+
+  // Fetch all filter options in one call
+  const { data: filterOptions } = useFilterOptions();
+  const allSeries = filterOptions?.series || [];
+  const allDevelopers = filterOptions?.developers || [];
+  const allPublishers = filterOptions?.publishers || [];
+  const allPlayModes = filterOptions?.playModes || [];
+  const allLanguages = filterOptions?.languages || [];
+  const allTags = filterOptions?.tags || [];
+  const allPlatforms = filterOptions?.platforms || [];
 
   // Local state for year inputs
   const [yearFromInput, setYearFromInput] = useState<string>(filters.yearFrom?.toString() || '');
@@ -35,7 +64,14 @@ export function FilterPanel({ filters }: FilterPanelProps) {
   const debouncedYearFrom = useDebounce(yearFromInput, 500);
   const debouncedYearTo = useDebounce(yearToInput, 500);
 
+  // Parse selected values from URL params
   const selectedTags = filters.tags ? filters.tags.split(',') : [];
+  const selectedPlatforms = filters.platform ? filters.platform.split(',') : [];
+  const selectedSeries = filters.series ? filters.series.split(',') : [];
+  const selectedDevelopers = filters.developers ? filters.developers.split(',') : [];
+  const selectedPublishers = filters.publishers ? filters.publishers.split(',') : [];
+  const selectedPlayModes = filters.playModes ? filters.playModes.split(',') : [];
+  const selectedLanguages = filters.languages ? filters.languages.split(',') : [];
 
   // Sync local state with filter props when they change externally
   useEffect(() => {
@@ -80,14 +116,6 @@ export function FilterPanel({ filters }: FilterPanelProps) {
     setSearchParams(newParams);
   };
 
-  const toggleWebPlayable = () => {
-    const newParams = new URLSearchParams(searchParams);
-    const currentValue = newParams.get('webPlayableOnly') !== 'false';
-    newParams.set('webPlayableOnly', (!currentValue).toString());
-    newParams.delete('page'); // Reset to page 1
-    setSearchParams(newParams);
-  };
-
   const toggleTag = (tagName: string) => {
     const newTags = selectedTags.includes(tagName)
       ? selectedTags.filter(t => t !== tagName)
@@ -98,11 +126,93 @@ export function FilterPanel({ filters }: FilterPanelProps) {
 
   const clearTags = () => {
     updateFilter('tags', '');
-    setShowTagDropdown(false);
+    setShowTagDropdownDesktop(false);
+    setShowTagDropdownMobile(false);
   };
 
-  // Show popular tags (top 20)
-  const popularTags = allTags.slice(0, 20);
+  const togglePlatform = (platformName: string) => {
+    const newPlatforms = selectedPlatforms.includes(platformName)
+      ? selectedPlatforms.filter(p => p !== platformName)
+      : [...selectedPlatforms, platformName];
+
+    updateFilter('platform', newPlatforms.join(','));
+  };
+
+  const clearPlatforms = () => {
+    updateFilter('platform', '');
+    setShowPlatformDropdownDesktop(false);
+    setShowPlatformDropdownMobile(false);
+  };
+
+  const toggleSeries = (seriesName: string) => {
+    const newSeries = selectedSeries.includes(seriesName)
+      ? selectedSeries.filter(s => s !== seriesName)
+      : [...selectedSeries, seriesName];
+
+    updateFilter('series', newSeries.join(','));
+  };
+
+  const clearSeries = () => {
+    updateFilter('series', '');
+    setShowSeriesDropdownDesktop(false);
+    setShowSeriesDropdownMobile(false);
+  };
+
+  const toggleDeveloper = (developerName: string) => {
+    const newDevelopers = selectedDevelopers.includes(developerName)
+      ? selectedDevelopers.filter(d => d !== developerName)
+      : [...selectedDevelopers, developerName];
+
+    updateFilter('developers', newDevelopers.join(','));
+  };
+
+  const clearDevelopers = () => {
+    updateFilter('developers', '');
+    setShowDeveloperDropdownDesktop(false);
+    setShowDeveloperDropdownMobile(false);
+  };
+
+  const togglePublisher = (publisherName: string) => {
+    const newPublishers = selectedPublishers.includes(publisherName)
+      ? selectedPublishers.filter(p => p !== publisherName)
+      : [...selectedPublishers, publisherName];
+
+    updateFilter('publishers', newPublishers.join(','));
+  };
+
+  const clearPublishers = () => {
+    updateFilter('publishers', '');
+    setShowPublisherDropdownDesktop(false);
+    setShowPublisherDropdownMobile(false);
+  };
+
+  const togglePlayMode = (playModeName: string) => {
+    const newPlayModes = selectedPlayModes.includes(playModeName)
+      ? selectedPlayModes.filter(pm => pm !== playModeName)
+      : [...selectedPlayModes, playModeName];
+
+    updateFilter('playModes', newPlayModes.join(','));
+  };
+
+  const clearPlayModes = () => {
+    updateFilter('playModes', '');
+    setShowPlayModeDropdownDesktop(false);
+    setShowPlayModeDropdownMobile(false);
+  };
+
+  const toggleLanguage = (languageName: string) => {
+    const newLanguages = selectedLanguages.includes(languageName)
+      ? selectedLanguages.filter(l => l !== languageName)
+      : [...selectedLanguages, languageName];
+
+    updateFilter('languages', newLanguages.join(','));
+  };
+
+  const clearLanguages = () => {
+    updateFilter('languages', '');
+    setShowLanguageDropdownDesktop(false);
+    setShowLanguageDropdownMobile(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -114,177 +224,926 @@ export function FilterPanel({ filters }: FilterPanelProps) {
 
       {/* All Filters */}
       <div className="space-y-3">
-        {/* Desktop Layout: Single Row */}
-        <div className="hidden md:flex items-center gap-3 flex-wrap">
-          {/* Web Playable Toggle */}
-          <Toggle
-            pressed={filters.webPlayableOnly !== false}
-            onPressedChange={toggleWebPlayable}
-            className="gap-2"
-            title={filters.webPlayableOnly !== false ? 'Showing HTML5 and Flash games (web-playable)' : 'Showing all platforms'}
-          >
-            <Monitor size={16} />
-            <span>{filters.webPlayableOnly !== false ? 'Web Only' : 'All Platforms'}</span>
-          </Toggle>
-
-          {/* Tag Filter */}
-          <Popover open={showTagDropdown} onOpenChange={setShowTagDropdown} modal={false}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="min-w-[120px] justify-between" type="button">
-                <span>
-                  {selectedTags.length > 0 ? `${selectedTags.length} Tags` : 'Select Tags'}
-                </span>
-                <ChevronDown size={16} className={`transition-transform ${showTagDropdown ? 'rotate-180' : ''}`} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-[250px] md:w-[300px] p-0 z-[100]"
-              align="start"
-              sideOffset={8}
-              collisionPadding={10}
-              onOpenAutoFocus={(e: Event) => e.preventDefault()}
-            >
-              <div className="sticky top-0 bg-popover border-b p-2 z-10">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">Popular Tags</span>
-                  {selectedTags.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearTags}
-                      className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive"
-                    >
-                      Clear All
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
-                {popularTags.length > 0 ? (
-                  popularTags.map((tag) => (
-                    <label
-                      key={tag.name}
-                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={selectedTags.includes(tag.name)}
-                        onCheckedChange={() => toggleTag(tag.name)}
-                      />
-                      <span className="text-sm flex-1">{tag.name}</span>
-                      <span className="text-xs text-muted-foreground">{tag.count.toLocaleString()}</span>
-                    </label>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    No tags available
+        {/* With Platform Filter */}
+        {showPlatformFilter && (
+          <>
+            {/* Desktop Layout: Single Row */}
+            <div className="hidden md:flex items-center gap-3 flex-wrap">
+              {/* Platform Filter - Desktop */}
+              <Popover open={showPlatformDropdownDesktop} onOpenChange={setShowPlatformDropdownDesktop} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="min-w-[140px] justify-between" type="button">
+                    <span className="flex items-center gap-2">
+                      <Gamepad2 size={16} />
+                      {selectedPlatforms.length > 0 ? `${selectedPlatforms.length} Platforms` : 'Select Platforms'}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform ${showPlatformDropdownDesktop ? 'rotate-180' : ''}`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[250px] md:w-[300px] p-0 z-[100]"
+                  align="start"
+                  sideOffset={8}
+                  collisionPadding={10}
+                  onOpenAutoFocus={(e: Event) => e.preventDefault()}
+                >
+                  <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Select Platforms</span>
+                      {selectedPlatforms.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearPlatforms}
+                          className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive"
+                        >
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                )}
+                  <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                    {allPlatforms.length > 0 ? (
+                      allPlatforms.map((platform) => (
+                        <label
+                          key={platform.name}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedPlatforms.includes(platform.name)}
+                            onCheckedChange={() => togglePlatform(platform.name)}
+                          />
+                          <span className="text-sm flex-1">{platform.name}</span>
+                          <span className="text-xs text-muted-foreground">{platform.count.toLocaleString()}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        No platforms available
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Series Filter - Desktop */}
+              <Popover open={showSeriesDropdownDesktop} onOpenChange={setShowSeriesDropdownDesktop} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="min-w-[120px] justify-between" type="button">
+                    <span className="flex items-center gap-2">
+                      <Tv size={16} />
+                      {selectedSeries.length > 0 ? `${selectedSeries.length} Series` : 'Series'}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform ${showSeriesDropdownDesktop ? 'rotate-180' : ''}`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                  <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Select Series</span>
+                      {selectedSeries.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearSeries} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                    {allSeries.length > 0 ? (
+                      allSeries.map((series) => (
+                        <label key={series.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                          <Checkbox checked={selectedSeries.includes(series.name)} onCheckedChange={() => toggleSeries(series.name)} />
+                          <span className="text-sm flex-1">{series.name}</span>
+                          <span className="text-xs text-muted-foreground">{series.count.toLocaleString()}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">No series available</div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Developer Filter - Desktop */}
+              <Popover open={showDeveloperDropdownDesktop} onOpenChange={setShowDeveloperDropdownDesktop} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="min-w-[120px] justify-between" type="button">
+                    <span className="flex items-center gap-2">
+                      <User size={16} />
+                      {selectedDevelopers.length > 0 ? `${selectedDevelopers.length} Devs` : 'Developer'}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform ${showDeveloperDropdownDesktop ? 'rotate-180' : ''}`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                  <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Select Developers</span>
+                      {selectedDevelopers.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearDevelopers} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                    {allDevelopers.length > 0 ? (
+                      allDevelopers.map((developer) => (
+                        <label key={developer.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                          <Checkbox checked={selectedDevelopers.includes(developer.name)} onCheckedChange={() => toggleDeveloper(developer.name)} />
+                          <span className="text-sm flex-1">{developer.name}</span>
+                          <span className="text-xs text-muted-foreground">{developer.count.toLocaleString()}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">No developers available</div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Publisher Filter - Desktop */}
+              <Popover open={showPublisherDropdownDesktop} onOpenChange={setShowPublisherDropdownDesktop} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="min-w-[120px] justify-between" type="button">
+                    <span className="flex items-center gap-2">
+                      <Building2 size={16} />
+                      {selectedPublishers.length > 0 ? `${selectedPublishers.length} Pubs` : 'Publisher'}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform ${showPublisherDropdownDesktop ? 'rotate-180' : ''}`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                  <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Select Publishers</span>
+                      {selectedPublishers.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearPublishers} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                    {allPublishers.length > 0 ? (
+                      allPublishers.map((publisher) => (
+                        <label key={publisher.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                          <Checkbox checked={selectedPublishers.includes(publisher.name)} onCheckedChange={() => togglePublisher(publisher.name)} />
+                          <span className="text-sm flex-1">{publisher.name}</span>
+                          <span className="text-xs text-muted-foreground">{publisher.count.toLocaleString()}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">No publishers available</div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Play Mode Filter - Desktop */}
+              <Popover open={showPlayModeDropdownDesktop} onOpenChange={setShowPlayModeDropdownDesktop} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="min-w-[120px] justify-between" type="button">
+                    <span className="flex items-center gap-2">
+                      <Users size={16} />
+                      {selectedPlayModes.length > 0 ? `${selectedPlayModes.length} Modes` : 'Play Mode'}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform ${showPlayModeDropdownDesktop ? 'rotate-180' : ''}`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                  <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Select Play Modes</span>
+                      {selectedPlayModes.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearPlayModes} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                    {allPlayModes.length > 0 ? (
+                      allPlayModes.map((playMode) => (
+                        <label key={playMode.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                          <Checkbox checked={selectedPlayModes.includes(playMode.name)} onCheckedChange={() => togglePlayMode(playMode.name)} />
+                          <span className="text-sm flex-1">{playMode.name}</span>
+                          <span className="text-xs text-muted-foreground">{playMode.count.toLocaleString()}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">No play modes available</div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Language Filter - Desktop */}
+              <Popover open={showLanguageDropdownDesktop} onOpenChange={setShowLanguageDropdownDesktop} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="min-w-[120px] justify-between" type="button">
+                    <span className="flex items-center gap-2">
+                      <Globe size={16} />
+                      {selectedLanguages.length > 0 ? `${selectedLanguages.length} Langs` : 'Language'}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform ${showLanguageDropdownDesktop ? 'rotate-180' : ''}`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                  <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Select Languages</span>
+                      {selectedLanguages.length > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearLanguages} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                    {allLanguages.length > 0 ? (
+                      allLanguages.map((language) => (
+                        <label key={language.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                          <Checkbox checked={selectedLanguages.includes(language.name)} onCheckedChange={() => toggleLanguage(language.name)} />
+                          <span className="text-sm flex-1">{language.name}</span>
+                          <span className="text-xs text-muted-foreground">{language.count.toLocaleString()}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">No languages available</div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Tag Filter - Desktop */}
+              <Popover open={showTagDropdownDesktop} onOpenChange={setShowTagDropdownDesktop} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="min-w-[120px] justify-between" type="button">
+                    <span>
+                      {selectedTags.length > 0 ? `${selectedTags.length} Tags` : 'Select Tags'}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform ${showTagDropdownDesktop ? 'rotate-180' : ''}`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[250px] md:w-[300px] p-0 z-[100]"
+                  align="start"
+                  sideOffset={8}
+                  collisionPadding={10}
+                  onOpenAutoFocus={(e: Event) => e.preventDefault()}
+                >
+                  <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Popular Tags</span>
+                      {selectedTags.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearTags}
+                          className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive"
+                        >
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                    {allTags.length > 0 ? (
+                      allTags.map((tag) => (
+                        <label
+                          key={tag.name}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedTags.includes(tag.name)}
+                            onCheckedChange={() => toggleTag(tag.name)}
+                          />
+                          <span className="text-sm flex-1">{tag.name}</span>
+                          <span className="text-xs text-muted-foreground">{tag.count.toLocaleString()}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        No tags available
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Year Range Filter */}
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-muted-foreground" />
+                <Input
+                  type="number"
+                  placeholder="From year"
+                  value={yearFromInput}
+                  onChange={(e) => setYearFromInput(e.target.value)}
+                  min="1970"
+                  max="2100"
+                  className="w-24 h-10"
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="number"
+                  placeholder="To year"
+                  value={yearToInput}
+                  onChange={(e) => setYearToInput(e.target.value)}
+                  min="1970"
+                  max="2100"
+                  className="w-24 h-10"
+                />
               </div>
-            </PopoverContent>
-          </Popover>
 
-          {/* Year Range Filter */}
-          <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-muted-foreground" />
-            <Input
-              type="number"
-              placeholder="From year"
-              value={yearFromInput}
-              onChange={(e) => setYearFromInput(e.target.value)}
-              min="1970"
-              max="2100"
-              className="w-24 h-10"
-            />
-            <span className="text-muted-foreground">-</span>
-            <Input
-              type="number"
-              placeholder="To year"
-              value={yearToInput}
-              onChange={(e) => setYearToInput(e.target.value)}
-              min="1970"
-              max="2100"
-              className="w-24 h-10"
-            />
-          </div>
-
-          {/* Sort - Pushed to Right */}
-          <select
-            value={filters.sortBy || 'title'}
-            onChange={(e) => updateFilter('sortBy', e.target.value)}
-            className="ml-auto px-3 py-2 bg-background border border-input rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-ring"
-          >
-            <option value="title">Sort: Title</option>
-            <option value="releaseDate">Sort: Release Date</option>
-            <option value="dateAdded">Sort: Date Added</option>
-            <option value="developer">Sort: Developer</option>
-          </select>
-        </div>
-
-        {/* Mobile Layout: Stacked */}
-        <div className="md:hidden space-y-2">
-          {/* Row 1: Web Playable, Tags, and Sort */}
-          <div className="flex items-center gap-2">
-            <Toggle
-              pressed={filters.webPlayableOnly !== false}
-              onPressedChange={toggleWebPlayable}
-              className="gap-2"
-              title={filters.webPlayableOnly !== false ? 'Showing HTML5 and Flash games (web-playable)' : 'Showing all platforms'}
-            >
-              <Monitor size={16} />
-              <span className="whitespace-nowrap">{filters.webPlayableOnly !== false ? 'Web Only' : 'All'}</span>
-            </Toggle>
-
-            <Popover open={showTagDropdown} onOpenChange={setShowTagDropdown} modal={false}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="justify-between" type="button">
-                  <span>
-                    {selectedTags.length > 0 ? `${selectedTags.length} Tags` : 'Tags'}
-                  </span>
-                  <ChevronDown size={16} className={`ml-2 transition-transform ${showTagDropdown ? 'rotate-180' : ''}`} />
+              {/* Sort Controls - Pushed to Right */}
+              <div className="ml-auto flex items-center gap-2">
+                <select
+                  value={filters.sortBy || 'title'}
+                  onChange={(e) => updateFilter('sortBy', e.target.value)}
+                  className="px-3 py-2 bg-background border border-input rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-ring"
+                  aria-label="Sort by"
+                >
+                  <option value="title">Title</option>
+                  <option value="releaseDate">Release Date</option>
+                  <option value="dateAdded">Date Added</option>
+                  <option value="developer">Developer</option>
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateFilter('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="h-10 px-3"
+                  type="button"
+                  title={filters.sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                >
+                  <ArrowUpDown size={16} />
+                  <span className="ml-1 text-xs">{filters.sortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>
                 </Button>
-              </PopoverTrigger>
-            </Popover>
+              </div>
+            </div>
 
-            <select
-              value={filters.sortBy || 'title'}
-              onChange={(e) => updateFilter('sortBy', e.target.value)}
-              className="flex-1 px-3 py-2 bg-background border border-input rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-ring"
-            >
-              <option value="title">Sort: Title</option>
-              <option value="releaseDate">Sort: Release Date</option>
-              <option value="dateAdded">Sort: Date Added</option>
-              <option value="developer">Sort: Developer</option>
-            </select>
-          </div>
+            {/* Mobile Layout: Stacked */}
+            <div className="md:hidden space-y-2">
+              {/* Row 1: Platform, Tags, and Sort */}
+              <div className="flex items-center gap-2">
+                {/* Platform Filter - Mobile */}
+                <Popover open={showPlatformDropdownMobile} onOpenChange={setShowPlatformDropdownMobile} modal={false}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between" type="button">
+                      <Gamepad2 size={16} />
+                      <span className="ml-1">
+                        {selectedPlatforms.length > 0 ? selectedPlatforms.length : ''}
+                      </span>
+                      <ChevronDown size={16} className={`ml-1 transition-transform ${showPlatformDropdownMobile ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[250px] md:w-[300px] p-0 z-[100]"
+                    align="start"
+                    sideOffset={8}
+                    collisionPadding={10}
+                    onOpenAutoFocus={(e: Event) => e.preventDefault()}
+                  >
+                    <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Select Platforms</span>
+                        {selectedPlatforms.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={clearPlatforms}
+                            className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive"
+                          >
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                      {allPlatforms.length > 0 ? (
+                        allPlatforms.map((platform) => (
+                          <label
+                            key={platform.name}
+                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={selectedPlatforms.includes(platform.name)}
+                              onCheckedChange={() => togglePlatform(platform.name)}
+                            />
+                            <span className="text-sm flex-1">{platform.name}</span>
+                            <span className="text-xs text-muted-foreground">{platform.count.toLocaleString()}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No platforms available
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
 
-          {/* Row 2: Year Range */}
-          <div className="flex items-center gap-2">
-            <Calendar size={16} className="text-muted-foreground flex-shrink-0" />
-            <Input
-              type="number"
-              placeholder="From"
-              value={yearFromInput}
-              onChange={(e) => setYearFromInput(e.target.value)}
-              min="1970"
-              max="2100"
-              className="flex-1 h-10"
-            />
-            <span className="text-muted-foreground">-</span>
-            <Input
-              type="number"
-              placeholder="To"
-              value={yearToInput}
-              onChange={(e) => setYearToInput(e.target.value)}
-              min="1970"
-              max="2100"
-              className="flex-1 h-10"
-            />
+                {/* Series Filter - Mobile */}
+                <Popover open={showSeriesDropdownMobile} onOpenChange={setShowSeriesDropdownMobile} modal={false}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between" type="button">
+                      <Tv size={16} />
+                      <span className="ml-1">
+                        {selectedSeries.length > 0 ? selectedSeries.length : ''}
+                      </span>
+                      <ChevronDown size={16} className={`ml-1 transition-transform ${showSeriesDropdownMobile ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                    <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Select Series</span>
+                        {selectedSeries.length > 0 && (
+                          <Button variant="ghost" size="sm" onClick={clearSeries} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                      {allSeries.length > 0 ? (
+                        allSeries.map((series) => (
+                          <label key={series.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                            <Checkbox checked={selectedSeries.includes(series.name)} onCheckedChange={() => toggleSeries(series.name)} />
+                            <span className="text-sm flex-1">{series.name}</span>
+                            <span className="text-xs text-muted-foreground">{series.count.toLocaleString()}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">No series available</div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Developer Filter - Mobile */}
+                <Popover open={showDeveloperDropdownMobile} onOpenChange={setShowDeveloperDropdownMobile} modal={false}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between" type="button">
+                      <User size={16} />
+                      <span className="ml-1">
+                        {selectedDevelopers.length > 0 ? selectedDevelopers.length : ''}
+                      </span>
+                      <ChevronDown size={16} className={`ml-1 transition-transform ${showDeveloperDropdownMobile ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                    <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Select Developers</span>
+                        {selectedDevelopers.length > 0 && (
+                          <Button variant="ghost" size="sm" onClick={clearDevelopers} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                      {allDevelopers.length > 0 ? (
+                        allDevelopers.map((developer) => (
+                          <label key={developer.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                            <Checkbox checked={selectedDevelopers.includes(developer.name)} onCheckedChange={() => toggleDeveloper(developer.name)} />
+                            <span className="text-sm flex-1">{developer.name}</span>
+                            <span className="text-xs text-muted-foreground">{developer.count.toLocaleString()}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">No developers available</div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Publisher Filter - Mobile */}
+                <Popover open={showPublisherDropdownMobile} onOpenChange={setShowPublisherDropdownMobile} modal={false}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between" type="button">
+                      <Building2 size={16} />
+                      <span className="ml-1">
+                        {selectedPublishers.length > 0 ? selectedPublishers.length : ''}
+                      </span>
+                      <ChevronDown size={16} className={`ml-1 transition-transform ${showPublisherDropdownMobile ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                    <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Select Publishers</span>
+                        {selectedPublishers.length > 0 && (
+                          <Button variant="ghost" size="sm" onClick={clearPublishers} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                      {allPublishers.length > 0 ? (
+                        allPublishers.map((publisher) => (
+                          <label key={publisher.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                            <Checkbox checked={selectedPublishers.includes(publisher.name)} onCheckedChange={() => togglePublisher(publisher.name)} />
+                            <span className="text-sm flex-1">{publisher.name}</span>
+                            <span className="text-xs text-muted-foreground">{publisher.count.toLocaleString()}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">No publishers available</div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Play Mode Filter - Mobile */}
+                <Popover open={showPlayModeDropdownMobile} onOpenChange={setShowPlayModeDropdownMobile} modal={false}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between" type="button">
+                      <Users size={16} />
+                      <span className="ml-1">
+                        {selectedPlayModes.length > 0 ? selectedPlayModes.length : ''}
+                      </span>
+                      <ChevronDown size={16} className={`ml-1 transition-transform ${showPlayModeDropdownMobile ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                    <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Select Play Modes</span>
+                        {selectedPlayModes.length > 0 && (
+                          <Button variant="ghost" size="sm" onClick={clearPlayModes} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                      {allPlayModes.length > 0 ? (
+                        allPlayModes.map((playMode) => (
+                          <label key={playMode.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                            <Checkbox checked={selectedPlayModes.includes(playMode.name)} onCheckedChange={() => togglePlayMode(playMode.name)} />
+                            <span className="text-sm flex-1">{playMode.name}</span>
+                            <span className="text-xs text-muted-foreground">{playMode.count.toLocaleString()}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">No play modes available</div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Language Filter - Mobile */}
+                <Popover open={showLanguageDropdownMobile} onOpenChange={setShowLanguageDropdownMobile} modal={false}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between" type="button">
+                      <Globe size={16} />
+                      <span className="ml-1">
+                        {selectedLanguages.length > 0 ? selectedLanguages.length : ''}
+                      </span>
+                      <ChevronDown size={16} className={`ml-1 transition-transform ${showLanguageDropdownMobile ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] md:w-[300px] p-0 z-[100]" align="start" sideOffset={8} collisionPadding={10} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+                    <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Select Languages</span>
+                        {selectedLanguages.length > 0 && (
+                          <Button variant="ghost" size="sm" onClick={clearLanguages} className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive">
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                      {allLanguages.length > 0 ? (
+                        allLanguages.map((language) => (
+                          <label key={language.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer">
+                            <Checkbox checked={selectedLanguages.includes(language.name)} onCheckedChange={() => toggleLanguage(language.name)} />
+                            <span className="text-sm flex-1">{language.name}</span>
+                            <span className="text-xs text-muted-foreground">{language.count.toLocaleString()}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">No languages available</div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Tag Filter - Mobile */}
+                <Popover open={showTagDropdownMobile} onOpenChange={setShowTagDropdownMobile} modal={false}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between" type="button">
+                      <span>
+                        {selectedTags.length > 0 ? `${selectedTags.length} Tags` : 'Tags'}
+                      </span>
+                      <ChevronDown size={16} className={`ml-2 transition-transform ${showTagDropdownMobile ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[250px] md:w-[300px] p-0 z-[100]"
+                    align="start"
+                    sideOffset={8}
+                    collisionPadding={10}
+                    onOpenAutoFocus={(e: Event) => e.preventDefault()}
+                  >
+                    <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Popular Tags</span>
+                        {selectedTags.length > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={clearTags}
+                            className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive"
+                          >
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                      {allTags.length > 0 ? (
+                        allTags.map((tag) => (
+                          <label
+                            key={tag.name}
+                            className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={selectedTags.includes(tag.name)}
+                              onCheckedChange={() => toggleTag(tag.name)}
+                            />
+                            <span className="text-sm flex-1">{tag.name}</span>
+                            <span className="text-xs text-muted-foreground">{tag.count.toLocaleString()}</span>
+                          </label>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          No tags available
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <select
+                  value={filters.sortBy || 'title'}
+                  onChange={(e) => updateFilter('sortBy', e.target.value)}
+                  className="flex-1 px-3 py-2 bg-background border border-input rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-ring"
+                  aria-label="Sort by"
+                >
+                  <option value="title">Title</option>
+                  <option value="releaseDate">Release Date</option>
+                  <option value="dateAdded">Date Added</option>
+                  <option value="developer">Developer</option>
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateFilter('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="h-10 px-2"
+                  type="button"
+                  title={filters.sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                >
+                  <ArrowUpDown size={16} />
+                </Button>
+              </div>
+
+              {/* Row 2: Year Range */}
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-muted-foreground flex-shrink-0" />
+                <Input
+                  type="number"
+                  placeholder="From"
+                  value={yearFromInput}
+                  onChange={(e) => setYearFromInput(e.target.value)}
+                  min="1970"
+                  max="2100"
+                  className="flex-1 h-10"
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="number"
+                  placeholder="To"
+                  value={yearToInput}
+                  onChange={(e) => setYearToInput(e.target.value)}
+                  min="1970"
+                  max="2100"
+                  className="flex-1 h-10"
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Tag Filter Popover - Desktop and Mobile (No platform filter) */}
+        {!showPlatformFilter && (
+          <>
+            {/* Desktop Layout: Single Row */}
+            <div className="hidden md:flex items-center gap-3 flex-wrap">
+              {/* Tag Filter */}
+              <Popover open={showTagDropdownDesktop} onOpenChange={setShowTagDropdownDesktop} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="min-w-[120px] justify-between" type="button">
+                    <span>
+                      {selectedTags.length > 0 ? `${selectedTags.length} Tags` : 'Select Tags'}
+                    </span>
+                    <ChevronDown size={16} className={`transition-transform ${showTagDropdownDesktop ? 'rotate-180' : ''}`} />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[250px] md:w-[300px] p-0 z-[100]"
+                  align="start"
+                  sideOffset={8}
+                  collisionPadding={10}
+                  onOpenAutoFocus={(e: Event) => e.preventDefault()}
+                >
+                  <div className="sticky top-0 bg-popover border-b p-2 z-10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Popular Tags</span>
+                      {selectedTags.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearTags}
+                          className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive"
+                        >
+                          Clear All
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                    {allTags.length > 0 ? (
+                      allTags.map((tag) => (
+                        <label
+                          key={tag.name}
+                          className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedTags.includes(tag.name)}
+                            onCheckedChange={() => toggleTag(tag.name)}
+                          />
+                          <span className="text-sm flex-1">{tag.name}</span>
+                          <span className="text-xs text-muted-foreground">{tag.count.toLocaleString()}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        No tags available
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Year Range Filter */}
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-muted-foreground" />
+                <Input
+                  type="number"
+                  placeholder="From year"
+                  value={yearFromInput}
+                  onChange={(e) => setYearFromInput(e.target.value)}
+                  min="1970"
+                  max="2100"
+                  className="w-24 h-10"
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="number"
+                  placeholder="To year"
+                  value={yearToInput}
+                  onChange={(e) => setYearToInput(e.target.value)}
+                  min="1970"
+                  max="2100"
+                  className="w-24 h-10"
+                />
+              </div>
+
+              {/* Sort Controls - Pushed to Right */}
+              <div className="ml-auto flex items-center gap-2">
+                <select
+                  value={filters.sortBy || 'title'}
+                  onChange={(e) => updateFilter('sortBy', e.target.value)}
+                  className="px-3 py-2 bg-background border border-input rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-ring"
+                  aria-label="Sort by"
+                >
+                  <option value="title">Title</option>
+                  <option value="releaseDate">Release Date</option>
+                  <option value="dateAdded">Date Added</option>
+                  <option value="developer">Developer</option>
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateFilter('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="h-10 px-3"
+                  type="button"
+                  title={filters.sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                >
+                  <ArrowUpDown size={16} />
+                  <span className="ml-1 text-xs">{filters.sortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Mobile Layout: Stacked */}
+            <div className="md:hidden space-y-2">
+              {/* Row 1: Tags and Sort */}
+              <div className="flex items-center gap-2">
+                <Popover open={showTagDropdownMobile} onOpenChange={setShowTagDropdownMobile} modal={false}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between" type="button">
+                      <span>
+                        {selectedTags.length > 0 ? `${selectedTags.length} Tags` : 'Tags'}
+                      </span>
+                      <ChevronDown size={16} className={`ml-2 transition-transform ${showTagDropdownMobile ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                </Popover>
+
+                <select
+                  value={filters.sortBy || 'title'}
+                  onChange={(e) => updateFilter('sortBy', e.target.value)}
+                  className="flex-1 px-3 py-2 bg-background border border-input rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-ring"
+                  aria-label="Sort by"
+                >
+                  <option value="title">Title</option>
+                  <option value="releaseDate">Release Date</option>
+                  <option value="dateAdded">Date Added</option>
+                  <option value="developer">Developer</option>
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateFilter('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="h-10 px-2"
+                  type="button"
+                  title={filters.sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                >
+                  <ArrowUpDown size={16} />
+                </Button>
+              </div>
+
+              {/* Row 2: Year Range */}
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-muted-foreground flex-shrink-0" />
+                <Input
+                  type="number"
+                  placeholder="From"
+                  value={yearFromInput}
+                  onChange={(e) => setYearFromInput(e.target.value)}
+                  min="1970"
+                  max="2100"
+                  className="flex-1 h-10"
+                />
+                <span className="text-muted-foreground">-</span>
+                <Input
+                  type="number"
+                  placeholder="To"
+                  value={yearToInput}
+                  onChange={(e) => setYearToInput(e.target.value)}
+                  min="1970"
+                  max="2100"
+                  className="flex-1 h-10"
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Selected Platforms Row */}
+        {selectedPlatforms.length > 0 && showPlatformFilter && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Platforms:</span>
+            {selectedPlatforms.map((platform) => (
+              <Badge
+                key={platform}
+                variant="default"
+                className="gap-1"
+              >
+                {platform}
+                <button
+                  onClick={() => togglePlatform(platform)}
+                  className="hover:text-primary-foreground/80"
+                  aria-label={`Remove ${platform} filter`}
+                >
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
           </div>
-        </div>
+        )}
 
         {/* Selected Tags Row */}
         {selectedTags.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Tags:</span>
             {selectedTags.map((tag) => (
               <Badge
                 key={tag}
@@ -295,6 +1154,122 @@ export function FilterPanel({ filters }: FilterPanelProps) {
                 <button
                   onClick={() => toggleTag(tag)}
                   className="hover:text-primary"
+                  aria-label={`Remove ${tag} tag`}
+                >
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Selected Series Row */}
+        {selectedSeries.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Series:</span>
+            {selectedSeries.map((series) => (
+              <Badge
+                key={series}
+                variant="default"
+                className="gap-1"
+              >
+                {series}
+                <button
+                  onClick={() => toggleSeries(series)}
+                  className="hover:text-primary-foreground/80"
+                  aria-label={`Remove ${series} filter`}
+                >
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Selected Developers Row */}
+        {selectedDevelopers.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Developers:</span>
+            {selectedDevelopers.map((developer) => (
+              <Badge
+                key={developer}
+                variant="default"
+                className="gap-1"
+              >
+                {developer}
+                <button
+                  onClick={() => toggleDeveloper(developer)}
+                  className="hover:text-primary-foreground/80"
+                  aria-label={`Remove ${developer} filter`}
+                >
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Selected Publishers Row */}
+        {selectedPublishers.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Publishers:</span>
+            {selectedPublishers.map((publisher) => (
+              <Badge
+                key={publisher}
+                variant="default"
+                className="gap-1"
+              >
+                {publisher}
+                <button
+                  onClick={() => togglePublisher(publisher)}
+                  className="hover:text-primary-foreground/80"
+                  aria-label={`Remove ${publisher} filter`}
+                >
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Selected Play Modes Row */}
+        {selectedPlayModes.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Play Modes:</span>
+            {selectedPlayModes.map((playMode) => (
+              <Badge
+                key={playMode}
+                variant="default"
+                className="gap-1"
+              >
+                {playMode}
+                <button
+                  onClick={() => togglePlayMode(playMode)}
+                  className="hover:text-primary-foreground/80"
+                  aria-label={`Remove ${playMode} filter`}
+                >
+                  <X size={12} />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Selected Languages Row */}
+        {selectedLanguages.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Languages:</span>
+            {selectedLanguages.map((language) => (
+              <Badge
+                key={language}
+                variant="default"
+                className="gap-1"
+              >
+                {language}
+                <button
+                  onClick={() => toggleLanguage(language)}
+                  className="hover:text-primary-foreground/80"
+                  aria-label={`Remove ${language} filter`}
                 >
                   <X size={12} />
                 </button>

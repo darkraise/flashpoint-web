@@ -1,0 +1,134 @@
+%% Flashpoint Web System Architecture
+%% Complete system architecture showing all three services, databases, and data flow
+
+graph TB
+    subgraph "Client Layer"
+        Browser[Web Browser]
+        Ruffle[Ruffle WebAssembly<br/>Flash Emulator]
+    end
+
+    subgraph "Frontend Service :5173"
+        direction TB
+        React[React 18 SPA]
+        Router[React Router v6]
+        TanStack[TanStack Query<br/>Server State Cache]
+        Zustand[Zustand Stores<br/>Auth, Theme, UI]
+        Vite[Vite Dev Server<br/>HMR & Proxy]
+    end
+
+    subgraph "Backend Service :3100"
+        direction TB
+        Express[Express Server]
+
+        subgraph "Middleware Layer"
+            AuthMW[Authentication]
+            RBACMW[RBAC]
+            LoggingMW[Activity Logger]
+            ErrorMW[Error Handler]
+        end
+
+        subgraph "Service Layer"
+            GameSvc[GameService]
+            UserSvc[UserService]
+            AuthSvc[AuthService]
+            PlaySvc[PlayTrackingService]
+            PlaylistSvc[PlaylistService]
+        end
+    end
+
+    subgraph "Game Service :22500/:22501"
+        direction TB
+        ProxyServer[HTTP Proxy Server<br/>:22500]
+        ZipServer[GameZip Server<br/>:22501]
+        ZipManager[ZIP Manager]
+        MimeHandler[MIME Type Handler<br/>199+ types]
+        CDNFallback[CDN Fallback]
+    end
+
+    subgraph "Data Layer"
+        FlashpointDB[(flashpoint.sqlite<br/>READ-ONLY<br/>Game Metadata)]
+        UserDB[(user.db<br/>READ-WRITE<br/>Users & Settings)]
+
+        subgraph "File System"
+            direction LR
+            HTDocs[Legacy/htdocs/<br/>Web Content]
+            Images[Data/Images/<br/>Screenshots]
+            Logos[Data/Logos/<br/>Game Logos]
+            Games[Data/Games/<br/>ZIP Archives]
+        end
+    end
+
+    subgraph "External Services"
+        CDN[Flashpoint CDN<br/>infinity.flashpointarchive.org]
+    end
+
+    %% Client connections
+    Browser --> React
+    React --> Router
+    React --> TanStack
+    React --> Zustand
+    React --> Ruffle
+
+    %% Frontend to Backend API calls
+    TanStack -->|REST API| Express
+
+    %% Vite dev proxy
+    Vite -.dev proxy.-> Express
+
+    %% Backend middleware flow
+    Express --> AuthMW
+    AuthMW --> RBACMW
+    RBACMW --> LoggingMW
+    LoggingMW --> GameSvc
+    LoggingMW --> UserSvc
+    LoggingMW --> AuthSvc
+    LoggingMW --> PlaySvc
+    LoggingMW --> PlaylistSvc
+
+    %% Service to database connections
+    GameSvc --> FlashpointDB
+    UserSvc --> UserDB
+    AuthSvc --> UserDB
+    PlaySvc --> UserDB
+    PlaySvc --> FlashpointDB
+    PlaylistSvc --> UserDB
+    PlaylistSvc --> FlashpointDB
+
+    %% Backend to game service delegation
+    Express -.proxy delegation.-> ProxyServer
+    Express -.ZIP mount requests.-> ZipServer
+
+    %% Game service components
+    ProxyServer --> MimeHandler
+    ProxyServer --> HTDocs
+    ProxyServer --> Games
+    ProxyServer -.fallback.-> CDNFallback
+    CDNFallback --> CDN
+
+    ZipServer --> ZipManager
+    ZipManager --> Games
+
+    %% Backend to file system
+    Express --> Images
+    Express --> Logos
+
+    %% Ruffle to game service
+    Ruffle -.load game files.-> ProxyServer
+
+    %% Error handling
+    ErrorMW -.handle errors.-> Express
+
+    %% Styling
+    classDef frontend fill:#61dafb,stroke:#333,stroke-width:2px,color:#000
+    classDef backend fill:#90ee90,stroke:#333,stroke-width:2px,color:#000
+    classDef gameservice fill:#ffd700,stroke:#333,stroke-width:2px,color:#000
+    classDef database fill:#ff9999,stroke:#333,stroke-width:2px,color:#000
+    classDef filesystem fill:#ffcc99,stroke:#333,stroke-width:2px,color:#000
+    classDef external fill:#e1e1e1,stroke:#333,stroke-width:2px,color:#000
+
+    class React,Router,TanStack,Zustand,Vite,Ruffle frontend
+    class Express,AuthMW,RBACMW,LoggingMW,ErrorMW,GameSvc,UserSvc,AuthSvc,PlaySvc,PlaylistSvc backend
+    class ProxyServer,ZipServer,ZipManager,MimeHandler,CDNFallback gameservice
+    class FlashpointDB,UserDB database
+    class HTDocs,Images,Logos,Games filesystem
+    class Browser,CDN external

@@ -26,6 +26,7 @@ export function SearchBar() {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search games..."
         className="pl-10"
+        aria-label="Search games"
       />
     </form>
   );

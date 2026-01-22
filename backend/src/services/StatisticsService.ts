@@ -8,7 +8,7 @@ export interface Statistics {
   totalPlatforms: number;
   webPlayableGames: number;
   totalPlaylists: number;
-  favoritesCount: number;
+  totalTags: number;
 }
 
 export class StatisticsService {
@@ -45,21 +45,42 @@ export class StatisticsService {
       );
       const webPlayableGames = webPlayableResult?.count || 0;
 
+      // Get active tags count (tags actually used by games)
+      let totalTags = 0;
+      try {
+        const sql = `
+          SELECT DISTINCT tagsStr
+          FROM game
+          WHERE tagsStr IS NOT NULL AND tagsStr != ''
+        `;
+
+        const results = DatabaseService.all(sql, []) as Array<{ tagsStr: string }>;
+
+        // Parse semicolon-separated tags and count distinct tags
+        const uniqueTags = new Set<string>();
+
+        for (const row of results) {
+          const tags = row.tagsStr.split(';').map(tag => tag.trim()).filter(tag => tag);
+          for (const tag of tags) {
+            uniqueTags.add(tag);
+          }
+        }
+
+        totalTags = uniqueTags.size;
+      } catch (error) {
+        logger.warn('Failed to count active tags:', error);
+        totalTags = 0;
+      }
+
       // Get playlists count from filesystem
       let totalPlaylists = 0;
-      let favoritesCount = 0;
 
       try {
         const playlists = await this.playlistService.getAllPlaylists();
         totalPlaylists = playlists.length;
-
-        // Get favorites count (special playlist ID)
-        const FAVORITES_PLAYLIST_ID = 'c8f81d60-b134-4309-8985-fd184ec96dfe';
-        const favoritesPlaylist = await this.playlistService.getPlaylistById(FAVORITES_PLAYLIST_ID);
-        favoritesCount = favoritesPlaylist?.games?.length || 0;
       } catch (error) {
         logger.warn('Failed to get playlist statistics:', error);
-        // Continue with 0 counts
+        // Continue with 0 count
       }
 
       // Statistics will be returned
@@ -69,7 +90,7 @@ export class StatisticsService {
         totalPlatforms,
         webPlayableGames,
         totalPlaylists,
-        favoritesCount
+        totalTags
       };
 
       logger.debug('Statistics calculated:', statistics);

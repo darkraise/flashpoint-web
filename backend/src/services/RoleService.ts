@@ -1,6 +1,9 @@
 import { UserDatabaseService } from './UserDatabaseService';
+import { PermissionCache } from './PermissionCache';
 import { AppError } from '../middleware/errorHandler';
 import { Role, Permission } from '../types/auth';
+import { SYSTEM_ROLES, isSystemRole } from '../constants/roles';
+import { logger } from '../utils/logger';
 
 export class RoleService {
   /**
@@ -104,7 +107,7 @@ export class RoleService {
     }
 
     // Prevent updating system roles (admin, user, guest)
-    if (id <= 3) {
+    if (isSystemRole(id)) {
       throw new AppError(403, 'Cannot modify system roles');
     }
 
@@ -158,7 +161,7 @@ export class RoleService {
     }
 
     // Prevent updating system roles (admin, user, guest)
-    if (roleId <= 3) {
+    if (isSystemRole(roleId)) {
       throw new AppError(403, 'Cannot modify system role permissions');
     }
 
@@ -172,6 +175,14 @@ export class RoleService {
         [roleId, permissionId]
       );
     }
+
+    // Invalidate permission cache for this role
+    PermissionCache.invalidateRole(roleId);
+    logger.info(`[RoleService] Updated permissions for role ${roleId}, cache invalidated`);
+
+    // Note: User-specific caches will expire naturally within 5 minutes
+    // For immediate updates, we could query all users with this role and invalidate them
+    // but that would defeat the purpose of caching. The TTL handles eventual consistency.
   }
 
   /**
@@ -184,7 +195,7 @@ export class RoleService {
     }
 
     // Prevent deleting system roles
-    if (id <= 3) {
+    if (isSystemRole(id)) {
       throw new AppError(403, 'Cannot delete system roles');
     }
 

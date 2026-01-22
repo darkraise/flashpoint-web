@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ThemePicker } from '@/components/theme/ThemePicker';
 
 const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username must be at most 50 characters'),
@@ -65,14 +66,35 @@ export function RegisterForm() {
   if (settings && !settings.userRegistrationEnabled) {
     return (
       <div className="w-full max-w-md">
-        <div className="bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">Registration Disabled</h2>
-          <p className="text-gray-300 text-center mb-4">
-            User registration is currently disabled. Please contact an administrator.
-          </p>
-          <div className="text-center">
-            <Link to="/login" className="text-sm text-blue-400 hover:text-blue-300">
-              Back to Login
+        <div className="bg-card border shadow-xl rounded-2xl px-8 py-8 mb-4 relative overflow-hidden">
+          {/* Decorative gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 pointer-events-none" />
+
+          {/* Theme Toggle in top-right corner */}
+          <div className="absolute top-4 right-4 z-10">
+            <ThemePicker />
+          </div>
+
+          {/* Logo Section */}
+          <div className="relative mb-8 flex flex-col items-center">
+            <div className="mb-4 w-24 h-24 flex items-center justify-center">
+              <img
+                src="/images/logo.png"
+                alt="Flashpoint Archive"
+                className="w-full h-full object-contain drop-shadow-lg"
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-foreground text-center mb-2">
+              Registration Disabled
+            </h1>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              User registration is currently disabled. Please contact an administrator for access.
+            </p>
+          </div>
+
+          <div className="relative text-center">
+            <Link to="/login" className="inline-flex items-center justify-center text-sm text-primary font-semibold hover:underline">
+              ← Back to Login
             </Link>
           </div>
         </div>
@@ -82,11 +104,34 @@ export function RegisterForm() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="bg-gray-800 shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h2 className="text-2xl font-bold text-white mb-6 text-center">Create Account</h2>
+      <div className="bg-card border shadow-xl rounded-2xl px-8 py-8 mb-4 relative overflow-hidden">
+        {/* Decorative gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 pointer-events-none" />
+
+        {/* Theme Toggle in top-right corner */}
+        <div className="absolute top-4 right-4 z-10">
+          <ThemePicker />
+        </div>
+
+        {/* Logo and Title Section */}
+        <div className="relative mb-8 flex flex-col items-center">
+          <div className="mb-4 w-24 h-24 flex items-center justify-center">
+            <img
+              src="/images/logo.png"
+              alt="Flashpoint Archive"
+              className="w-full h-full object-contain drop-shadow-lg"
+            />
+          </div>
+          <h1 className="text-3xl font-bold text-foreground text-center mb-2">
+            Create Account
+          </h1>
+          <p className="text-sm text-muted-foreground text-center">
+            Join Flashpoint Archive today
+          </p>
+        </div>
 
         {registerMutation.isError && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-6">
             <AlertDescription>
               {(registerMutation.error as any)?.response?.data?.error?.message || 'Registration failed. Please try again.'}
             </AlertDescription>
@@ -94,17 +139,18 @@ export function RegisterForm() {
         )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="relative space-y-4">
             <FormField
               control={form.control}
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Username</FormLabel>
+                  <FormLabel className="text-sm font-semibold">Username</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Username"
+                      placeholder="Choose a username"
                       autoFocus
+                      className="h-11"
                       {...field}
                     />
                   </FormControl>
@@ -118,11 +164,12 @@ export function RegisterForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className="text-sm font-semibold">Email</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
                       placeholder="you@example.com"
+                      className="h-11"
                       {...field}
                     />
                   </FormControl>
@@ -136,11 +183,12 @@ export function RegisterForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel className="text-sm font-semibold">Password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="******************"
+                      placeholder="Create a strong password"
+                      className="h-11"
                       {...field}
                     />
                   </FormControl>
@@ -154,11 +202,12 @@ export function RegisterForm() {
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
+                  <FormLabel className="text-sm font-semibold">Confirm Password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="******************"
+                      placeholder="Confirm your password"
+                      className="h-11"
                       {...field}
                     />
                   </FormControl>
@@ -167,22 +216,32 @@ export function RegisterForm() {
               )}
             />
 
-            <div className="pt-2">
+            <div className="pt-4">
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-11 text-base font-semibold shadow-md hover:shadow-lg transition-all"
                 disabled={registerMutation.isPending}
               >
-                {registerMutation.isPending ? 'Creating account...' : 'Create Account'}
+                {registerMutation.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    Creating account...
+                  </span>
+                ) : (
+                  'Create Account'
+                )}
               </Button>
             </div>
           </form>
         </Form>
 
-        <div className="mt-4 text-center">
-          <Link to="/login" className="text-sm text-blue-400 hover:text-blue-300">
-            Already have an account? Sign in
-          </Link>
+        <div className="relative mt-6 pt-6 border-t">
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary font-semibold hover:underline">
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
     </div>

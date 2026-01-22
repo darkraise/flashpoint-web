@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3100';
 
 export interface Statistics {
   totalGames: number;
@@ -9,7 +9,7 @@ export interface Statistics {
   totalPlatforms: number;
   webPlayableGames: number;
   totalPlaylists: number;
-  favoritesCount: number;
+  totalTags: number;
 }
 
 const statisticsApi = {

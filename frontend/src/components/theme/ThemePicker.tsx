@@ -29,7 +29,7 @@ export function ThemePicker() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" title="Toggle theme">
+        <Button variant="outline" size="icon" className="border-primary" title="Toggle theme">
           {getModeIcon()}
           <span className="sr-only">Toggle theme</span>
         </Button>

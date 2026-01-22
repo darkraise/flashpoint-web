@@ -29,6 +29,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogBody,
 } from '@/components/ui/dialog';
 
 const playlistSchema = z.object({
@@ -92,8 +93,9 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <DialogBody>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="title"
@@ -188,6 +190,7 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
             </DialogFooter>
           </form>
         </Form>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );
