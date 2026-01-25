@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal } from 'lucide-react';
+import { toast } from 'sonner';
 import { useUsers, useDeleteUser } from '../../hooks/useUsers';
 import { UserDetails } from '../../types/auth';
 import { RoleGuard } from '../common/RoleGuard';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { DataTable } from '../ui/data-table';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { FormattedDate } from '../common/FormattedDate';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,21 +26,36 @@ interface UserTableProps {
 
 export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
   const [page, setPage] = useState(1);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserDetails | null>(null);
   const limit = 20;
 
   const { data, isLoading, isError, error } = useUsers(page, limit);
   const deleteUserMutation = useDeleteUser();
 
-  const handleDelete = async (user: UserDetails) => {
-    if (!confirm(`Are you sure you want to delete user "${user.username}"?`)) {
-      return;
-    }
+  const handleDeleteClick = (user: UserDetails) => {
+    setUserToDelete(user);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
 
     try {
-      await deleteUserMutation.mutateAsync(user.id);
+      await deleteUserMutation.mutateAsync(userToDelete.id);
+      toast.success(`User "${userToDelete.username}" deleted successfully`);
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
     } catch (error) {
-      alert('Failed to delete user');
+      toast.error('Failed to delete user');
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false);
+    setUserToDelete(null);
   };
 
   const columns: ColumnDef<UserDetails>[] = [
@@ -92,7 +110,7 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
         const lastLogin = row.getValue('lastLoginAt') as string | null;
         return (
           <div className="text-muted-foreground">
-            {lastLogin ? new Date(lastLogin).toLocaleString() : 'Never'}
+            {lastLogin ? <FormattedDate date={lastLogin} type="datetime" /> : 'Never'}
           </div>
         );
       },
@@ -126,7 +144,7 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
               </RoleGuard>
               <RoleGuard permission="users.delete">
                 <DropdownMenuItem
-                  onClick={() => handleDelete(user)}
+                  onClick={() => handleDeleteClick(user)}
                   disabled={deleteUserMutation.isPending}
                   className="text-destructive focus:text-destructive"
                 >
@@ -150,13 +168,25 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={data?.data || []}
-      pagination={data?.pagination}
-      onPageChange={setPage}
-      isLoading={isLoading}
-      emptyMessage="No users found"
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={data?.data || []}
+        pagination={data?.pagination}
+        onPageChange={setPage}
+        isLoading={isLoading}
+        emptyMessage="No users found"
+      />
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        title="Delete User"
+        message={`Are you sure you want to delete user "${userToDelete?.username}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
+    </>
   );
 }

@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal } from 'lucide-react';
+import { toast } from 'sonner';
 import { useRoles, useDeleteRole } from '../../hooks/useRoles';
 import { Role } from '../../types/auth';
 import { RoleGuard } from '../common/RoleGuard';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { DataTable } from '../ui/data-table';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -21,19 +24,34 @@ interface RoleTableProps {
 }
 
 export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const { data: roles, isLoading, isError, error } = useRoles();
   const deleteRoleMutation = useDeleteRole();
 
-  const handleDelete = async (role: Role) => {
-    if (!confirm(`Are you sure you want to delete role "${role.name}"?`)) {
-      return;
-    }
+  const handleDeleteClick = (role: Role) => {
+    setRoleToDelete(role);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!roleToDelete) return;
 
     try {
-      await deleteRoleMutation.mutateAsync(role.id);
+      await deleteRoleMutation.mutateAsync(roleToDelete.id);
+      toast.success(`Role "${roleToDelete.name}" deleted successfully`);
+      setIsDeleteDialogOpen(false);
+      setRoleToDelete(null);
     } catch (error) {
-      alert('Failed to delete role');
+      toast.error('Failed to delete role');
+      setIsDeleteDialogOpen(false);
+      setRoleToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setIsDeleteDialogOpen(false);
+    setRoleToDelete(null);
   };
 
   const columns: ColumnDef<Role>[] = [
@@ -117,7 +135,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
                 </RoleGuard>
                 <RoleGuard permission="roles.delete">
                   <DropdownMenuItem
-                    onClick={() => handleDelete(role)}
+                    onClick={() => handleDeleteClick(role)}
                     disabled={deleteRoleMutation.isPending || isSystemRole}
                     className="text-destructive focus:text-destructive"
                   >
@@ -145,11 +163,23 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
   }
 
   return (
-    <DataTable
-      columns={columns}
-      data={roles || []}
-      isLoading={isLoading}
-      emptyMessage="No roles found"
-    />
+    <>
+      <DataTable
+        columns={columns}
+        data={roles || []}
+        isLoading={isLoading}
+        emptyMessage="No roles found"
+      />
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        title="Delete Role"
+        message={`Are you sure you want to delete role "${roleToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
+    </>
   );
 }

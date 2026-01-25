@@ -15,7 +15,7 @@
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215.4 16.3% 35%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
@@ -24,6 +24,11 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+
+    /* Scrollbar colors */
+    --scrollbar-track: 210 40% 96.1%; /* Light gray for track */
+    --scrollbar-thumb: 220 8.9% 46.1%; /* Medium gray for thumb */
+    --scrollbar-thumb-hover: 221.2 83.2% 53.3%; /* Primary color on hover */
   }
 
   .dark {
@@ -46,6 +51,11 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+
+    /* Scrollbar colors */
+    --scrollbar-track: 217.2 32.6% 17.5%; /* Dark gray for track */
+    --scrollbar-thumb: 220 13% 69%; /* Light gray for thumb */
+    --scrollbar-thumb-hover: 217.2 91.2% 59.8%; /* Primary color on hover */
   }
 }
 
@@ -56,6 +66,36 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Global scrollbar styling */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: hsl(var(--scrollbar-thumb)) hsl(var(--scrollbar-track));
+}
+
+*::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+*::-webkit-scrollbar-track {
+  background: hsl(var(--scrollbar-track));
+  border-radius: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--scrollbar-thumb));
+  border-radius: 6px;
+  border: 3px solid hsl(var(--scrollbar-track));
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--scrollbar-thumb-hover));
+}
+
+*::-webkit-scrollbar-corner {
+  background: hsl(var(--scrollbar-track));
 }
 
 /* Keep existing font and rendering optimizations */
@@ -72,7 +112,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -105,5 +147,14 @@ html, body, #root {
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    border: 2px solid hsl(var(--scrollbar-track));
   }
 }

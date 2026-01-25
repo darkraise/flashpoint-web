@@ -1,12 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { Game } from "@/types/game";
-import {
-  ImageIcon,
-  ListPlus,
-  Play,
-  Heart,
-} from "lucide-react";
+import { ImageIcon, ListPlus, Play, Heart } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +42,8 @@ export function GameCard({
 
   // Check if game is favorited and playable
   const isFavorited = favoriteGameIds?.has(game.id) ?? false;
-  const isPlayable = game.platformName === "Flash" || game.platformName === "HTML5";
+  const isPlayable =
+    game.platformName === "Flash" || game.platformName === "HTML5";
 
   return (
     <Card className="group overflow-hidden hover:ring-2 hover:ring-primary/80 hover:shadow-xl hover:-translate-y-1 hover:z-20 transition-all duration-200 relative">
@@ -110,9 +106,10 @@ export function GameCard({
       <div className="absolute top-1.5 right-1.5 flex gap-1">
         {/* Favorite Indicator (non-clickable, always visible if favorited) */}
         {showFavoriteIndicator && isFavorited && !isFavoritePage && (
-          <div className="h-7 w-7 flex items-center justify-center bg-primary/90 backdrop-blur-sm rounded-md">
-            <Heart size={14} fill="currentColor" className="text-primary-foreground" />
-          </div>
+          // <div className="h-7 w-7 flex items-center justify-center bg-primary/90 backdrop-blur-sm rounded-md">
+          //   <Heart size={14} fill="currentColor" className="text-primary" />
+          // </div>
+          <Heart size={14} fill="currentColor" className="text-primary" />
         )}
 
         {/* Remove from Favorites Button (Favorites page only) */}
@@ -120,7 +117,7 @@ export function GameCard({
           <RemoveFavoriteButton
             gameId={game.id}
             size="sm"
-            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-7 w-7 p-0 transition-opacity"
           />
         )}
 
@@ -149,7 +146,7 @@ export function GameCard({
               }
               setIsPlaylistModalOpen(true);
             }}
-            className="h-7 w-7 p-0 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-7 w-7 p-0 backdrop-blur-sm transition-opacity"
             title="Add to Playlist"
             aria-label="Add to Playlist"
           >
@@ -164,7 +161,7 @@ export function GameCard({
           size="default"
           variant="default"
           asChild
-          className="absolute bottom-2 right-2 h-10 w-10 p-0 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+          className="absolute bottom-2 right-2 h-10 w-10 p-0 backdrop-blur-sm transition-opacity shadow-lg"
           title="Play Game"
         >
           <Link

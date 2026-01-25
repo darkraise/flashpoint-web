@@ -1,21 +1,12 @@
 import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from './components/layout/AppShell';
 import { BrowseView } from './views/BrowseView';
 import { FlashGamesView } from './views/FlashGamesView';
 import { HTML5GamesView } from './views/HTML5GamesView';
-import { AnimationsView } from './views/AnimationsView';
 import { GameDetailView } from './views/GameDetailView';
 import { GamePlayerView } from './views/GamePlayerView';
-import { PlaylistsView } from './views/PlaylistsView';
-import { PlaylistDetailView } from './views/PlaylistDetailView';
-import { UserPlaylistsView } from './views/UserPlaylistsView';
-import { UserPlaylistDetailView } from './views/UserPlaylistDetailView';
-import { FavoritesView } from './views/FavoritesView';
-import { DashboardView } from './views/DashboardView';
-import { SettingsView } from './views/SettingsView';
-import { JobsView } from './views/JobsView';
 import { LoginView } from './views/LoginView';
 import { RegisterView } from './views/RegisterView';
 import { UnauthorizedView } from './views/UnauthorizedView';
@@ -23,18 +14,30 @@ import { MaintenancePage } from './views/MaintenancePage';
 import { NotFoundView } from './components/error/NotFoundView';
 import { ServerErrorView } from './components/error/ServerErrorView';
 import { NetworkErrorView } from './components/error/NetworkErrorView';
-import { UsersView } from './views/UsersView';
-import { RolesView } from './views/RolesView';
-import { ActivitiesView } from './views/ActivitiesView';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { MaintenanceGuard } from './components/common/MaintenanceGuard';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NetworkStatusIndicator } from './components/common/NetworkStatusIndicator';
 import { MobileWarningDialog } from './components/common/MobileWarningDialog';
+import { RouteLoadingFallback } from './components/common/RouteLoadingFallback';
 import { useAuthStore } from './store/auth';
 import { authSettingsApi } from './lib/api';
 import { usePublicSettings } from './hooks/usePublicSettings';
 import { Toaster } from '@/components/ui/sonner';
+
+// Lazy load heavy/admin views for better initial bundle size
+const AnimationsView = lazy(() => import('./views/AnimationsView').then(m => ({ default: m.AnimationsView })));
+const FavoritesView = lazy(() => import('./views/FavoritesView').then(m => ({ default: m.FavoritesView })));
+const DashboardView = lazy(() => import('./views/DashboardView').then(m => ({ default: m.DashboardView })));
+const SettingsView = lazy(() => import('./views/SettingsView').then(m => ({ default: m.SettingsView })));
+const JobsView = lazy(() => import('./views/JobsView').then(m => ({ default: m.JobsView })));
+const PlaylistsView = lazy(() => import('./views/PlaylistsView').then(m => ({ default: m.PlaylistsView })));
+const PlaylistDetailView = lazy(() => import('./views/PlaylistDetailView').then(m => ({ default: m.PlaylistDetailView })));
+const UserPlaylistsView = lazy(() => import('./views/UserPlaylistsView').then(m => ({ default: m.UserPlaylistsView })));
+const UserPlaylistDetailView = lazy(() => import('./views/UserPlaylistDetailView').then(m => ({ default: m.UserPlaylistDetailView })));
+const UsersView = lazy(() => import('./views/UsersView').then(m => ({ default: m.UsersView })));
+const RolesView = lazy(() => import('./views/RolesView').then(m => ({ default: m.RolesView })));
+const ActivitiesView = lazy(() => import('./views/ActivitiesView').then(m => ({ default: m.ActivitiesView })));
 
 function App() {
   const { isAuthenticated, isGuest, clearAuth } = useAuthStore();
@@ -126,7 +129,9 @@ function App() {
         } />
         <Route path="/animations" element={
           <ProtectedRoute requireAuth={false}>
-            <AnimationsView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <AnimationsView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/games/:id" element={
@@ -138,7 +143,9 @@ function App() {
         {/* Protected routes - require authentication */}
         <Route path="/dashboard" element={
           <ProtectedRoute requireFeature="enableStatistics">
-            <DashboardView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <DashboardView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/games/:id/play" element={
@@ -148,58 +155,78 @@ function App() {
         } />
         <Route path="/favorites" element={
           <ProtectedRoute requireFeature="enableFavorites">
-            <FavoritesView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <FavoritesView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/playlists" element={
           <ProtectedRoute requireFeature="enablePlaylists">
-            <UserPlaylistsView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <UserPlaylistsView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/playlists/:id" element={
           <ProtectedRoute requireFeature="enablePlaylists">
-            <UserPlaylistDetailView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <UserPlaylistDetailView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/flashpoint-playlists" element={
           <ProtectedRoute requireFeature="enablePlaylists">
-            <PlaylistsView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <PlaylistsView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/flashpoint-playlists/:id" element={
           <ProtectedRoute requireFeature="enablePlaylists">
-            <PlaylistDetailView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <PlaylistDetailView />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         {/* User management routes */}
         <Route path="/users" element={
           <ProtectedRoute requirePermission="users.read">
-            <UsersView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <UsersView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/roles" element={
           <ProtectedRoute requirePermission="roles.read">
-            <RolesView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <RolesView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/activities" element={
-          <ProtectedRoute requirePermission="activities.read">
-            <ActivitiesView />
+          <ProtectedRoute requirePermission="activities.read" requireFeature="enableStatistics">
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <ActivitiesView />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         {/* Jobs */}
         <Route path="/jobs" element={
           <ProtectedRoute requirePermission="settings.update">
-            <JobsView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <JobsView />
+            </Suspense>
           </ProtectedRoute>
         } />
 
         {/* Settings */}
         <Route path="/settings" element={
           <ProtectedRoute>
-            <SettingsView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <SettingsView />
+            </Suspense>
           </ProtectedRoute>
         } />
       </Route>

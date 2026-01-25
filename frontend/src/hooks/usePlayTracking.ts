@@ -1,7 +1,9 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { playTrackingApi } from '../lib/api';
 import { useAuthStore } from '../store/auth';
+import { useFeatureFlags } from './useFeatureFlags';
 import { useEffect, useRef } from 'react';
+import { logger } from '@/lib/logger';
 
 /**
  * Hook for tracking play sessions
@@ -11,16 +13,17 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
   const previousGameIdRef = useRef<string | null>(null);
   const hasStartedSessionRef = useRef(false);
   const { isAuthenticated, isGuest } = useAuthStore();
+  const { enableStatistics } = useFeatureFlags();
 
   const startMutation = useMutation({
     mutationFn: ({ gameId, gameTitle }: { gameId: string; gameTitle: string }) =>
       playTrackingApi.startSession(gameId, gameTitle),
     onSuccess: (data) => {
       sessionIdRef.current = data.sessionId;
-      console.log('[PlaySession] Started session:', data.sessionId, 'for game:', gameId);
+      logger.debug('[PlaySession] Started session:', data.sessionId, 'for game:', gameId);
     },
     onError: (error) => {
-      console.error('[PlaySession] Failed to start play session:', error);
+      logger.error('[PlaySession] Failed to start play session:', error);
       hasStartedSessionRef.current = false;
     }
   });
@@ -28,19 +31,20 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
   const endMutation = useMutation({
     mutationFn: (sessionId: string) => playTrackingApi.endSession(sessionId),
     onSuccess: () => {
-      console.log('[PlaySession] Ended session:', sessionIdRef.current);
+      logger.debug('[PlaySession] Ended session:', sessionIdRef.current);
       sessionIdRef.current = null;
     },
     onError: (error) => {
-      console.error('[PlaySession] Failed to end play session:', error);
+      logger.error('[PlaySession] Failed to end play session:', error);
     }
   });
 
   // Handle session lifecycle (start on mount, end on game change)
   useEffect(() => {
-    console.log('[PlaySession] Effect triggered', {
+    logger.debug('[PlaySession] Effect triggered', {
       isAuthenticated,
       isGuest,
+      enableStatistics,
       gameId,
       gameTitle,
       hasStartedSession: hasStartedSessionRef.current,
@@ -48,14 +52,14 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
       isPending: startMutation.isPending
     });
 
-    // Skip if not authenticated, is guest, or no game data
-    if (!isAuthenticated || isGuest || !gameId || !gameTitle) {
+    // Skip if feature disabled, not authenticated, is guest, or no game data
+    if (!enableStatistics || !isAuthenticated || isGuest || !gameId || !gameTitle) {
       return;
     }
 
     // Skip if we're already starting a session (prevents duplicate calls in React StrictMode)
     if (startMutation.isPending) {
-      console.log('[PlaySession] Mutation already pending, skipping');
+      logger.debug('[PlaySession] Mutation already pending, skipping');
       return;
     }
 
@@ -65,7 +69,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
 
       // If there's a previous session for a different game, end it first
       if (previousSessionId && previousGameIdRef.current !== gameId) {
-        console.log('[PlaySession] Ending previous session before starting new one');
+        logger.debug('[PlaySession] Ending previous session before starting new one');
         sessionIdRef.current = null;
 
         playTrackingApi.endSession(previousSessionId).then(() => {
@@ -73,7 +77,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
           hasStartedSessionRef.current = true;
           startMutation.mutate({ gameId, gameTitle });
         }).catch(error => {
-          console.error('[PlaySession] Failed to end previous session:', error);
+          logger.error('[PlaySession] Failed to end previous session:', error);
           // Start new session anyway
           previousGameIdRef.current = gameId;
           hasStartedSessionRef.current = true;
@@ -81,21 +85,21 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
         });
       } else {
         // No previous session or same game, just start
-        console.log('[PlaySession] Starting new session');
+        logger.debug('[PlaySession] Starting new session');
         previousGameIdRef.current = gameId;
         hasStartedSessionRef.current = true;
         startMutation.mutate({ gameId, gameTitle });
       }
     }
-  }, [isAuthenticated, isGuest, gameId, gameTitle, startMutation.isPending]);
+  }, [enableStatistics, isAuthenticated, isGuest, gameId, gameTitle, startMutation.isPending]);
 
   // End session on unmount
   useEffect(() => {
     return () => {
       if (sessionIdRef.current) {
-        console.log('[PlaySession] Component unmounting, ending session:', sessionIdRef.current);
+        logger.debug('[PlaySession] Component unmounting, ending session:', sessionIdRef.current);
         playTrackingApi.endSession(sessionIdRef.current).catch(error => {
-          console.error('[PlaySession] Failed to end play session on cleanup:', error);
+          logger.error('[PlaySession] Failed to end play session on cleanup:', error);
         });
         // Reset refs on unmount
         hasStartedSessionRef.current = false;
@@ -120,11 +124,12 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
  */
 export function useUserStats() {
   const { isAuthenticated, isGuest } = useAuthStore();
+  const { enableStatistics } = useFeatureFlags();
 
   return useQuery({
     queryKey: ['playStats'],
     queryFn: () => playTrackingApi.getStats(),
-    enabled: isAuthenticated && !isGuest,
+    enabled: enableStatistics && isAuthenticated && !isGuest,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -134,11 +139,12 @@ export function useUserStats() {
  */
 export function useGameStats(limit = 50, offset = 0) {
   const { isAuthenticated, isGuest } = useAuthStore();
+  const { enableStatistics } = useFeatureFlags();
 
   return useQuery({
     queryKey: ['gameStats', limit, offset],
     queryFn: () => playTrackingApi.getGameStats(limit, offset),
-    enabled: isAuthenticated && !isGuest,
+    enabled: enableStatistics && isAuthenticated && !isGuest,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }
@@ -148,11 +154,12 @@ export function useGameStats(limit = 50, offset = 0) {
  */
 export function usePlayHistory(limit = 50, offset = 0) {
   const { isAuthenticated, isGuest } = useAuthStore();
+  const { enableStatistics } = useFeatureFlags();
 
   return useQuery({
     queryKey: ['playHistory', limit, offset],
     queryFn: () => playTrackingApi.getHistory(limit, offset),
-    enabled: isAuthenticated && !isGuest,
+    enabled: enableStatistics && isAuthenticated && !isGuest,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 }
@@ -162,11 +169,12 @@ export function usePlayHistory(limit = 50, offset = 0) {
  */
 export function useTopGames(limit = 10) {
   const { isAuthenticated, isGuest } = useAuthStore();
+  const { enableStatistics } = useFeatureFlags();
 
   return useQuery({
     queryKey: ['topGames', limit],
     queryFn: () => playTrackingApi.getTopGames(limit),
-    enabled: isAuthenticated && !isGuest,
+    enabled: enableStatistics && isAuthenticated && !isGuest,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -176,11 +184,12 @@ export function useTopGames(limit = 10) {
  */
 export function usePlayActivityOverTime(days = 30) {
   const { isAuthenticated, isGuest } = useAuthStore();
+  const { enableStatistics } = useFeatureFlags();
 
   return useQuery({
     queryKey: ['playActivity', days],
     queryFn: () => playTrackingApi.getActivityOverTime(days),
-    enabled: isAuthenticated && !isGuest,
+    enabled: enableStatistics && isAuthenticated && !isGuest,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -190,11 +199,12 @@ export function usePlayActivityOverTime(days = 30) {
  */
 export function useGamesDistribution(limit = 10) {
   const { isAuthenticated, isGuest } = useAuthStore();
+  const { enableStatistics } = useFeatureFlags();
 
   return useQuery({
     queryKey: ['gamesDistribution', limit],
     queryFn: () => playTrackingApi.getGamesDistribution(limit),
-    enabled: isAuthenticated && !isGuest,
+    enabled: enableStatistics && isAuthenticated && !isGuest,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
