@@ -1,9 +1,24 @@
+import { lazy, Suspense } from 'react';
 import { Clock, GamepadIcon, TrendingUp, BarChart3 } from 'lucide-react';
 import { useUserStats } from '../../hooks/usePlayTracking';
-import { PlaytimeChart } from './PlaytimeChart';
-import { TopGamesChart } from './TopGamesChart';
-import { GamesDistributionChart } from './GamesDistributionChart';
 import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
+import { ChartErrorBoundary } from './ChartErrorBoundary';
+
+// Lazy load chart components to reduce initial bundle size
+const PlaytimeChart = lazy(() => import('./PlaytimeChart').then(m => ({ default: m.PlaytimeChart })));
+const TopGamesChart = lazy(() => import('./TopGamesChart').then(m => ({ default: m.TopGamesChart })));
+const GamesDistributionChart = lazy(() => import('./GamesDistributionChart').then(m => ({ default: m.GamesDistributionChart })));
+
+// Skeleton loader for chart components
+function ChartSkeleton({ height = 'h-80' }: { height?: string }) {
+  return (
+    <div className="bg-card rounded-lg p-6 border border-border shadow-md">
+      <div className={`${height} flex items-center justify-center`}>
+        <div className="animate-pulse text-muted-foreground">Loading chart...</div>
+      </div>
+    </div>
+  );
+}
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) {
@@ -121,15 +136,27 @@ export function UserStatsPanel() {
       </div>
 
       {/* Play Activity Over Time Chart */}
-      <PlaytimeChart />
+      <ChartErrorBoundary fallbackTitle="Play Activity Chart Error">
+        <Suspense fallback={<ChartSkeleton height="h-96" />}>
+          <PlaytimeChart />
+        </Suspense>
+      </ChartErrorBoundary>
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Games Bar Chart */}
-        <TopGamesChart />
+        <ChartErrorBoundary fallbackTitle="Top Games Chart Error">
+          <Suspense fallback={<ChartSkeleton height="h-96" />}>
+            <TopGamesChart />
+          </Suspense>
+        </ChartErrorBoundary>
 
         {/* Games Distribution Pie Chart */}
-        <GamesDistributionChart />
+        <ChartErrorBoundary fallbackTitle="Distribution Chart Error">
+          <Suspense fallback={<ChartSkeleton height="h-96" />}>
+            <GamesDistributionChart />
+          </Suspense>
+        </ChartErrorBoundary>
       </div>
     </div>
   );
