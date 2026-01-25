@@ -104,6 +104,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
 
       {/* Sidebar */}
       <aside
+        id="navigation"
         ref={sidebarRef}
         className={cn(
           'bg-card border-r flex flex-col overflow-hidden',
