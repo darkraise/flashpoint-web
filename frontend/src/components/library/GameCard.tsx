@@ -117,7 +117,7 @@ export function GameCard({
           <RemoveFavoriteButton
             gameId={game.id}
             size="sm"
-            className="h-7 w-7 p-0 transition-opacity"
+            className="min-h-[44px] min-w-[44px] h-11 w-11 p-0 transition-opacity"
           />
         )}
 
@@ -127,7 +127,7 @@ export function GameCard({
             gameId={game.id}
             isFavorited={false}
             size="sm"
-            className="h-7 w-7 p-0"
+            className="min-h-[44px] min-w-[44px] h-11 w-11 p-0"
             showOnHoverOnly={true}
           />
         )}
@@ -146,11 +146,11 @@ export function GameCard({
               }
               setIsPlaylistModalOpen(true);
             }}
-            className="h-7 w-7 p-0 backdrop-blur-sm transition-opacity"
+            className="min-h-[44px] min-w-[44px] h-11 w-11 p-0 backdrop-blur-sm transition-opacity"
             title="Add to Playlist"
             aria-label={`Add ${game.title} to playlist`}
           >
-            <ListPlus size={14} aria-hidden="true" />
+            <ListPlus size={16} aria-hidden="true" />
           </Button>
         )}
       </div>
@@ -161,7 +161,7 @@ export function GameCard({
           size="default"
           variant="default"
           asChild
-          className="absolute bottom-2 right-2 h-10 w-10 p-0 backdrop-blur-sm transition-opacity shadow-lg"
+          className="absolute bottom-2 right-2 min-h-[44px] min-w-[44px] h-11 w-11 p-0 backdrop-blur-sm transition-opacity shadow-lg"
           title={`Play ${game.title}`}
         >
           <Link
@@ -169,7 +169,7 @@ export function GameCard({
             onClick={(e) => e.stopPropagation()}
             aria-label={`Play ${game.title}`}
           >
-            <Play size={20} fill="currentColor" aria-hidden="true" />
+            <Play size={22} fill="currentColor" aria-hidden="true" />
           </Link>
         </Button>
       )}
