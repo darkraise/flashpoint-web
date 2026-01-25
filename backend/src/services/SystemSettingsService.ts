@@ -80,9 +80,9 @@ export class SystemSettingsService {
 
     UserDatabaseService.run(
       `UPDATE system_settings
-       SET value = ?, updated_by = ?, updated_at = datetime('now')
+       SET value = ?, updated_by = ?, updated_at = ?
        WHERE key = ?`,
-      [stringValue, updatedBy || null, key]
+      [stringValue, updatedBy || null, new Date().toISOString(), key]
     );
   }
 
@@ -140,9 +140,9 @@ export class SystemSettingsService {
   resetToDefault(key: string, updatedBy?: number): void {
     UserDatabaseService.run(
       `UPDATE system_settings
-       SET value = default_value, updated_by = ?, updated_at = datetime('now')
+       SET value = default_value, updated_by = ?, updated_at = ?
        WHERE key = ?`,
-      [updatedBy || null, key]
+      [updatedBy || null, new Date().toISOString(), key]
     );
   }
 

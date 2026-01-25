@@ -51,6 +51,9 @@ router.get(
   '/',
   authenticate,
   requirePermission('playlists.read'),
+  logActivity('playlists.view.list', 'user_playlists', (req, res) => ({
+    playlistCount: res.locals.playlistCount || 0
+  })),
   async (req, res, next) => {
     try {
       if (!req.user) {
@@ -58,6 +61,10 @@ router.get(
       }
 
       const playlists = playlistService.getUserPlaylists(req.user.id);
+
+      // Store count for activity logging
+      res.locals.playlistCount = playlists.length;
+
       res.json(playlists);
     } catch (error) {
       next(error);
@@ -95,6 +102,11 @@ router.get(
   '/:id',
   authenticate,
   requirePermission('playlists.read'),
+  logActivity('playlists.view.detail', 'user_playlists', (req, res) => ({
+    playlistId: req.params.id,
+    playlistTitle: res.locals.playlistTitle || null,
+    gameCount: res.locals.gameCount || 0
+  })),
   async (req, res, next) => {
     try {
       if (!req.user) {
@@ -110,6 +122,10 @@ router.get(
       if (!playlist) {
         throw new AppError(404, 'Playlist not found');
       }
+
+      // Store for activity logging
+      res.locals.playlistTitle = playlist.title;
+      res.locals.gameCount = playlist.gameCount;
 
       res.json(playlist);
     } catch (error) {
@@ -181,7 +197,10 @@ router.patch(
   '/:id',
   authenticate,
   requirePermission('playlists.update'),
-  logActivity('playlists.update', 'user_playlists'),
+  logActivity('playlists.update.metadata', 'user_playlists', (req, res) => ({
+    playlistId: req.params.id,
+    fieldsUpdated: Object.keys(req.body)
+  })),
   async (req, res, next) => {
     try {
       if (!req.user) {
@@ -252,7 +271,10 @@ router.post(
   '/:id/games',
   authenticate,
   requirePermission('playlists.update'),
-  logActivity('playlists.update', 'user_playlist_games'),
+  logActivity('playlists.games.add', 'user_playlist_games', (req) => ({
+    playlistId: req.params.id,
+    gamesAdded: req.body.gameIds?.length || 0
+  })),
   async (req, res, next) => {
     try {
       if (!req.user) {
@@ -297,7 +319,10 @@ router.delete(
   '/:id/games',
   authenticate,
   requirePermission('playlists.update'),
-  logActivity('playlists.update', 'user_playlist_games'),
+  logActivity('playlists.games.remove', 'user_playlist_games', (req) => ({
+    playlistId: req.params.id,
+    gamesRemoved: req.body.gameIds?.length || 0
+  })),
   async (req, res, next) => {
     try {
       if (!req.user) {
@@ -342,7 +367,10 @@ router.put(
   '/:id/games/reorder',
   authenticate,
   requirePermission('playlists.update'),
-  logActivity('playlists.update', 'user_playlist_games'),
+  logActivity('playlists.games.reorder', 'user_playlist_games', (req) => ({
+    playlistId: req.params.id,
+    gameCount: req.body.gameIdOrder?.length || 0
+  })),
   async (req, res, next) => {
     try {
       if (!req.user) {

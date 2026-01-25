@@ -19,7 +19,12 @@ import {
   ActivitiesResponse,
   ActivityFilters,
   AuthSettings,
-  UpdateAuthSettingsData
+  UpdateAuthSettingsData,
+  ActivityStatsResponse,
+  ActivityTrendResponse,
+  TopActionsResponse,
+  ActivityBreakdownResponse,
+  TimeRange
 } from '@/types/auth';
 import {
   StartSessionResponse,
@@ -337,6 +342,34 @@ export const activitiesApi = {
       params: { page, limit, ...filters }
     });
     return data;
+  },
+
+  getStats: async (timeRange: TimeRange = '24h', customRange?: { startDate?: string; endDate?: string }): Promise<ActivityStatsResponse> => {
+    const { data } = await api.get<ActivityStatsResponse>('/activities/stats', {
+      params: { timeRange, ...customRange }
+    });
+    return data;
+  },
+
+  getTrend: async (days = 7): Promise<ActivityTrendResponse> => {
+    const { data } = await api.get<ActivityTrendResponse>('/activities/trend', {
+      params: { days }
+    });
+    return data;
+  },
+
+  getTopActions: async (limit = 10, timeRange: TimeRange = '24h'): Promise<TopActionsResponse> => {
+    const { data } = await api.get<TopActionsResponse>('/activities/top-actions', {
+      params: { limit, timeRange }
+    });
+    return data;
+  },
+
+  getBreakdown: async (groupBy: 'resource' | 'user' | 'ip', limit = 10, timeRange: TimeRange = '24h'): Promise<ActivityBreakdownResponse> => {
+    const { data } = await api.get<ActivityBreakdownResponse>('/activities/breakdown', {
+      params: { groupBy, limit, timeRange }
+    });
+    return data;
   }
 };
 
@@ -599,6 +632,11 @@ export const jobsApi = {
     return data;
   },
 
+  update: async (jobId: string, updates: { enabled: boolean }): Promise<JobStatusEnriched> => {
+    const { data } = await api.patch<JobStatusEnriched>(`/jobs/${jobId}`, updates);
+    return data;
+  },
+
   start: async (jobId: string): Promise<{ success: boolean; message: string }> => {
     const { data } = await api.post(`/jobs/${jobId}/start`);
     return data;
@@ -643,6 +681,8 @@ export const ruffleApi = {
     currentVersion: string | null;
     latestVersion: string;
     updateAvailable: boolean;
+    changelog?: string;
+    publishedAt?: string;
   }> => {
     const { data } = await api.get('/ruffle/check-update');
     return data;

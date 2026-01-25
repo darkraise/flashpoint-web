@@ -4,9 +4,11 @@ import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { JobScheduler } from '../services/JobScheduler';
 import { JobExecutionService } from '../services/JobExecutionService';
+import { CachedSystemSettingsService } from '../services/CachedSystemSettingsService';
 
 const router = Router();
 const executionService = new JobExecutionService();
+const systemSettings = new CachedSystemSettingsService();
 
 // ===================================
 // GET ALL JOBS WITH STATUS
@@ -46,6 +48,59 @@ router.get(
     } catch (error) {
       console.error(`Failed to get job ${req.params.jobId}:`, error);
       res.status(500).json({ error: { message: 'Failed to retrieve job' } });
+    }
+  }
+);
+
+// ===================================
+// UPDATE JOB SETTINGS (ENABLE/DISABLE)
+// ===================================
+router.patch(
+  '/:jobId',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('jobs.update', 'job'),
+  async (req: Request, res: Response) => {
+    try {
+      const { jobId } = req.params;
+      const { enabled } = req.body;
+
+      // Validate request body
+      if (typeof enabled !== 'boolean') {
+        return res.status(400).json({
+          error: { message: 'Invalid request: enabled must be a boolean' }
+        });
+      }
+
+      // Verify job exists
+      const job = JobScheduler.getJobStatusEnriched(jobId);
+      if (!job) {
+        return res.status(404).json({ error: { message: 'Job not found' } });
+      }
+
+      // Update the job's enabled state in system_settings
+      const settingKey = `jobs.${jobId.replace('-', '_')}_enabled`;
+      const userId = req.user!.id;
+      systemSettings.set(settingKey, enabled ? '1' : '0', userId);
+
+      // Update the job in JobScheduler
+      JobScheduler.updateJobEnabled(jobId, enabled);
+
+      // Start or stop the job based on enabled state
+      if (enabled) {
+        JobScheduler.startJob(jobId);
+      } else {
+        JobScheduler.stopJob(jobId);
+      }
+
+      // Return updated job status
+      const updatedJob = JobScheduler.getJobStatusEnriched(jobId);
+      res.json(updatedJob);
+    } catch (error) {
+      console.error(`Failed to update job ${req.params.jobId}:`, error);
+      res.status(500).json({
+        error: { message: error instanceof Error ? error.message : 'Failed to update job' }
+      });
     }
   }
 );

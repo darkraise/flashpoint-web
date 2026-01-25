@@ -140,7 +140,8 @@ export class RoleService {
       return role;
     }
 
-    updates.push("updated_at = datetime('now')");
+    updates.push("updated_at = ?");
+    params.push(new Date().toISOString());
     params.push(id);
 
     UserDatabaseService.run(

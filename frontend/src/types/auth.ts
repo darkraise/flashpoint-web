@@ -167,6 +167,106 @@ export interface ActivitiesResponse {
 }
 
 // ===================================
+// Activity Dashboard Types
+// ===================================
+
+export interface ActivityStats {
+  total: number;
+  uniqueUsers: number;
+  peakHour: {
+    hour: number;
+    count: number;
+    formattedRange: string;
+  };
+  authEvents: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
+  failedOperations: number;
+  systemEvents: number;
+  trends: {
+    totalChange: number;
+    userChange: number;
+    authChange: number;
+  };
+}
+
+export interface ActivityStatsResponse {
+  success: boolean;
+  data: ActivityStats;
+  meta: {
+    calculatedAt: string;
+    timeRange: string;
+  };
+}
+
+export interface ActivityTrendData {
+  timestamp: string;
+  total: number;
+  authEvents: number;
+  failedActions: number;
+  uniqueUsers: number;
+}
+
+export interface ActivityTrendResponse {
+  success: boolean;
+  data: ActivityTrendData[];
+  meta: {
+    granularity: 'hour' | 'day';
+    startDate: string;
+    endDate: string;
+    dataPoints: number;
+  };
+}
+
+export interface TopAction {
+  action: string;
+  count: number;
+  percentage: number;
+  category: 'auth' | 'crud' | 'error' | 'system';
+  topResource: string | null;
+  exampleActivity: {
+    username: string;
+    timestamp: string;
+  };
+}
+
+export interface TopActionsResponse {
+  success: boolean;
+  data: TopAction[];
+  meta: {
+    totalActivities: number;
+    uniqueActions: number;
+  };
+}
+
+export interface ActivityBreakdownItem {
+  key: string;
+  count: number;
+  percentage: number;
+  metadata: {
+    userId?: number;
+    lastActivity?: string;
+    topAction?: string;
+    associatedUserCount?: number;
+    associatedUsers?: string[];
+    failedAttempts?: number;
+  };
+}
+
+export interface ActivityBreakdownResponse {
+  success: boolean;
+  data: ActivityBreakdownItem[];
+  meta: {
+    groupBy: 'resource' | 'user' | 'ip';
+    total: number;
+  };
+}
+
+export type TimeRange = '24h' | '7d' | '30d';
+
+// ===================================
 // Auth Settings Types
 // ===================================
 

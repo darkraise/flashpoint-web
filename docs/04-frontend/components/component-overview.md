@@ -9,7 +9,7 @@ Components are organized by domain and functionality:
 ```
 components/
 ├── auth/              # Authentication components (4 components)
-├── common/            # Shared/utility components (7 components)
+├── common/            # Shared/utility components (11 components)
 ├── dialogs/           # Modal dialogs (1 component)
 ├── game/              # Game-specific components (1 component)
 ├── layout/            # Layout structure (3 components)
@@ -34,6 +34,22 @@ Located in `components/auth/`
 - **RegisterForm** - User registration form
 - **ProtectedRoute** - Route wrapper for authorization
 - **AuthContext** - Authentication context provider
+
+### Common Components
+
+Located in `components/common/`
+
+- **FormattedDate** - Reusable date/time formatting component with user preferences
+- **CardSizeControl** - Control for adjusting card size in grid views
+- **ConfirmDialog** - Generic confirmation dialog for destructive actions
+- **ErrorBoundary** - Error boundary wrapper for graceful error handling
+- **FavoriteButton** - Button to add games to favorites
+- **RemoveFavoriteButton** - Button to remove games from favorites
+- **MaintenanceGuard** - Component to display maintenance mode message
+- **MobileWarningDialog** - Warning for mobile users about limited functionality
+- **NetworkStatusIndicator** - Shows online/offline network status
+- **RoleGuard** - Component wrapper for role-based access control
+- **ViewOptions** - Toggle between list and grid view modes
 
 ### Layout Components
 

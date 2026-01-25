@@ -4,11 +4,11 @@ Comprehensive documentation of all custom React hooks in the Flashpoint Web fron
 
 ## Overview
 
-The application uses 17+ custom hooks organized by functionality:
+The application uses 18+ custom hooks organized by functionality:
 
 - **Data Fetching** - useGames, usePlaylists, useUsers, useRoles, useActivities
 - **Authentication** - useAuth
-- **UI** - useDebounce, useSwipeGesture, useMountEffect, useToast
+- **UI** - useDebounce, useSwipeGesture, useMountEffect, useToast, useDateTimeFormat
 - **Game Data** - useFilterOptions, useTags, usePlatforms, useStatistics, useDownload
 - **Play Tracking** - usePlayTracking
 - **Community** - useCommunityPlaylists
@@ -133,6 +133,81 @@ const ref = useSwipeGesture<HTMLDivElement>({
 
 return <div ref={ref}>Swipeable content</div>;
 ```
+
+### useDateTimeFormat
+
+Date and time formatting hook with user-configurable formats.
+
+**Location:** `frontend/src/hooks/useDateTimeFormat.ts`
+
+**Purpose:** Provides consistent date/time formatting across the application using user-selected format preferences from system settings.
+
+```typescript
+const {
+  dateFormat,      // Current date format string (e.g., 'MM/dd/yyyy')
+  timeFormat,      // Current time format string (e.g., 'hh:mm a')
+  formatDate,      // Function to format dates
+  formatTime,      // Function to format times
+  formatDateTime   // Function to format date + time
+} = useDateTimeFormat();
+```
+
+**Available Date Formats:**
+- `MM/dd/yyyy` - US format (01/24/2026)
+- `dd/MM/yyyy` - European format (24/01/2026)
+- `yyyy-MM-dd` - ISO 8601 format (2026-01-24)
+- `MMM dd, yyyy` - Short month (Jan 24, 2026)
+- `MMMM dd, yyyy` - Full month (January 24, 2026)
+- `dd MMM yyyy` - Day-first short month (24 Jan 2026)
+- `dd MMMM yyyy` - Day-first full month (24 January 2026)
+
+**Available Time Formats:**
+- `hh:mm a` - 12-hour with AM/PM (02:30 PM)
+- `HH:mm` - 24-hour (14:30)
+- `hh:mm:ss a` - 12-hour with seconds (02:30:45 PM)
+- `HH:mm:ss` - 24-hour with seconds (14:30:45)
+
+**Example Usage:**
+
+```typescript
+function ActivityTable() {
+  const { formatDateTime } = useDateTimeFormat();
+
+  return (
+    <Table>
+      {activities.map(activity => (
+        <TableRow key={activity.id}>
+          <TableCell>{formatDateTime(activity.createdAt)}</TableCell>
+        </TableRow>
+      ))}
+    </Table>
+  );
+}
+```
+
+**With FormattedDate Component:**
+
+```typescript
+import { FormattedDate } from '@/components/common/FormattedDate';
+
+function GameStats() {
+  return (
+    <div>
+      <p>First played: <FormattedDate date={stats.firstPlayAt} type="date" /></p>
+      <p>Last played: <FormattedDate date={stats.lastPlayAt} type="datetime" /></p>
+    </div>
+  );
+}
+```
+
+**Features:**
+- Automatically fetches user's format preferences from system settings
+- Caches settings with 5-minute staleTime
+- Handles Date objects, ISO strings, and timestamps
+- Falls back to defaults if settings not loaded
+- Uses date-fns for reliable formatting
+
+**See Also:** [Date & Time Formatting Feature](../../10-features/10-date-time-formatting.md)
 
 ### useFilterOptions
 

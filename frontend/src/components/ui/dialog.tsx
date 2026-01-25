@@ -85,7 +85,7 @@ const DialogBody = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "no-scrollbar -mx-4 max-h-[80vh] overflow-y-auto px-4",
+      "-mx-4 max-h-[80vh] overflow-y-auto px-4",
       className,
     )}
     {...props}

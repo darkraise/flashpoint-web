@@ -31,18 +31,6 @@ export function JobsView() {
     enabled: !!selectedJobId && showLogsDialog
   });
 
-  // Start mutation
-  const startMutation = useMutation({
-    mutationFn: (jobId: string) => jobsApi.start(jobId),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
-      showToast(data.message, 'success');
-    },
-    onError: (error: any) => {
-      showToast(error.response?.data?.message || 'Failed to start job', 'error');
-    }
-  });
-
   // Stop mutation
   const stopMutation = useMutation({
     mutationFn: (jobId: string) => jobsApi.stop(jobId),
@@ -67,9 +55,19 @@ export function JobsView() {
     }
   });
 
-  const handleStart = (jobId: string) => {
-    startMutation.mutate(jobId);
-  };
+  // Update mutation (for enabling/disabling jobs)
+  const updateMutation = useMutation({
+    mutationFn: ({ jobId, enabled }: { jobId: string; enabled: boolean }) =>
+      jobsApi.update(jobId, { enabled }),
+    onSuccess: (updatedJob) => {
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      const status = updatedJob.enabled ? 'enabled' : 'disabled';
+      showToast(`Job ${updatedJob.name} ${status} successfully`, 'success');
+    },
+    onError: (error: any) => {
+      showToast(error.response?.data?.error?.message || 'Failed to update job', 'error');
+    }
+  });
 
   const handleStop = (jobId: string) => {
     stopMutation.mutate(jobId);
@@ -90,14 +88,10 @@ export function JobsView() {
   };
 
   const handleToggleEnabled = (jobId: string, enabled: boolean) => {
-    if (enabled) {
-      startMutation.mutate(jobId);
-    } else {
-      stopMutation.mutate(jobId);
-    }
+    updateMutation.mutate({ jobId, enabled });
   };
 
-  const isAnyMutating = startMutation.isPending || stopMutation.isPending || triggerMutation.isPending;
+  const isAnyMutating = stopMutation.isPending || triggerMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -132,12 +126,11 @@ export function JobsView() {
               <p>No background jobs configured</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-fr">
               {jobs.map((job) => (
                 <JobCard
                   key={job.id}
                   job={job}
-                  onStart={handleStart}
                   onStop={handleStop}
                   onTrigger={handleTrigger}
                   onViewLogs={handleViewLogs}

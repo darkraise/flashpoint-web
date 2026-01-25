@@ -186,6 +186,72 @@ export class UserDatabaseService {
           logger.info('[UserDB] Migration completed: 008_convert-interval-to-cron');
         }
       }
+
+      // Migration 013: Add datetime format settings (system-wide)
+      const hasDateFormatSetting = this.db!.prepare(`
+        SELECT COUNT(*) as count FROM system_settings
+        WHERE key = 'app.date_format'
+      `).get() as { count: number } | undefined;
+
+      if (systemSettingsTables.length > 0 && (!hasDateFormatSetting || hasDateFormatSetting.count === 0)) {
+        logger.info('[UserDB] Running migration: 013_add-datetime-format-settings');
+        const migrationPath = path.join(__dirname, '../migrations/013_add-datetime-format-settings.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 013_add-datetime-format-settings');
+        }
+      }
+
+      // Migration 014: Add user-specific datetime format settings
+      const hasUserDateFormatSetting = this.db!.prepare(`
+        SELECT COUNT(*) as count FROM user_settings
+        WHERE setting_key = 'date_format'
+      `).get() as { count: number } | undefined;
+
+      if (!hasUserDateFormatSetting || hasUserDateFormatSetting.count === 0) {
+        logger.info('[UserDB] Running migration: 014_add-user-datetime-format-settings');
+        const migrationPath = path.join(__dirname, '../migrations/014_add-user-datetime-format-settings.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 014_add-user-datetime-format-settings');
+        }
+      }
+
+      // Migration 015: Standardize datetime to ISO 8601 UTC format
+      // Check if migration has run by looking for ISO format (contains 'T') in datetime columns
+      const sampleUser = this.db!.prepare(`
+        SELECT created_at FROM users LIMIT 1
+      `).get() as { created_at: string } | undefined;
+
+      const needsDateTimeMigration = sampleUser && sampleUser.created_at && !sampleUser.created_at.includes('T');
+
+      if (needsDateTimeMigration) {
+        logger.info('[UserDB] Running migration: 015_standardize-datetime-to-iso8601');
+        const migrationPath = path.join(__dirname, '../migrations/015_standardize-datetime-to-iso8601.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 015_standardize-datetime-to-iso8601');
+        }
+      }
+
+      // Migration 016: Add Ruffle update job settings
+      const hasRuffleJobSetting = this.db!.prepare(`
+        SELECT COUNT(*) as count FROM system_settings
+        WHERE key = 'jobs.ruffle_update_enabled'
+      `).get() as { count: number } | undefined;
+
+      if (systemSettingsTables.length > 0 && (!hasRuffleJobSetting || hasRuffleJobSetting.count === 0)) {
+        logger.info('[UserDB] Running migration: 016_add-ruffle-update-job-settings');
+        const migrationPath = path.join(__dirname, '../migrations/016_add-ruffle-update-job-settings.sql');
+        if (fs.existsSync(migrationPath)) {
+          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+          this.db!.exec(migrationSQL);
+          logger.info('[UserDB] Migration completed: 016_add-ruffle-update-job-settings');
+        }
+      }
     } catch (error) {
       logger.error('[UserDB] Failed to run migrations:', error);
       throw error;

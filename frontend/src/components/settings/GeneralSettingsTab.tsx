@@ -1,19 +1,18 @@
-import {
-  Shield,
-  Download,
-  RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-} from "lucide-react";
+import { Shield, Calendar } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { authSettingsApi, ruffleApi } from "@/lib/api";
+import { authSettingsApi, ruffleApi, usersApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useDialog } from "@/contexts/DialogContext";
-import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface GeneralSettingsTabProps {
   tabContentVariants: any;
@@ -25,10 +24,6 @@ export function GeneralSettingsTab({
   const { user } = useAuthStore();
   const { showToast } = useDialog();
   const isAdmin = user?.permissions.includes("settings.update");
-  const [updateCheckResult, setUpdateCheckResult] = useState<{
-    latestVersion: string;
-    updateAvailable: boolean;
-  } | null>(null);
 
   // Fetch auth settings
   const { data: authSettings, refetch: refetchAuthSettings } = useQuery({
@@ -37,10 +32,18 @@ export function GeneralSettingsTab({
     enabled: isAdmin,
   });
 
-  // Fetch Ruffle version
-  const { data: ruffleVersion, refetch: refetchRuffleVersion } = useQuery({
+  // Fetch Ruffle version (public - accessible to all users)
+  const { data: ruffleVersion, isLoading: isLoadingRuffleVersion } = useQuery({
     queryKey: ["ruffleVersion"],
     queryFn: () => ruffleApi.getVersion(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch user settings (for date/time format preferences)
+  const { data: userSettings, refetch: refetchUserSettings } = useQuery({
+    queryKey: ["userSettings"],
+    queryFn: () => usersApi.getAllSettings(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Update auth settings mutation
@@ -57,44 +60,17 @@ export function GeneralSettingsTab({
     },
   });
 
-  // Check for Ruffle update mutation
-  const checkRuffleUpdate = useMutation({
-    mutationFn: () => ruffleApi.checkUpdate(),
-    onSuccess: (data) => {
-      setUpdateCheckResult({
-        latestVersion: data.latestVersion,
-        updateAvailable: data.updateAvailable,
-      });
-      if (data.updateAvailable) {
-        showToast(
-          `Ruffle ${data.latestVersion} is available! Current: ${data.currentVersion}`,
-          "success",
-        );
-      } else {
-        showToast("Ruffle is up to date!", "success");
-      }
+  // Update user settings mutation (for date/time format preferences)
+  const updateUserSettings = useMutation({
+    mutationFn: (settings: Record<string, string>) =>
+      usersApi.updateSettings(settings),
+    onSuccess: () => {
+      refetchUserSettings();
+      showToast("Settings updated successfully", "success");
     },
     onError: (error: any) => {
       const message =
-        error?.response?.data?.error?.message || "Failed to check for updates";
-      showToast(message, "error");
-    },
-  });
-
-  // Update Ruffle mutation
-  const updateRuffle = useMutation({
-    mutationFn: () => ruffleApi.update(),
-    onSuccess: (data) => {
-      showToast(
-        `${data.message}. Please refresh the page to use the new version.`,
-        "success",
-      );
-      refetchRuffleVersion();
-      setUpdateCheckResult(null);
-    },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.error?.message || "Failed to update Ruffle";
+        error?.response?.data?.error?.message || "Failed to update settings";
       showToast(message, "error");
     },
   });
@@ -123,104 +99,75 @@ export function GeneralSettingsTab({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Ruffle Emulator:</span>
             <span className="font-medium">
-              {ruffleVersion?.currentVersion || "Not installed"}
+              {isLoadingRuffleVersion
+                ? "Loading..."
+                : ruffleVersion?.currentVersion || "Not installed"}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Ruffle Management (Admin Only) */}
-      {isAdmin && ruffleVersion && (
+      {/* Date & Time Format Settings - Available to all authenticated users */}
+      {userSettings && (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
-            <Download size={24} className="text-primary" />
-            <h2 className="text-xl font-semibold">
-              Ruffle Emulator Management
-            </h2>
+            <Calendar size={24} className="text-primary" />
+            <h2 className="text-xl font-semibold">Date & Time Format</h2>
           </div>
-
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label className="text-sm text-muted-foreground">Current Version</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold">
-                    {ruffleVersion.currentVersion || "Not installed"}
-                  </span>
-                  {ruffleVersion.isInstalled ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-yellow-500" />
-                  )}
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => checkRuffleUpdate.mutate()}
-                disabled={checkRuffleUpdate.isPending}
+            <div className="space-y-2">
+              <Label htmlFor="date-format" className="text-base">
+                Date Format
+              </Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Choose how dates are displayed throughout the application
+              </p>
+              <Select
+                value={userSettings.date_format || "MM/dd/yyyy"}
+                onValueChange={(value: string) => {
+                  updateUserSettings.mutate({ date_format: value });
+                }}
+                disabled={updateUserSettings.isPending}
               >
-                {checkRuffleUpdate.isPending ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    Checking...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Check for Updates
-                  </>
-                )}
-              </Button>
+                <SelectTrigger id="date-format" className="w-full">
+                  <SelectValue placeholder="Select date format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MM/dd/yyyy">MM/DD/YYYY (01/24/2026)</SelectItem>
+                  <SelectItem value="dd/MM/yyyy">DD/MM/YYYY (24/01/2026)</SelectItem>
+                  <SelectItem value="yyyy-MM-dd">YYYY-MM-DD (2026-01-24)</SelectItem>
+                  <SelectItem value="MMM dd, yyyy">MMM DD, YYYY (Jan 24, 2026)</SelectItem>
+                  <SelectItem value="MMMM dd, yyyy">MMMM DD, YYYY (January 24, 2026)</SelectItem>
+                  <SelectItem value="dd MMM yyyy">DD MMM YYYY (24 Jan 2026)</SelectItem>
+                  <SelectItem value="dd MMMM yyyy">DD MMMM YYYY (24 January 2026)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {updateCheckResult && (
-              <div className="p-4 border rounded-lg bg-muted/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">
-                      {updateCheckResult.updateAvailable
-                        ? `Update Available: ${updateCheckResult.latestVersion}`
-                        : "You're up to date!"}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {updateCheckResult.updateAvailable
-                        ? "A new version of Ruffle is available for download."
-                        : "You have the latest version of Ruffle installed."}
-                    </p>
-                  </div>
-                  {updateCheckResult.updateAvailable && (
-                    <Button
-                      onClick={() => updateRuffle.mutate()}
-                      disabled={updateRuffle.isPending}
-                    >
-                      {updateRuffle.isPending ? (
-                        <>
-                          <Download className="mr-2 h-4 w-4 animate-pulse" />
-                          Updating...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="mr-2 h-4 w-4" />
-                          Update Now
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="text-sm text-muted-foreground pt-2 space-y-1">
-              <p>
-                Ruffle is an open-source Flash Player emulator. Keeping it up to
-                date ensures the best compatibility and performance for Flash
-                games.
+            <div className="space-y-2">
+              <Label htmlFor="time-format" className="text-base">
+                Time Format
+              </Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Choose how times are displayed throughout the application
               </p>
-              <p className="text-amber-600 dark:text-amber-400">
-                <strong>Note:</strong> After updating Ruffle, you must refresh
-                the browser page for the new version to take effect.
-              </p>
+              <Select
+                value={userSettings.time_format || "hh:mm a"}
+                onValueChange={(value: string) => {
+                  updateUserSettings.mutate({ time_format: value });
+                }}
+                disabled={updateUserSettings.isPending}
+              >
+                <SelectTrigger id="time-format" className="w-full">
+                  <SelectValue placeholder="Select time format" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hh:mm a">12-hour (02:30 PM)</SelectItem>
+                  <SelectItem value="HH:mm">24-hour (14:30)</SelectItem>
+                  <SelectItem value="hh:mm:ss a">12-hour with seconds (02:30:45 PM)</SelectItem>
+                  <SelectItem value="HH:mm:ss">24-hour with seconds (14:30:45)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

@@ -92,7 +92,7 @@ export function useDeleteUser() {
   return useMutation({
     mutationFn: (id: number) => usersApi.delete(id),
 
-    onMutate: async (id) => {
+    onMutate: async (_id) => {
       await queryClient.cancelQueries({ queryKey: ['users'] });
 
       // Store snapshot for rollback (paginated queries)
@@ -101,7 +101,7 @@ export function useDeleteUser() {
       return { previousQueries };
     },
 
-    onError: (err: any, id, context) => {
+    onError: (err: any, _id, context) => {
       if (context?.previousQueries) {
         // Restore all user queries
         context.previousQueries.forEach(([queryKey, data]) => {

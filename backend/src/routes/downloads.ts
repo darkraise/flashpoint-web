@@ -3,6 +3,7 @@ import { DownloadManager } from '../services/DownloadManager';
 import { PreferencesService } from '../services/PreferencesService';
 import { GameDatabaseUpdater } from '../services/GameDatabaseUpdater';
 import { GameService } from '../services/GameService';
+import { ActivityService } from '../services/ActivityService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
@@ -10,6 +11,7 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 const gameService = new GameService();
+const activityService = new ActivityService();
 
 /**
  * POST /api/games/:id/download
@@ -32,7 +34,12 @@ router.post(
   '/:id/download',
   authenticate,
   requirePermission('games.download'),
-  logActivity('games.download', 'games'),
+  logActivity('games.download', 'games', (req, res) => ({
+    gameId: req.params.id,
+    gameDataId: req.body.gameDataId || res.locals.gameDataId,
+    gameTitle: res.locals.gameTitle,
+    sources: res.locals.sources
+  })),
   async (req: Request, res: Response) => {
   try {
     const gameId = req.params.id;
@@ -90,6 +97,23 @@ router.post(
       });
     }
 
+    // Store metadata for activity logging
+    res.locals.gameDataId = gameDataId;
+    res.locals.gameTitle = game.title;
+    res.locals.sources = sources.map(s => s.name);
+
+    // Capture metadata for background error logging
+    const downloadMetadata = {
+      gameId,
+      gameDataId,
+      gameTitle: game.title,
+      sha256: gameData.sha256,
+      sources: sources.map(s => s.name),
+      userId: req.user?.id,
+      username: req.user?.username,
+      ipAddress: req.ip
+    };
+
     // Start download (non-blocking)
     // We don't wait for it to complete - client uses SSE endpoint for progress
     DownloadManager.downloadGameData(
@@ -98,11 +122,30 @@ router.post(
       undefined, // Progress callback handled by SSE endpoint
       undefined, // Details callback handled by SSE endpoint
       undefined  // No abort signal for now
-    ).catch(error => {
+    ).catch(async error => {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Background download failed', {
         gameId,
         gameDataId,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage
+      });
+
+      // Log download failure activity
+      await activityService.log({
+        userId: downloadMetadata.userId,
+        username: downloadMetadata.username,
+        action: 'games.download.failed',
+        resource: 'games',
+        resourceId: downloadMetadata.gameId,
+        details: {
+          gameDataId: downloadMetadata.gameDataId,
+          gameTitle: downloadMetadata.gameTitle,
+          sha256: downloadMetadata.sha256,
+          sources: downloadMetadata.sources,
+          error: errorMessage
+        },
+        ipAddress: downloadMetadata.ipAddress,
+        userAgent: req.get('user-agent')
       });
     });
 
@@ -202,6 +245,23 @@ router.get(
               status: 'complete',
               details: 'Download completed successfully'
             })}\n\n`);
+
+            // Log download completion activity
+            const gameData = await GameDatabaseUpdater.getGameData(gameDataId);
+            await activityService.log({
+              userId: req.user?.id,
+              username: req.user?.username,
+              action: 'games.download.complete',
+              resource: 'games',
+              resourceId: gameId,
+              details: {
+                gameDataId,
+                gameTitle: game.title,
+                sha256: gameData?.sha256
+              },
+              ipAddress: req.ip,
+              userAgent: req.get('user-agent')
+            });
           } else {
             res.write(`data: ${JSON.stringify({
               percent: 0,

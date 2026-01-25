@@ -107,7 +107,7 @@ export function useToggleFavorite() {
     },
 
     // Rollback on error
-    onError: (err: any, gameId, context) => {
+    onError: (err: any, _gameId, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
@@ -117,7 +117,7 @@ export function useToggleFavorite() {
     },
 
     // Verify with server response
-    onSuccess: (isFavorited, gameId) => {
+    onSuccess: (_isFavorited, _gameId) => {
       // Invalidate paginated lists (they might have changed)
       queryClient.invalidateQueries({
         queryKey: ['favorites'],
@@ -161,7 +161,7 @@ export function useAddFavorite() {
       return { previousIds };
     },
 
-    onError: (err: any, gameId, context) => {
+    onError: (err: any, _gameId, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
@@ -211,7 +211,7 @@ export function useRemoveFavorite() {
       return { previousIds };
     },
 
-    onError: (err: any, gameId, context) => {
+    onError: (err: any, _gameId, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
@@ -264,7 +264,7 @@ export function useBatchAddFavorites() {
       return { previousIds };
     },
 
-    onError: (err: any, gameIds, context) => {
+    onError: (err: any, _gameIds, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
@@ -315,7 +315,7 @@ export function useBatchRemoveFavorites() {
       return { previousIds };
     },
 
-    onError: (err: any, gameIds, context) => {
+    onError: (err: any, _gameIds, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }

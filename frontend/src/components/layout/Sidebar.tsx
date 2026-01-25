@@ -60,8 +60,8 @@ export function Sidebar({ isOpen }: SidebarProps) {
   const managementNavItems: NavItem[] = [
     { path: '/users', icon: Users, label: 'Users', permission: 'users.read' },
     { path: '/roles', icon: Shield, label: 'Roles', permission: 'roles.read' },
-    { path: '/activities', icon: Activity, label: 'Activity Logs', permission: 'activities.read' },
-  ];
+    enableStatistics && { path: '/activities', icon: Activity, label: 'Activity Logs', permission: 'activities.read' },
+  ].filter(Boolean) as NavItem[];
 
   const bottomNavItems: NavItem[] = [
     enableStatistics && { path: '/dashboard', icon: BarChart3, label: 'Dashboard' },

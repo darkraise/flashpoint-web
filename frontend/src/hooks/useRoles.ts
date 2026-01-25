@@ -149,7 +149,7 @@ export function useDeleteRole() {
       return { previousRoles };
     },
 
-    onError: (err: any, id, context) => {
+    onError: (err: any, _id, context) => {
       if (context?.previousRoles) {
         queryClient.setQueryData(['roles'], context.previousRoles);
       }

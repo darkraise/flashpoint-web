@@ -1,5 +1,6 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { usePlayActivityOverTime } from '../../hooks/usePlayTracking';
+import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) {
@@ -11,11 +12,6 @@ function formatPlaytime(seconds: number): string {
     const hours = (seconds / 3600).toFixed(1);
     return `${hours}h`;
   }
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 interface CustomTooltipProps {
@@ -49,6 +45,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 
 export function PlaytimeChart() {
   const { data, isLoading } = usePlayActivityOverTime(30);
+  const { formatDate } = useDateTimeFormat();
 
   if (isLoading) {
     return (

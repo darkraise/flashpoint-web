@@ -14,8 +14,14 @@ The settings UI is organized into five tabs:
 
 #### 1. General Tab
 - **Version Information** - View app and Flashpoint versions
-- **Game Metadata Sync** - Check for and sync metadata updates (admin only)
-- **Authentication Settings** - Control user registration and guest access
+- **Date & Time Format** - Customize how dates and times are displayed throughout the application
+  - **Date Format** - Choose from 7 formats (MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD, etc.)
+  - **Time Format** - Choose from 4 formats (12-hour, 24-hour, with/without seconds)
+- **Ruffle Emulator Management** - Check for and install Ruffle updates (admin only)
+  - View current version and installation status
+  - Check for updates with changelog display
+  - One-click update installation
+- **Authentication Settings** - Control user registration and guest access (admin only)
 
 #### 2. App Tab
 - **Site Name** - Customize the application name
@@ -108,9 +114,9 @@ Settings are organized into logical categories:
 | Category | Purpose | Example Keys |
 |----------|---------|--------------|
 | auth | Authentication/security | guestAccessEnabled, maxLoginAttempts |
-| app | Application settings | siteName, maintenanceMode |
+| app | Application settings | siteName, maintenanceMode, dateFormat, timeFormat |
 | metadata | Metadata sync config | autoSyncEnabled, syncIntervalMinutes |
-| features | Feature flags | enablePlaylists, enableFavorites |
+| features | Feature flags | enablePlaylists, enableFavorites, enableStatistics |
 | game | Game player config | defaultScaleMode, defaultVolume |
 
 ### Caching Strategy
@@ -179,6 +185,14 @@ All settings use JSON Schema validation:
 - Enabled runtime type and constraint validation
 - Supports: type, minimum, maximum, minLength, maxLength, enum
 
+**Migration 013: Add Date/Time Format Settings (2026-01-24)**
+- Added `app.date_format` setting with 7 format options
+  - MM/dd/yyyy, dd/MM/yyyy, yyyy-MM-dd, MMM dd, yyyy, MMMM dd, yyyy, dd MMM yyyy, dd MMMM yyyy
+- Added `app.time_format` setting with 4 format options
+  - hh:mm a (12-hour), HH:mm (24-hour), hh:mm:ss a (12-hour with seconds), HH:mm:ss (24-hour with seconds)
+- Both settings are public (accessible without authentication)
+- Validation schemas enforce allowed format values
+
 ### API Integration
 
 **AuthService Integration:**
@@ -237,6 +251,8 @@ Default values are set during migration:
 - maintenanceMode: false
 - defaultTheme: "dark"
 - defaultPrimaryColor: "blue"
+- dateFormat: "MM/dd/yyyy"
+- timeFormat: "hh:mm a"
 
 **Metadata Defaults:**
 - autoSyncEnabled: false

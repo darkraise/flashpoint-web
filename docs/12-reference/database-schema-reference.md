@@ -217,6 +217,7 @@ Migrations are SQL files that run sequentially on application startup:
 2. `002_create-user-settings.sql` - User settings and theme preferences
 3. `003_create-system-settings.sql` - Create system_settings table with seeded defaults
 4. `004_add-validation-schemas.sql` - Add JSON Schema validation to system settings
+5. `013_add-datetime-format-settings.sql` - Add date and time format settings to app category
 
 ### Tables
 
@@ -441,6 +442,8 @@ Global system settings stored as key-value pairs.
    - `maintenanceMode` (boolean): Enable maintenance mode
    - `defaultTheme` (string): Default theme mode
    - `defaultPrimaryColor` (string): Default primary color
+   - `dateFormat` (string): Date format for UI display (e.g., "MM/dd/yyyy", "dd/MM/yyyy", "yyyy-MM-dd")
+   - `timeFormat` (string): Time format for UI display (e.g., "hh:mm a", "HH:mm")
 
 3. **metadata** - Metadata sync settings
    - `autoSyncEnabled` (boolean): Auto sync on startup

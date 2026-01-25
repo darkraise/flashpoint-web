@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuthService } from '../services/AuthService';
 import { ActivityService } from '../services/ActivityService';
 import { AppError } from '../middleware/errorHandler';
+import { logActivity } from '../middleware/activityLogger';
 import { logger } from '../utils/logger';
 import { z } from 'zod';
 
@@ -56,8 +57,32 @@ router.post('/login', async (req, res, next) => {
       return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
     }
 
+    // Log failed login attempt
+    const ipAddress = req.ip || '';
+    const username = req.body.username || 'unknown';
+
+    try {
+      await activityService.log({
+        userId: undefined,
+        username,
+        action: 'auth.login.failed',
+        resource: 'auth',
+        details: {
+          reason: error instanceof Error && error.message.includes('Invalid')
+            ? 'invalid_credentials'
+            : 'other',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        },
+        ipAddress,
+        userAgent: req.headers['user-agent']
+      });
+    } catch (logError) {
+      // Don't fail request if logging fails
+      logger.error('[Auth] Failed to log failed login attempt:', logError);
+    }
+
     // Log the error with full details before passing to error handler
-    logger.error(`[Auth] Login failed for user: ${req.body.username}`, {
+    logger.error(`[Auth] Login failed for user: ${username}`, {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
     });
@@ -109,20 +134,24 @@ router.post('/register', async (req, res, next) => {
  * POST /api/auth/logout
  * Logout and revoke refresh token
  */
-router.post('/logout', async (req, res, next) => {
-  try {
-    const { refreshToken } = refreshTokenSchema.parse(req.body);
+router.post(
+  '/logout',
+  logActivity('auth.logout', 'auth'),
+  async (req, res, next) => {
+    try {
+      const { refreshToken } = refreshTokenSchema.parse(req.body);
 
-    await authService.logout(refreshToken);
+      await authService.logout(refreshToken);
 
-    res.json({ success: true, message: 'Logged out successfully' });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
+      res.json({ success: true, message: 'Logged out successfully' });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
+      }
+      next(error);
     }
-    next(error);
   }
-});
+);
 
 /**
  * POST /api/auth/refresh

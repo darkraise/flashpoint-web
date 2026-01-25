@@ -53,8 +53,8 @@ export class AuthService {
 
       // Update last login
       UserDatabaseService.run(
-        "UPDATE users SET last_login_at = datetime('now') WHERE id = ?",
-        [user.id]
+        "UPDATE users SET last_login_at = ? WHERE id = ?",
+        [new Date().toISOString(), user.id]
       );
 
       // Get user permissions
@@ -172,8 +172,8 @@ export class AuthService {
    */
   async logout(refreshToken: string): Promise<void> {
     UserDatabaseService.run(
-      "UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE token = ?",
-      [refreshToken]
+      "UPDATE refresh_tokens SET revoked_at = ? WHERE token = ?",
+      [new Date().toISOString(), refreshToken]
     );
   }
 
@@ -183,8 +183,8 @@ export class AuthService {
    */
   async revokeAllUserTokens(userId: number): Promise<void> {
     UserDatabaseService.run(
-      "UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE user_id = ? AND revoked_at IS NULL",
-      [userId]
+      "UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL",
+      [new Date().toISOString(), userId]
     );
 
     logger.info(`[AuthService] Revoked all refresh tokens for user ${userId}`);
@@ -197,8 +197,8 @@ export class AuthService {
     // Verify token is valid and not revoked
     const tokenRecord = UserDatabaseService.get(
       `SELECT * FROM refresh_tokens
-       WHERE token = ? AND revoked_at IS NULL AND expires_at > datetime('now')`,
-      [refreshToken]
+       WHERE token = ? AND revoked_at IS NULL AND expires_at > ?`,
+      [refreshToken, new Date().toISOString()]
     );
 
     if (!tokenRecord) {
@@ -220,8 +220,8 @@ export class AuthService {
 
     // Revoke the old refresh token (security best practice)
     UserDatabaseService.run(
-      "UPDATE refresh_tokens SET revoked_at = datetime('now') WHERE token = ?",
-      [refreshToken]
+      "UPDATE refresh_tokens SET revoked_at = ? WHERE token = ?",
+      [new Date().toISOString(), refreshToken]
     );
 
     logger.debug(`[AuthService] Revoked old refresh token for user ${user.id}`);

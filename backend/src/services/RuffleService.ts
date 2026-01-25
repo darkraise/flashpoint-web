@@ -65,6 +65,7 @@ export class RuffleService {
     version: string;
     downloadUrl: string;
     publishedAt: string;
+    changelog: string;
   }> {
     try {
       // Get latest nightly release (prereleases only)
@@ -93,7 +94,8 @@ export class RuffleService {
       return {
         version: release.tag_name.replace('nightly-', ''),
         downloadUrl: asset.browser_download_url,
-        publishedAt: release.published_at
+        publishedAt: release.published_at,
+        changelog: release.body || 'No changelog available.'
       };
     } catch (error) {
       console.error('Error fetching latest Ruffle version:', error);
@@ -108,6 +110,8 @@ export class RuffleService {
     currentVersion: string | null;
     latestVersion: string;
     updateAvailable: boolean;
+    changelog?: string;
+    publishedAt?: string;
   }> {
     const currentVersion = this.getCurrentVersion();
     const latest = await this.getLatestVersion();
@@ -121,7 +125,9 @@ export class RuffleService {
     return {
       currentVersion,
       latestVersion: latest.version,
-      updateAvailable
+      updateAvailable,
+      changelog: latest.changelog,
+      publishedAt: latest.publishedAt
     };
   }
 

@@ -126,7 +126,10 @@ router.patch(
   '/:id',
   authenticate,
   requirePermission('users.update'),
-  logActivity('users.update', 'users'),
+  logActivity('users.update.profile', 'users', (req) => ({
+    userId: req.params.id,
+    fieldsUpdated: Object.keys(req.body)
+  })),
   async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);

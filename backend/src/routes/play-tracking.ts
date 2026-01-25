@@ -20,32 +20,43 @@ router.use(requirePermission('games.play'));
  * POST /api/play/start
  * Start a new play session
  */
-router.post('/start', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { gameId, gameTitle } = req.body;
+router.post(
+  '/start',
+  logActivity('play.start', 'games', (req, res) => ({
+    sessionId: res.locals.sessionId,
+    gameTitle: req.body.gameTitle,
+    gameId: req.body.gameId
+  })),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { gameId, gameTitle } = req.body;
 
-    if (!gameId || !gameTitle) {
-      throw new AppError(400, 'gameId and gameTitle are required');
+      if (!gameId || !gameTitle) {
+        throw new AppError(400, 'gameId and gameTitle are required');
+      }
+
+      if (!req.user) {
+        throw new AppError(401, 'Authentication required');
+      }
+
+      const sessionId = await playTrackingService.startPlaySession(
+        req.user.id,
+        gameId,
+        gameTitle
+      );
+
+      // Store sessionId for activity logging
+      res.locals.sessionId = sessionId;
+
+      res.json({
+        success: true,
+        sessionId
+      });
+    } catch (error) {
+      next(error);
     }
-
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
-    const sessionId = await playTrackingService.startPlaySession(
-      req.user.id,
-      gameId,
-      gameTitle
-    );
-
-    res.json({
-      success: true,
-      sessionId
-    });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 /**
  * POST /api/play/end

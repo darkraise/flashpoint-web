@@ -123,7 +123,8 @@ export class UserService {
       return user; // No changes
     }
 
-    updates.push("updated_at = datetime('now')");
+    updates.push("updated_at = ?");
+    params.push(new Date().toISOString());
     params.push(id);
 
     UserDatabaseService.run(
@@ -189,8 +190,8 @@ export class UserService {
 
     // Update password
     UserDatabaseService.run(
-      "UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?",
-      [passwordHash, id]
+      "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
+      [passwordHash, new Date().toISOString(), id]
     );
   }
 
@@ -245,13 +246,14 @@ export class UserService {
       throw new AppError(404, 'User not found');
     }
 
+    const now = new Date().toISOString();
     UserDatabaseService.run(
       `INSERT INTO user_settings (user_id, setting_key, setting_value, updated_at)
-       VALUES (?, ?, ?, datetime('now'))
+       VALUES (?, ?, ?, ?)
        ON CONFLICT(user_id, setting_key)
        DO UPDATE SET setting_value = excluded.setting_value,
-                     updated_at = datetime('now')`,
-      [userId, key, value]
+                     updated_at = ?`,
+      [userId, key, value, now, now]
     );
   }
 

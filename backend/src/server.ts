@@ -13,6 +13,7 @@ import { UserDatabaseService } from './services/UserDatabaseService';
 import { PlayTrackingService } from './services/PlayTrackingService';
 import { JobScheduler } from './services/JobScheduler';
 import { MetadataSyncJob } from './jobs/MetadataSyncJob';
+import { RuffleUpdateJob } from './jobs/RuffleUpdateJob';
 import { CachedSystemSettingsService } from './services/CachedSystemSettingsService';
 import { PermissionCache } from './services/PermissionCache';
 import { RuffleService } from './services/RuffleService';
@@ -101,6 +102,16 @@ async function startServer() {
       enabled: jobSettings.metadataSyncEnabled || false,
       cronSchedule: jobSettings.metadataSyncSchedule || '0 * * * *', // Default: hourly
       run: () => metadataSyncJob.run()
+    });
+
+    // Register Ruffle update job
+    const ruffleUpdateJob = new RuffleUpdateJob();
+    JobScheduler.registerJob({
+      id: 'ruffle-update',
+      name: 'Ruffle Update',
+      enabled: jobSettings.ruffleUpdateEnabled || false,
+      cronSchedule: jobSettings.ruffleUpdateSchedule || '0 0 * * *', // Default: daily at midnight
+      run: () => ruffleUpdateJob.run()
     });
 
     // Start all enabled jobs

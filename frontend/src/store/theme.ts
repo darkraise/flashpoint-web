@@ -97,6 +97,9 @@ const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
   // Apply primary color CSS variables
   root.style.setProperty('--primary', colorValue);
   root.style.setProperty('--ring', colorValue);
+
+  // Update scrollbar hover color to match primary
+  root.style.setProperty('--scrollbar-thumb-hover', colorValue);
 };
 
 export const useThemeStore = create<ThemeState>()(

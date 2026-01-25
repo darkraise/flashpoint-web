@@ -163,6 +163,21 @@ class JobSchedulerService {
   }
 
   /**
+   * Update only the enabled state of a job
+   */
+  updateJobEnabled(jobId: string, enabled: boolean): void {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      logger.error(`Cannot update job enabled state: Job ${jobId} not found`);
+      return;
+    }
+
+    job.enabled = enabled;
+    this.jobs.set(jobId, job);
+    logger.info(`Job ${job.name} enabled state updated to: ${enabled}`);
+  }
+
+  /**
    * Get job status
    */
   getJobStatus(jobId: string): { enabled: boolean; running: boolean; cronSchedule: string } | null {

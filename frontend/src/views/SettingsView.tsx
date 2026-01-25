@@ -4,11 +4,13 @@ import { AnimatePresence } from "framer-motion";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/store/auth";
+import { useQuery } from "@tanstack/react-query";
+import { ruffleApi } from "@/lib/api";
 
 // Tab components
 import { GeneralSettingsTab } from "@/components/settings/GeneralSettingsTab";
 import { AppSettingsTab } from "@/components/settings/AppSettingsTab";
-import { MetadataSettingsTab } from "@/components/settings/MetadataSettingsTab";
+import { UpdateSettingsTab } from "@/components/settings/UpdateSettingsTab";
 import { FeaturesSettingsTab } from "@/components/settings/FeaturesSettingsTab";
 
 // Animation variants for tab transitions - smooth cross-fade
@@ -40,6 +42,14 @@ export function SettingsView() {
   const { user } = useAuthStore();
   const isAdmin = user?.permissions.includes("settings.update");
 
+  // Fetch Ruffle version for non-admin users
+  const { data: ruffleVersion, isLoading: isLoadingRuffleVersion } = useQuery({
+    queryKey: ["ruffleVersion"],
+    queryFn: () => ruffleApi.getVersion(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !isAdmin, // Only fetch for non-admin users (admin users get it from GeneralSettingsTab)
+  });
+
   return (
     <TooltipProvider>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -59,7 +69,7 @@ export function SettingsView() {
             <TabsList className="grid w-full grid-cols-4 border-2 border-primary/60 h-full">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="app">App</TabsTrigger>
-              <TabsTrigger value="metadata">Metadata</TabsTrigger>
+              <TabsTrigger value="update">Update</TabsTrigger>
               <TabsTrigger value="features">Features</TabsTrigger>
             </TabsList>
 
@@ -73,10 +83,8 @@ export function SettingsView() {
                   <AppSettingsTab tabContentVariants={tabContentVariants} />
                 )}
 
-                {activeTab === "metadata" && (
-                  <MetadataSettingsTab
-                    tabContentVariants={tabContentVariants}
-                  />
+                {activeTab === "update" && (
+                  <UpdateSettingsTab tabContentVariants={tabContentVariants} />
                 )}
 
                 {activeTab === "features" && (
@@ -106,6 +114,16 @@ export function SettingsView() {
                     Web App Version:
                   </span>
                   <span className="font-medium">1.0.0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Ruffle Emulator:
+                  </span>
+                  <span className="font-medium">
+                    {isLoadingRuffleVersion
+                      ? "Loading..."
+                      : ruffleVersion?.currentVersion || "Not installed"}
+                  </span>
                 </div>
               </div>
             </div>

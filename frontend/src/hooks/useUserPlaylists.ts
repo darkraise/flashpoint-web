@@ -154,7 +154,7 @@ export function useDeleteUserPlaylist() {
       return { previousPlaylists };
     },
 
-    onError: (err: any, id, context) => {
+    onError: (err: any, _id, context) => {
       if (context?.previousPlaylists) {
         queryClient.setQueryData(['user-playlists'], context.previousPlaylists);
       }
@@ -183,7 +183,7 @@ export function useAddGamesToUserPlaylist() {
     mutationFn: ({ id, gameIds }: { id: number; gameIds: string[] }) =>
       userPlaylistsApi.addGames(id, gameIds),
 
-    onMutate: async ({ id, gameIds }) => {
+    onMutate: async ({ id, gameIds: _gameIds }) => {
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
       const previousGames = queryClient.getQueryData(['user-playlist', id, 'games']);
 

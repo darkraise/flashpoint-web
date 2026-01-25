@@ -3,6 +3,7 @@ import { useUserStats } from '../../hooks/usePlayTracking';
 import { PlaytimeChart } from './PlaytimeChart';
 import { TopGamesChart } from './TopGamesChart';
 import { GamesDistributionChart } from './GamesDistributionChart';
+import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) {
@@ -17,18 +18,9 @@ function formatPlaytime(seconds: number): string {
   }
 }
 
-function formatDate(dateString: string | null): string {
-  if (!dateString) return 'Never';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}
-
 export function UserStatsPanel() {
   const { data: stats, isLoading: statsLoading } = useUserStats();
+  const { formatDate } = useDateTimeFormat();
 
   if (statsLoading) {
     return (
@@ -119,11 +111,11 @@ export function UserStatsPanel() {
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
           <div>
             <p className="text-muted-foreground text-sm">First Played</p>
-            <p className="font-medium">{formatDate(stats.firstPlayAt)}</p>
+            <p className="font-medium">{stats.firstPlayAt ? formatDate(stats.firstPlayAt) : 'Never'}</p>
           </div>
           <div>
             <p className="text-muted-foreground text-sm">Last Played</p>
-            <p className="font-medium">{formatDate(stats.lastPlayAt)}</p>
+            <p className="font-medium">{stats.lastPlayAt ? formatDate(stats.lastPlayAt) : 'Never'}</p>
           </div>
         </div>
       </div>

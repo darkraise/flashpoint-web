@@ -121,7 +121,10 @@ export function GamesDistributionChart() {
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ percentage }: { percentage: number }) => `${percentage.toFixed(0)}%`}
+            label={(props: any) => {
+              const percentage = props.percent * 100;
+              return `${percentage.toFixed(0)}%`;
+            }}
             outerRadius={120}
             innerRadius={60}
             fill="#8884d8"

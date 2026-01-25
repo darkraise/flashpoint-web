@@ -50,13 +50,15 @@ export class MetadataSyncJob {
       const result = await this.metadataSyncService.syncMetadata();
 
       if (result.success) {
-        const message =
-          `Games updated: ${result.gamesUpdated}, ` +
-          `Tags updated: ${result.tagsUpdated}, ` +
-          `Platforms updated: ${result.platformsUpdated}, ` +
-          `Games deleted: ${result.gamesDeleted}`;
+        const message = `Games updated: ${result.gamesUpdated}`;
 
-        logger.info(`[MetadataSyncJob] Sync completed successfully - ${message}`);
+        logger.info(
+          `[MetadataSyncJob] Sync completed successfully - ` +
+          `Games: ${result.gamesUpdated}, ` +
+          `Tags: ${result.tagsUpdated}, ` +
+          `Platforms: ${result.platformsUpdated}, ` +
+          `Deleted: ${result.gamesDeleted}`
+        );
         return message;
       } else {
         logger.error(`[MetadataSyncJob] Sync failed: ${result.error}`);
