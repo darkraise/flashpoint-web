@@ -1,8 +1,9 @@
 import { useSearchParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Filter, X, ChevronDown, Calendar, Gamepad2, Tv, User, Building2, Users, Globe, ArrowUpDown } from 'lucide-react';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useFilterDropdowns } from '@/hooks/useFilterDropdowns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -30,21 +31,44 @@ interface FilterPanelProps {
 export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Dropdown state for each filter
-  const [showTagDropdownDesktop, setShowTagDropdownDesktop] = useState(false);
-  const [showTagDropdownMobile, setShowTagDropdownMobile] = useState(false);
-  const [showPlatformDropdownDesktop, setShowPlatformDropdownDesktop] = useState(false);
-  const [showPlatformDropdownMobile, setShowPlatformDropdownMobile] = useState(false);
-  const [showSeriesDropdownDesktop, setShowSeriesDropdownDesktop] = useState(false);
-  const [showSeriesDropdownMobile, setShowSeriesDropdownMobile] = useState(false);
-  const [showDeveloperDropdownDesktop, setShowDeveloperDropdownDesktop] = useState(false);
-  const [showDeveloperDropdownMobile, setShowDeveloperDropdownMobile] = useState(false);
-  const [showPublisherDropdownDesktop, setShowPublisherDropdownDesktop] = useState(false);
-  const [showPublisherDropdownMobile, setShowPublisherDropdownMobile] = useState(false);
-  const [showPlayModeDropdownDesktop, setShowPlayModeDropdownDesktop] = useState(false);
-  const [showPlayModeDropdownMobile, setShowPlayModeDropdownMobile] = useState(false);
-  const [showLanguageDropdownDesktop, setShowLanguageDropdownDesktop] = useState(false);
-  const [showLanguageDropdownMobile, setShowLanguageDropdownMobile] = useState(false);
+  // Consolidated dropdown state management
+  const dropdowns = useFilterDropdowns();
+
+  // Helper functions for dropdown state
+  const showTagDropdownDesktop = dropdowns.isOpen('tag-desktop');
+  const setShowTagDropdownDesktop = useCallback((open: boolean) => dropdowns.setOpen('tag-desktop', open), [dropdowns]);
+  const showTagDropdownMobile = dropdowns.isOpen('tag-mobile');
+  const setShowTagDropdownMobile = useCallback((open: boolean) => dropdowns.setOpen('tag-mobile', open), [dropdowns]);
+
+  const showPlatformDropdownDesktop = dropdowns.isOpen('platform-desktop');
+  const setShowPlatformDropdownDesktop = useCallback((open: boolean) => dropdowns.setOpen('platform-desktop', open), [dropdowns]);
+  const showPlatformDropdownMobile = dropdowns.isOpen('platform-mobile');
+  const setShowPlatformDropdownMobile = useCallback((open: boolean) => dropdowns.setOpen('platform-mobile', open), [dropdowns]);
+
+  const showSeriesDropdownDesktop = dropdowns.isOpen('series-desktop');
+  const setShowSeriesDropdownDesktop = useCallback((open: boolean) => dropdowns.setOpen('series-desktop', open), [dropdowns]);
+  const showSeriesDropdownMobile = dropdowns.isOpen('series-mobile');
+  const setShowSeriesDropdownMobile = useCallback((open: boolean) => dropdowns.setOpen('series-mobile', open), [dropdowns]);
+
+  const showDeveloperDropdownDesktop = dropdowns.isOpen('developer-desktop');
+  const setShowDeveloperDropdownDesktop = useCallback((open: boolean) => dropdowns.setOpen('developer-desktop', open), [dropdowns]);
+  const showDeveloperDropdownMobile = dropdowns.isOpen('developer-mobile');
+  const setShowDeveloperDropdownMobile = useCallback((open: boolean) => dropdowns.setOpen('developer-mobile', open), [dropdowns]);
+
+  const showPublisherDropdownDesktop = dropdowns.isOpen('publisher-desktop');
+  const setShowPublisherDropdownDesktop = useCallback((open: boolean) => dropdowns.setOpen('publisher-desktop', open), [dropdowns]);
+  const showPublisherDropdownMobile = dropdowns.isOpen('publisher-mobile');
+  const setShowPublisherDropdownMobile = useCallback((open: boolean) => dropdowns.setOpen('publisher-mobile', open), [dropdowns]);
+
+  const showPlayModeDropdownDesktop = dropdowns.isOpen('playmode-desktop');
+  const setShowPlayModeDropdownDesktop = useCallback((open: boolean) => dropdowns.setOpen('playmode-desktop', open), [dropdowns]);
+  const showPlayModeDropdownMobile = dropdowns.isOpen('playmode-mobile');
+  const setShowPlayModeDropdownMobile = useCallback((open: boolean) => dropdowns.setOpen('playmode-mobile', open), [dropdowns]);
+
+  const showLanguageDropdownDesktop = dropdowns.isOpen('language-desktop');
+  const setShowLanguageDropdownDesktop = useCallback((open: boolean) => dropdowns.setOpen('language-desktop', open), [dropdowns]);
+  const showLanguageDropdownMobile = dropdowns.isOpen('language-mobile');
+  const setShowLanguageDropdownMobile = useCallback((open: boolean) => dropdowns.setOpen('language-mobile', open), [dropdowns]);
 
   // Fetch all filter options in one call
   const { data: filterOptions } = useFilterOptions();
