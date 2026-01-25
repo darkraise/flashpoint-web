@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { logger } from '@/lib/logger';
 import { Menu, User, LogOut } from "lucide-react";
 import { useUIStore } from "@/store/ui";
 import { useAuthStore } from "@/store/auth";
@@ -52,7 +53,7 @@ export function Header() {
     try {
       await logout();
     } catch (error) {
-      console.error("Logout error:", error);
+      logger.error("Logout error:", error);
     }
   };
 

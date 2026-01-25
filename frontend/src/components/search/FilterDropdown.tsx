@@ -45,10 +45,15 @@ export function FilterDropdown({
   return (
     <Popover open={isOpen} onOpenChange={onOpenChange} modal={false}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="min-w-[120px] justify-between" type="button">
-          {icon && <span className="mr-2">{icon}</span>}
+        <Button
+          variant="outline"
+          className="min-w-[120px] justify-between"
+          type="button"
+          aria-label={`Filter by ${label}: ${selectedCount > 0 ? `${selectedCount} selected` : 'none selected'}`}
+        >
+          {icon && <span className="mr-2" aria-hidden="true">{icon}</span>}
           <span>{buttonText}</span>
-          <ChevronDown size={16} className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown size={16} className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -68,6 +73,7 @@ export function FilterDropdown({
                 size="sm"
                 onClick={onClear}
                 className="h-auto py-1 px-2 text-xs text-destructive hover:text-destructive"
+                aria-label={`Clear all ${label} filters`}
               >
                 Clear All
               </Button>

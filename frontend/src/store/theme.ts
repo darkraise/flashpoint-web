@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logger } from '@/lib/logger';
 import { persist } from 'zustand/middleware';
 import { usersApi } from '@/lib/api';
 import { useAuthStore } from './auth';
@@ -119,7 +120,7 @@ export const useThemeStore = create<ThemeState>()(
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated && !authState.isGuest) {
           get().syncThemeToServer().catch((error) => {
-            console.debug('Theme sync to server failed:', error);
+            logger.debug('Theme sync to server failed:', error);
           });
         }
       },
@@ -132,7 +133,7 @@ export const useThemeStore = create<ThemeState>()(
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated && !authState.isGuest) {
           get().syncThemeToServer().catch((error) => {
-            console.debug('Theme sync to server failed:', error);
+            logger.debug('Theme sync to server failed:', error);
           });
         }
       },
@@ -152,7 +153,7 @@ export const useThemeStore = create<ThemeState>()(
           applyTheme(mode);
           applyPrimaryColor(primaryColor, mode);
         } catch (error) {
-          console.error('Failed to load theme from server:', error);
+          logger.error('Failed to load theme from server:', error);
           set({ isLoading: false });
         }
       },
@@ -163,7 +164,7 @@ export const useThemeStore = create<ThemeState>()(
           await usersApi.updateThemeSettings(mode, primaryColor);
         } catch (error) {
           // Silent fail - user might not be authenticated
-          console.debug('Theme sync to server failed:', error);
+          logger.debug('Theme sync to server failed:', error);
         }
       }
     }),
@@ -183,7 +184,7 @@ export const useThemeStore = create<ThemeState>()(
           const authState = useAuthStore.getState();
           if (authState.isAuthenticated && !authState.isGuest) {
             state.loadThemeFromServer().catch((error) => {
-              console.debug('Failed to load theme from server on rehydration:', error);
+              logger.debug('Failed to load theme from server on rehydration:', error);
             });
           }
         }

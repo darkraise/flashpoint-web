@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '@/lib/logger';
 import { gamesApi } from '@/lib/api';
 
 export interface DownloadProgress {
@@ -47,12 +48,12 @@ export function useDownload(gameId: string) {
             setIsDownloading(false);
           }
         } catch (error) {
-          console.error('Error parsing SSE data:', error);
+          logger.error('Error parsing SSE data:', error);
         }
       };
 
       eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
+        logger.error('SSE connection error:', error);
         setProgress({
           percent: 0,
           status: 'error',
@@ -98,7 +99,7 @@ export function useDownload(gameId: string) {
         error: 'Cancelled by user'
       });
     } catch (error) {
-      console.error('Error cancelling download:', error);
+      logger.error('Error cancelling download:', error);
       throw error;
     }
   }, [gameId]);

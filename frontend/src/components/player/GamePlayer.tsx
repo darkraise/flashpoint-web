@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '@/lib/logger';
 import { Play, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { RufflePlayer } from './RufflePlayer';
 
@@ -79,7 +80,7 @@ export function GamePlayer({
 
   // Debug logging for game content
   if (contentUrl) {
-    console.log(`[GamePlayer] Loading ${platform} game:`, {
+    logger.debug(`[GamePlayer] Loading ${platform} game:`, {
       title,
       platform,
       contentUrl,
@@ -184,10 +185,10 @@ export function GamePlayer({
             className="w-full h-full"
             scaleMode={defaultScaleMode}
             onLoadError={(error) => {
-              console.error('Ruffle load error:', error);
+              logger.error('Ruffle load error:', error);
             }}
             onLoadSuccess={() => {
-              console.log('Ruffle loaded successfully');
+              logger.debug('Ruffle loaded successfully');
             }}
           />
         ) : platform === 'HTML5' && contentUrl ? (
@@ -199,11 +200,11 @@ export function GamePlayer({
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-pointer-lock allow-top-navigation-by-user-activation"
               allow="fullscreen; autoplay; clipboard-read; clipboard-write"
               onLoad={() => {
-                console.log('[HTML5 Game] Loaded successfully:', contentUrl);
+                logger.debug('[HTML5 Game] Loaded successfully:', contentUrl);
                 setIframeError(null);
               }}
               onError={(e) => {
-                console.error('[HTML5 Game] Load error:', e);
+                logger.error('[HTML5 Game] Load error:', e);
                 setIframeError('Failed to load HTML5 game');
               }}
             />

@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from '@/lib/logger';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
@@ -39,7 +40,7 @@ async function initApp() {
     // Manually set in React Query cache with infinite stale time
     queryClient.setQueryData(['system-settings', 'public'], publicSettings);
   } catch (error) {
-    console.error('[main.tsx] Failed to fetch public settings:', error);
+    logger.error('[main.tsx] Failed to fetch public settings:', error);
   }
 
   // Now render the app with data already in cache

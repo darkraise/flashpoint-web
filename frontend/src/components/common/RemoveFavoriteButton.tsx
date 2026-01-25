@@ -40,10 +40,12 @@ export function RemoveFavoriteButton({
       disabled={toggleFavorite.isPending}
       className={`backdrop-blur-sm ${className}`}
       title="Remove from Favorites"
+      aria-label="Remove from Favorites"
     >
       <HeartOff
         size={size === "sm" ? 14 : 16}
         className={toggleFavorite.isPending ? "animate-pulse" : ""}
+        aria-hidden="true"
       />
       {showLabel && <span className="ml-2">Remove</span>}
     </Button>

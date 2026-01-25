@@ -55,6 +55,8 @@ export function SidebarItem({
           : "hover:bg-accent hover:text-primary/80 text-foreground border-transparent",
       )}
       title={collapsed ? label : undefined}
+      aria-label={label}
+      aria-current={isActive ? "page" : undefined}
       style={{
         width: collapsed ? "2.5rem" : "auto",
         height: collapsed ? "2.5rem" : "auto",
@@ -68,11 +70,12 @@ export function SidebarItem({
       {iconImage ? (
         <img
           src={iconImage}
-          alt={label}
+          alt=""
+          aria-hidden="true"
           className="w-5 h-5 object-contain flex-shrink-0"
         />
       ) : Icon ? (
-        <Icon size={20} className="flex-shrink-0" />
+        <Icon size={20} className="flex-shrink-0" aria-hidden="true" />
       ) : null}
       <span
         className="whitespace-nowrap"

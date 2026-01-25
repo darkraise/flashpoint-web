@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { logger } from '@/lib/logger';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -21,7 +22,7 @@ export class ActivityErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Activity log error:', error, errorInfo);
+    logger.error('Activity log error:', error, errorInfo);
   }
 
   handleReset = () => {

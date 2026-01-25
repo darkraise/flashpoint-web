@@ -6,6 +6,7 @@ import { BrowseCommunityPlaylistsModal } from '@/components/playlist/BrowseCommu
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 export function PlaylistsView() {
   const { data: allPlaylists, isLoading, error } = usePlaylists();
@@ -35,7 +36,8 @@ export function PlaylistsView() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <ErrorBoundary>
+      <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Flashpoint Playlists</h1>
         <Button
@@ -109,5 +111,6 @@ export function PlaylistsView() {
         onClose={() => setIsBrowseModalOpen(false)}
       />
     </div>
+    </ErrorBoundary>
   );
 }

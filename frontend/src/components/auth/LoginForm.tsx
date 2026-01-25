@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { authSettingsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { logger } from '@/lib/logger';
 import {
   Form,
   FormControl,
@@ -56,7 +57,7 @@ export function LoginForm() {
       // AuthContext will handle navigation (including maintenance mode check)
       await login(values, from);
     } catch (error: any) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       setError(error?.response?.data?.error?.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);

@@ -70,11 +70,13 @@ export function FavoriteButton({
       disabled={toggleFavorite.isPending}
       className={`backdrop-blur-sm transition-opacity ${opacityClass} ${className}`}
       title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+      aria-label={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
     >
       <Heart
         size={size === "sm" ? 14 : 16}
         fill={isFavorited ? "currentColor" : "none"}
         className={toggleFavorite.isPending ? "animate-pulse" : ""}
+        aria-hidden="true"
       />
       {showLabel && (
         <span className="ml-2">

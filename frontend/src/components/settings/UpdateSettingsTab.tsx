@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { logger } from '@/lib/logger';
 import {
   RefreshCw,
   Download,
@@ -86,7 +87,7 @@ export function UpdateSettingsTab({
       const data = await response.json();
       setMetadataInfo(data);
     } catch (err) {
-      console.error("Error checking metadata updates:", err);
+      logger.error("Error checking metadata updates:", err);
       setMetadataInfo({
         hasUpdates: false,
         gamesUpdateAvailable: false,

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 import { systemSettingsApi } from '@/lib/api';
 
 /**
@@ -18,9 +19,9 @@ export function usePublicSettings() {
   const query = useQuery({
     queryKey: ['system-settings', 'public'],
     queryFn: async () => {
-      console.log('[usePublicSettings] queryFn called - fetching from API');
+      logger.debug('[usePublicSettings] queryFn called - fetching from API');
       const result = await systemSettingsApi.getPublic();
-      console.log('[usePublicSettings] Fetch complete:', result);
+      logger.debug('[usePublicSettings] Fetch complete:', result);
       return result;
     },
     staleTime: Infinity, // Data never goes stale (only refetch manually)

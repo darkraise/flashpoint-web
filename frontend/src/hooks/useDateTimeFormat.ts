@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 import { usersApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { format as dateFnsFormat } from 'date-fns';
@@ -30,7 +31,7 @@ export function useDateTimeFormat() {
     try {
       return dateFnsFormat(dateObj, dateFormat);
     } catch (error) {
-      console.error('Error formatting date:', error);
+      logger.error('Error formatting date:', error);
       return String(date);
     }
   };
@@ -43,7 +44,7 @@ export function useDateTimeFormat() {
     try {
       return dateFnsFormat(dateObj, timeFormat);
     } catch (error) {
-      console.error('Error formatting time:', error);
+      logger.error('Error formatting time:', error);
       return String(date);
     }
   };
@@ -56,7 +57,7 @@ export function useDateTimeFormat() {
     try {
       return dateFnsFormat(dateObj, `${dateFormat} ${timeFormat}`);
     } catch (error) {
-      console.error('Error formatting datetime:', error);
+      logger.error('Error formatting datetime:', error);
       return String(date);
     }
   };

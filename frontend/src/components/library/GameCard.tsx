@@ -47,7 +47,7 @@ export function GameCard({
 
   return (
     <Card className="group overflow-hidden hover:ring-2 hover:ring-primary/80 hover:shadow-xl hover:-translate-y-1 hover:z-20 transition-all duration-200 relative">
-      <Link to={`/games/${game.id}`}>
+      <Link to={`/games/${game.id}`} aria-label={`View details for ${game.title}`}>
         <CardContent className="p-0 aspect-square flex items-center justify-center relative overflow-hidden">
           {imageUrl && !imageError ? (
             <>
@@ -109,7 +109,7 @@ export function GameCard({
           // <div className="h-7 w-7 flex items-center justify-center bg-primary/90 backdrop-blur-sm rounded-md">
           //   <Heart size={14} fill="currentColor" className="text-primary" />
           // </div>
-          <Heart size={14} fill="currentColor" className="text-primary" />
+          <Heart size={14} fill="currentColor" className="text-primary" aria-hidden="true" />
         )}
 
         {/* Remove from Favorites Button (Favorites page only) */}
@@ -148,9 +148,9 @@ export function GameCard({
             }}
             className="h-7 w-7 p-0 backdrop-blur-sm transition-opacity"
             title="Add to Playlist"
-            aria-label="Add to Playlist"
+            aria-label={`Add ${game.title} to playlist`}
           >
-            <ListPlus size={14} />
+            <ListPlus size={14} aria-hidden="true" />
           </Button>
         )}
       </div>
@@ -162,14 +162,14 @@ export function GameCard({
           variant="default"
           asChild
           className="absolute bottom-2 right-2 h-10 w-10 p-0 backdrop-blur-sm transition-opacity shadow-lg"
-          title="Play Game"
+          title={`Play ${game.title}`}
         >
           <Link
             to={`/games/${game.id}/play`}
             onClick={(e) => e.stopPropagation()}
-            aria-label="Play Game"
+            aria-label={`Play ${game.title}`}
           >
-            <Play size={20} fill="currentColor" />
+            <Play size={20} fill="currentColor" aria-hidden="true" />
           </Link>
         </Button>
       )}

@@ -118,6 +118,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             ? 'transform 300ms ease-out'
             : 'width 500ms ease-out',
         }}
+        aria-label="Main navigation"
       >
         {/* Main Navigation */}
         <ScrollArea

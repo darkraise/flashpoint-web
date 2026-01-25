@@ -7,6 +7,7 @@ import { ArrowLeft, Play, ImageIcon, Loader2, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 // Helper function to format duration in seconds
 function formatDuration(seconds: number): string {
@@ -131,7 +132,8 @@ export function GameDetailView() {
   const needsDataDownload = game.presentOnDisk === 0;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <ErrorBoundary>
+      <div className="max-w-6xl mx-auto space-y-6">
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -305,5 +307,6 @@ export function GameDetailView() {
         )}
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

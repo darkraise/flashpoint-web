@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/auth';
 import { authApi } from '../lib/api';
 import { LoginCredentials, RegisterData } from '../types/auth';
 import axios from 'axios';
+import { logger } from '../lib/logger';
 
 interface AuthContextType {
   login: (credentials: LoginCredentials, redirectPath?: string) => Promise<void>;
@@ -36,20 +37,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const cachedData = queryClient.getQueryData(['system-settings', 'public']) as any;
 
       if (cachedData) {
-        console.log('[AuthContext] Using cached maintenance mode data');
+        logger.debug('[AuthContext] Using cached maintenance mode data');
         const isMaintenanceActive = cachedData.app?.maintenanceMode === true;
         setMaintenanceMode(isMaintenanceActive);
         return isMaintenanceActive;
       }
 
       // Fallback: if not in cache, fetch it (shouldn't happen with prefetch)
-      console.warn('[AuthContext] Cache miss! Making direct axios call to /api/settings/public');
+      logger.warn('[AuthContext] Cache miss! Making direct axios call to /api/settings/public');
       const response = await axios.get('/api/settings/public');
       const isMaintenanceActive = response.data.app?.maintenanceMode === true;
       setMaintenanceMode(isMaintenanceActive);
       return isMaintenanceActive;
     } catch (error) {
-      console.error('Failed to check maintenance mode:', error);
+      logger.error('Failed to check maintenance mode:', error);
       return false;
     }
   }, [setMaintenanceMode, queryClient]);
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Normal login - redirect to requested page or home
       navigate(redirectPath || '/', { replace: true });
     } catch (error) {
-      console.error('Login failed:', error);
+      logger.error('Login failed:', error);
       throw error;
     }
   }, [setAuth, queryClient, checkMaintenanceMode, navigate]);
@@ -108,7 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const result = await authApi.register(userData);
       setAuth(result.user, result.tokens);
     } catch (error) {
-      console.error('Registration failed:', error);
+      logger.error('Registration failed:', error);
       throw error;
     }
   }, [setAuth]);
@@ -123,7 +124,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await authApi.logout(token);
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
     } finally {
       // Clear all cached queries EXCEPT public settings when user logs out
       // Public settings are not user-specific and should persist across sessions
@@ -152,7 +153,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const tokens = await authApi.refreshToken(token);
       updateAccessToken(tokens.accessToken);
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      logger.error('Token refresh failed:', error);
       // The axios interceptor will handle logout and redirect
       // Just clear auth here to ensure clean state
       clearAuth();

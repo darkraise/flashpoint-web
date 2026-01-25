@@ -1,4 +1,5 @@
 import { ListPlus } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { useCreatePlaylist } from '@/hooks/usePlaylists';
 import { useDialog } from '@/contexts/DialogContext';
 import { useForm } from 'react-hook-form';
@@ -75,7 +76,7 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
       showToast('Playlist created successfully', 'success');
       onClose();
     } catch (error) {
-      console.error('Failed to create playlist:', error);
+      logger.error('Failed to create playlist:', error);
       showToast('Failed to create playlist. Please try again.', 'error');
     }
   };

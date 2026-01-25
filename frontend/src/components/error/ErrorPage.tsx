@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { logger } from '@/lib/logger';
 import { useNavigate } from 'react-router-dom';
 import { FileQuestion, AlertCircle, WifiOff, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -117,7 +118,7 @@ export function ErrorPage({
         setHasReported(true);
       } catch (error) {
         // Error already handled by reportError function
-        console.error('Failed to report error:', error);
+        logger.error('Failed to report error:', error);
       } finally {
         setIsReporting(false);
       }

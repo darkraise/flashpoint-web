@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../lib/api';
 import { useAuth as useAuthContext } from '../contexts/AuthContext';
 import { LoginCredentials, RegisterData } from '../types/auth';
+import { logger } from '../lib/logger';
 
 /**
  * Hook for login mutation
@@ -12,7 +13,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (credentials: LoginCredentials) => login(credentials),
     onError: (error) => {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
     }
   });
 }
@@ -26,7 +27,7 @@ export function useRegister() {
   return useMutation({
     mutationFn: (userData: RegisterData) => register(userData),
     onError: (error) => {
-      console.error('Registration error:', error);
+      logger.error('Registration error:', error);
     }
   });
 }
@@ -45,7 +46,7 @@ export function useLogout() {
       queryClient.clear();
     },
     onError: (error) => {
-      console.error('Logout error:', error);
+      logger.error('Logout error:', error);
     }
   });
 }

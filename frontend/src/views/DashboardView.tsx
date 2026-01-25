@@ -1,12 +1,14 @@
 import { Gamepad2, Film, Layers, FolderOpen, BarChart3, Tags } from 'lucide-react';
 import { useStatistics } from '@/hooks/useStatistics';
 import { UserStatsPanel } from '@/components/stats/UserStatsPanel';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 export function DashboardView() {
   const { data: statistics, isLoading: statsLoading } = useStatistics();
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <ErrorBoundary>
+      <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <BarChart3 size={32} className="text-primary" />
@@ -119,5 +121,6 @@ export function DashboardView() {
       {/* User Play Statistics */}
       <UserStatsPanel />
     </div>
+    </ErrorBoundary>
   );
 }
