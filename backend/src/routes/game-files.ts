@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { GameFileService } from '../services/GameFileService';
 import { AppError } from '../middleware/errorHandler';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -13,7 +14,7 @@ const gameFileService = new GameFileService();
  * - /game-files/www.example.com/path/file.swf
  * - /game-files/cdn.games.com/assets/game.swf
  */
-router.get('/*', async (req: Request, res: Response, next) => {
+router.get('/*', asyncHandler(async (req: Request, res: Response) => {
   try {
     // Extract path after /game-files/
     const urlPath = req.path.substring(1); // Remove leading slash
@@ -40,12 +41,12 @@ router.get('/*', async (req: Request, res: Response, next) => {
     res.send(result.data);
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
-      next(new AppError(404, 'Game file not found in any source'));
+      throw new AppError(404, 'Game file not found in any source');
     } else {
       logger.error('[GameFilesRoute] Error:', error);
-      next(error);
+      throw error;
     }
   }
-});
+}));
 
 export default router;

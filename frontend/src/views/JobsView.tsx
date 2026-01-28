@@ -8,6 +8,7 @@ import { JobEditDialog } from '@/components/jobs/JobEditDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog';
 import { useDialog } from '@/contexts/DialogContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getErrorMessage } from '@/types/api-error';
 
 export function JobsView() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -38,8 +39,8 @@ export function JobsView() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       showToast(data.message, 'success');
     },
-    onError: (error: any) => {
-      showToast(error.response?.data?.message || 'Failed to stop job', 'error');
+    onError: (error: unknown) => {
+      showToast(getErrorMessage(error) || 'Failed to stop job', 'error');
     }
   });
 
@@ -50,8 +51,8 @@ export function JobsView() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       showToast(data.message, 'success');
     },
-    onError: (error: any) => {
-      showToast(error.response?.data?.message || 'Failed to trigger job', 'error');
+    onError: (error: unknown) => {
+      showToast(getErrorMessage(error) || 'Failed to trigger job', 'error');
     }
   });
 
@@ -64,8 +65,8 @@ export function JobsView() {
       const status = updatedJob.enabled ? 'enabled' : 'disabled';
       showToast(`Job ${updatedJob.name} ${status} successfully`, 'success');
     },
-    onError: (error: any) => {
-      showToast(error.response?.data?.error?.message || 'Failed to update job', 'error');
+    onError: (error: unknown) => {
+      showToast(getErrorMessage(error) || 'Failed to update job', 'error');
     }
   });
 

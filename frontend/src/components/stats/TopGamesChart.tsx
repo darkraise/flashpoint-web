@@ -1,5 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useTopGames } from '../../hooks/usePlayTracking';
+import type { CustomTooltipProps } from '@/types/chart';
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) {
@@ -18,22 +19,21 @@ function truncateTitle(title: string, maxLength = 30): string {
   return title.substring(0, maxLength) + '...';
 }
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-}
-
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (active && payload && payload.length) {
-    const game = payload[0].payload;
+    const data = payload[0];
+    if (!data?.payload) return null;
+
+    const game = data.payload as any;
+    const playtime = typeof game.playtime === 'number' ? game.playtime : 0;
+
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg max-w-xs">
         <p className="font-medium mb-2">{game.fullTitle}</p>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Playtime:</span>
-            <span className="font-semibold text-sm">{formatPlaytime(game.playtime)}</span>
+            <span className="font-semibold text-sm">{formatPlaytime(playtime)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Total Plays:</span>

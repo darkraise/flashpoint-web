@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/auth';
 import { authApi } from '../lib/api';
 import { LoginCredentials, RegisterData } from '../types/auth';
+import { PublicSettings } from '../types/settings';
 import axios from 'axios';
 import { logger } from '../lib/logger';
 
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const checkMaintenanceMode = useCallback(async (): Promise<boolean> => {
     try {
       // Get from React Query cache instead of making a new API call
-      const cachedData = queryClient.getQueryData(['system-settings', 'public']) as any;
+      const cachedData = queryClient.getQueryData<PublicSettings>(['system-settings', 'public']);
 
       if (cachedData) {
         logger.debug('[AuthContext] Using cached maintenance mode data');

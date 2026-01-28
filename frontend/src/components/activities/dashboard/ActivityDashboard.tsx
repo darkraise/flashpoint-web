@@ -8,11 +8,7 @@ import { TopActionsChart } from './TopActionsChart';
 import { ResourceDistributionChart } from './ResourceDistributionChart';
 import { UserLeaderboard } from './UserLeaderboard';
 
-interface ActivityDashboardProps {
-  onFilterChange?: (filter: string) => void;
-}
-
-function ActivityDashboardComponent({ onFilterChange }: ActivityDashboardProps) {
+function ActivityDashboardComponent() {
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const stored = localStorage.getItem('activityDashboardCollapsed');
     return stored === 'true';
@@ -20,32 +16,13 @@ function ActivityDashboardComponent({ onFilterChange }: ActivityDashboardProps) 
 
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
-  const [activeFilter, setActiveFilter] = useState<string | undefined>(() => {
-    const stored = localStorage.getItem('activityDashboardActiveFilter');
-    return stored || undefined;
-  });
 
   // Persist collapsed state
   useEffect(() => {
     localStorage.setItem('activityDashboardCollapsed', String(isCollapsed));
   }, [isCollapsed]);
 
-  // Persist active filter
-  useEffect(() => {
-    if (activeFilter) {
-      localStorage.setItem('activityDashboardActiveFilter', activeFilter);
-    } else {
-      localStorage.removeItem('activityDashboardActiveFilter');
-    }
-  }, [activeFilter]);
-
   const { data: stats, isLoading, isFetching } = useActivityStats(timeRange, undefined, autoRefresh);
-
-  const handleCardClick = (filter: string) => {
-    const newFilter = activeFilter === filter ? undefined : filter;
-    setActiveFilter(newFilter);
-    onFilterChange?.(newFilter || '');
-  };
 
   const handleToggleAutoRefresh = () => {
     setAutoRefresh(!autoRefresh);
@@ -143,8 +120,6 @@ function ActivityDashboardComponent({ onFilterChange }: ActivityDashboardProps) 
           {stats && (
             <ActivityStats
               stats={stats.data}
-              onCardClick={handleCardClick}
-              activeFilter={activeFilter}
               timeRange={timeRange}
             />
           )}

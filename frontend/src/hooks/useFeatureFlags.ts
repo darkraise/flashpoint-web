@@ -21,13 +21,13 @@ export function useFeatureFlags() {
 
   return {
     // Individual feature flags (admins bypass all restrictions)
-    enablePlaylists: isAdmin || features.enablePlaylists !== false,
-    enableFavorites: isAdmin || features.enableFavorites !== false,
-    enableStatistics: isAdmin || features.enableStatistics !== false,
+    enablePlaylists: isAdmin || (features.enablePlaylists ?? true),
+    enableFavorites: isAdmin || (features.enableFavorites ?? true),
+    enableStatistics: isAdmin || (features.enableStatistics ?? true),
 
     // Helper function to check any feature (admins bypass all restrictions)
     isFeatureEnabled: (featureName: string) => {
-      return isAdmin || features[featureName] !== false;
+      return isAdmin || ((features as Record<string, unknown>)[featureName] ?? true) !== false;
     },
 
     // Check if user is admin

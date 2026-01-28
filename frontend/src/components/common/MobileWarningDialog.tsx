@@ -17,7 +17,7 @@ const STORAGE_KEY = 'flashpoint-mobile-warning-dismissed';
  */
 function isMobileDevice(): boolean {
   // Check user agent for mobile devices
-  const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
   const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
 
   // Also check screen size (less than 768px width)

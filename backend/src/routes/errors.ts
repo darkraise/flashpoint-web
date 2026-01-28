@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ async function ensureLogDir(): Promise<void> {
   try {
     await fs.mkdir(LOG_DIR, { recursive: true });
   } catch (error) {
-    console.error('Failed to create logs directory:', error);
+    logger.error('Failed to create logs directory:', error);
   }
 }
 
@@ -41,7 +42,7 @@ async function logError(report: ErrorReport): Promise<void> {
     const logLine = JSON.stringify(report) + '\n';
     await fs.appendFile(ERROR_LOG_FILE, logLine, 'utf8');
   } catch (error) {
-    console.error('Failed to log client error:', error);
+    logger.error('Failed to log client error:', error);
   }
 }
 
@@ -65,21 +66,21 @@ async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
             const report = JSON.parse(line);
             errors.push(report);
           } catch (parseError) {
-            console.warn('Failed to parse error log line:', parseError);
+            logger.warn('Failed to parse error log line:', parseError);
           }
         }
       }
 
       return errors;
-    } catch (readError: any) {
-      // File doesn't exist yet
-      if (readError.code === 'ENOENT') {
+    } catch (readError) {
+      // File doesn't exist yet - handle ENOENT error
+      if (readError && typeof readError === 'object' && 'code' in readError && readError.code === 'ENOENT') {
         return [];
       }
       throw readError;
     }
   } catch (error) {
-    console.error('Failed to read client errors:', error);
+    logger.error('Failed to read client errors:', error);
     return [];
   }
 }
@@ -122,11 +123,11 @@ router.post('/report', async (req: Request, res: Response) => {
     // Log to file
     await logError(report);
 
-    console.log(`[Client Error] ${report.type} - ${report.message} (${report.url})`);
+    logger.info(`[Client Error] ${report.type} - ${report.message} (${report.url})`);
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error in /errors/report:', error);
+    logger.error('Error in /errors/report:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -157,7 +158,7 @@ router.get(
         limit
       });
     } catch (error) {
-      console.error('Error in /errors/recent:', error);
+      logger.error('Error in /errors/recent:', error);
       res.status(500).json({
         success: false,
         error: {

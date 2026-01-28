@@ -1,7 +1,10 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { AuthService } from '../services/AuthService';
 import { ActivityService } from '../services/ActivityService';
+import { UserDatabaseService } from '../services/UserDatabaseService';
 import { AppError } from '../middleware/errorHandler';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { logActivity } from '../middleware/activityLogger';
 import { logger } from '../utils/logger';
 import { z } from 'zod';
@@ -9,6 +12,54 @@ import { z } from 'zod';
 const router = Router();
 const authService = new AuthService();
 const activityService = new ActivityService();
+
+// Rate limiters for authentication endpoints
+// Stricter limits on login to prevent brute force attacks
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 requests per window per IP
+  message: {
+    error: {
+      message: 'Too many login attempts from this IP, please try again after 15 minutes',
+      statusCode: 429
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false, // Count all attempts
+  handler: (req, res) => {
+    logger.warn(`[Security] Rate limit exceeded for login from IP: ${req.ip}`);
+    res.status(429).json({
+      error: {
+        message: 'Too many login attempts from this IP, please try again after 15 minutes',
+        statusCode: 429
+      }
+    });
+  }
+});
+
+// Moderate limits on registration
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 registration attempts per hour per IP
+  message: {
+    error: {
+      message: 'Too many registration attempts from this IP, please try again after an hour',
+      statusCode: 429
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn(`[Security] Rate limit exceeded for registration from IP: ${req.ip}`);
+    res.status(429).json({
+      error: {
+        message: 'Too many registration attempts from this IP, please try again after an hour',
+        statusCode: 429
+      }
+    });
+  }
+});
 
 // Validation schemas
 const loginSchema = z.object({
@@ -27,10 +78,25 @@ const refreshTokenSchema = z.object({
 });
 
 /**
+ * GET /api/auth/setup-status
+ * Check if the system needs initial setup (no users exist)
+ * Public endpoint - no authentication required
+ */
+router.get('/setup-status', (req, res) => {
+  const needsSetup = UserDatabaseService.needsInitialSetup();
+  res.json({
+    needsSetup,
+    message: needsSetup
+      ? 'No users found. Please create an administrator account.'
+      : 'System is configured'
+  });
+});
+
+/**
  * POST /api/auth/login
  * Login with username and password
  */
-router.post('/login', async (req, res, next) => {
+router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
   try {
     const credentials = loginSchema.parse(req.body);
     const ipAddress = req.ip || '';
@@ -54,7 +120,7 @@ router.post('/login', async (req, res, next) => {
   } catch (error) {
     if (error instanceof z.ZodError) {
       logger.warn(`[Auth] Validation error during login: ${error.errors[0].message}`);
-      return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
+      throw new AppError(400, `Validation error: ${error.errors[0].message}`);
     }
 
     // Log failed login attempt
@@ -87,15 +153,15 @@ router.post('/login', async (req, res, next) => {
       stack: error instanceof Error ? error.stack : undefined
     });
 
-    next(error);
+    throw error;
   }
-});
+}));
 
 /**
  * POST /api/auth/register
  * Register new user
  */
-router.post('/register', async (req, res, next) => {
+router.post('/register', registerLimiter, asyncHandler(async (req, res) => {
   try {
     const data = registerSchema.parse(req.body);
 
@@ -118,7 +184,7 @@ router.post('/register', async (req, res, next) => {
   } catch (error) {
     if (error instanceof z.ZodError) {
       logger.warn(`[Auth] Validation error during registration: ${error.errors[0].message}`);
-      return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
+      throw new AppError(400, `Validation error: ${error.errors[0].message}`);
     }
 
     logger.error(`[Auth] Registration failed for user: ${req.body.username}`, {
@@ -126,9 +192,9 @@ router.post('/register', async (req, res, next) => {
       stack: error instanceof Error ? error.stack : undefined
     });
 
-    next(error);
+    throw error;
   }
-});
+}));
 
 /**
  * POST /api/auth/logout
@@ -137,59 +203,41 @@ router.post('/register', async (req, res, next) => {
 router.post(
   '/logout',
   logActivity('auth.logout', 'auth'),
-  async (req, res, next) => {
-    try {
-      const { refreshToken } = refreshTokenSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const { refreshToken } = refreshTokenSchema.parse(req.body);
 
-      await authService.logout(refreshToken);
+    await authService.logout(refreshToken);
 
-      res.json({ success: true, message: 'Logged out successfully' });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
-    }
-  }
+    res.json({ success: true, message: 'Logged out successfully' });
+  })
 );
 
 /**
  * POST /api/auth/refresh
  * Refresh access token using refresh token
  */
-router.post('/refresh', async (req, res, next) => {
-  try {
-    const { refreshToken } = refreshTokenSchema.parse(req.body);
+router.post('/refresh', asyncHandler(async (req, res) => {
+  const { refreshToken } = refreshTokenSchema.parse(req.body);
 
-    const tokens = await authService.refreshToken(refreshToken);
+  const tokens = await authService.refreshToken(refreshToken);
 
-    res.json(tokens);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-    }
-    next(error);
-  }
-});
+  res.json(tokens);
+}));
 
 /**
  * GET /api/auth/me
  * Get current authenticated user
  */
-router.get('/me', async (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError(401, 'No token provided');
-    }
-
-    const token = authHeader.substring(7);
-    const user = await authService.verifyAccessToken(token);
-
-    res.json(user);
-  } catch (error) {
-    next(error);
+router.get('/me', asyncHandler(async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new AppError(401, 'No token provided');
   }
-});
+
+  const token = authHeader.substring(7);
+  const user = await authService.verifyAccessToken(token);
+
+  res.json(user);
+}));
 
 export default router;

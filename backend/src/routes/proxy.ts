@@ -1,6 +1,7 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { config } from '../config';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 import path from 'path';
 import fs from 'fs';
@@ -10,14 +11,45 @@ import axios from 'axios';
 const router = Router();
 
 /**
+ * Validate path to prevent directory traversal attacks
+ * @param requestedPath - The path from the request
+ * @param allowedBasePath - The allowed base directory
+ * @returns Validated safe path or null if invalid
+ */
+function validatePath(requestedPath: string, allowedBasePath: string): string | null {
+  try {
+    // Normalize the requested path to remove . and .. sequences
+    const normalizedPath = path.normalize(requestedPath).replace(/^(\.\.(\/|\\|$))+/, '');
+
+    // Join with base path
+    const fullPath = path.join(allowedBasePath, normalizedPath);
+
+    // Resolve to absolute path
+    const resolvedPath = path.resolve(fullPath);
+    const resolvedBase = path.resolve(allowedBasePath);
+
+    // Verify the resolved path is within the allowed directory
+    if (!resolvedPath.startsWith(resolvedBase)) {
+      logger.warn(`[Security] Path traversal attempt detected: ${requestedPath}`);
+      return null;
+    }
+
+    return resolvedPath;
+  } catch (error) {
+    logger.error('[Security] Path validation error:', error);
+    return null;
+  }
+}
+
+/**
  * Helper function to serve file with external CDN fallback
  */
 async function serveFileWithFallback(
   localPath: string,
   relativePath: string,
   externalBaseUrls: string[],
-  res: any,
-  next: any
+  res: Response,
+  next: NextFunction
 ) {
   try {
     // Try local file first
@@ -101,7 +133,7 @@ router.use('/game', createProxyMiddleware({
     }
   },
   onError: (err, req, res) => {
-    console.error('Proxy error:', err);
+    logger.error('Proxy error:', err);
     res.status(500).json({
       error: {
         message: 'Failed to proxy request to game server',
@@ -112,9 +144,20 @@ router.use('/game', createProxyMiddleware({
 }));
 
 // Serve images with CDN fallback
-router.get('/images/:path(*)', async (req, res, next) => {
+router.get('/images/:path(*)', asyncHandler(async (req, res, next) => {
   const relativePath = req.params.path;
-  const localPath = path.join(config.flashpointImagesPath, relativePath);
+
+  // Validate path to prevent directory traversal
+  const localPath = validatePath(relativePath, config.flashpointImagesPath);
+
+  if (!localPath) {
+    return res.status(403).json({
+      error: {
+        message: 'Access denied',
+        statusCode: 403
+      }
+    });
+  }
 
   await serveFileWithFallback(
     localPath,
@@ -123,12 +166,23 @@ router.get('/images/:path(*)', async (req, res, next) => {
     res,
     next
   );
-});
+}));
 
 // Serve logos with CDN fallback
-router.get('/logos/:path(*)', async (req, res, next) => {
+router.get('/logos/:path(*)', asyncHandler(async (req, res, next) => {
   const relativePath = req.params.path;
-  const localPath = path.join(config.flashpointLogosPath, relativePath);
+
+  // Validate path to prevent directory traversal
+  const localPath = validatePath(relativePath, config.flashpointLogosPath);
+
+  if (!localPath) {
+    return res.status(403).json({
+      error: {
+        message: 'Access denied',
+        statusCode: 403
+      }
+    });
+  }
 
   // For logos, the external path should include 'Logos' subdirectory
   const externalUrls = config.externalImageUrls.map(url => `${url}/../Logos`);
@@ -140,12 +194,23 @@ router.get('/logos/:path(*)', async (req, res, next) => {
     res,
     next
   );
-});
+}));
 
 // Serve screenshots with CDN fallback
-router.get('/screenshots/:path(*)', async (req, res, next) => {
+router.get('/screenshots/:path(*)', asyncHandler(async (req, res, next) => {
   const relativePath = `Screenshots/${req.params.path}`;
-  const localPath = path.join(config.flashpointImagesPath, relativePath);
+
+  // Validate path to prevent directory traversal
+  const localPath = validatePath(relativePath, config.flashpointImagesPath);
+
+  if (!localPath) {
+    return res.status(403).json({
+      error: {
+        message: 'Access denied',
+        statusCode: 403
+      }
+    });
+  }
 
   await serveFileWithFallback(
     localPath,
@@ -154,6 +219,6 @@ router.get('/screenshots/:path(*)', async (req, res, next) => {
     res,
     next
   );
-});
+}));
 
 export default router;

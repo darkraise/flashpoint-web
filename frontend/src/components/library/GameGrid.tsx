@@ -42,7 +42,7 @@ export function GameGrid({
           key={game.id}
           game={game}
           showFavoriteButton={showFavoriteButton}
-          showRemoveButton={isFavoritePage}
+          showRemoveButton={true}
           showFavoriteIndicator={!isFavoritePage}
           showAddToPlaylistButton={showAddToPlaylistButton}
           favoriteGameIds={favoriteGameIds}

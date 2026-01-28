@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { AppError } from '../middleware/errorHandler';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { z } from 'zod';
 
 const router = Router();
@@ -23,14 +24,10 @@ const updateSettingsSchema = z.object({
  * GET /api/settings/auth
  * Get current auth settings (public endpoint)
  */
-router.get('/', async (req, res, next) => {
-  try {
-    const settings = authSettingsService.getSettings();
-    res.json(settings);
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/', asyncHandler(async (req, res) => {
+  const settings = authSettingsService.getSettings();
+  res.json(settings);
+}));
 
 /**
  * PATCH /api/settings/auth
@@ -41,7 +38,7 @@ router.patch(
   authenticate,
   requirePermission('settings.update'),
   logActivity('settings.update', 'system_settings'),
-  async (req, res, next) => {
+  asyncHandler(async (req, res) => {
     try {
       const data = updateSettingsSchema.parse(req.body);
 
@@ -54,11 +51,11 @@ router.patch(
       res.json(settings);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
+        throw new AppError(400, `Validation error: ${error.errors[0].message}`);
       }
-      next(error);
+      throw error;
     }
-  }
+  })
 );
 
 export default router;

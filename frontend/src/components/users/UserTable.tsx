@@ -10,6 +10,7 @@ import { DataTable } from '../ui/data-table';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { FormattedDate } from '../common/FormattedDate';
+import { getErrorMessage } from '@/types/api-error';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -162,7 +163,7 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
     return (
       <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-destructive">
         Error loading users:{' '}
-        {(error as any)?.response?.data?.error?.message || 'Unknown error'}
+        {getErrorMessage(error) || 'Unknown error'}
       </div>
     );
   }

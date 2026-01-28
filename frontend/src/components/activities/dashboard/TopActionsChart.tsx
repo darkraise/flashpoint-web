@@ -2,15 +2,13 @@ import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useTopActions } from '@/hooks/useActivities';
 import { TimeRange } from '@/types/auth';
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-}
+import type { CustomTooltipProps } from '@/types/chart';
 
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (active && payload && payload.length) {
-    const action = payload[0].payload;
+    const action = payload[0]?.payload as any;
+    if (!action) return null;
+
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg max-w-xs">
         <p className="font-medium mb-2">{action.fullAction}</p>

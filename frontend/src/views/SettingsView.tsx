@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Settings } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/store/auth";
 import { useQuery } from "@tanstack/react-query";
-import { ruffleApi } from "@/lib/api";
+import { ruffleApi, systemSettingsApi } from "@/lib/api";
 
 // Tab components
 import { GeneralSettingsTab } from "@/components/settings/GeneralSettingsTab";
@@ -24,7 +23,7 @@ const tabContentVariants = {
     y: 0,
     transition: {
       duration: 0.25,
-      ease: "easeOut",
+      ease: "easeOut" as const,
     },
   },
   exit: {
@@ -32,7 +31,7 @@ const tabContentVariants = {
     y: -10,
     transition: {
       duration: 0.2,
-      ease: "easeIn",
+      ease: "easeIn" as const,
     },
   },
 };
@@ -50,9 +49,21 @@ export function SettingsView() {
     enabled: !isAdmin, // Only fetch for non-admin users (admin users get it from GeneralSettingsTab)
   });
 
+  // Fetch metadata settings for Flashpoint version
+  const { data: metadataSettings } = useQuery({
+    queryKey: ["systemSettings", "metadata"],
+    queryFn: () => systemSettingsApi.getCategory("metadata"),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !isAdmin, // Only fetch for non-admin users
+  });
+
+  // Get version strings
+  const flashpointVersion =
+    (typeof metadataSettings?.flashpointVersion === 'string' ? metadataSettings.flashpointVersion : null) || "Unknown";
+  const webAppVersion = import.meta.env.VITE_APP_VERSION || "1.0.0";
+
   return (
-    <TooltipProvider>
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Settings size={32} className="text-primary" />
@@ -106,14 +117,14 @@ export function SettingsView() {
                     Flashpoint Version:
                   </span>
                   <span className="font-medium">
-                    14.0.3 Infinity - Kingfisher
+                    {flashpointVersion}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
                     Web App Version:
                   </span>
-                  <span className="font-medium">1.0.0</span>
+                  <span className="font-medium">{webAppVersion}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
@@ -130,6 +141,5 @@ export function SettingsView() {
           </div>
         )}
       </div>
-    </TooltipProvider>
   );
 }

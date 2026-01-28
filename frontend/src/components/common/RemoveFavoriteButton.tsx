@@ -2,6 +2,7 @@ import { HeartOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToggleFavorite } from "@/hooks/useFavorites";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/types/api-error";
 
 interface RemoveFavoriteButtonProps {
   gameId: string;
@@ -26,8 +27,8 @@ export function RemoveFavoriteButton({
       onSuccess: () => {
         toast.success("Removed from favorites");
       },
-      onError: (error: any) => {
-        toast.error(error?.response?.data?.error?.message || "Failed to remove favorite");
+      onError: (error: unknown) => {
+        toast.error(getErrorMessage(error) || "Failed to remove favorite");
       }
     });
   };

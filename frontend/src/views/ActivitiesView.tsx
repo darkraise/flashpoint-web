@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from 'react';
+import { memo } from 'react';
 import { ActivityTable } from '../components/activities/ActivityTable';
 import { ActivityDashboard } from '../components/activities/dashboard/ActivityDashboard';
 import { ActivityErrorBoundary } from '../components/error/ActivityErrorBoundary';
@@ -21,13 +21,7 @@ const ActivityHeader = memo(() => (
 ActivityHeader.displayName = 'ActivityHeader';
 
 export function ActivitiesView() {
-  const [dashboardFilter, setDashboardFilter] = useState<string>('');
   const { enableStatistics } = useFeatureFlags();
-
-  // Memoize callback to prevent ActivityDashboard re-renders
-  const handleDashboardFilterChange = useCallback((filter: string) => {
-    setDashboardFilter(filter);
-  }, []);
 
   return (
     <ActivityErrorBoundary>
@@ -37,12 +31,12 @@ export function ActivitiesView() {
         {/* Dashboard - only render if statistics feature is enabled */}
         {enableStatistics && (
           <div className="mb-6">
-            <ActivityDashboard onFilterChange={handleDashboardFilterChange} />
+            <ActivityDashboard />
           </div>
         )}
 
         {/* Activity Table */}
-        <ActivityTable dashboardFilter={dashboardFilter} />
+        <ActivityTable />
       </div>
     </ActivityErrorBoundary>
   );

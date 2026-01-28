@@ -2,32 +2,33 @@ import { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useActivityBreakdown } from '@/hooks/useActivities';
 import { TimeRange } from '@/types/auth';
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-}
+import type { CustomTooltipProps, CustomLegendProps } from '@/types/chart';
 
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (active && payload && payload.length) {
     const data = payload[0];
-    const percentage = data.payload.percentage;
+    if (!data?.payload) return null;
+
+    const resourceData = data.payload as any;
+    const percentage = resourceData.percentage;
+    const value = typeof data.value === 'number' ? data.value : 0;
+
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg max-w-xs">
-        <p className="font-medium mb-2">{data.payload.fullName}</p>
+        <p className="font-medium mb-2">{resourceData.fullName}</p>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Count:</span>
-            <span className="font-semibold text-sm">{data.value.toLocaleString()}</span>
+            <span className="font-semibold text-sm">{value.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Percentage:</span>
             <span className="font-semibold text-sm">{percentage.toFixed(1)}%</span>
           </div>
-          {data.payload.topAction && (
+          {resourceData.topAction && (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">Top Action:</span>
-              <span className="font-semibold text-sm">{data.payload.topAction}</span>
+              <span className="font-semibold text-sm">{resourceData.topAction}</span>
             </div>
           )}
         </div>
@@ -64,18 +65,20 @@ export function ResourceDistributionChart({ autoRefresh = false }: ResourceDistr
 
   const { data, isLoading } = useActivityBreakdown('resource', 10, timeRange, autoRefresh);
 
-  const renderLegend = (props: any) => {
+  const renderLegend = (props: CustomLegendProps) => {
     const { payload } = props;
     return (
       <div className="flex flex-wrap gap-2 justify-center mt-4 max-h-24 overflow-y-auto">
-        {payload.map((entry: any, index: number) => (
-          <div key={`legend-${index}`} className="flex items-center gap-2 text-xs">
-            <div
-              className="w-3 h-3 rounded-full flex-shrink-0"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-muted-foreground">{entry.value}</span>
-          </div>
+        {payload?.map((entry, index: number) => (
+          entry.value ? (
+            <div key={`legend-${index}`} className="flex items-center gap-2 text-xs">
+              <div
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-muted-foreground">{entry.value}</span>
+            </div>
+          ) : null
         ))}
       </div>
     );
@@ -158,7 +161,8 @@ export function ResourceDistributionChart({ autoRefresh = false }: ResourceDistr
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={(props: any) => {
+              label={(props: { percent?: number }) => {
+                if (!props.percent) return '';
                 const percentage = props.percent * 100;
                 return `${percentage.toFixed(0)}%`;
               }}

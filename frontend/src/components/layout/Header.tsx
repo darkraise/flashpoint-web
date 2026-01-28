@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePublicSettings } from "@/hooks/usePublicSettings";
 import { SearchBar } from "../search/SearchBar";
 import { ThemePicker } from "../theme/ThemePicker";
-import { PrimaryColorPicker } from "../theme/PrimaryColorPicker";
+import { GitHubButton } from "../github/GitHubButton";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -119,12 +119,12 @@ export function Header() {
             <SearchBar />
           </div>
 
-          {/* Right: Theme Button & User Menu */}
+          {/* Right: GitHub, Theme Settings & User Menu */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            {/* Primary Color Picker - For all users */}
-            <PrimaryColorPicker />
+            {/* GitHub Star Button */}
+            <GitHubButton />
 
-            {/* Theme Picker - For all users */}
+            {/* Theme Settings (mode + color) - For all users */}
             <ThemePicker />
 
             {(isAuthenticated || isGuest) && user ? (

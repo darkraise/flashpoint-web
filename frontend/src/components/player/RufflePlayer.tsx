@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
+import type { RufflePlayer as RufflePlayerType } from "@ruffle-rs/ruffle";
 
 export interface RufflePlayerProps {
   swfUrl: string;
@@ -21,7 +22,7 @@ export function RufflePlayer({
   onLoadSuccess,
 }: RufflePlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const rufflePlayerRef = useRef<any>(null);
+  const rufflePlayerRef = useRef<RufflePlayerType | null>(null);
   const isInitializingRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export function RufflePlayer({
 
   useEffect(() => {
     let mounted = true;
-    let player: any = null;
+    let player: RufflePlayerType | null = null;
 
     const initRuffle = async () => {
       if (!containerRef.current || isInitializingRef.current) {

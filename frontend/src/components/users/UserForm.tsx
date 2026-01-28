@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getErrorMessage } from '@/types/api-error';
 import {
   Dialog,
   DialogContent,
@@ -122,7 +123,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
           {mutation.isError && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                {(mutation.error as any)?.response?.data?.error?.message || 'Operation failed'}
+                {getErrorMessage(mutation.error) || 'Operation failed'}
               </AlertDescription>
             </Alert>
           )}

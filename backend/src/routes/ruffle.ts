@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { RuffleService } from '../services/RuffleService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
+import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 const ruffleService = new RuffleService();
@@ -28,26 +29,18 @@ router.get('/version', (req, res, next) => {
  * GET /api/ruffle/check-update
  * Check for Ruffle updates (admin only)
  */
-router.get('/check-update', authenticate, requirePermission('settings.update'), async (req, res, next) => {
-  try {
-    const updateInfo = await ruffleService.checkForUpdate();
-    res.json(updateInfo);
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/check-update', authenticate, requirePermission('settings.update'), asyncHandler(async (req, res) => {
+  const updateInfo = await ruffleService.checkForUpdate();
+  res.json(updateInfo);
+}));
 
 /**
  * POST /api/ruffle/update
  * Update Ruffle to latest version (admin only)
  */
-router.post('/update', authenticate, requirePermission('settings.update'), async (req, res, next) => {
-  try {
-    const result = await ruffleService.updateRuffle();
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
+router.post('/update', authenticate, requirePermission('settings.update'), asyncHandler(async (req, res) => {
+  const result = await ruffleService.updateRuffle();
+  res.json(result);
+}));
 
 export default router;

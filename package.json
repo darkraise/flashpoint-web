@@ -26,6 +26,11 @@
     "typecheck:backend": "cd backend && npm run typecheck",
     "typecheck:frontend": "cd frontend && npm run typecheck",
     "typecheck:game-service": "cd game-service && npm run typecheck",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md,yml,yaml}\"",
+    "format:backend": "cd backend && npm run format",
+    "format:frontend": "cd frontend && npm run format",
+    "format:game-service": "cd game-service && npm run format",
     "clean": "npm run clean:backend && npm run clean:frontend && npm run clean:game-service",
     "clean:backend": "cd backend && rm -rf dist node_modules",
     "clean:frontend": "cd frontend && rm -rf dist node_modules",
@@ -41,7 +46,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "prettier": "^3.2.4"
   },
   "engines": {
     "node": ">=20.0.0",

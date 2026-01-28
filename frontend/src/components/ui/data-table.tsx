@@ -11,7 +11,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -34,8 +34,11 @@ interface DataTableProps<TData, TValue> {
     limit: number
   }
   onPageChange?: (page: number) => void
+  sorting?: SortingState
+  onSortingChange?: (updater: SortingState | ((old: SortingState) => SortingState)) => void
   isLoading?: boolean
   emptyMessage?: string
+  caption?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -43,13 +46,30 @@ export function DataTable<TData, TValue>({
   data,
   pagination,
   onPageChange,
+  sorting: controlledSorting,
+  onSortingChange: onControlledSortingChange,
   isLoading = false,
   emptyMessage = "No results.",
+  caption,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+
+  // Use controlled sorting if provided, otherwise use internal state
+  const sorting = controlledSorting ?? internalSorting
+
+  const setSorting: (updater: SortingState | ((old: SortingState) => SortingState)) => void = React.useCallback(
+    (updater) => {
+      if (onControlledSortingChange) {
+        onControlledSortingChange(updater)
+      } else {
+        setInternalSorting(updater as any)
+      }
+    },
+    [onControlledSortingChange]
+  )
 
   const table = useReactTable({
     data,
@@ -69,34 +89,73 @@ export function DataTable<TData, TValue>({
       rowSelection,
     },
     manualPagination: !!pagination,
+    manualSorting: !!controlledSorting,
     pageCount: pagination?.totalPages,
+    enableSortingRemoval: false,
   })
 
   if (isLoading) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        Loading...
+      <div
+        className="text-center py-8 text-muted-foreground"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span className="sr-only">Loading data, please wait...</span>
+        <span aria-hidden="true">Loading...</span>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <Card className="shadow-md overflow-hidden">
+      <Card className="shadow-md">
         <div className="overflow-x-auto">
           <Table>
+            {caption && <caption className="sr-only">{caption}</caption>}
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     return (
                       <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                        {header.isPlaceholder ? null : (
+                          <div
+                            className={
+                              header.column.getCanSort()
+                                ? "flex items-center gap-2 cursor-pointer select-none hover:text-primary transition-colors"
+                                : ""
+                            }
+                            onClick={header.column.getToggleSortingHandler()}
+                            role={header.column.getCanSort() ? "button" : undefined}
+                            tabIndex={header.column.getCanSort() ? 0 : undefined}
+                            onKeyDown={(e) => {
+                              if (header.column.getCanSort() && (e.key === "Enter" || e.key === " ")) {
+                                e.preventDefault()
+                                header.column.getToggleSortingHandler()?.(e as any)
+                              }
+                            }}
+                            aria-sort={
+                              header.column.getIsSorted() === "asc"
+                                ? "ascending"
+                                : header.column.getIsSorted() === "desc"
+                                ? "descending"
+                                : undefined
+                            }
+                            aria-label={
+                              header.column.getCanSort()
+                                ? `Sort by ${header.column.columnDef.header}`
+                                : undefined
+                            }
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {{
+                              asc: <ArrowUp className="h-4 w-4" aria-hidden="true" />,
+                              desc: <ArrowDown className="h-4 w-4" aria-hidden="true" />,
+                            }[header.column.getIsSorted() as string] ?? null}
+                          </div>
+                        )}
                       </TableHead>
                     )
                   })}
@@ -140,8 +199,9 @@ export function DataTable<TData, TValue>({
                 onClick={() => onPageChange?.(1)}
                 disabled={pagination.page === 1}
                 title="First page"
+                aria-label="Go to first page"
               >
-                <ChevronsLeft className="h-4 w-4" />
+                <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
               </Button>
               <Button
                 variant="outline"
@@ -167,8 +227,9 @@ export function DataTable<TData, TValue>({
                 onClick={() => onPageChange?.(pagination.totalPages)}
                 disabled={pagination.page === pagination.totalPages}
                 title="Last page"
+                aria-label="Go to last page"
               >
-                <ChevronsRight className="h-4 w-4" />
+                <ChevronsRight className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
           </div>

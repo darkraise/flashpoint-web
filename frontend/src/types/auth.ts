@@ -159,6 +159,8 @@ export interface ActivityFilters {
   resource?: string;
   startDate?: string;
   endDate?: string;
+  sortBy?: 'createdAt' | 'username' | 'action' | 'resource' | 'ipAddress';
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface ActivitiesResponse {

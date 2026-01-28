@@ -89,10 +89,15 @@ export class AuthService {
    * Register new user
    */
   async register(data: RegisterData): Promise<{ user: AuthUser; tokens: AuthTokens }> {
-    // Check if registration is enabled
-    const settings = this.getAuthSettings();
-    if (!settings.user_registration_enabled) {
-      throw new AppError(403, 'User registration is currently disabled');
+    // Check if this is initial setup (no users exist)
+    const isInitialSetup = UserDatabaseService.needsInitialSetup();
+
+    // Allow registration during initial setup even if registration is disabled
+    if (!isInitialSetup) {
+      const settings = this.getAuthSettings();
+      if (!settings.user_registration_enabled) {
+        throw new AppError(403, 'User registration is currently disabled');
+      }
     }
 
     // Check if username exists
@@ -116,11 +121,22 @@ export class AuthService {
     // Hash password
     const passwordHash = await hashPassword(data.password);
 
-    // Create user with default 'user' role (id=2)
+    // First user becomes admin (role_id = 1), subsequent users get 'user' role (role_id = 2)
+    const roleId = isInitialSetup ? 1 : 2;
+    const roleName = isInitialSetup ? 'admin' : 'user';
+
     const result = UserDatabaseService.run(
       'INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)',
-      [data.username, data.email, passwordHash, 2]
+      [data.username, data.email, passwordHash, roleId]
     );
+
+    if (isInitialSetup) {
+      logger.info('╔═══════════════════════════════════════════════════════════════╗');
+      logger.info('║  INITIAL ADMIN ACCOUNT CREATED                                ║');
+      logger.info(`║  Username: ${data.username.padEnd(48)} ║`);
+      logger.info('║  The first user has been granted administrator privileges.    ║');
+      logger.info('╚═══════════════════════════════════════════════════════════════╝');
+    }
 
     const userId = result.lastInsertRowid as number;
 
@@ -326,17 +342,21 @@ export class AuthService {
     const lockoutDuration = settings.lockout_duration_minutes;
     const maxAttempts = settings.max_login_attempts;
 
-    // Count failed attempts in lockout window
+    // Validate and sanitize lockoutDuration to prevent SQL injection
+    // Ensure it's a number between 1 and 1440 (24 hours)
+    const safeLockoutDuration = Math.min(Math.max(parseInt(String(lockoutDuration), 10) || 15, 1), 1440);
+
+    // Count failed attempts in lockout window - using parameterized query
     const failedAttempts = UserDatabaseService.get(
       `SELECT COUNT(*) as count FROM login_attempts
        WHERE (username = ? OR ip_address = ?)
        AND success = 0
-       AND attempted_at > datetime('now', '-${lockoutDuration} minutes')`,
-      [username, ipAddress]
+       AND attempted_at > datetime('now', '-' || ? || ' minutes')`,
+      [username, ipAddress, safeLockoutDuration]
     );
 
     if (failedAttempts?.count >= maxAttempts) {
-      throw new AppError(429, `Too many login attempts. Please try again in ${lockoutDuration} minutes.`);
+      throw new AppError(429, `Too many login attempts. Please try again in ${safeLockoutDuration} minutes.`);
     }
   }
 

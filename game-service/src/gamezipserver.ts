@@ -6,6 +6,7 @@ import { zipManager } from './zip-manager';
 import { ConfigManager } from './config';
 import { getMimeType } from './mimeTypes';
 import { injectPolyfills } from './utils/htmlInjector';
+import { setCorsHeaders, setCorsHeadersWithMaxAge } from './utils/cors';
 
 /**
  * GameZip Server - Serves files from mounted ZIP archives
@@ -103,12 +104,7 @@ export class GameZipServer {
    * Handle CORS preflight
    */
   private handleOptionsRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    if (this.settings.allowCrossDomain) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', '*');
-      res.setHeader('Access-Control-Max-Age', '86400');
-    }
+    setCorsHeadersWithMaxAge(res, this.settings, 86400);
 
     res.writeHead(204);
     res.end();
@@ -126,6 +122,14 @@ export class GameZipServer {
       return;
     }
 
+    // Validate mount ID to prevent path traversal
+    // ID should not contain path separators or traversal sequences
+    if (id.includes('/') || id.includes('\\') || id.includes('..') || id.includes('\0')) {
+      logger.warn(`[Security] Invalid mount ID detected: ${id}`);
+      this.sendError(res, 400, 'Invalid mount ID');
+      return;
+    }
+
     // Parse request body
     const body = await this.readBody(req);
     let zipPath: string;
@@ -140,6 +144,28 @@ export class GameZipServer {
       }
     } catch (error) {
       this.sendError(res, 400, 'Invalid JSON');
+      return;
+    }
+
+    // Validate ZIP path to prevent directory traversal
+    // Ensure the ZIP file is within the allowed games directory
+    try {
+      const flashpointPath = process.env.FLASHPOINT_PATH || 'D:/Flashpoint';
+      const allowedGamesPath = process.env.FLASHPOINT_GAMES_PATH || path.join(flashpointPath, 'Data', 'Games');
+
+      const normalizedZipPath = path.normalize(zipPath);
+      const resolvedZipPath = path.resolve(normalizedZipPath);
+      const resolvedGamesPath = path.resolve(allowedGamesPath);
+
+      // Check if the resolved path is within the allowed games directory
+      if (!resolvedZipPath.startsWith(resolvedGamesPath)) {
+        logger.warn(`[Security] ZIP path outside allowed directory: ${zipPath}`);
+        this.sendError(res, 403, 'Forbidden: ZIP file must be within games directory');
+        return;
+      }
+    } catch (error) {
+      logger.error('[Security] ZIP path validation error:', error);
+      this.sendError(res, 400, 'Invalid ZIP path');
       return;
     }
 
@@ -163,6 +189,13 @@ export class GameZipServer {
     const id = req.url?.split('/mount/')[1];
     if (!id) {
       this.sendError(res, 400, 'Missing mount ID');
+      return;
+    }
+
+    // Validate mount ID to prevent path traversal
+    if (id.includes('/') || id.includes('\\') || id.includes('..') || id.includes('\0')) {
+      logger.warn(`[Security] Invalid mount ID detected: ${id}`);
+      this.sendError(res, 400, 'Invalid mount ID');
       return;
     }
 
@@ -248,11 +281,7 @@ export class GameZipServer {
     logger.info(`[GameZipServer] ✓ Serving from ZIP ${result.mountId}: ${relPath} (${fileData.length} bytes)`);
 
     // CORS headers
-    if (this.settings.allowCrossDomain) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', '*');
-    }
+    setCorsHeaders(res, this.settings);
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', fileData.length);
@@ -265,13 +294,19 @@ export class GameZipServer {
   }
 
   /**
-   * Read request body
+   * Read request body with size limit to prevent DoS attacks
    */
-  private readBody(req: http.IncomingMessage): Promise<string> {
+  private readBody(req: http.IncomingMessage, maxSize: number = 1024 * 1024): Promise<string> {
     return new Promise((resolve, reject) => {
       let body = '';
       req.on('data', chunk => {
         body += chunk.toString();
+
+        // Check size limit (default 1MB)
+        if (body.length > maxSize) {
+          req.destroy();
+          reject(new Error('Request body too large'));
+        }
       });
       req.on('end', () => {
         resolve(body);
@@ -287,11 +322,7 @@ export class GameZipServer {
     logger.warn(`[GameZipServer] Sending error ${statusCode}: ${message}`);
 
     // Set CORS headers even for error responses
-    if (this.settings.allowCrossDomain) {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', '*');
-    }
+    setCorsHeaders(res, this.settings);
 
     res.setHeader('Content-Type', 'text/plain');
     res.writeHead(statusCode);

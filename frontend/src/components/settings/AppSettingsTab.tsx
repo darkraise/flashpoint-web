@@ -3,14 +3,16 @@ import { Palette, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { motion, Variants } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { systemSettingsApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useDialog } from "@/contexts/DialogContext";
+import { AppSettings } from "@/types/settings";
 
 interface AppSettingsTabProps {
-  tabContentVariants: any;
+  tabContentVariants: Variants;
 }
 
 export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
@@ -25,7 +27,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
   // Fetch app settings
   const { data: appSettings } = useQuery({
     queryKey: ["systemSettings", "app"],
-    queryFn: () => systemSettingsApi.getCategory("app"),
+    queryFn: async () => systemSettingsApi.getCategory("app") as unknown as AppSettings,
     enabled: isAdmin,
   });
 
@@ -43,7 +45,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
       settings,
     }: {
       category: string;
-      settings: Record<string, any>;
+      settings: Record<string, unknown>;
     }) => systemSettingsApi.updateCategory(category, settings),
     onSuccess: (updatedSettings, variables) => {
       // Use response data instead of refetching
@@ -165,22 +167,25 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
               <p className="text-sm text-muted-foreground">
                 Default theme mode for new users (light, dark, or system).
               </p>
-              <select
-                id="default-theme"
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              <Select
                 value={appSettings.defaultTheme || "dark"}
-                onChange={(e) => {
+                onValueChange={(value: string) => {
                   updateSystemSettings.mutate({
                     category: "app",
-                    settings: { defaultTheme: e.target.value },
+                    settings: { defaultTheme: value },
                   });
                 }}
                 disabled={updateSystemSettings.isPending}
               >
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="system">System</option>
-              </select>
+                <SelectTrigger id="default-theme" className="w-full">
+                  <SelectValue placeholder="Select default theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Default Primary Color */}
@@ -191,27 +196,46 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
               <p className="text-sm text-muted-foreground">
                 Default primary color for new users.
               </p>
-              <select
-                id="default-primary-color"
-                className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              <Select
                 value={appSettings.defaultPrimaryColor || "blue"}
-                onChange={(e) => {
+                onValueChange={(value: string) => {
                   updateSystemSettings.mutate({
                     category: "app",
                     settings: {
-                      defaultPrimaryColor: e.target.value,
+                      defaultPrimaryColor: value,
                     },
                   });
                 }}
                 disabled={updateSystemSettings.isPending}
               >
-                <option value="blue">Blue</option>
-                <option value="green">Green</option>
-                <option value="red">Red</option>
-                <option value="purple">Purple</option>
-                <option value="orange">Orange</option>
-                <option value="pink">Pink</option>
-              </select>
+                <SelectTrigger id="default-primary-color" className="w-full">
+                  <SelectValue placeholder="Select default primary color" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="slate">Slate</SelectItem>
+                  <SelectItem value="gray">Gray</SelectItem>
+                  <SelectItem value="zinc">Zinc</SelectItem>
+                  <SelectItem value="neutral">Neutral</SelectItem>
+                  <SelectItem value="stone">Stone</SelectItem>
+                  <SelectItem value="red">Red</SelectItem>
+                  <SelectItem value="orange">Orange</SelectItem>
+                  <SelectItem value="amber">Amber</SelectItem>
+                  <SelectItem value="yellow">Yellow</SelectItem>
+                  <SelectItem value="lime">Lime</SelectItem>
+                  <SelectItem value="green">Green</SelectItem>
+                  <SelectItem value="emerald">Emerald</SelectItem>
+                  <SelectItem value="teal">Teal</SelectItem>
+                  <SelectItem value="cyan">Cyan</SelectItem>
+                  <SelectItem value="sky">Sky</SelectItem>
+                  <SelectItem value="blue">Blue</SelectItem>
+                  <SelectItem value="indigo">Indigo</SelectItem>
+                  <SelectItem value="violet">Violet</SelectItem>
+                  <SelectItem value="purple">Purple</SelectItem>
+                  <SelectItem value="fuchsia">Fuchsia</SelectItem>
+                  <SelectItem value="pink">Pink</SelectItem>
+                  <SelectItem value="rose">Rose</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

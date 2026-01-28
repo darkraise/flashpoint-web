@@ -58,6 +58,15 @@ export async function maintenanceMode(req: Request, res: Response, next: NextFun
     const user = req.user;
     const isAdmin = user?.permissions?.includes('settings.update');
 
+    // Debug logging to help diagnose permission issues
+    if (user) {
+      logger.debug(
+        `[Maintenance] User ${user.username} (role: ${user.role}) - permissions: ${user.permissions?.join(', ') || 'none'}`
+      );
+    } else {
+      logger.debug('[Maintenance] No user found in request (unauthenticated)');
+    }
+
     if (isAdmin) {
       // Admin user - ALLOW EVERYTHING (all endpoints, all features)
       // user is guaranteed to exist if isAdmin is true

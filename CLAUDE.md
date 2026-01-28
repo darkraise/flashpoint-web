@@ -43,9 +43,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | How do I deploy? | `docs/09-deployment/README.md` |
 | What's the architecture? | `docs/02-architecture/system-architecture.md` |
 | Design system/theming? | `docs/07-design-system/theme-system.md` |
-| Common errors/pitfalls? | `docs/08-development/common-pitfalls.md` |
+| Common errors/pitfalls? | `docs/08-development/common-pitfalls.md` and "Common Pitfalls" section in CLAUDE.md |
 | TypeScript types? | `docs/12-reference/type-definitions.md` |
 | Environment variables? | `docs/09-deployment/environment-variables.md` |
+| How to add new API endpoints? | "Frontend API Guidelines" section in CLAUDE.md |
 
 ## Project Overview
 
@@ -230,6 +231,48 @@ React 18 single-page application using modern patterns:
 - HTML5 games: Served directly via game-service proxy
 - Animations: Separate view with same player infrastructure
 
+**Frontend API Guidelines:**
+
+**CRITICAL:** Always use the authenticated axios instance for backend API calls.
+
+- **Centralized API client**: All backend API calls MUST go through `frontend/src/lib/api.ts`
+- **Never use raw `fetch()`** for backend endpoints - it bypasses authentication
+- **Axios interceptors**: The `api` instance automatically adds `Authorization: Bearer <token>` headers
+- **Pattern to follow**: Create typed API methods in appropriate objects (e.g., `gamesApi`, `authApi`, `githubApi`)
+
+**Example (CORRECT):**
+```typescript
+// In frontend/src/lib/api.ts
+export const githubApi = {
+  getStarCount: async (): Promise<{ stars: number }> => {
+    const { data } = await api.get<{ success: boolean; data: { stars: number } }>('/github/stars');
+    return data.data;
+  }
+};
+
+// In component
+import { githubApi } from '@/lib/api';
+const result = await githubApi.getStarCount(); // ✅ Authenticated
+```
+
+**Example (WRONG):**
+```typescript
+// In component - DO NOT DO THIS
+const response = await fetch('/api/github/stars'); // ❌ No authentication!
+```
+
+**Why this matters:**
+- Maintenance mode blocks unauthenticated requests with 503
+- Protected endpoints require JWT tokens
+- Axios interceptors handle token refresh automatically
+- Consistent error handling across all API calls
+
+**When adding new backend endpoints:**
+1. Create the backend route in `backend/src/routes/`
+2. Add the typed API method to `frontend/src/lib/api.ts`
+3. Use the API method in components (never raw `fetch()`)
+4. Test with maintenance mode enabled to ensure authentication works
+
 ### Game Service (Ports 22500, 22501)
 
 Independent Node.js service that replaces the original Go-based Flashpoint Game Server. Runs two HTTP servers:
@@ -355,6 +398,22 @@ The application uses JWT-based authentication with RBAC:
 - Users can browse games without authentication
 - Playing games requires authentication and "games.play" permission
 
+**Maintenance mode:**
+
+- Controlled via `app.maintenance_mode` setting in `system_settings` table
+- When enabled, blocks all non-admin users from accessing endpoints (returns 503)
+- Admin users identified by `settings.update` permission bypass maintenance mode
+- Minimal public paths always accessible: `/health`, `/api/auth/login`, `/api/auth/refresh`, `/api/settings/public`, `/proxy/*`
+- Implemented in `backend/src/middleware/maintenanceMode.ts`
+- Depends on `softAuth` middleware to populate `req.user` before checking permissions
+
+**Permission caching:**
+
+- User permissions cached for 5 minutes via `PermissionCache` (in-memory)
+- Cache automatically invalidated when user roles or role permissions change
+- Cache cleared on server restart
+- Debug issues by checking backend logs for `[Maintenance]` entries
+
 ## Testing
 
 Backend includes vitest configuration. Run tests with:
@@ -416,6 +475,52 @@ Background job runs every 6 hours to clean up abandoned sessions.
 4. **Game files not loading**: Ensure game-service is running before backend
 5. **JWT secret in production**: Change default JWT_SECRET in production environments
 6. **Ruffle files missing**: Run `npm run copy-ruffle` in frontend if Ruffle doesn't load
+7. **503 errors in maintenance mode**: If admin users get 503 errors, check if components are using raw `fetch()` instead of the authenticated `api` instance from `lib/api.ts`. The axios interceptors automatically add authentication headers.
+8. **Unauthenticated API calls**: Never use raw `fetch()` for backend API endpoints. Always add new endpoints to `frontend/src/lib/api.ts` and use the typed API methods. See "Frontend API Guidelines" section above.
+
+## Recent Changes & Lessons Learned
+
+### 2026-01-28: Maintenance Mode Admin Bypass Fix
+
+**Issue:** Admin users were getting 503 errors when accessing `/api/github/stars` while maintenance mode was enabled.
+
+**Root Cause:** The `GitHubButton` component was using raw `fetch()` instead of the authenticated axios instance, so requests had no `Authorization` header. The maintenance mode middleware blocked these unauthenticated requests.
+
+**Fix:**
+1. Added `githubApi.getStarCount()` method to `frontend/src/lib/api.ts`
+2. Updated `GitHubButton.tsx` to use the authenticated API method
+3. The axios instance automatically adds JWT token via request interceptor
+
+**Key Lesson:** **NEVER use raw `fetch()` for backend API calls.** Always use the centralized `api` instance from `lib/api.ts` which handles authentication, token refresh, and error handling automatically.
+
+**Verification Steps Taken:**
+1. Checked database - confirmed admin role has `settings.update` permission ✅
+2. Tested backend directly - confirmed maintenance mode allows admin access ✅
+3. Identified frontend was making unauthenticated requests ❌
+4. Fixed component to use authenticated axios instance ✅
+
+**Prevention:** See "Frontend API Guidelines" section for the correct pattern. When adding new API endpoints, always:
+1. Add typed method to appropriate API object in `lib/api.ts`
+2. Import and use the API method in components
+3. Test with maintenance mode enabled
+
+---
+
+### 2026-01-28: Database Migration Consolidation
+
+**Change:** Consolidated 16 separate migration files into 2 files:
+- `001_initialize_schema.sql`: All table definitions
+- `002_seed_default_data.sql`: All seed data (roles, permissions, settings)
+
+**Added:** Migration registry system in `bootstrap.sql` to track applied migrations with checksums and execution times.
+
+**Benefits:**
+- Cleaner migration directory
+- Industry-standard migration tracking (similar to Flyway, Knex)
+- Backward compatibility with existing databases
+- All archived migrations saved in `migrations/archived/` for reference
+
+---
 
 ## Source Code References
 

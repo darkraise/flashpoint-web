@@ -99,8 +99,23 @@ const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
   root.style.setProperty('--primary', colorValue);
   root.style.setProperty('--ring', colorValue);
 
-  // Update scrollbar hover color to match primary
-  root.style.setProperty('--scrollbar-thumb-hover', colorValue);
+  // Parse HSL values to create toned-down versions for scrollbar
+  const [hue, saturation, lightness] = colorValue.split(' ').map(v => parseFloat(v));
+
+  // Scrollbar thumb: Use primary color with adjusted lightness for better visibility
+  // Light mode: Slightly darker, Dark mode: Slightly lighter
+  const scrollbarLightness = actualTheme === 'light'
+    ? Math.max(lightness - 15, 30)  // Darker in light mode (min 30%)
+    : Math.min(lightness + 10, 70);  // Lighter in dark mode (max 70%)
+
+  const scrollbarThumb = `${hue} ${saturation}% ${scrollbarLightness}%`;
+
+  // Scrollbar hover: Full primary color
+  const scrollbarThumbHover = colorValue;
+
+  // Apply scrollbar colors
+  root.style.setProperty('--scrollbar-thumb', scrollbarThumb);
+  root.style.setProperty('--scrollbar-thumb-hover', scrollbarThumbHover);
 };
 
 export const useThemeStore = create<ThemeState>()(

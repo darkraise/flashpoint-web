@@ -2,21 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
 import { AppError } from './errorHandler';
 
-// Extend Express Request type to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        username: string;
-        email: string;
-        role: string;
-        permissions: string[];
-      };
-    }
-  }
-}
-
 const authService = new AuthService();
 
 /**

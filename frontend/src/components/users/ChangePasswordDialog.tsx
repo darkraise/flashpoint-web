@@ -14,6 +14,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getErrorMessage } from '@/types/api-error';
 import {
   Dialog,
   DialogContent,
@@ -82,7 +83,7 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
           {changePasswordMutation.isError && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                {(changePasswordMutation.error as any)?.response?.data?.error?.message || 'Failed to change password'}
+                {getErrorMessage(changePasswordMutation.error) || 'Failed to change password'}
               </AlertDescription>
             </Alert>
           )}

@@ -354,7 +354,7 @@ export class UserPlaylistService {
       });
 
       // Extract game IDs from flashpoint playlist
-      const gameIds = flashpointPlaylist.games.map((game: any) => game.id);
+      const gameIds = flashpointPlaylist.games.map((game) => game.id);
 
       // Add all games
       this.addGamesToPlaylist(userPlaylist.id, userId, gameIds);

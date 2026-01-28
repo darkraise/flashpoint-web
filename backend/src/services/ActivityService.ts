@@ -1,6 +1,7 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { ActivityLog, LogActivityData } from '../types/auth';
 import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../utils/pagination';
+import { ActivityBreakdownRow, UserBreakdownRow, ResourceBreakdownRow, IpBreakdownRow } from '../types/database-rows';
 
 export class ActivityService {
   /**
@@ -37,11 +38,24 @@ export class ActivityService {
       username?: string;
       action?: string;
       resource?: string;
-      dateFrom?: string;
-      dateTo?: string;
-    }
+      startDate?: string;
+      endDate?: string;
+    },
+    sortBy: string = 'createdAt',
+    sortOrder: 'asc' | 'desc' = 'desc'
   ): Promise<PaginatedResponse<ActivityLog>> {
     const offset = calculateOffset(page, limit);
+
+    // Map frontend column names to database column names
+    const columnMap: Record<string, string> = {
+      createdAt: 'created_at',
+      username: 'username',
+      action: 'action',
+      resource: 'resource',
+      ipAddress: 'ip_address'
+    };
+    const dbColumn = columnMap[sortBy] || 'created_at';
+    const order = sortOrder.toUpperCase();
 
     let sql = `
       SELECT id, user_id as userId, username, action, resource, resource_id as resourceId,
@@ -72,22 +86,22 @@ export class ActivityService {
       params.push(`${filters.resource}%`);
     }
 
-    if (filters?.dateFrom) {
+    if (filters?.startDate) {
       sql += ' AND created_at >= ?';
-      params.push(filters.dateFrom);
+      params.push(filters.startDate);
     }
 
-    if (filters?.dateTo) {
+    if (filters?.endDate) {
       sql += ' AND created_at <= ?';
-      params.push(filters.dateTo);
+      params.push(filters.endDate);
     }
 
-    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    sql += ` ORDER BY ${dbColumn} ${order} LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
-    const logs = UserDatabaseService.all(sql, params).map(log => ({
+    const logs = UserDatabaseService.all<ActivityLog>(sql, params).map(log => ({
       ...log,
-      details: log.details ? JSON.parse(log.details) : null
+      details: log.details ? JSON.parse(log.details as string) : null
     }));
 
     // Count total
@@ -114,17 +128,17 @@ export class ActivityService {
       countParams.push(`${filters.resource}%`);
     }
 
-    if (filters?.dateFrom) {
+    if (filters?.startDate) {
       countSql += ' AND created_at >= ?';
-      countParams.push(filters.dateFrom);
+      countParams.push(filters.startDate);
     }
 
-    if (filters?.dateTo) {
+    if (filters?.endDate) {
       countSql += ' AND created_at <= ?';
-      countParams.push(filters.dateTo);
+      countParams.push(filters.endDate);
     }
 
-    const total = UserDatabaseService.get(countSql, countParams)?.count || 0;
+    const total = UserDatabaseService.get<{ count: number }>(countSql, countParams)?.count || 0;
 
     return createPaginatedResponse(logs, total, page, limit);
   }
@@ -157,7 +171,15 @@ export class ActivityService {
     }
 
     // Get current period stats
-    const currentStats = UserDatabaseService.get(
+    const currentStats = UserDatabaseService.get<{
+      total: number;
+      uniqueUsers: number;
+      authEvents: number;
+      authSuccessful: number;
+      authFailed: number;
+      failedOperations: number;
+      systemEvents: number;
+    }>(
       `SELECT
         COUNT(*) as total,
         COUNT(DISTINCT user_id) as uniqueUsers,
@@ -169,15 +191,7 @@ export class ActivityService {
        FROM activity_logs
        WHERE created_at >= ? AND created_at <= ?`,
       [startDate, endDate]
-    ) as {
-      total: number;
-      uniqueUsers: number;
-      authEvents: number;
-      authSuccessful: number;
-      authFailed: number;
-      failedOperations: number;
-      systemEvents: number;
-    } | null;
+    );
 
     // Get peak hour
     const peakHourData = UserDatabaseService.get(
@@ -466,27 +480,27 @@ export class ActivityService {
         throw new Error(`Invalid groupBy parameter: ${groupBy}`);
     }
 
-    const results = UserDatabaseService.all(sql, groupBy === 'user' || groupBy === 'resource' ? [startDate, startDate, limit] : [startDate, limit]) as any[];
+    const results = UserDatabaseService.all(sql, groupBy === 'user' || groupBy === 'resource' ? [startDate, startDate, limit] : [startDate, limit]) as ActivityBreakdownRow[];
 
     return {
-      data: results.map((row: any) => ({
+      data: results.map((row: ActivityBreakdownRow) => ({
         key: row.key || 'Unknown',
         count: row.count,
         percentage: totalActivities > 0 ? (row.count / totalActivities) * 100 : 0,
         metadata: groupBy === 'user'
           ? {
-              userId: row.userId,
-              lastActivity: row.lastActivity,
-              topAction: row.topAction
+              userId: (row as UserBreakdownRow).userId,
+              lastActivity: (row as UserBreakdownRow).lastActivity,
+              topAction: (row as UserBreakdownRow).topAction
             }
           : groupBy === 'ip'
           ? {
-              associatedUserCount: row.associatedUserCount,
-              associatedUsers: row.associatedUsers ? row.associatedUsers.split(',').slice(0, 5) : [],
-              failedAttempts: row.failedAttempts
+              associatedUserCount: (row as IpBreakdownRow).associatedUserCount,
+              associatedUsers: (row as IpBreakdownRow).associatedUsers ? (row as IpBreakdownRow).associatedUsers.split(',').slice(0, 5) : [],
+              failedAttempts: (row as IpBreakdownRow).failedAttempts
             }
           : {
-              topAction: row.topAction
+              topAction: (row as ResourceBreakdownRow).topAction
             }
       })),
       meta: {

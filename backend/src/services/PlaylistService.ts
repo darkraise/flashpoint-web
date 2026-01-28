@@ -45,7 +45,7 @@ export class PlaylistService {
 
             // Extract game IDs from playlist (they're objects with gameId property)
             const gameIds = Array.isArray(playlist.games)
-              ? playlist.games.map((g: any) => typeof g === 'string' ? g : g.gameId).filter(Boolean)
+              ? playlist.games.map((g: unknown) => typeof g === 'string' ? g : (g as {gameId?: string}).gameId).filter(Boolean)
               : [];
 
             playlists.push({

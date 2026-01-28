@@ -43,7 +43,7 @@ export function NetworkStatusIndicator() {
 
     const checkNetworkSpeed = () => {
       if (navigator.onLine) {
-        const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 
         if (connection) {
           // Use Network Information API if available

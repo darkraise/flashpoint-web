@@ -128,16 +128,25 @@ export class FavoritesService {
       ORDER BY added_at DESC
     `;
 
+    const params: any[] = [userId];
+
     if (limit !== undefined) {
-      query += ` LIMIT ${limit}`;
+      // Validate limit is a positive integer
+      const safeLimit = Math.max(1, Math.min(parseInt(String(limit), 10) || 50, 1000));
+      query += ` LIMIT ?`;
+      params.push(safeLimit);
+
       if (offset !== undefined) {
-        query += ` OFFSET ${offset}`;
+        // Validate offset is a non-negative integer
+        const safeOffset = Math.max(0, parseInt(String(offset), 10) || 0);
+        query += ` OFFSET ?`;
+        params.push(safeOffset);
       }
     }
 
     const stmt = db.prepare(query);
 
-    return stmt.all(userId) as Favorite[];
+    return stmt.all(...params) as Favorite[];
   }
 
   /**

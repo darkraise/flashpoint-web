@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { useCreateUserPlaylist, useUpdateUserPlaylist } from '@/hooks/useUserPlaylists';
 import { UserPlaylist } from '@/types/playlist';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/types/api-error';
 
 interface CreateUserPlaylistDialogProps {
   isOpen: boolean;
@@ -82,9 +83,9 @@ export function CreateUserPlaylistDialog({
       } else {
         onClose();
       }
-    } catch (error: any) {
+    } catch (error) {
       toast.error(
-        error?.response?.data?.error?.message ||
+        getErrorMessage(error) ||
           `Failed to ${isEditing ? 'update' : 'create'} playlist`
       );
     }

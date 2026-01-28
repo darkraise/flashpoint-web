@@ -22,6 +22,7 @@ import playTrackingRouter from './play-tracking';
 import userPlaylistsRouter from './user-playlists';
 import favoritesRouter from './favorites';
 import ruffleRouter from './ruffle';
+import githubRouter from './github';
 
 export function setupRoutes(app: Express): void {
   // Authentication routes
@@ -36,6 +37,9 @@ export function setupRoutes(app: Express): void {
 
   // Ruffle management routes
   app.use('/api/ruffle', ruffleRouter);
+
+  // GitHub integration routes
+  app.use('/api/github', githubRouter);
 
   // Jobs routes
   app.use('/api/jobs', jobsRouter);

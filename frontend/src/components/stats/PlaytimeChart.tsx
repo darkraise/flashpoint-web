@@ -1,6 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { usePlayActivityOverTime } from '../../hooks/usePlayTracking';
 import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
+import type { CustomTooltipProps } from '@/types/chart';
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) {
@@ -14,14 +15,11 @@ function formatPlaytime(seconds: number): string {
   }
 }
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-}
-
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
-  if (active && payload && payload.length) {
+  if (active && payload && payload.length >= 2) {
+    const playtimeValue = typeof payload[0].value === 'number' ? payload[0].value : 0;
+    const sessionsValue = payload[1].value;
+
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
         <p className="font-medium mb-2">{label}</p>
@@ -29,12 +27,12 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
             <span className="text-muted-foreground text-sm">Playtime:</span>
-            <span className="font-semibold text-sm">{formatPlaytime(payload[0].value)}</span>
+            <span className="font-semibold text-sm">{formatPlaytime(playtimeValue)}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
             <span className="text-muted-foreground text-sm">Sessions:</span>
-            <span className="font-semibold text-sm">{payload[1].value}</span>
+            <span className="font-semibold text-sm">{sessionsValue}</span>
           </div>
         </div>
       </div>

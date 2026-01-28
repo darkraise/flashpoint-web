@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ActivityService } from '../services/ActivityService';
+import { logger } from '../utils/logger';
 
 const activityService = new ActivityService();
 
@@ -21,7 +22,7 @@ export const logActivity = (
     const originalEnd = res.end;
 
     // Override end function to log activity after response
-    res.end = function(this: Response, ...args: any[]): Response {
+    res.end = function (this: Response, ...args: any[]): Response {
       // Log activity (non-blocking)
       setImmediate(async () => {
         try {
@@ -42,7 +43,7 @@ export const logActivity = (
           });
         } catch (error) {
           // Log error but don't fail request
-          console.error('Failed to log activity:', error);
+          logger.error('Failed to log activity:', error);
         }
       });
 

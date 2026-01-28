@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { AppError } from '../middleware/errorHandler';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { z } from 'zod';
 
 const router = Router();
@@ -48,18 +49,14 @@ router.get(
   authenticate,
   requirePermission('users.read'),
   logActivity('users.list', 'users'),
-  async (req, res, next) => {
-    try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
+  asyncHandler(async (req, res) => {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
 
-      const result = await userService.getUsers(page, limit);
+    const result = await userService.getUsers(page, limit);
 
-      res.json(result);
-    } catch (error) {
-      next(error);
-    }
-  }
+    res.json(result);
+  })
 );
 
 /**
@@ -71,20 +68,16 @@ router.get(
   authenticate,
   requirePermission('users.read'),
   logActivity('users.view', 'users'),
-  async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const user = await userService.getUserById(id);
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    const user = await userService.getUserById(id);
 
-      if (!user) {
-        throw new AppError(404, 'User not found');
-      }
-
-      res.json(user);
-    } catch (error) {
-      next(error);
+    if (!user) {
+      throw new AppError(404, 'User not found');
     }
-  }
+
+    res.json(user);
+  })
 );
 
 /**
@@ -96,26 +89,19 @@ router.post(
   authenticate,
   requirePermission('users.create'),
   logActivity('users.create', 'users'),
-  async (req, res, next) => {
-    try {
-      const data = createUserSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const data = createUserSchema.parse(req.body);
 
-      const user = await userService.createUser({
-        username: data.username,
-        email: data.email,
-        password: data.password,
-        roleId: data.roleId,
-        isActive: data.isActive ?? true
-      });
+    const user = await userService.createUser({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      roleId: data.roleId,
+      isActive: data.isActive ?? true
+    });
 
-      res.status(201).json(user);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
-    }
-  }
+    res.status(201).json(user);
+  })
 );
 
 /**
@@ -130,21 +116,14 @@ router.patch(
     userId: req.params.id,
     fieldsUpdated: Object.keys(req.body)
   })),
-  async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const data = updateUserSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    const data = updateUserSchema.parse(req.body);
 
-      const user = await userService.updateUser(id, data);
+    const user = await userService.updateUser(id, data);
 
-      res.json(user);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
-    }
-  }
+    res.json(user);
+  })
 );
 
 /**
@@ -156,17 +135,13 @@ router.delete(
   authenticate,
   requirePermission('users.delete'),
   logActivity('users.delete', 'users'),
-  async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
 
-      await userService.deleteUser(id);
+    await userService.deleteUser(id);
 
-      res.json({ success: true, message: 'User deleted successfully' });
-    } catch (error) {
-      next(error);
-    }
-  }
+    res.json({ success: true, message: 'User deleted successfully' });
+  })
 );
 
 /**
@@ -177,29 +152,22 @@ router.delete(
 router.post(
   '/:id/change-password',
   authenticate,
-  async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const data = changePasswordSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    const data = changePasswordSchema.parse(req.body);
 
-      // Check if user is changing their own password or is an admin
-      const isOwnPassword = req.user?.id === id;
-      const isAdmin = req.user?.permissions.includes('users.update');
+    // Check if user is changing their own password or is an admin
+    const isOwnPassword = req.user?.id === id;
+    const isAdmin = req.user?.permissions.includes('users.update');
 
-      if (!isOwnPassword && !isAdmin) {
-        throw new AppError(403, 'Insufficient permissions');
-      }
-
-      await userService.changePassword(id, data.currentPassword, data.newPassword);
-
-      res.json({ success: true, message: 'Password changed successfully' });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
+    if (!isOwnPassword && !isAdmin) {
+      throw new AppError(403, 'Insufficient permissions');
     }
-  }
+
+    await userService.changePassword(id, data.currentPassword, data.newPassword);
+
+    res.json({ success: true, message: 'Password changed successfully' });
+  })
 );
 
 /**
@@ -210,20 +178,16 @@ router.post(
 router.get(
   '/me/theme',
   authenticate,
-  async (req, res, next) => {
-    try {
-      const userId = req.user!.id;
-      const themeSettings = await userService.getThemeSettings(userId);
+  asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    const themeSettings = await userService.getThemeSettings(userId);
 
-      // Return in old format for compatibility
-      res.json({
-        themeColor: `${themeSettings.primaryColor}-500`,
-        surfaceColor: 'slate-700'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+    // Return in old format for compatibility
+    res.json({
+      themeColor: `${themeSettings.primaryColor}-500`,
+      surfaceColor: 'slate-700'
+    });
+  })
 );
 
 /**
@@ -235,29 +199,22 @@ router.patch(
   '/me/theme',
   authenticate,
   logActivity('users.updateTheme', 'users'),
-  async (req, res, next) => {
-    try {
-      const userId = req.user!.id;
-      const data = updateThemeSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    const data = updateThemeSchema.parse(req.body);
 
-      // Extract color name from format like 'blue-500' -> 'blue'
-      const primaryColor = data.themeColor.split('-')[0];
+    // Extract color name from format like 'blue-500' -> 'blue'
+    const primaryColor = data.themeColor.split('-')[0];
 
-      // Update using new settings table
-      await userService.updateThemeSettings(userId, 'dark', primaryColor);
+    // Update using new settings table
+    await userService.updateThemeSettings(userId, 'dark', primaryColor);
 
-      res.json({
-        success: true,
-        themeColor: data.themeColor,
-        surfaceColor: data.surfaceColor || 'slate-700'
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
-    }
-  }
+    res.json({
+      success: true,
+      themeColor: data.themeColor,
+      surfaceColor: data.surfaceColor || 'slate-700'
+    });
+  })
 );
 
 /**
@@ -268,15 +225,11 @@ router.patch(
 router.get(
   '/me/settings/theme',
   authenticate,
-  async (req, res, next) => {
-    try {
-      const userId = req.user!.id;
-      const themeSettings = await userService.getThemeSettings(userId);
-      res.json(themeSettings);
-    } catch (error) {
-      next(error);
-    }
-  }
+  asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    const themeSettings = await userService.getThemeSettings(userId);
+    res.json(themeSettings);
+  })
 );
 
 /**
@@ -288,26 +241,19 @@ router.patch(
   '/me/settings/theme',
   authenticate,
   logActivity('users.updateThemeSettings', 'users'),
-  async (req, res, next) => {
-    try {
-      const userId = req.user!.id;
-      const validated = updateThemeSettingsSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    const validated = updateThemeSettingsSchema.parse(req.body);
 
-      await userService.updateThemeSettings(
-        userId,
-        validated.mode,
-        validated.primaryColor
-      );
+    await userService.updateThemeSettings(
+      userId,
+      validated.mode,
+      validated.primaryColor
+    );
 
-      const updated = await userService.getThemeSettings(userId);
-      res.json(updated);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
-    }
-  }
+    const updated = await userService.getThemeSettings(userId);
+    res.json(updated);
+  })
 );
 
 /**
@@ -317,15 +263,11 @@ router.patch(
 router.get(
   '/me/settings',
   authenticate,
-  async (req, res, next) => {
-    try {
-      const userId = req.user!.id;
-      const settings = await userService.getUserSettings(userId);
-      res.json(settings);
-    } catch (error) {
-      next(error);
-    }
-  }
+  asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    const settings = await userService.getUserSettings(userId);
+    res.json(settings);
+  })
 );
 
 /**
@@ -336,21 +278,17 @@ router.patch(
   '/me/settings',
   authenticate,
   logActivity('users.updateSettings', 'users'),
-  async (req, res, next) => {
-    try {
-      const userId = req.user!.id;
-      const settings = req.body as Record<string, string>;
+  asyncHandler(async (req, res) => {
+    const userId = req.user!.id;
+    const settings = req.body as Record<string, string>;
 
-      for (const [key, value] of Object.entries(settings)) {
-        await userService.setUserSetting(userId, key, value);
-      }
-
-      const updated = await userService.getUserSettings(userId);
-      res.json(updated);
-    } catch (error) {
-      next(error);
+    for (const [key, value] of Object.entries(settings)) {
+      await userService.setUserSetting(userId, key, value);
     }
-  }
+
+    const updated = await userService.getUserSettings(userId);
+    res.json(updated);
+  })
 );
 
 export default router;

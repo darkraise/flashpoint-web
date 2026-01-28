@@ -2,13 +2,6 @@ import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from './components/layout/AppShell';
-import { BrowseView } from './views/BrowseView';
-import { FlashGamesView } from './views/FlashGamesView';
-import { HTML5GamesView } from './views/HTML5GamesView';
-import { GameDetailView } from './views/GameDetailView';
-import { GamePlayerView } from './views/GamePlayerView';
-import { LoginView } from './views/LoginView';
-import { RegisterView } from './views/RegisterView';
 import { UnauthorizedView } from './views/UnauthorizedView';
 import { MaintenancePage } from './views/MaintenancePage';
 import { NotFoundView } from './components/error/NotFoundView';
@@ -24,17 +17,32 @@ import { useAuthStore } from './store/auth';
 import { authSettingsApi } from './lib/api';
 import { usePublicSettings } from './hooks/usePublicSettings';
 import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-// Lazy load heavy/admin views for better initial bundle size
+// Lazy load views for optimal bundle splitting
+// Auth views
+const LoginView = lazy(() => import('./views/LoginView').then(m => ({ default: m.LoginView })));
+const RegisterView = lazy(() => import('./views/RegisterView').then(m => ({ default: m.RegisterView })));
+
+// Game browsing views
+const BrowseView = lazy(() => import('./views/BrowseView').then(m => ({ default: m.BrowseView })));
+const FlashGamesView = lazy(() => import('./views/FlashGamesView').then(m => ({ default: m.FlashGamesView })));
+const HTML5GamesView = lazy(() => import('./views/HTML5GamesView').then(m => ({ default: m.HTML5GamesView })));
 const AnimationsView = lazy(() => import('./views/AnimationsView').then(m => ({ default: m.AnimationsView })));
+const GameDetailView = lazy(() => import('./views/GameDetailView').then(m => ({ default: m.GameDetailView })));
+const GamePlayerView = lazy(() => import('./views/GamePlayerView').then(m => ({ default: m.GamePlayerView })));
+
+// User feature views
 const FavoritesView = lazy(() => import('./views/FavoritesView').then(m => ({ default: m.FavoritesView })));
 const DashboardView = lazy(() => import('./views/DashboardView').then(m => ({ default: m.DashboardView })));
-const SettingsView = lazy(() => import('./views/SettingsView').then(m => ({ default: m.SettingsView })));
-const JobsView = lazy(() => import('./views/JobsView').then(m => ({ default: m.JobsView })));
 const PlaylistsView = lazy(() => import('./views/PlaylistsView').then(m => ({ default: m.PlaylistsView })));
 const PlaylistDetailView = lazy(() => import('./views/PlaylistDetailView').then(m => ({ default: m.PlaylistDetailView })));
 const UserPlaylistsView = lazy(() => import('./views/UserPlaylistsView').then(m => ({ default: m.UserPlaylistsView })));
 const UserPlaylistDetailView = lazy(() => import('./views/UserPlaylistDetailView').then(m => ({ default: m.UserPlaylistDetailView })));
+
+// Admin views
+const SettingsView = lazy(() => import('./views/SettingsView').then(m => ({ default: m.SettingsView })));
+const JobsView = lazy(() => import('./views/JobsView').then(m => ({ default: m.JobsView })));
 const UsersView = lazy(() => import('./views/UsersView').then(m => ({ default: m.UsersView })));
 const RolesView = lazy(() => import('./views/RolesView').then(m => ({ default: m.RolesView })));
 const ActivitiesView = lazy(() => import('./views/ActivitiesView').then(m => ({ default: m.ActivitiesView })));
@@ -71,13 +79,22 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <NetworkStatusIndicator />
-      <MobileWarningDialog />
-      <Toaster />
-      <Routes>
+      <TooltipProvider delayDuration={300}>
+        <NetworkStatusIndicator />
+        <MobileWarningDialog />
+        <Toaster />
+        <Routes>
       {/* Auth routes (no AppShell) */}
-      <Route path="/login" element={<LoginView />} />
-      <Route path="/register" element={<RegisterView />} />
+      <Route path="/login" element={
+        <Suspense fallback={<RouteLoadingFallback />}>
+          <LoginView />
+        </Suspense>
+      } />
+      <Route path="/register" element={
+        <Suspense fallback={<RouteLoadingFallback />}>
+          <RegisterView />
+        </Suspense>
+      } />
       <Route path="/unauthorized" element={<UnauthorizedView />} />
       <Route path="/maintenance" element={<MaintenancePage />} />
 
@@ -114,17 +131,23 @@ function App() {
         {/* Public/guest accessible routes */}
         <Route path="/flash-games" element={
           <ProtectedRoute requireAuth={false}>
-            <FlashGamesView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <FlashGamesView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/html5-games" element={
           <ProtectedRoute requireAuth={false}>
-            <HTML5GamesView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <HTML5GamesView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/browse" element={
           <ProtectedRoute requireAuth={false}>
-            <BrowseView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <BrowseView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/animations" element={
@@ -136,7 +159,9 @@ function App() {
         } />
         <Route path="/games/:id" element={
           <ProtectedRoute requireAuth={false}>
-            <GameDetailView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <GameDetailView />
+            </Suspense>
           </ProtectedRoute>
         } />
 
@@ -150,7 +175,9 @@ function App() {
         } />
         <Route path="/games/:id/play" element={
           <ProtectedRoute requirePermission="games.play">
-            <GamePlayerView />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <GamePlayerView />
+            </Suspense>
           </ProtectedRoute>
         } />
         <Route path="/favorites" element={
@@ -234,6 +261,7 @@ function App() {
       {/* 404 catch-all - MUST BE LAST, no AppShell */}
       <Route path="*" element={<NotFoundView />} />
       </Routes>
+      </TooltipProvider>
     </ErrorBoundary>
   );
 }

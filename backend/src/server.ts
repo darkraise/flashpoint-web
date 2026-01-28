@@ -23,8 +23,11 @@ async function startServer() {
 
   // Security middleware
   app.use(helmet({
-    contentSecurityPolicy: false, // Will be configured in frontend
-    crossOriginEmbedderPolicy: false
+    contentSecurityPolicy: false, // Will be configured in frontend via meta tag
+    crossOriginEmbedderPolicy: false,
+    frameguard: {
+      action: 'deny' // Equivalent to frame-ancestors 'none'
+    }
   }));
 
   // CORS
@@ -33,9 +36,9 @@ async function startServer() {
     credentials: true
   }));
 
-  // Body parsing
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  // Body parsing with size limits (prevent DoS attacks)
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Compression
   app.use(compression());
@@ -99,8 +102,8 @@ async function startServer() {
     JobScheduler.registerJob({
       id: 'metadata-sync',
       name: 'Metadata Sync',
-      enabled: jobSettings.metadataSyncEnabled || false,
-      cronSchedule: jobSettings.metadataSyncSchedule || '0 * * * *', // Default: hourly
+      enabled: typeof jobSettings.metadataSyncEnabled === 'boolean' ? jobSettings.metadataSyncEnabled : false,
+      cronSchedule: typeof jobSettings.metadataSyncSchedule === 'string' ? jobSettings.metadataSyncSchedule : '0 * * * *', // Default: hourly
       run: () => metadataSyncJob.run()
     });
 
@@ -109,8 +112,8 @@ async function startServer() {
     JobScheduler.registerJob({
       id: 'ruffle-update',
       name: 'Ruffle Update',
-      enabled: jobSettings.ruffleUpdateEnabled || false,
-      cronSchedule: jobSettings.ruffleUpdateSchedule || '0 0 * * *', // Default: daily at midnight
+      enabled: typeof jobSettings.ruffleUpdateEnabled === 'boolean' ? jobSettings.ruffleUpdateEnabled : false,
+      cronSchedule: typeof jobSettings.ruffleUpdateSchedule === 'string' ? jobSettings.ruffleUpdateSchedule : '0 0 * * *', // Default: daily at midnight
       run: () => ruffleUpdateJob.run()
     });
 
@@ -174,6 +177,9 @@ async function startServer() {
   const shutdown = () => {
     logger.info('Shutting down gracefully...');
 
+    // Stop scheduled jobs
+    JobScheduler.stopAllJobs();
+
     // Stop permission cache cleanup
     PermissionCache.stopCleanup();
 
@@ -208,18 +214,4 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully...');
-  JobScheduler.stopAllJobs();
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully...');
-  JobScheduler.stopAllJobs();
-  process.exit(0);
-});
-
 startServer();
-// force restart

@@ -12,6 +12,35 @@ export class AppError extends Error {
   }
 }
 
+/**
+ * Sanitize request body by redacting sensitive fields
+ */
+function sanitizeBody(body: any): any {
+  if (!body || typeof body !== 'object') {
+    return body;
+  }
+
+  const sanitized = { ...body };
+  const sensitiveFields = [
+    'password',
+    'currentPassword',
+    'newPassword',
+    'token',
+    'refreshToken',
+    'secret',
+    'apiKey',
+    'accessToken'
+  ];
+
+  sensitiveFields.forEach(field => {
+    if (sanitized[field]) {
+      sanitized[field] = '[REDACTED]';
+    }
+  });
+
+  return sanitized;
+}
+
 export function errorHandler(
   err: Error | AppError,
   req: Request,
@@ -34,29 +63,19 @@ export function errorHandler(
     });
   }
 
-  // Unhandled errors - Log full details
+  // Unhandled errors - Log full details with sanitization
   logger.error(`[UnhandledError] ${err.message}`, {
     name: err.name,
     message: err.message,
     stack: err.stack,
     path: req.path,
     method: req.method,
-    body: req.body,
+    body: sanitizeBody(req.body),
     query: req.query,
     params: req.params
   });
 
-  // Also log the raw error to console for immediate visibility
-  console.error('=== UNHANDLED ERROR ===');
-  console.error('Error:', err);
-  console.error('Stack:', err.stack);
-  console.error('Request:', {
-    method: req.method,
-    path: req.path,
-    body: req.body
-  });
-  console.error('======================');
-
+  // Return generic error message to client (prevent information leakage)
   res.status(500).json({
     error: {
       message: 'Internal server error',

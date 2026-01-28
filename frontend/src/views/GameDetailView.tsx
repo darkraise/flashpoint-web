@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 
 // Helper function to format duration in seconds
 function formatDuration(seconds: number): string {
@@ -131,9 +132,18 @@ export function GameDetailView() {
   // presentOnDisk: null = no data needed, 0 = needs download, 1 = downloaded
   const needsDataDownload = game.presentOnDisk === 0;
 
+  // Build breadcrumb items
+  const breadcrumbItems = [
+    { label: 'Browse', href: '/browse' },
+    { label: game.title, active: true }
+  ];
+
   return (
     <ErrorBoundary>
       <div className="max-w-6xl mx-auto space-y-6">
+      {/* Breadcrumbs Navigation */}
+      <Breadcrumbs items={breadcrumbItems} />
+
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -232,16 +242,10 @@ export function GameDetailView() {
                 )}
               </>
             ) : (
-              <>
-                <button
-                  disabled
-                  className="inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-muted text-muted-foreground rounded-xl shadow-md cursor-not-allowed opacity-60 w-full sm:w-auto"
-                  title="This game requires the Flashpoint Launcher"
-                >
-                  <Play size={28} className="sm:w-8 sm:h-8" />
-                </button>
-                <p className="text-xs sm:text-sm text-muted-foreground font-medium">Requires Flashpoint Launcher</p>
-              </>
+              <Badge variant="secondary" className="px-4 py-2 text-sm sm:text-base font-medium flex items-center gap-2">
+                <Play size={16} className="sm:w-5 sm:h-5" />
+                Play on Flashpoint Launcher
+              </Badge>
             )}
           </div>
         </div>

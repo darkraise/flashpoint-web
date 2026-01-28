@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { AppError } from '../middleware/errorHandler';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { z } from 'zod';
 
 const router = Router();
@@ -36,14 +37,10 @@ router.get(
   authenticate,
   requirePermission('roles.read'),
   logActivity('roles.list', 'roles'),
-  async (req, res, next) => {
-    try {
-      const roles = await roleService.getRoles();
-      res.json(roles);
-    } catch (error) {
-      next(error);
-    }
-  }
+  asyncHandler(async (req, res) => {
+    const roles = await roleService.getRoles();
+    res.json(roles);
+  })
 );
 
 /**
@@ -54,14 +51,10 @@ router.get(
   '/permissions',
   authenticate,
   requirePermission('roles.read'),
-  async (req, res, next) => {
-    try {
-      const permissions = await roleService.getPermissions();
-      res.json(permissions);
-    } catch (error) {
-      next(error);
-    }
-  }
+  asyncHandler(async (req, res) => {
+    const permissions = await roleService.getPermissions();
+    res.json(permissions);
+  })
 );
 
 /**
@@ -73,20 +66,16 @@ router.get(
   authenticate,
   requirePermission('roles.read'),
   logActivity('roles.view', 'roles'),
-  async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const role = await roleService.getRoleById(id);
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    const role = await roleService.getRoleById(id);
 
-      if (!role) {
-        throw new AppError(404, 'Role not found');
-      }
-
-      res.json(role);
-    } catch (error) {
-      next(error);
+    if (!role) {
+      throw new AppError(404, 'Role not found');
     }
-  }
+
+    res.json(role);
+  })
 );
 
 /**
@@ -98,25 +87,18 @@ router.post(
   authenticate,
   requirePermission('roles.create'),
   logActivity('roles.create', 'roles'),
-  async (req, res, next) => {
-    try {
-      const data = createRoleSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const data = createRoleSchema.parse(req.body);
 
-      const role = await roleService.createRole(
-        data.name,
-        data.description,
-        data.priority,
-        data.permissionIds || []
-      );
+    const role = await roleService.createRole(
+      data.name,
+      data.description,
+      data.priority,
+      data.permissionIds || []
+    );
 
-      res.status(201).json(role);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
-    }
-  }
+    res.status(201).json(role);
+  })
 );
 
 /**
@@ -128,26 +110,19 @@ router.patch(
   authenticate,
   requirePermission('roles.update'),
   logActivity('roles.update', 'roles'),
-  async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const data = updateRoleSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    const data = updateRoleSchema.parse(req.body);
 
-      const role = await roleService.updateRole(
-        id,
-        data.name,
-        data.description,
-        data.priority
-      );
+    const role = await roleService.updateRole(
+      id,
+      data.name,
+      data.description,
+      data.priority
+    );
 
-      res.json(role);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
-    }
-  }
+    res.json(role);
+  })
 );
 
 /**
@@ -159,22 +134,15 @@ router.put(
   authenticate,
   requirePermission('roles.update'),
   logActivity('roles.update_permissions', 'roles'),
-  async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      const data = updatePermissionsSchema.parse(req.body);
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    const data = updatePermissionsSchema.parse(req.body);
 
-      await roleService.updateRolePermissions(id, data.permissionIds);
-      const role = await roleService.getRoleById(id);
+    await roleService.updateRolePermissions(id, data.permissionIds);
+    const role = await roleService.getRoleById(id);
 
-      res.json(role);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return next(new AppError(400, `Validation error: ${error.errors[0].message}`));
-      }
-      next(error);
-    }
-  }
+    res.json(role);
+  })
 );
 
 /**
@@ -186,17 +154,13 @@ router.delete(
   authenticate,
   requirePermission('roles.delete'),
   logActivity('roles.delete', 'roles'),
-  async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
 
-      await roleService.deleteRole(id);
+    await roleService.deleteRole(id);
 
-      res.json({ success: true, message: 'Role deleted successfully' });
-    } catch (error) {
-      next(error);
-    }
-  }
+    res.json({ success: true, message: 'Role deleted successfully' });
+  })
 );
 
 export default router;

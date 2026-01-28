@@ -71,6 +71,23 @@ interface ApiPlatform {
   Deleted?: boolean;
 }
 
+interface MetadataSourceTimestamp {
+  actualUpdateTime?: string;
+  latestUpdateTime?: string;
+}
+
+interface MetadataSource {
+  name: string;
+  games: MetadataSourceTimestamp;
+  tags: MetadataSourceTimestamp;
+  platforms?: MetadataSourceTimestamp;
+}
+
+interface FlashpointPreferences {
+  gameMetadataSources: MetadataSource[];
+  [key: string]: unknown; // Allow other properties from preferences.json
+}
+
 /**
  * Service for synchronizing game metadata from FPFSS
  * Matches the Flashpoint Launcher's sync implementation
@@ -344,7 +361,7 @@ export class MetadataSyncService {
         deletedIds = response.data.deletedGames;
       } else if (response.data.games && Array.isArray(response.data.games)) {
         // Wrapped in games property
-        deletedIds = response.data.games.map((g: any) => typeof g === 'string' ? g : g.id);
+        deletedIds = response.data.games.map((g: unknown) => typeof g === 'string' ? g : (g as { id: string }).id);
       } else {
         logger.warn('[MetadataSync] Unexpected deleted games API response format:', response.data);
       }
@@ -573,8 +590,8 @@ export class MetadataSyncService {
         // Find child games that reference parents being deleted
         const childGamesQuery = `SELECT id FROM game WHERE parentGameId IN (${placeholders})`;
         const stmt = db.prepare(childGamesQuery);
-        const childGames = stmt.all(gameIds);
-        const childGameIds = (childGames as any[]).map((row: any) => row.id);
+        const childGames = stmt.all(gameIds) as Array<{ id: string }>;
+        const childGameIds = childGames.map((row) => row.id);
 
         // Update child games to set parentGameId to NULL (orphan them instead of cascade delete)
         // This preserves the games but removes the broken reference
@@ -606,7 +623,7 @@ export class MetadataSyncService {
    */
   private async updatePreferencesTimestamps(
     source: GameMetadataSource,
-    preferences: any,
+    preferences: FlashpointPreferences,
     latestDates: {
       gamesLatestDate: string | null;
       tagsLatestDate: string | null;
@@ -617,7 +634,7 @@ export class MetadataSyncService {
       const now = new Date().toISOString();
 
       // Update the source timestamps
-      const sourceIndex = preferences.gameMetadataSources.findIndex((s: any) => s.name === source.name);
+      const sourceIndex = preferences.gameMetadataSources.findIndex((s) => s.name === source.name);
       if (sourceIndex >= 0) {
         // Update actualUpdateTime to NOW (when we actually synced)
         preferences.gameMetadataSources[sourceIndex].games.actualUpdateTime = now;

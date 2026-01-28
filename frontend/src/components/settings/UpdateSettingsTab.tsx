@@ -12,7 +12,7 @@ import {
   ChevronUp,
   Calendar,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { FormattedDate } from "@/components/common/FormattedDate";
@@ -40,7 +40,7 @@ interface MetadataUpdateInfo {
 }
 
 interface UpdateSettingsTabProps {
-  tabContentVariants: any;
+  tabContentVariants: Variants;
 }
 
 export function UpdateSettingsTab({
@@ -275,6 +275,18 @@ export function UpdateSettingsTab({
       showToast(message, "error");
     },
   });
+
+  // Auto-expand changelog if new version is available with changelog
+  useEffect(() => {
+    if (
+      updateCheckResult?.updateAvailable &&
+      updateCheckResult?.changelog
+    ) {
+      setShowChangelog(true);
+    } else {
+      setShowChangelog(false);
+    }
+  }, [updateCheckResult]);
 
   // Cleanup on unmount
   useEffect(() => {

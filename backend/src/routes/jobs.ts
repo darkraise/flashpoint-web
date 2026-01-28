@@ -5,6 +5,7 @@ import { logActivity } from '../middleware/activityLogger';
 import { JobScheduler } from '../services/JobScheduler';
 import { JobExecutionService } from '../services/JobExecutionService';
 import { CachedSystemSettingsService } from '../services/CachedSystemSettingsService';
+import { logger } from '../utils/logger';
 
 const router = Router();
 const executionService = new JobExecutionService();
@@ -22,7 +23,7 @@ router.get(
       const jobs = JobScheduler.getAllJobsEnriched();
       res.json(jobs);
     } catch (error) {
-      console.error('Failed to get jobs:', error);
+      logger.error('Failed to get jobs:', error);
       res.status(500).json({ error: { message: 'Failed to retrieve jobs' } });
     }
   }
@@ -46,7 +47,7 @@ router.get(
 
       res.json(job);
     } catch (error) {
-      console.error(`Failed to get job ${req.params.jobId}:`, error);
+      logger.error(`Failed to get job ${req.params.jobId}:`, error);
       res.status(500).json({ error: { message: 'Failed to retrieve job' } });
     }
   }
@@ -97,7 +98,7 @@ router.patch(
       const updatedJob = JobScheduler.getJobStatusEnriched(jobId);
       res.json(updatedJob);
     } catch (error) {
-      console.error(`Failed to update job ${req.params.jobId}:`, error);
+      logger.error(`Failed to update job ${req.params.jobId}:`, error);
       res.status(500).json({
         error: { message: error instanceof Error ? error.message : 'Failed to update job' }
       });
@@ -119,7 +120,7 @@ router.post(
       JobScheduler.startJob(jobId);
       res.json({ success: true, message: 'Job started successfully' });
     } catch (error) {
-      console.error(`Failed to start job ${req.params.jobId}:`, error);
+      logger.error(`Failed to start job ${req.params.jobId}:`, error);
       res.status(500).json({
         success: false,
         message: error instanceof Error ? error.message : 'Failed to start job'
@@ -142,7 +143,7 @@ router.post(
       JobScheduler.stopJob(jobId);
       res.json({ success: true, message: 'Job stopped successfully' });
     } catch (error) {
-      console.error(`Failed to stop job ${req.params.jobId}:`, error);
+      logger.error(`Failed to stop job ${req.params.jobId}:`, error);
       res.status(500).json({
         success: false,
         message: error instanceof Error ? error.message : 'Failed to stop job'
@@ -176,7 +177,7 @@ router.post(
         return res.status(409).json({ success: false, message });
       }
 
-      console.error(`Failed to trigger job ${req.params.jobId}:`, error);
+      logger.error(`Failed to trigger job ${req.params.jobId}:`, error);
       res.status(500).json({ success: false, message });
     }
   }
@@ -198,7 +199,7 @@ router.get(
       const result = executionService.getJobLogs(jobId, limit, offset);
       res.json({ ...result, limit, offset });
     } catch (error) {
-      console.error(`Failed to get logs for job ${req.params.jobId}:`, error);
+      logger.error(`Failed to get logs for job ${req.params.jobId}:`, error);
       res.status(500).json({ error: { message: 'Failed to retrieve job logs' } });
     }
   }
@@ -219,7 +220,7 @@ router.get(
       const result = executionService.getAllLogs(limit, offset);
       res.json({ ...result, limit, offset });
     } catch (error) {
-      console.error('Failed to get all logs:', error);
+      logger.error('Failed to get all logs:', error);
       res.status(500).json({ error: { message: 'Failed to retrieve logs' } });
     }
   }

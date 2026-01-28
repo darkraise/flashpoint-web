@@ -4,6 +4,7 @@ import { Role } from "../../types/auth";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { getErrorMessage } from "@/types/api-error";
 import {
   Dialog,
   DialogContent,
@@ -121,8 +122,7 @@ export function PermissionSelector({
           {updatePermissionsMutation.isError && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                {(updatePermissionsMutation.error as any)?.response?.data?.error
-                  ?.message || "Failed to update permissions"}
+                {getErrorMessage(updatePermissionsMutation.error) || "Failed to update permissions"}
               </AlertDescription>
             </Alert>
           )}

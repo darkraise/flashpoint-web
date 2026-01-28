@@ -375,10 +375,14 @@ export class GameProxyServer {
 
           return buffer;
         }
-      } catch (error: any) {
-        const errorMsg = error.response?.status
-          ? `HTTP ${error.response.status}`
-          : error.message || 'Unknown error';
+      } catch (error) {
+        let errorMsg = 'Unknown error';
+        if (error && typeof error === 'object') {
+          const err = error as { response?: { status?: number }; message?: string };
+          errorMsg = err.response?.status
+            ? `HTTP ${err.response.status}`
+            : err.message || 'Unknown error';
+        }
         logger.info(`[Proxy] ✗ Failed (${errorMsg}): ${baseUrl.trim()}/${requestPath}`);
       }
     }

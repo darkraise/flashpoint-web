@@ -154,12 +154,12 @@ export class DatabaseService {
   }
 
   // Helper method to execute queries and return results as objects
-  static exec(sql: string, params: any[] = []): any[] {
+  static exec<T = any>(sql: string, params: any[] = []): T[] {
     const db = this.getDatabase();
 
     try {
       const stmt = db.prepare(sql);
-      return stmt.all(params);
+      return stmt.all(params) as T[];
     } catch (error) {
       logger.error('Database query error:', { sql, params, error });
       throw error;
@@ -167,12 +167,13 @@ export class DatabaseService {
   }
 
   // Helper method to get a single row
-  static get(sql: string, params: any[] = []): any | null {
+  static get<T = any>(sql: string, params: any[] = []): T | undefined {
     const db = this.getDatabase();
 
     try {
       const stmt = db.prepare(sql);
-      return stmt.get(params) || null;
+      const result = stmt.get(params);
+      return result as T | undefined;
     } catch (error) {
       logger.error('Database get error:', error);
       throw error;
@@ -180,12 +181,12 @@ export class DatabaseService {
   }
 
   // Helper method to get all rows
-  static all(sql: string, params: any[] = []): any[] {
+  static all<T = any>(sql: string, params: any[] = []): T[] {
     const db = this.getDatabase();
 
     try {
       const stmt = db.prepare(sql);
-      return stmt.all(params);
+      return stmt.all(params) as T[];
     } catch (error) {
       logger.error('Database all error:', error);
       throw error;

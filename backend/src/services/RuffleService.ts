@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import AdmZip from 'adm-zip';
 import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
 
 /**
  * Service for managing Ruffle emulator versions
@@ -53,7 +54,7 @@ export class RuffleService {
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
       return packageJson.version || null;
     } catch (error) {
-      console.error('Error reading Ruffle version:', error);
+      logger.error('Error reading Ruffle version:', error);
       return null;
     }
   }
@@ -98,7 +99,7 @@ export class RuffleService {
         changelog: release.body || 'No changelog available.'
       };
     } catch (error) {
-      console.error('Error fetching latest Ruffle version:', error);
+      logger.error('Error fetching latest Ruffle version:', error);
       throw new AppError(500, 'Failed to check for Ruffle updates');
     }
   }
@@ -141,7 +142,7 @@ export class RuffleService {
   }> {
     try {
       const latest = await this.getLatestVersion();
-      console.log(`[RuffleService] Downloading Ruffle ${latest.version}...`);
+      logger.info(`[RuffleService] Downloading Ruffle ${latest.version}...`);
 
       // Download zip file
       const response = await axios.get(latest.downloadUrl, {
@@ -152,7 +153,7 @@ export class RuffleService {
         }
       });
 
-      console.log('[RuffleService] Download complete, extracting...');
+      logger.info('[RuffleService] Download complete, extracting...');
 
       // Extract zip to temporary directory
       const zip = new AdmZip(Buffer.from(response.data));
@@ -167,7 +168,7 @@ export class RuffleService {
       // Extract all files
       zip.extractAllTo(tempDir, true);
 
-      console.log('[RuffleService] Extraction complete, installing...');
+      logger.info('[RuffleService] Extraction complete, installing...');
 
       // Backup current installation
       const backupDir = path.join(this.frontendPublicPath, '../ruffle-backup');
@@ -192,7 +193,7 @@ export class RuffleService {
         throw new Error('Ruffle files were not installed successfully');
       }
 
-      console.log('[RuffleService] Ruffle update completed successfully');
+      logger.info('[RuffleService] Ruffle update completed successfully');
 
       return {
         success: true,
@@ -200,7 +201,7 @@ export class RuffleService {
         message: `Successfully updated Ruffle to version ${latest.version}`
       };
     } catch (error) {
-      console.error('[RuffleService] Error updating Ruffle:', error);
+      logger.error('[RuffleService] Error updating Ruffle:', error);
 
       // Provide more detailed error message
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

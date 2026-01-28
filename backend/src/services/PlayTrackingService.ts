@@ -2,6 +2,7 @@ import { UserDatabaseService } from './UserDatabaseService';
 import { DatabaseService } from './DatabaseService';
 import { logger } from '../utils/logger';
 import { randomBytes } from 'crypto';
+import { PlaySessionRow, GameStatsRow, PlaytimeActivityRow, DistributionRow } from '../types/database-rows';
 
 export interface PlaySession {
   id: number;
@@ -286,7 +287,7 @@ export class PlayTrackingService {
         [userId, limit, offset]
       );
 
-      return stats.map((stat: any) => ({
+      return stats.map((stat: GameStatsRow) => ({
         gameId: stat.game_id,
         gameTitle: stat.game_title,
         totalPlays: stat.total_plays,
@@ -314,7 +315,7 @@ export class PlayTrackingService {
         [userId, limit, offset]
       );
 
-      return sessions.map((session: any) => ({
+      return sessions.map((session: PlaySessionRow) => ({
         id: session.id,
         userId: session.user_id,
         gameId: session.game_id,
@@ -344,7 +345,7 @@ export class PlayTrackingService {
         [userId, limit]
       );
 
-      return stats.map((stat: any) => ({
+      return stats.map((stat: GameStatsRow) => ({
         gameId: stat.game_id,
         gameTitle: stat.game_title,
         totalPlays: stat.total_plays,
@@ -363,6 +364,10 @@ export class PlayTrackingService {
    */
   async getPlayActivityOverTime(userId: number, days = 30): Promise<Array<{ date: string; playtime: number; sessions: number }>> {
     try {
+      // Validate and sanitize days parameter to prevent SQL injection
+      // Ensure it's a positive integer between 1 and 365
+      const safeDays = Math.min(Math.max(parseInt(String(days), 10) || 30, 1), 365);
+
       const data = UserDatabaseService.all(
         `SELECT
           DATE(started_at) as date,
@@ -371,13 +376,13 @@ export class PlayTrackingService {
          FROM user_game_plays
          WHERE user_id = ?
          AND ended_at IS NOT NULL
-         AND started_at >= datetime('now', '-${days} days')
+         AND started_at >= datetime('now', '-' || ? || ' days')
          GROUP BY DATE(started_at)
          ORDER BY date ASC`,
-        [userId]
+        [userId, safeDays]
       );
 
-      return data.map((row: any) => ({
+      return data.map((row: PlaytimeActivityRow) => ({
         date: row.date,
         playtime: row.total_playtime || 0,
         sessions: row.session_count || 0
@@ -402,7 +407,7 @@ export class PlayTrackingService {
         [userId, limit]
       );
 
-      return stats.map((stat: any) => ({
+      return stats.map((stat: DistributionRow) => ({
         name: stat.game_title,
         value: stat.total_playtime_seconds
       }));

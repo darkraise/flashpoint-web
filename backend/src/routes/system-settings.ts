@@ -6,6 +6,7 @@ import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { JobScheduler } from '../services/JobScheduler';
+import { logger } from '../utils/logger';
 
 const router = Router();
 const systemSettings = new CachedSystemSettingsService();
@@ -40,7 +41,7 @@ router.get(
       const allSettings = systemSettings.getAll();
       res.json(allSettings);
     } catch (error) {
-      console.error('Failed to get all settings:', error);
+      logger.error('Failed to get all settings:', error);
       res.status(500).json({
         error: { message: 'Failed to retrieve settings' }
       });
@@ -56,7 +57,7 @@ router.get('/public', async (req: Request, res: Response) => {
     const publicSettings = systemSettings.getPublicSettings();
     res.json(publicSettings);
   } catch (error) {
-    console.error('Failed to get public settings:', error);
+    logger.error('Failed to get public settings:', error);
     res.status(500).json({
       error: { message: 'Failed to retrieve public settings' }
     });
@@ -64,22 +65,27 @@ router.get('/public', async (req: Request, res: Response) => {
 });
 
 // ===================================
-// GET CATEGORY SETTINGS
+// GET CATEGORY SETTINGS (Admin Only)
 // ===================================
-router.get('/:category', async (req: Request, res: Response) => {
-  try {
-    const { category } = req.params;
-    const categorySettings = systemSettings.getCategory(category);
+router.get(
+  '/:category',
+  authenticate,
+  requirePermission('settings.read'),
+  async (req: Request, res: Response) => {
+    try {
+      const { category } = req.params;
+      const categorySettings = systemSettings.getCategory(category);
 
-    // Return settings (empty object if category has no settings yet)
-    res.json(categorySettings);
-  } catch (error) {
-    console.error(`Failed to get ${req.params.category} settings:`, error);
-    res.status(500).json({
-      error: { message: 'Failed to retrieve settings' }
-    });
+      // Return settings (empty object if category has no settings yet)
+      res.json(categorySettings);
+    } catch (error) {
+      logger.error(`Failed to get ${req.params.category} settings:`, error);
+      res.status(500).json({
+        error: { message: 'Failed to retrieve settings' }
+      });
+    }
   }
-});
+);
 
 // ===================================
 // UPDATE CATEGORY SETTINGS (Admin Only)
@@ -118,7 +124,7 @@ router.patch(
       const updated = systemSettings.getCategory(category);
       res.json(updated);
     } catch (error) {
-      console.error(`Failed to update ${req.params.category} settings:`, error);
+      logger.error(`Failed to update ${req.params.category} settings:`, error);
 
       // Check if it's a validation error
       if (error instanceof Error && error.message.includes('must be')) {
@@ -135,28 +141,33 @@ router.patch(
 );
 
 // ===================================
-// GET SINGLE SETTING
+// GET SINGLE SETTING (Admin Only)
 // ===================================
-router.get('/:category/:key', async (req: Request, res: Response) => {
-  try {
-    const { category, key } = req.params;
-    const fullKey = `${category}.${key}`;
-    const value = systemSettings.get(fullKey);
+router.get(
+  '/:category/:key',
+  authenticate,
+  requirePermission('settings.read'),
+  async (req: Request, res: Response) => {
+    try {
+      const { category, key } = req.params;
+      const fullKey = `${category}.${key}`;
+      const value = systemSettings.get(fullKey);
 
-    if (value === null) {
-      return res.status(404).json({
-        error: { message: `Setting '${fullKey}' not found` }
+      if (value === null) {
+        return res.status(404).json({
+          error: { message: `Setting '${fullKey}' not found` }
+        });
+      }
+
+      res.json({ value });
+    } catch (error) {
+      logger.error(`Failed to get setting ${req.params.category}.${req.params.key}:`, error);
+      res.status(500).json({
+        error: { message: 'Failed to retrieve setting' }
       });
     }
-
-    res.json({ value });
-  } catch (error) {
-    console.error(`Failed to get setting ${req.params.category}.${req.params.key}:`, error);
-    res.status(500).json({
-      error: { message: 'Failed to retrieve setting' }
-    });
   }
-});
+);
 
 // ===================================
 // UPDATE SINGLE SETTING (Admin Only)
@@ -195,7 +206,7 @@ router.patch(
       const updated = systemSettings.get(fullKey);
       res.json({ value: updated });
     } catch (error) {
-      console.error(`Failed to update setting ${req.params.category}.${req.params.key}:`, error);
+      logger.error(`Failed to update setting ${req.params.category}.${req.params.key}:`, error);
 
       // Check if it's a validation error
       if (error instanceof Error && error.message.includes('must be')) {
@@ -223,7 +234,7 @@ router.get(
       const stats = systemSettings.getCacheStats();
       res.json(stats);
     } catch (error) {
-      console.error('Failed to get cache stats:', error);
+      logger.error('Failed to get cache stats:', error);
       res.status(500).json({
         error: { message: 'Failed to retrieve cache statistics' }
       });
@@ -251,7 +262,7 @@ router.post(
 
       res.json({ message: 'Cache cleared successfully' });
     } catch (error) {
-      console.error('Failed to clear cache:', error);
+      logger.error('Failed to clear cache:', error);
       res.status(500).json({
         error: { message: 'Failed to clear cache' }
       });
@@ -282,7 +293,7 @@ router.get(
         }
       });
     } catch (error) {
-      console.error('Failed to get permission cache stats:', error);
+      logger.error('Failed to get permission cache stats:', error);
       res.status(500).json({
         error: { message: 'Failed to retrieve permission cache statistics' }
       });
@@ -325,7 +336,7 @@ router.post(
         });
       }
     } catch (error) {
-      console.error('Failed to clear permission cache:', error);
+      logger.error('Failed to clear permission cache:', error);
       res.status(500).json({
         error: { message: 'Failed to clear permission cache' }
       });

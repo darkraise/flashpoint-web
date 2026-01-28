@@ -6,6 +6,7 @@ import { SyncStatusService } from '../services/SyncStatusService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 
 const router = Router();
@@ -16,16 +17,11 @@ const metadataSyncService = new MetadataSyncService();
  * GET /api/updates/check
  * Check for available updates
  */
-router.get('/check', async (req, res, next) => {
-  try {
-    logger.info('[Updates API] Checking for updates...');
-    const updateInfo = await updateService.checkForUpdates();
-    res.json(updateInfo);
-  } catch (error) {
-    logger.error('[Updates API] Error checking for updates:', error);
-    next(error);
-  }
-});
+router.get('/check', asyncHandler(async (req, res) => {
+  logger.info('[Updates API] Checking for updates...');
+  const updateInfo = await updateService.checkForUpdates();
+  res.json(updateInfo);
+}));
 
 /**
  * POST /api/updates/install
@@ -38,16 +34,11 @@ router.post(
   authenticate,
   requirePermission('settings.update'),
   logActivity('updates.install', 'system'),
-  async (req, res, next) => {
-    try {
-      logger.info(`[Updates API] Installing updates (requested by ${req.user?.username})...`);
-      const result = await updateService.installUpdates();
-      res.json(result);
-    } catch (error) {
-      logger.error('[Updates API] Error installing updates:', error);
-      next(error);
-    }
-  }
+  asyncHandler(async (req, res) => {
+    logger.info(`[Updates API] Installing updates (requested by ${req.user?.username})...`);
+    const result = await updateService.installUpdates();
+    res.json(result);
+  })
 );
 
 /**
@@ -61,15 +52,10 @@ router.get(
   authenticate,
   requirePermission('settings.update'),
   logActivity('updates.system_info', 'system'),
-  async (req, res, next) => {
-    try {
-      const systemInfo = await updateService.getSystemInfo();
-      res.json(systemInfo);
-    } catch (error) {
-      logger.error('[Updates API] Error getting system info:', error);
-      next(error);
-    }
-  }
+  asyncHandler(async (req, res) => {
+    const systemInfo = await updateService.getSystemInfo();
+    res.json(systemInfo);
+  })
 );
 
 /**
@@ -77,16 +63,11 @@ router.get(
  * Check for game metadata updates (like Flashpoint Launcher)
  * Returns info about game database updates from FPFSS
  */
-router.get('/metadata', async (req, res, next) => {
-  try {
-    logger.info('[Updates API] Checking for metadata updates...');
-    const metadataInfo = await metadataUpdateService.getMetadataUpdateInfo();
-    res.json(metadataInfo);
-  } catch (error) {
-    logger.error('[Updates API] Error checking for metadata updates:', error);
-    next(error);
-  }
-});
+router.get('/metadata', asyncHandler(async (req, res) => {
+  logger.info('[Updates API] Checking for metadata updates...');
+  const metadataInfo = await metadataUpdateService.getMetadataUpdateInfo();
+  res.json(metadataInfo);
+}));
 
 /**
  * POST /api/updates/metadata/sync
@@ -101,38 +82,33 @@ router.post(
   authenticate,
   requirePermission('settings.update'),
   logActivity('updates.metadata_sync', 'system'),
-  async (req, res, next) => {
-    try {
-      const syncStatus = SyncStatusService.getInstance();
+  asyncHandler(async (req, res) => {
+    const syncStatus = SyncStatusService.getInstance();
 
-      // Check if sync is already running
-      if (syncStatus.isRunning()) {
-        return res.status(409).json({
-          success: false,
-          error: 'Sync already in progress',
-          status: syncStatus.getStatus()
-        });
-      }
-
-      logger.info(`[Updates API] Starting metadata sync in background (requested by ${req.user?.username})...`);
-
-      // Start sync in background (don't await - let it run async)
-      metadataSyncService.syncMetadata()
-        .catch((error) => {
-          logger.error('[Updates API] Background sync error:', error);
-        });
-
-      // Return immediately
-      res.json({
-        success: true,
-        message: 'Sync started',
+    // Check if sync is already running
+    if (syncStatus.isRunning()) {
+      return res.status(409).json({
+        success: false,
+        error: 'Sync already in progress',
         status: syncStatus.getStatus()
       });
-    } catch (error) {
-      logger.error('[Updates API] Error starting metadata sync:', error);
-      next(error);
     }
-  }
+
+    logger.info(`[Updates API] Starting metadata sync in background (requested by ${req.user?.username})...`);
+
+    // Start sync in background (don't await - let it run async)
+    metadataSyncService.syncMetadata()
+      .catch((error) => {
+        logger.error('[Updates API] Background sync error:', error);
+      });
+
+    // Return immediately
+    res.json({
+      success: true,
+      message: 'Sync started',
+      status: syncStatus.getStatus()
+    });
+  })
 );
 
 /**

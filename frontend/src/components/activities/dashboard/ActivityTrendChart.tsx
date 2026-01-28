@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useActivityTrend } from '@/hooks/useActivities';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-}
+import type { CustomTooltipProps } from '@/types/chart';
 
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (active && payload && payload.length) {

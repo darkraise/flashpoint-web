@@ -2,14 +2,14 @@ import { ToggleLeft, Info } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { systemSettingsApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useDialog } from "@/contexts/DialogContext";
 
 interface FeaturesSettingsTabProps {
-  tabContentVariants: any;
+  tabContentVariants: Variants;
 }
 
 export function FeaturesSettingsTab({
@@ -34,7 +34,7 @@ export function FeaturesSettingsTab({
       settings,
     }: {
       category: string;
-      settings: Record<string, any>;
+      settings: Record<string, unknown>;
     }) => systemSettingsApi.updateCategory(category, settings),
     onSuccess: (updatedSettings, variables) => {
       // Use response data instead of refetching

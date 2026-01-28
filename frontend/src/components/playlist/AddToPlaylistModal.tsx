@@ -16,6 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { CreateUserPlaylistDialog } from './CreateUserPlaylistDialog';
 import { UserPlaylist } from '@/types/playlist';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/types/api-error';
 
 interface AddToPlaylistModalProps {
   isOpen: boolean;
@@ -84,8 +85,8 @@ export function AddToPlaylistModal({
       toast.success(`Added to ${selectedPlaylists.size} playlist${selectedPlaylists.size > 1 ? 's' : ''}`);
 
       onClose();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error?.message || 'Failed to add to playlists');
+    } catch (error) {
+      toast.error(getErrorMessage(error) || 'Failed to add to playlists');
     }
   };
 

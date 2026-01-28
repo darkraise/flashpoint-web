@@ -1,7 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useRegister } from '../../hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
-import { authSettingsApi } from '../../lib/api';
+import { authSettingsApi, systemSettingsApi } from '../../lib/api';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,7 +16,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getErrorMessage } from '@/types/api-error';
 import { ThemePicker } from '@/components/theme/ThemePicker';
+import { AlertTriangle } from 'lucide-react';
 
 const registerSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username must be at most 50 characters'),
@@ -34,10 +36,18 @@ export function RegisterForm() {
   const navigate = useNavigate();
   const registerMutation = useRegister();
 
-  // Check if registration is enabled
+  // Fetch public settings first to check maintenance mode
+  const { data: publicSettings, isSuccess: isPublicSettingsLoaded } = useQuery({
+    queryKey: ['publicSettings'],
+    queryFn: () => systemSettingsApi.getPublic()
+  });
+
+  // Only check if registration is enabled if NOT in maintenance mode (to avoid 503 errors)
+  // Wait for public settings to load first, then only fetch if maintenance mode is disabled
   const { data: settings } = useQuery({
     queryKey: ['authSettings'],
-    queryFn: () => authSettingsApi.get()
+    queryFn: () => authSettingsApi.get(),
+    enabled: isPublicSettingsLoaded && !publicSettings?.app.maintenanceMode
   });
 
   const form = useForm<RegisterFormValues>({
@@ -63,7 +73,8 @@ export function RegisterForm() {
     }
   };
 
-  if (settings && !settings.userRegistrationEnabled) {
+  // Only show registration disabled screen if NOT in maintenance mode and registration is disabled
+  if (!publicSettings?.app.maintenanceMode && settings && !settings.userRegistrationEnabled) {
     return (
       <div className="w-full max-w-md">
         <div className="bg-card border shadow-xl rounded-2xl px-8 py-8 mb-4 relative overflow-hidden">
@@ -130,10 +141,26 @@ export function RegisterForm() {
           </p>
         </div>
 
+        {/* Maintenance Mode Notice */}
+        {publicSettings?.app.maintenanceMode && (
+          <Alert
+            className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100"
+            role="alert"
+            aria-live="polite"
+          >
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="ml-2">
+              <strong className="font-semibold">Maintenance Mode:</strong>{' '}
+              {publicSettings.app.maintenanceMessage ||
+                'The system is currently under maintenance. Some features may be unavailable.'}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {registerMutation.isError && (
           <Alert variant="destructive" className="mb-6">
             <AlertDescription>
-              {(registerMutation.error as any)?.response?.data?.error?.message || 'Registration failed. Please try again.'}
+              {getErrorMessage(registerMutation.error) || 'Registration failed. Please try again.'}
             </AlertDescription>
           </Alert>
         )}

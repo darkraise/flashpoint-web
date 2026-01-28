@@ -4,6 +4,7 @@ import { useCommunityPlaylists, useDownloadCommunityPlaylist } from '@/hooks/use
 import { usePlaylists } from '@/hooks/usePlaylists';
 import { useDialog } from '@/contexts/DialogContext';
 import type { CommunityPlaylist } from '@/hooks/useCommunityPlaylists';
+import { isApiError } from '@/types/api-error';
 import {
   Dialog,
   DialogContent,
@@ -103,8 +104,8 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
 
       showToast(`"${playlist.name}" downloaded successfully!`, 'success');
       // Modal stays open for more downloads
-    } catch (error: any) {
-      if (error.response?.status === 409) {
+    } catch (error) {
+      if (isApiError(error) && error.response?.status === 409) {
         showToast('You already have this playlist', 'info');
         // Also track as downloaded since it already exists
         setDownloadedInSession(prev => new Set([...prev, playlist.name]));

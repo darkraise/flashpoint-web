@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getErrorMessage } from '@/types/api-error';
 import {
   Dialog,
   DialogContent,
@@ -78,7 +79,7 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
           description: values.description,
           priority: values.priority,
         };
-        await updateMutation.mutateAsync({ id: role.id, roleData: updateData });
+        await updateMutation.mutateAsync({ id: role.id, data: updateData });
       } else {
         const createData: CreateRoleData = {
           name: values.name,
@@ -110,7 +111,7 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
           {mutation.isError && (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                {(mutation.error as any)?.response?.data?.error?.message || 'Operation failed'}
+                {getErrorMessage(mutation.error) || 'Operation failed'}
               </AlertDescription>
             </Alert>
           )}

@@ -1,7 +1,8 @@
 import { SystemSettingsService } from './SystemSettingsService';
+import { SettingValue, CategorySettings } from '../types/settings';
 
 interface CacheEntry {
-  value: any;
+  value: SettingValue | CategorySettings;
   timestamp: number;
 }
 
@@ -28,11 +29,11 @@ export class CachedSystemSettingsService extends SystemSettingsService {
   /**
    * Get a single setting by key (with caching)
    */
-  get(key: string): any {
+  get(key: string): SettingValue | null {
     const cached = this.cache.get(key);
 
     if (cached && this.isValid(cached.timestamp)) {
-      return cached.value;
+      return cached.value as SettingValue | null;
     }
 
     // Cache miss - fetch from database
@@ -51,11 +52,11 @@ export class CachedSystemSettingsService extends SystemSettingsService {
   /**
    * Get all settings in a category (with caching)
    */
-  getCategory(category: string): Record<string, any> {
+  getCategory(category: string): CategorySettings {
     const cached = this.categoryCache.get(category);
 
     if (cached && this.isValid(cached.timestamp)) {
-      return cached.value;
+      return cached.value as CategorySettings;
     }
 
     // Cache miss - fetch from database
@@ -72,7 +73,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
   /**
    * Set a single setting (invalidates cache)
    */
-  set(key: string, value: any, updatedBy?: number): void {
+  set(key: string, value: SettingValue, updatedBy?: number): void {
     super.set(key, value, updatedBy);
 
     // Invalidate cache for this key
@@ -86,7 +87,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
   /**
    * Update multiple settings in a category (invalidates cache)
    */
-  updateCategory(category: string, settings: Record<string, any>, updatedBy?: number): void {
+  updateCategory(category: string, settings: CategorySettings, updatedBy?: number): void {
     super.updateCategory(category, settings, updatedBy);
 
     // Invalidate all keys in this category

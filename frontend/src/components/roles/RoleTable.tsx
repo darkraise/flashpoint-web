@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 import { DataTable } from '../ui/data-table';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { getErrorMessage } from '@/types/api-error';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -157,7 +158,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
     return (
       <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-destructive">
         Error loading roles:{' '}
-        {(error as any)?.response?.data?.error?.message || 'Unknown error'}
+        {getErrorMessage(error) || 'Unknown error'}
       </div>
     );
   }

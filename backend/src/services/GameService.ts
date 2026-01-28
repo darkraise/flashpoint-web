@@ -240,9 +240,9 @@ export class GameService {
         );
 
         // Merge presentOnDisk into game objects and remove total_count
-        games.forEach((game: any) => {
+        games.forEach((game: Game & { total_count: number }) => {
           game.presentOnDisk = presentOnDiskMap.get(game.id) || 0;
-          delete game.total_count;
+          delete (game as any).total_count;
         });
       }
 

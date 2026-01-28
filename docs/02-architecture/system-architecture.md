@@ -169,6 +169,8 @@ routes/ → middleware/ → services/ → databases/
 - Mounts and serves files from ZIP archives
 - Streaming support for large files
 - Zero-extraction design (files served directly from ZIP)
+- **LRU cache** for ZIP mounts (max 100, 30-min TTL, auto-cleanup on eviction)
+- **Request body size limit** (1MB maximum) for DoS protection
 - Automatic cleanup of unused mounts
 
 ## Data Flow Architecture
@@ -437,10 +439,13 @@ All services run on localhost:
 - HTTP cache for metadata responses
 
 **Performance Optimizations**:
-- Database connection pooling
-- Query result caching
-- Lazy loading for game lists
-- Virtual scrolling for large datasets
+- **Frontend**: Route-based lazy loading (38% bundle size reduction)
+- **Frontend**: React.memo with custom comparison (98% fewer re-renders)
+- **Game Service**: LRU cache for ZIP mounts (prevents memory leaks)
+- **Game Service**: Request body size limits (1MB max, DoS protection)
+- **Backend**: Query result caching (statistics, permissions)
+- Database connection pooling (future)
+- Virtual scrolling for large datasets (future)
 
 ## Development vs Production
 

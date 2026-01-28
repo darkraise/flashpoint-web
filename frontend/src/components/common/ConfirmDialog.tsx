@@ -1,4 +1,3 @@
-import { AlertTriangle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,70 +8,98 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/index';
 
 interface ConfirmDialogProps {
-  isOpen: boolean;
+  // Support both API styles for backward compatibility
+  open?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onCancel?: () => void;
+  onConfirm: () => void;
   title?: string;
-  message: string;
+  description?: string;
+  message?: string; // Alias for description
   confirmText?: string;
   cancelText?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  variant?: 'danger' | 'warning' | 'info';
+  variant?: 'default' | 'destructive' | 'danger' | 'warning' | 'info';
 }
 
+/**
+ * Reusable confirmation dialog for destructive or important actions
+ * Prevents accidental data loss by requiring explicit user confirmation
+ */
 export function ConfirmDialog({
+  open,
   isOpen,
-  title = 'Confirm Action',
+  onOpenChange,
+  onCancel,
+  onConfirm,
+  title,
+  description,
   message,
   confirmText = 'Confirm',
   cancelText = 'Cancel',
-  onConfirm,
-  onCancel,
-  variant = 'warning'
+  variant = 'default',
 }: ConfirmDialogProps) {
-  const variantStyles = {
-    danger: 'bg-red-600 hover:bg-red-700',
-    warning: 'bg-orange-600 hover:bg-orange-700',
-    info: 'bg-primary-600 hover:bg-primary-700'
+  // Support both prop names
+  const isDialogOpen = open ?? isOpen ?? false;
+  const dialogTitle = title ?? 'Confirm';
+  const desc = description ?? message ?? '';
+
+  // Normalize variant to supported types
+  const variantNormalized = variant === 'danger' ? 'destructive' : variant;
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(newOpen);
+    }
+    if (!newOpen && onCancel) {
+      onCancel();
+    }
   };
 
-  const iconBgStyles = {
-    danger: 'bg-red-600/20',
-    warning: 'bg-orange-600/20',
-    info: 'bg-primary-600/20'
+  const handleConfirm = () => {
+    onConfirm();
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
   };
 
-  const iconColorStyles = {
-    danger: 'text-red-500',
-    warning: 'text-orange-500',
-    info: 'text-primary-500'
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+    }
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
+  };
+
+  // Determine button styling based on variant
+  const getButtonClassName = () => {
+    if (variantNormalized === 'destructive') {
+      return 'bg-destructive text-destructive-foreground hover:bg-destructive/90';
+    }
+    if (variantNormalized === 'warning') {
+      return 'bg-yellow-600 text-white hover:bg-yellow-700';
+    }
+    if (variantNormalized === 'info') {
+      return 'bg-blue-600 text-white hover:bg-blue-700';
+    }
+    return undefined;
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open: boolean) => !open && onCancel()}>
-      <AlertDialogContent className="sm:max-w-md">
+    <AlertDialog open={isDialogOpen} onOpenChange={handleOpenChange}>
+      <AlertDialogContent>
         <AlertDialogHeader>
-          <div className="flex items-start gap-4">
-            <div className={cn('p-2 rounded-lg', iconBgStyles[variant])}>
-              <AlertTriangle size={24} className={iconColorStyles[variant]} />
-            </div>
-            <div className="flex-1">
-              <AlertDialogTitle>{title}</AlertDialogTitle>
-              <AlertDialogDescription className="text-left mt-2">
-                {message}
-              </AlertDialogDescription>
-            </div>
-          </div>
+          <AlertDialogTitle>{dialogTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{desc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>
-            {cancelText}
-          </AlertDialogCancel>
+          <AlertDialogCancel onClick={handleCancel}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirm}
-            className={cn(variantStyles[variant])}
+            onClick={handleConfirm}
+            className={getButtonClassName()}
           >
             {confirmText}
           </AlertDialogAction>

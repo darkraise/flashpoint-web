@@ -1,5 +1,6 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useGamesDistribution } from '../../hooks/usePlayTracking';
+import type { CustomTooltipProps, CustomLegendProps } from '@/types/chart';
 
 function formatPlaytime(seconds: number): string {
   if (seconds < 60) {
@@ -18,22 +19,22 @@ function truncateTitle(title: string, maxLength = 25): string {
   return title.substring(0, maxLength) + '...';
 }
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: any[];
-}
-
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (active && payload && payload.length) {
     const data = payload[0];
-    const percentage = data.payload.percentage;
+    if (!data?.payload) return null;
+
+    const gameData = data.payload as any;
+    const percentage = gameData.percentage;
+    const value = typeof data.value === 'number' ? data.value : 0;
+
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg max-w-xs">
-        <p className="font-medium mb-2">{data.payload.fullName}</p>
+        <p className="font-medium mb-2">{gameData.fullName}</p>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Playtime:</span>
-            <span className="font-semibold text-sm">{formatPlaytime(data.value)}</span>
+            <span className="font-semibold text-sm">{formatPlaytime(value)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Percentage:</span>
@@ -93,18 +94,20 @@ export function GamesDistributionChart() {
     color: COLORS[index % COLORS.length]
   }));
 
-  const renderLegend = (props: any) => {
+  const renderLegend = (props: CustomLegendProps) => {
     const { payload } = props;
     return (
       <div className="flex flex-wrap gap-2 justify-center mt-4">
-        {payload.map((entry: any, index: number) => (
-          <div key={`legend-${index}`} className="flex items-center gap-2 text-xs">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-muted-foreground">{entry.value}</span>
-          </div>
+        {payload?.map((entry, index: number) => (
+          entry.value ? (
+            <div key={`legend-${index}`} className="flex items-center gap-2 text-xs">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-muted-foreground">{entry.value}</span>
+            </div>
+          ) : null
         ))}
       </div>
     );
@@ -121,7 +124,8 @@ export function GamesDistributionChart() {
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={(props: any) => {
+            label={(props: { percent?: number }) => {
+              if (!props.percent) return '';
               const percentage = props.percent * 100;
               return `${percentage.toFixed(0)}%`;
             }}

@@ -1,5 +1,5 @@
 import { cronToReadable } from '@/lib/cron-utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Clock } from 'lucide-react';
 
 interface JobScheduleDisplayProps {
@@ -14,18 +14,16 @@ export function JobScheduleDisplay({ cronSchedule }: JobScheduleDisplayProps) {
       <Clock size={16} className="text-muted-foreground" />
       <div>
         <p className="font-medium">{readable}</p>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <p className="text-xs text-muted-foreground font-mono cursor-help">
-                {cronSchedule}
-              </p>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Cron expression: {cronSchedule}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <p className="text-xs text-muted-foreground font-mono cursor-help">
+              {cronSchedule}
+            </p>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Cron expression: {cronSchedule}</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

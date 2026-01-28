@@ -7,11 +7,18 @@ declare module '@ruffle-rs/ruffle' {
       backgroundColor?: string;
       letterbox?: 'on' | 'off' | 'fullscreen';
       unmuteOverlay?: 'visible' | 'hidden';
-      contextMenu?: 'on' | 'off' | 'rightClickOnly';
+      contextMenu?: boolean | 'on' | 'off' | 'rightClickOnly';
       showSwfDownload?: boolean;
       upgradeToHttps?: boolean;
       warnOnUnsupportedContent?: boolean;
       logLevel?: 'error' | 'warn' | 'info' | 'debug' | 'trace';
+      scale?: 'exactfit' | 'noborder' | 'showall' | 'noscale';
+      forceScale?: boolean;
+      publicPath?: string;
+      quality?: 'low' | 'medium' | 'high' | 'best';
+      allowScriptAccess?: 'always' | 'sameDomain' | 'never';
+      salign?: string;
+      wmode?: 'window' | 'direct' | 'opaque' | 'transparent' | 'gpu';
     };
   }
 

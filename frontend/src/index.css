@@ -25,10 +25,29 @@
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
 
-    /* Scrollbar colors */
+    /* Scrollbar colors - thumb colors are dynamically set by theme.ts based on primary color */
     --scrollbar-track: 210 40% 96.1%; /* Light gray for track */
-    --scrollbar-thumb: 220 8.9% 46.1%; /* Medium gray for thumb */
-    --scrollbar-thumb-hover: 221.2 83.2% 53.3%; /* Primary color on hover */
+    --scrollbar-thumb: 221.2 83.2% 38.3%; /* Fallback - dynamically updated to primary color */
+    --scrollbar-thumb-hover: 221.2 83.2% 53.3%; /* Fallback - dynamically updated to primary color */
+
+    /* Semantic toast colors (light mode) */
+    /* Subtle backgrounds - low saturation, high lightness */
+    --toast-success: 142.1 30% 90%;
+    --toast-success-foreground: 222.2 84% 4.9%;
+    --toast-success-icon: 142.1 70.6% 40%;
+    --toast-success-border: 142.1 50% 65%;
+    --toast-error: 0 35% 90%;
+    --toast-error-foreground: 222.2 84% 4.9%;
+    --toast-error-icon: 0 72.2% 45%;
+    --toast-error-border: 0 55% 65%;
+    --toast-warning: 37.7 40% 88%;
+    --toast-warning-foreground: 222.2 84% 4.9%;
+    --toast-warning-icon: 37.7 92.1% 45%;
+    --toast-warning-border: 37.7 65% 60%;
+    --toast-info: 199.3 40% 88%;
+    --toast-info-foreground: 222.2 84% 4.9%;
+    --toast-info-icon: 199.3 89.1% 42%;
+    --toast-info-border: 199.3 60% 60%;
   }
 
   .dark {
@@ -52,10 +71,29 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
 
-    /* Scrollbar colors */
+    /* Scrollbar colors - thumb colors are dynamically set by theme.ts based on primary color */
     --scrollbar-track: 217.2 32.6% 17.5%; /* Dark gray for track */
-    --scrollbar-thumb: 220 13% 69%; /* Light gray for thumb */
-    --scrollbar-thumb-hover: 217.2 91.2% 59.8%; /* Primary color on hover */
+    --scrollbar-thumb: 217.2 91.2% 69.8%; /* Fallback - dynamically updated to primary color */
+    --scrollbar-thumb-hover: 217.2 91.2% 59.8%; /* Fallback - dynamically updated to primary color */
+
+    /* Semantic toast colors (dark mode) */
+    /* Subtle backgrounds - low saturation, low lightness */
+    --toast-success: 142.1 25% 15%;
+    --toast-success-foreground: 210 40% 98%;
+    --toast-success-icon: 142.1 70% 55%;
+    --toast-success-border: 142.1 45% 35%;
+    --toast-error: 0 30% 15%;
+    --toast-error-foreground: 210 40% 98%;
+    --toast-error-icon: 0 70% 60%;
+    --toast-error-border: 0 50% 40%;
+    --toast-warning: 37.7 35% 15%;
+    --toast-warning-foreground: 210 40% 98%;
+    --toast-warning-icon: 37.7 90% 60%;
+    --toast-warning-border: 37.7 60% 40%;
+    --toast-info: 199.3 30% 15%;
+    --toast-info-foreground: 210 40% 98%;
+    --toast-info-icon: 199.3 85% 58%;
+    --toast-info-border: 199.3 55% 40%;
   }
 }
 
@@ -113,7 +151,14 @@
 }
 
 html,
-body,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
 #root {
   margin: 0;
   padding: 0;
@@ -156,5 +201,129 @@ body,
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
     border: 2px solid hsl(var(--scrollbar-track));
+  }
+}
+
+/* ========================================
+   Prismatic Light Diffusion Background
+   ======================================== */
+
+/* CSS Variables for opacity control */
+:root {
+  --prismatic-opacity-1: 0.10;
+  --prismatic-opacity-2: 0.08;
+  --prismatic-opacity-3: 0.06;
+  --prismatic-glow-opacity: 0.15;
+}
+
+.dark {
+  --prismatic-opacity-1: 0.12;
+  --prismatic-opacity-2: 0.10;
+  --prismatic-opacity-3: 0.08;
+  --prismatic-glow-opacity: 0.20;
+}
+
+/* Keyframe Animations */
+@keyframes ambient-breathe-1 {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ambient-breathe-2 {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.93;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  75% {
+    opacity: 0.93;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ambient-breathe-3 {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.91;
+  }
+  50% {
+    opacity: 0.75;
+  }
+  75% {
+    opacity: 0.91;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes prismatic-glow {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Gradient Layers */
+.prismatic-light-1,
+.prismatic-light-2,
+.prismatic-light-3 {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  will-change: opacity;
+  transform: translateZ(0);
+}
+
+.prismatic-light-1 {
+  animation: ambient-breathe-1 15s ease-in-out infinite;
+}
+
+.prismatic-light-2 {
+  animation: ambient-breathe-2 20s ease-in-out infinite;
+  animation-delay: -6s;
+}
+
+.prismatic-light-3 {
+  animation: ambient-breathe-3 18s ease-in-out infinite;
+  animation-delay: -9s;
+}
+
+/* Form glow overlay animation */
+.prismatic-form-glow {
+  animation: prismatic-glow 8s ease-in-out infinite;
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .prismatic-light-1,
+  .prismatic-light-2,
+  .prismatic-light-3,
+  .prismatic-form-glow {
+    animation: none !important;
   }
 }

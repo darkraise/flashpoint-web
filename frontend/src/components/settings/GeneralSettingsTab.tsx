@@ -1,7 +1,7 @@
 import { Shield, Calendar } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { authSettingsApi, ruffleApi, usersApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 
 interface GeneralSettingsTabProps {
-  tabContentVariants: any;
+  tabContentVariants: Variants;
 }
 
 export function GeneralSettingsTab({

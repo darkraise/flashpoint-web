@@ -4,8 +4,6 @@ import { ActivityStats as ActivityStatsType, TimeRange } from '@/types/auth';
 
 interface ActivityStatsProps {
   stats: ActivityStatsType;
-  onCardClick?: (filter: string) => void;
-  activeFilter?: string;
   timeRange?: TimeRange;
 }
 
@@ -22,7 +20,7 @@ const getTimeRangeLabel = (timeRange: TimeRange = '24h') => {
   }
 };
 
-export function ActivityStats({ stats, onCardClick, activeFilter, timeRange = '24h' }: ActivityStatsProps) {
+export function ActivityStats({ stats, timeRange = '24h' }: ActivityStatsProps) {
   const timeLabel = getTimeRangeLabel(timeRange);
   const statCards = useMemo(() => [
     {
@@ -97,29 +95,15 @@ export function ActivityStats({ stats, onCardClick, activeFilter, timeRange = '2
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {statCards.map((stat) => {
         const Icon = stat.icon;
-        const isActive = activeFilter === stat.id;
+        const isPeakHour = stat.id === 'peak';
 
         return (
           <div
             key={stat.id}
-            role="button"
-            tabIndex={0}
-            onClick={() => onCardClick?.(stat.id)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onCardClick?.(stat.id);
-              }
-            }}
-            aria-pressed={isActive}
-            aria-label={`Filter by ${stat.label}`}
-            className={`
-              ${stat.bgColor} rounded-lg p-4 border transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-              ${isActive ? 'border-primary ring-2 ring-primary' : 'border-border hover:border-primary/50'}
-            `}
+            className={`${stat.bgColor} rounded-lg p-4 border border-border shadow-sm`}
           >
             <div className="flex items-start gap-3">
               <div className="p-2 bg-accent rounded-lg flex-shrink-0">
@@ -127,7 +111,10 @@ export function ActivityStats({ stats, onCardClick, activeFilter, timeRange = '2
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-muted-foreground text-xs mb-1">{stat.label}</p>
-                <p className="text-xl font-bold truncate">{stat.value}</p>
+                {/* Peak Hour: use smaller font and break text instead of truncate */}
+                <p className={`font-bold ${isPeakHour ? 'text-base break-words' : 'text-xl truncate'}`}>
+                  {stat.value}
+                </p>
                 <p className="text-muted-foreground text-xs mt-1 truncate">{stat.sublabel}</p>
                 {stat.trend !== undefined && (
                   <div className={`text-xs mt-1 font-medium ${getTrendColor(stat.trend)}`}>

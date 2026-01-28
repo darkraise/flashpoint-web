@@ -52,6 +52,7 @@ import {
   BatchRemoveFavoritesResponse,
   ClearAllFavoritesResponse
 } from '@/types/favorite';
+import { SystemSettings, PublicSettings } from '@/types/settings';
 import { JobStatusEnriched, JobLogsResponse } from '@/types/jobs';
 import { useAuthStore } from '@/store/auth';
 
@@ -394,33 +395,33 @@ export const authSettingsApi = {
 // ===================================
 
 export const systemSettingsApi = {
-  getAll: async (): Promise<Record<string, Record<string, any>>> => {
-    const { data } = await api.get('/settings');
+  getAll: async (): Promise<SystemSettings> => {
+    const { data } = await api.get<SystemSettings>('/settings');
     return data;
   },
 
-  getPublic: async (): Promise<Record<string, any>> => {
-    const { data } = await api.get('/settings/public');
+  getPublic: async (): Promise<PublicSettings> => {
+    const { data } = await api.get<PublicSettings>('/settings/public');
     return data;
   },
 
-  getCategory: async (category: string): Promise<Record<string, any>> => {
-    const { data } = await api.get(`/settings/${category}`);
+  getCategory: async (category: string): Promise<Record<string, unknown>> => {
+    const { data } = await api.get<Record<string, unknown>>(`/settings/${category}`);
     return data;
   },
 
-  updateCategory: async (category: string, settings: Record<string, any>): Promise<Record<string, any>> => {
-    const { data } = await api.patch(`/settings/${category}`, settings);
+  updateCategory: async (category: string, settings: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    const { data } = await api.patch<Record<string, unknown>>(`/settings/${category}`, settings);
     return data;
   },
 
-  getSetting: async (category: string, key: string): Promise<{ value: any }> => {
-    const { data } = await api.get(`/settings/${category}/${key}`);
+  getSetting: async (category: string, key: string): Promise<{ value: unknown }> => {
+    const { data } = await api.get<{ value: unknown }>(`/settings/${category}/${key}`);
     return data;
   },
 
-  updateSetting: async (category: string, key: string, value: any): Promise<{ value: any }> => {
-    const { data } = await api.patch(`/settings/${category}/${key}`, { value });
+  updateSetting: async (category: string, key: string, value: unknown): Promise<{ value: unknown }> => {
+    const { data } = await api.patch<{ value: unknown }>(`/settings/${category}/${key}`, { value });
     return data;
   },
 
@@ -438,6 +439,13 @@ export const systemSettingsApi = {
 // ===================================
 // Play Tracking API
 // ===================================
+
+export const statisticsApi = {
+  getStatistics: async () => {
+    const { data } = await api.get('/statistics');
+    return data;
+  }
+};
 
 export const playTrackingApi = {
   startSession: async (gameId: string, gameTitle: string): Promise<StartSessionResponse> => {
@@ -695,6 +703,16 @@ export const ruffleApi = {
   }> => {
     const { data } = await api.post('/ruffle/update');
     return data;
+  }
+};
+
+// ===================================
+// GitHub API
+// ===================================
+export const githubApi = {
+  getStarCount: async (): Promise<{ stars: number }> => {
+    const { data } = await api.get<{ success: boolean; data: { stars: number } }>('/github/stars');
+    return data.data;
   }
 };
 

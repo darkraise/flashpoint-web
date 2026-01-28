@@ -226,7 +226,7 @@ This handles cases where Flashpoint stores files with subdomain prefixes but gam
 **Architecture**:
 ```typescript
 class ZipManager {
-  private mountedZips: Map<string, MountedZip>
+  private mountedZips: LRUCache<string, MountedZip>
 
   async mount(id: string, zipPath: string): void
   async unmount(id: string): Promise<boolean>
@@ -234,6 +234,33 @@ class ZipManager {
   async findFile(relPath: string): Promise<{data, mountId} | null>
 }
 ```
+
+**Performance Optimization - LRU Cache**:
+
+The ZIP manager uses an LRU (Least Recently Used) cache to prevent memory leaks and manage resources:
+
+```typescript
+constructor() {
+  this.mountedZips = new LRUCache<string, MountedZip>({
+    max: 100,                  // Maximum 100 mounted ZIPs
+    ttl: 30 * 60 * 1000,      // 30-minute TTL
+    dispose: async (value, key) => {
+      // Auto-cleanup on eviction
+      logger.info(`[ZipManager] Auto-closing evicted ZIP: ${key}`);
+      await value.zip.close();
+    },
+    updateAgeOnGet: true,      // Refresh TTL on access
+    updateAgeOnHas: false
+  });
+}
+```
+
+**Benefits**:
+- Prevents unlimited ZIP mounts (bounded at 100)
+- Automatic cleanup of old mounts after 30 minutes
+- Resource leak prevention via disposal callback
+- TTL refresh on access keeps active ZIPs in memory
+- Graceful eviction when limit reached
 
 **Mounting Process**:
 ```
@@ -293,7 +320,68 @@ getMimeType(ext: string): string {
 - VRML (.wrl) → model/vrml
 - Chemical formats (.pdb, .mol) → chemical/x-*
 
-### 7. HTML Polyfill Injector
+### 7. CORS Utilities
+
+**Purpose**: Centralized CORS header management
+
+**Location**: `game-service/src/utils/cors.ts`
+
+**Benefits**:
+- Eliminates 6+ instances of duplicate CORS header setting
+- Consistent CORS configuration across both servers
+- Reusable functions for standard and preflight requests
+
+**API**:
+
+```typescript
+interface CorsSettings {
+  allowCrossDomain: boolean;
+}
+
+// Standard CORS headers
+function setCorsHeaders(res: ServerResponse, settings: CorsSettings): void
+
+// CORS headers with max-age (for OPTIONS preflight)
+function setCorsHeadersWithMaxAge(
+  res: ServerResponse,
+  settings: CorsSettings,
+  maxAge: number = 86400
+): void
+```
+
+**Usage**:
+
+```typescript
+import { setCorsHeaders, setCorsHeadersWithMaxAge } from '../utils/cors';
+
+// Standard request
+const settings = { allowCrossDomain: true };
+setCorsHeaders(res, settings);
+// Sets: Access-Control-Allow-Origin: *
+//       Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
+//       Access-Control-Allow-Headers: *
+
+// OPTIONS preflight request
+if (req.method === 'OPTIONS') {
+  setCorsHeadersWithMaxAge(res, settings, 86400);
+  res.writeHead(204);
+  res.end();
+  return;
+}
+```
+
+**Security Justification**:
+
+The game-service uses wildcard CORS (`Access-Control-Allow-Origin: *`) which is justified because:
+- Serves public, read-only game content only
+- No sensitive data exposure
+- No authentication required
+- Supports game embedding across different domains
+- Backend service maintains restrictive CORS for sensitive operations
+
+See `docs/12-reference/cors-security-decision.md` for detailed security rationale.
+
+### 8. HTML Polyfill Injector
 
 **Purpose**: Inject compatibility polyfills into HTML files for game engines
 
@@ -510,17 +598,45 @@ try {
 **Critical**: CORS headers MUST be set even for error responses, otherwise browsers show CORS error instead of actual error.
 
 ```typescript
+import { setCorsHeaders } from '../utils/cors';
+
 private sendError(res: Response, status: number, message: string) {
-  // Set CORS headers BEFORE sending error
-  if (settings.allowCrossDomain) {
-    res.setHeader('Access-Control-Allow-Origin', '*')
-  }
-  res.writeHead(status)
-  res.end(message)
+  // Set CORS headers BEFORE sending error (using utility)
+  setCorsHeaders(res, { allowCrossDomain: true });
+  res.writeHead(status);
+  res.end(message);
 }
 ```
 
 ## Security Architecture
+
+### Request Body Size Limits
+
+**DoS Protection**: The GameZip server limits request body sizes to prevent memory exhaustion attacks:
+
+```typescript
+// gamezipserver.ts
+private readBody(req: http.IncomingMessage, maxSize: number = 1024 * 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+      if (body.length > maxSize) {
+        req.destroy();  // Immediately terminate connection
+        reject(new Error('Request body too large'));
+      }
+    });
+    req.on('end', () => resolve(body));
+    req.on('error', reject);
+  });
+}
+```
+
+**Protection**:
+- 1MB maximum request size by default
+- Connection destroyed immediately on overflow
+- Prevents memory exhaustion attacks
+- Configurable per endpoint if needed
 
 ### Path Traversal Prevention
 
@@ -529,9 +645,33 @@ All file paths are normalized:
 path.normalize(filePath).toLowerCase()
 ```
 
+**ZIP Mount ID Validation**:
+```typescript
+// Reject IDs with path traversal sequences
+if (id.includes('/') || id.includes('\\') ||
+    id.includes('..') || id.includes('\0')) {
+  this.sendError(res, 400, 'Invalid mount ID');
+  return;
+}
+```
+
+**ZIP Path Validation**:
+```typescript
+// Ensure ZIP files are within allowed directory
+const resolvedZipPath = path.resolve(normalizedZipPath);
+const resolvedGamesPath = path.resolve(allowedGamesPath);
+
+if (!resolvedZipPath.startsWith(resolvedGamesPath)) {
+  this.sendError(res, 403, 'Forbidden: ZIP file must be within games directory');
+  return;
+}
+```
+
 Prevents attacks like:
 - `../../../etc/passwd`
 - `..\\..\\windows\\system32`
+- Null byte injection (`file.txt\0.jpg`)
+- Directory escape via mount IDs
 
 ### ZIP Access Control
 

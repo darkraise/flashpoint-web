@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 /**
  * User Database Service - Singleton for user.db
@@ -31,14 +32,14 @@ export class UserDatabaseService {
       // Enable foreign keys
       this.db.pragma('foreign_keys = ON');
 
-      // Create tables if not exist
-      await this.createTables();
+      // Bootstrap migration registry
+      await this.bootstrapMigrationRegistry();
 
       // Run migrations
       await this.runMigrations();
 
-      // Create default admin user if no users exist
-      await this.createDefaultAdmin();
+      // Check if initial setup is needed (first user becomes admin)
+      this.needsInitialSetup();
 
       logger.info('[UserDB] User database initialized successfully');
     } catch (error) {
@@ -48,210 +49,138 @@ export class UserDatabaseService {
   }
 
   /**
-   * Create tables from schema SQL file
+   * Bootstrap migration registry table
+   * Creates migrations table if it doesn't exist and detects existing database state
    */
-  private static async createTables(): Promise<void> {
+  private static async bootstrapMigrationRegistry(): Promise<void> {
     try {
-      const schemaPath = path.join(__dirname, '../migrations/001_user-schema.sql');
+      // Check if migrations table exists
+      const hasMigrationsTable = this.db!.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='migrations'"
+      ).get();
 
-      if (!fs.existsSync(schemaPath)) {
-        throw new Error(`Schema file not found: ${schemaPath}`);
+      if (!hasMigrationsTable) {
+        logger.info('[UserDB] Bootstrapping migration registry...');
+
+        // Create migrations table
+        const bootstrapPath = path.join(__dirname, '../migrations/bootstrap.sql');
+        if (fs.existsSync(bootstrapPath)) {
+          const bootstrapSQL = fs.readFileSync(bootstrapPath, 'utf-8');
+          this.db!.exec(bootstrapSQL);
+          logger.info('[UserDB] Migration registry created');
+        } else {
+          throw new Error(`Bootstrap file not found: ${bootstrapPath}`);
+        }
+
+        // Detect existing migrations in legacy databases
+        await this.detectExistingMigrations();
       }
-
-      const schemaSQL = fs.readFileSync(schemaPath, 'utf-8');
-      this.db!.exec(schemaSQL);
-
-      logger.info('[UserDB] Database schema created successfully');
     } catch (error) {
-      logger.error('[UserDB] Failed to create tables:', error);
+      logger.error('[UserDB] Failed to bootstrap migration registry:', error);
       throw error;
     }
   }
 
   /**
-   * Run database migrations
+   * Detect and mark existing migrations for backward compatibility
+   * This method checks for database features and marks corresponding migrations as applied
+   */
+  private static async detectExistingMigrations(): Promise<void> {
+    try {
+      // Check if any tables exist (indicates existing database)
+      const tables = this.db!.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+      ).all() as { name: string }[];
+
+      if (tables.length === 0) {
+        // New database, no detection needed
+        logger.info('[UserDB] New database detected, no legacy migrations to detect');
+        return;
+      }
+
+      logger.info('[UserDB] Existing database detected, detecting applied migrations...');
+
+      // Helper to mark migration as applied
+      const markApplied = (name: string, description: string) => {
+        this.db!.prepare(
+          'INSERT OR IGNORE INTO migrations (name, applied_at, description) VALUES (?, ?, ?)'
+        ).run(name, new Date().toISOString(), description);
+        logger.info(`[UserDB] Marked migration as applied: ${name}`);
+      };
+
+      // Detect 001_initialize_schema (check for users table)
+      if (tables.some(t => t.name === 'users')) {
+        markApplied('001_initialize_schema', 'Detected existing schema');
+      }
+
+      // Detect 002_seed_default_data (check for roles)
+      const hasRoles = this.db!.prepare('SELECT COUNT(*) as count FROM roles').get() as { count: number };
+      if (hasRoles && hasRoles.count > 0) {
+        markApplied('002_seed_default_data', 'Detected existing seed data');
+      }
+
+      logger.info('[UserDB] Legacy migration detection completed');
+    } catch (error) {
+      logger.error('[UserDB] Failed to detect existing migrations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Compute SHA-256 checksum of SQL content
+   */
+  private static computeChecksum(sql: string): string {
+    return crypto.createHash('sha256').update(sql).digest('hex');
+  }
+
+  /**
+   * Run database migrations using registry-based approach
+   * Scans migrations directory and runs any migrations not yet applied
    */
   private static async runMigrations(): Promise<void> {
     try {
-      const tableInfo = this.db!.pragma('table_info(users)') as any[];
+      const migrationDir = path.join(__dirname, '../migrations');
 
-      // Migration 002: Create user_settings table
-      const tables = this.db!.prepare(`
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name='user_settings'
-      `).all();
+      // Get all migration files (*.sql files with numeric prefix)
+      const files = fs.readdirSync(migrationDir)
+        .filter(f => f.endsWith('.sql') && /^\d{3}_/.test(f))
+        .sort(); // Alphabetical sort ensures correct order (001, 002, etc.)
 
-      if (tables.length === 0) {
-        logger.info('[UserDB] Running migration: 002_create-user-settings');
-        const migrationPath = path.join(__dirname, '../migrations/002_create-user-settings.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 002_create-user-settings');
+      logger.info(`[UserDB] Found ${files.length} migration file(s)`);
+
+      for (const file of files) {
+        const name = path.basename(file, '.sql');
+        const migrationPath = path.join(migrationDir, file);
+
+        // Check if migration has already been applied
+        const applied = this.db!.prepare(
+          'SELECT 1 FROM migrations WHERE name = ?'
+        ).get(name);
+
+        if (!applied) {
+          logger.info(`[UserDB] Running migration: ${name}`);
+
+          // Read migration SQL
+          const sql = fs.readFileSync(migrationPath, 'utf-8');
+          const checksum = this.computeChecksum(sql);
+          const start = Date.now();
+
+          // Execute migration
+          this.db!.exec(sql);
+
+          // Record migration in registry
+          const executionTime = Date.now() - start;
+          this.db!.prepare(
+            'INSERT INTO migrations (name, applied_at, checksum, execution_time_ms) VALUES (?, ?, ?, ?)'
+          ).run(name, new Date().toISOString(), checksum, executionTime);
+
+          logger.info(`[UserDB] Migration completed: ${name} (${executionTime}ms)`);
+        } else {
+          logger.debug(`[UserDB] Migration already applied: ${name}`);
         }
       }
 
-      // Migration 003: Create system_settings table
-      const systemSettingsTables = this.db!.prepare(`
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name='system_settings'
-      `).all();
-
-      if (systemSettingsTables.length === 0) {
-        logger.info('[UserDB] Running migration: 003_create-system-settings');
-        const migrationPath = path.join(__dirname, '../migrations/003_create-system-settings.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 003_create-system-settings');
-        }
-      }
-
-      // Migration 004: Add validation schemas
-      const hasValidationSchemas = this.db!.prepare(`
-        SELECT validation_schema FROM system_settings
-        WHERE key = 'auth.user_registration_enabled'
-      `).get() as { validation_schema: string | null } | undefined;
-
-      if (systemSettingsTables.length > 0 && (!hasValidationSchemas || !hasValidationSchemas.validation_schema)) {
-        logger.info('[UserDB] Running migration: 004_add-validation-schemas');
-        const migrationPath = path.join(__dirname, '../migrations/004_add-validation-schemas.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 004_add-validation-schemas');
-        }
-      }
-
-      // Migration 005: User playlists and favorites
-      const userPlaylistsTables = this.db!.prepare(`
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name='user_playlists'
-      `).all();
-
-      if (userPlaylistsTables.length === 0) {
-        logger.info('[UserDB] Running migration: 005_user-playlists-and-favorites');
-        const migrationPath = path.join(__dirname, '../migrations/005_user-playlists-and-favorites.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 005_user-playlists-and-favorites');
-        }
-      }
-
-      // Migration 006: Jobs settings
-      const hasJobsSettings = this.db!.prepare(`
-        SELECT COUNT(*) as count FROM system_settings
-        WHERE category = 'jobs'
-      `).get() as { count: number } | undefined;
-
-      if (systemSettingsTables.length > 0 && (!hasJobsSettings || hasJobsSettings.count === 0)) {
-        logger.info('[UserDB] Running migration: 006_create-jobs-settings');
-        const migrationPath = path.join(__dirname, '../migrations/006_create-jobs-settings.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 006_create-jobs-settings');
-        }
-      }
-
-      // Migration 007: Job execution logs
-      const jobExecutionLogsTables = this.db!.prepare(`
-        SELECT name FROM sqlite_master
-        WHERE type='table' AND name='job_execution_logs'
-      `).all();
-
-      if (jobExecutionLogsTables.length === 0) {
-        logger.info('[UserDB] Running migration: 007_create-job-execution-logs');
-        const migrationPath = path.join(__dirname, '../migrations/007_create-job-execution-logs.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 007_create-job-execution-logs');
-        }
-      }
-
-      // Migration 008: Convert interval to cron
-      const hasCronSchedule = this.db!.prepare(`
-        SELECT COUNT(*) as count FROM system_settings
-        WHERE key = 'jobs.metadata_sync_schedule'
-      `).get() as { count: number } | undefined;
-
-      if (systemSettingsTables.length > 0 && (!hasCronSchedule || hasCronSchedule.count === 0)) {
-        logger.info('[UserDB] Running migration: 008_convert-interval-to-cron');
-        const migrationPath = path.join(__dirname, '../migrations/008_convert-interval-to-cron.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 008_convert-interval-to-cron');
-        }
-      }
-
-      // Migration 013: Add datetime format settings (system-wide)
-      const hasDateFormatSetting = this.db!.prepare(`
-        SELECT COUNT(*) as count FROM system_settings
-        WHERE key = 'app.date_format'
-      `).get() as { count: number } | undefined;
-
-      if (systemSettingsTables.length > 0 && (!hasDateFormatSetting || hasDateFormatSetting.count === 0)) {
-        logger.info('[UserDB] Running migration: 013_add-datetime-format-settings');
-        const migrationPath = path.join(__dirname, '../migrations/013_add-datetime-format-settings.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 013_add-datetime-format-settings');
-        }
-      }
-
-      // Migration 014: Add user-specific datetime format settings
-      const hasUserDateFormatSetting = this.db!.prepare(`
-        SELECT COUNT(*) as count FROM user_settings
-        WHERE setting_key = 'date_format'
-      `).get() as { count: number } | undefined;
-
-      if (!hasUserDateFormatSetting || hasUserDateFormatSetting.count === 0) {
-        logger.info('[UserDB] Running migration: 014_add-user-datetime-format-settings');
-        const migrationPath = path.join(__dirname, '../migrations/014_add-user-datetime-format-settings.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 014_add-user-datetime-format-settings');
-        }
-      }
-
-      // Migration 015: Standardize datetime to ISO 8601 UTC format
-      // Check if migration has run by looking for ISO format (contains 'T') in datetime columns
-      const sampleUser = this.db!.prepare(`
-        SELECT created_at FROM users LIMIT 1
-      `).get() as { created_at: string } | undefined;
-
-      const needsDateTimeMigration = sampleUser && sampleUser.created_at && !sampleUser.created_at.includes('T');
-
-      if (needsDateTimeMigration) {
-        logger.info('[UserDB] Running migration: 015_standardize-datetime-to-iso8601');
-        const migrationPath = path.join(__dirname, '../migrations/015_standardize-datetime-to-iso8601.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 015_standardize-datetime-to-iso8601');
-        }
-      }
-
-      // Migration 016: Add Ruffle update job settings
-      const hasRuffleJobSetting = this.db!.prepare(`
-        SELECT COUNT(*) as count FROM system_settings
-        WHERE key = 'jobs.ruffle_update_enabled'
-      `).get() as { count: number } | undefined;
-
-      if (systemSettingsTables.length > 0 && (!hasRuffleJobSetting || hasRuffleJobSetting.count === 0)) {
-        logger.info('[UserDB] Running migration: 016_add-ruffle-update-job-settings');
-        const migrationPath = path.join(__dirname, '../migrations/016_add-ruffle-update-job-settings.sql');
-        if (fs.existsSync(migrationPath)) {
-          const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-          this.db!.exec(migrationSQL);
-          logger.info('[UserDB] Migration completed: 016_add-ruffle-update-job-settings');
-        }
-      }
+      logger.info('[UserDB] All migrations completed successfully');
     } catch (error) {
       logger.error('[UserDB] Failed to run migrations:', error);
       throw error;
@@ -259,40 +188,27 @@ export class UserDatabaseService {
   }
 
   /**
-   * Create default admin user if no users exist
+   * Check if the system needs initial setup (no users exist)
    */
-  private static async createDefaultAdmin(): Promise<void> {
+  static needsInitialSetup(): boolean {
     try {
       const userCount = this.get('SELECT COUNT(*) as count FROM users', []);
+      const needsSetup = userCount?.count === 0;
 
-      if (userCount?.count === 0) {
-        // Default admin credentials (MUST be changed on first login)
-        const defaultUsername = 'admin';
-        const defaultPassword = 'admin123';
-        const defaultEmail = 'admin@flashpoint.local';
-
-        // Hash password
-        const passwordHash = await bcrypt.hash(defaultPassword, config.bcryptSaltRounds);
-
-        // Create admin user (role_id = 1 for admin)
-        this.run(
-          'INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)',
-          [defaultUsername, defaultEmail, passwordHash, 1]
-        );
-
-        logger.warn('╔═══════════════════════════════════════════════════════════════╗');
-        logger.warn('║  DEFAULT ADMIN USER CREATED                                   ║');
-        logger.warn('║  Username: admin                                              ║');
-        logger.warn('║  Password: admin123                                           ║');
-        logger.warn('║                                                               ║');
-        logger.warn('║  ⚠️  SECURITY WARNING: CHANGE THIS PASSWORD IMMEDIATELY! ⚠️   ║');
-        logger.warn('╚═══════════════════════════════════════════════════════════════╝');
+      if (needsSetup) {
+        logger.info('╔═══════════════════════════════════════════════════════════════╗');
+        logger.info('║  INITIAL SETUP REQUIRED                                       ║');
+        logger.info('║  No users found in database.                                  ║');
+        logger.info('║  The first registered user will become an administrator.      ║');
+        logger.info('╚═══════════════════════════════════════════════════════════════╝');
       } else {
         logger.debug(`[UserDB] Found ${userCount.count} existing user(s)`);
       }
+
+      return needsSetup;
     } catch (error) {
-      logger.error('[UserDB] Failed to create default admin:', error);
-      throw error;
+      logger.error('[UserDB] Failed to check initial setup status:', error);
+      return false;
     }
   }
 
@@ -309,11 +225,11 @@ export class UserDatabaseService {
   /**
    * Execute a query and return all rows
    */
-  static exec(sql: string, params: any[] = []): any[] {
+  static exec<T = any>(sql: string, params: any[] = []): T[] {
     const db = this.getDatabase();
     try {
       const stmt = db.prepare(sql);
-      return stmt.all(params);
+      return stmt.all(params) as T[];
     } catch (error) {
       logger.error('[UserDB] Query error:', { sql, params, error });
       throw error;
@@ -323,11 +239,12 @@ export class UserDatabaseService {
   /**
    * Execute a query and return first row
    */
-  static get(sql: string, params: any[] = []): any | null {
+  static get<T = any>(sql: string, params: any[] = []): T | undefined {
     const db = this.getDatabase();
     try {
       const stmt = db.prepare(sql);
-      return stmt.get(params) || null;
+      const result = stmt.get(params);
+      return result as T | undefined;
     } catch (error) {
       logger.error('[UserDB] Get error:', { sql, params, error });
       throw error;
@@ -337,8 +254,8 @@ export class UserDatabaseService {
   /**
    * Execute a query and return all rows (alias for exec)
    */
-  static all(sql: string, params: any[] = []): any[] {
-    return this.exec(sql, params);
+  static all<T = any>(sql: string, params: any[] = []): T[] {
+    return this.exec<T>(sql, params);
   }
 
   /**

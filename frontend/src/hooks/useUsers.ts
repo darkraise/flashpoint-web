@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../lib/api';
 import { CreateUserData, UpdateUserData, ChangePasswordData } from '../types/auth';
 import { useDialog } from '@/contexts/DialogContext';
+import { getErrorMessage } from '@/types/api-error';
 
 /**
  * Hook to fetch all users with pagination
@@ -47,8 +48,8 @@ export function useCreateUser() {
 
       showToast('User created successfully', 'success');
     },
-    onError: (err: any) => {
-      const message = err?.response?.data?.error?.message || 'Failed to create user';
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err) || 'Failed to create user';
       showToast(message, 'error');
     }
   });
@@ -74,8 +75,8 @@ export function useUpdateUser() {
 
       showToast('User updated successfully', 'success');
     },
-    onError: (err: any) => {
-      const message = err?.response?.data?.error?.message || 'Failed to update user';
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err) || 'Failed to update user';
       showToast(message, 'error');
     }
   });
@@ -101,14 +102,14 @@ export function useDeleteUser() {
       return { previousQueries };
     },
 
-    onError: (err: any, _id, context) => {
+    onError: (err: unknown, _id, context) => {
       if (context?.previousQueries) {
         // Restore all user queries
         context.previousQueries.forEach(([queryKey, data]) => {
           queryClient.setQueryData(queryKey, data);
         });
       }
-      const message = err?.response?.data?.error?.message || 'Failed to delete user';
+      const message = getErrorMessage(err) || 'Failed to delete user';
       showToast(message, 'error');
     },
 
@@ -137,8 +138,8 @@ export function useChangePassword() {
     onSuccess: () => {
       showToast('Password changed successfully', 'success');
     },
-    onError: (err: any) => {
-      const message = err?.response?.data?.error?.message || 'Failed to change password';
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err) || 'Failed to change password';
       showToast(message, 'error');
     }
   });

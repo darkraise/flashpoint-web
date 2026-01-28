@@ -1,6 +1,7 @@
 import StreamZip from 'node-stream-zip';
 import path from 'path';
 import fs from 'fs/promises';
+import { LRUCache } from 'lru-cache';
 import { logger } from './utils/logger';
 
 interface MountedZip {
@@ -11,7 +12,29 @@ interface MountedZip {
 }
 
 export class ZipManager {
-  private mountedZips: Map<string, MountedZip> = new Map();
+  // Use LRU cache to prevent memory leaks from unlimited ZIP mounts
+  // Max 100 concurrent mounts, 30-minute TTL, auto-close on eviction
+  private mountedZips: LRUCache<string, MountedZip>;
+
+  constructor() {
+    this.mountedZips = new LRUCache<string, MountedZip>({
+      max: 100, // Maximum 100 ZIPs mounted simultaneously
+      ttl: 30 * 60 * 1000, // 30-minute TTL
+      dispose: async (value, key) => {
+        // Automatically close ZIP when evicted from cache
+        try {
+          logger.info(`[ZipManager] Auto-closing evicted ZIP: ${key}`);
+          await value.zip.close();
+        } catch (error) {
+          logger.error(`[ZipManager] Error closing evicted ZIP ${key}:`, error);
+        }
+      },
+      // Update access time on get
+      updateAgeOnGet: true,
+      // Don't update on has() check
+      updateAgeOnHas: false
+    });
+  }
 
   /**
    * Mount a ZIP file for serving
@@ -137,7 +160,8 @@ export class ZipManager {
   getMountedZips(): Array<{ id: string; zipPath: string; mountTime: Date; fileCount: number }> {
     const result: Array<{ id: string; zipPath: string; mountTime: Date; fileCount: number }> = [];
 
-    for (const [id, mounted] of this.mountedZips) {
+    // LRU cache provides entries() iterator
+    for (const [id, mounted] of this.mountedZips.entries()) {
       result.push({
         id,
         zipPath: mounted.zipPath,

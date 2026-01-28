@@ -13,8 +13,21 @@ export interface Statistics {
 
 export class StatisticsService {
   private playlistService = new PlaylistService();
+  private cache: { data: Statistics | null; timestamp: number } = {
+    data: null,
+    timestamp: 0
+  };
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   async getStatistics(): Promise<Statistics> {
+    // Check if cache is valid
+    const now = Date.now();
+    const cacheAge = now - this.cache.timestamp;
+
+    if (this.cache.data && cacheAge < this.CACHE_TTL) {
+      logger.debug(`Returning cached statistics (age: ${Math.round(cacheAge / 1000)}s)`);
+      return this.cache.data;
+    }
     try {
       // Get total games count
       const totalGamesResult = DatabaseService.get(
@@ -94,6 +107,12 @@ export class StatisticsService {
       };
 
       logger.debug('Statistics calculated:', statistics);
+
+      // Update cache
+      this.cache = {
+        data: statistics,
+        timestamp: Date.now()
+      };
 
       return statistics;
     } catch (error) {

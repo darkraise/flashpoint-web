@@ -1,6 +1,35 @@
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 dotenv.config();
+
+/**
+ * Generate a secure JWT secret for development environments
+ * In production, JWT_SECRET MUST be provided as an environment variable
+ */
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+
+  if (secret) {
+    return secret;
+  }
+
+  // In production, fail fast if JWT_SECRET is not set
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'FATAL: JWT_SECRET environment variable is required in production.\n' +
+      'Generate a secure secret: openssl rand -base64 64\n' +
+      'Set it in your .env file or environment variables.'
+    );
+  }
+
+  // In development, generate a random secret and warn
+  const devSecret = `INSECURE-DEV-ONLY-${crypto.randomBytes(32).toString('hex')}`;
+  console.warn('\n⚠️  WARNING: Using auto-generated JWT secret for development.');
+  console.warn('   In production, set JWT_SECRET environment variable.\n');
+
+  return devSecret;
+}
 
 export const config = {
   // Server
@@ -49,7 +78,7 @@ export const config = {
   userDbPath: process.env.USER_DB_PATH || './user.db',
 
   // JWT Configuration
-  jwtSecret: process.env.JWT_SECRET || 'change-in-production-use-long-random-string',
+  jwtSecret: getJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
 
   // Security

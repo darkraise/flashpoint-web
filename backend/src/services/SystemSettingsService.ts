@@ -1,4 +1,5 @@
 import { UserDatabaseService } from './UserDatabaseService';
+import { SettingValue, SettingRow, CategorySettings, SettingDataType } from '../types/settings';
 
 /**
  * System Settings Service
@@ -8,11 +9,11 @@ export class SystemSettingsService {
   /**
    * Get a single setting by key
    */
-  get(key: string): any {
+  get(key: string): SettingValue | null {
     const row = UserDatabaseService.get(
       'SELECT value, data_type, default_value FROM system_settings WHERE key = ?',
       [key]
-    );
+    ) as SettingRow | undefined;
 
     if (!row) {
       return null;
@@ -25,20 +26,23 @@ export class SystemSettingsService {
   /**
    * Get all settings in a category
    */
-  getCategory(category: string): Record<string, any> {
+  getCategory(category: string): CategorySettings {
     const rows = UserDatabaseService.all(
       'SELECT key, value, data_type, default_value FROM system_settings WHERE category = ?',
       [category]
-    );
+    ) as SettingRow[];
 
-    const settings: Record<string, any> = {};
+    const settings: CategorySettings = {};
 
-    rows.forEach((row: any) => {
+    rows.forEach((row) => {
       // Remove category prefix from key (e.g., 'auth.guest_access_enabled' -> 'guestAccessEnabled')
       const shortKey = row.key.replace(`${category}.`, '');
       const camelCaseKey = this.snakeToCamel(shortKey);
       const valueToUse = row.value || row.default_value;
-      settings[camelCaseKey] = this.parseValue(valueToUse, row.data_type);
+      const parsedValue = this.parseValue(valueToUse, row.data_type);
+      if (parsedValue !== null) {
+        settings[camelCaseKey] = parsedValue;
+      }
     });
 
     return settings;
@@ -47,15 +51,15 @@ export class SystemSettingsService {
   /**
    * Get all settings grouped by category
    */
-  getAll(): Record<string, Record<string, any>> {
+  getAll(): Record<string, CategorySettings> {
     const rows = UserDatabaseService.all(
       'SELECT key, value, data_type, default_value, category FROM system_settings',
       []
-    );
+    ) as SettingRow[];
 
-    const allSettings: Record<string, Record<string, any>> = {};
+    const allSettings: Record<string, CategorySettings> = {};
 
-    rows.forEach((row: any) => {
+    rows.forEach((row) => {
       if (!allSettings[row.category]) {
         allSettings[row.category] = {};
       }
@@ -63,7 +67,10 @@ export class SystemSettingsService {
       const shortKey = row.key.replace(`${row.category}.`, '');
       const camelCaseKey = this.snakeToCamel(shortKey);
       const valueToUse = row.value || row.default_value;
-      allSettings[row.category][camelCaseKey] = this.parseValue(valueToUse, row.data_type);
+      const parsedValue = this.parseValue(valueToUse, row.data_type);
+      if (parsedValue !== null) {
+        allSettings[row.category][camelCaseKey] = parsedValue;
+      }
     });
 
     return allSettings;
@@ -72,7 +79,7 @@ export class SystemSettingsService {
   /**
    * Set a single setting by key
    */
-  set(key: string, value: any, updatedBy?: number): void {
+  set(key: string, value: SettingValue, updatedBy?: number): void {
     // Validate before setting
     this.validate(key, value);
 
@@ -89,7 +96,7 @@ export class SystemSettingsService {
   /**
    * Update multiple settings in a category
    */
-  updateCategory(category: string, settings: Record<string, any>, updatedBy?: number): void {
+  updateCategory(category: string, settings: CategorySettings, updatedBy?: number): void {
     // Use individual updates (transactions would require accessing private db property)
     Object.entries(settings).forEach(([key, value]) => {
       const snakeKey = this.camelToSnake(key);
@@ -101,15 +108,15 @@ export class SystemSettingsService {
   /**
    * Get public settings (accessible without authentication)
    */
-  getPublicSettings(): Record<string, any> {
+  getPublicSettings(): Record<string, CategorySettings> {
     const rows = UserDatabaseService.all(
       'SELECT key, value, data_type, default_value, category FROM system_settings WHERE is_public = 1',
       []
-    );
+    ) as SettingRow[];
 
-    const publicSettings: Record<string, Record<string, any>> = {};
+    const publicSettings: Record<string, CategorySettings> = {};
 
-    rows.forEach((row: any) => {
+    rows.forEach((row) => {
       if (!publicSettings[row.category]) {
         publicSettings[row.category] = {};
       }
@@ -117,7 +124,10 @@ export class SystemSettingsService {
       const shortKey = row.key.replace(`${row.category}.`, '');
       const camelCaseKey = this.snakeToCamel(shortKey);
       const valueToUse = row.value || row.default_value;
-      publicSettings[row.category][camelCaseKey] = this.parseValue(valueToUse, row.data_type);
+      const parsedValue = this.parseValue(valueToUse, row.data_type);
+      if (parsedValue !== null) {
+        publicSettings[row.category][camelCaseKey] = parsedValue;
+      }
     });
 
     return publicSettings;
@@ -155,12 +165,12 @@ export class SystemSettingsService {
     category: string;
     description: string | null;
     isPublic: boolean;
-    defaultValue: any;
+    defaultValue: SettingValue | null;
   } | null {
     const row = UserDatabaseService.get(
       'SELECT key, data_type, category, description, is_public, default_value FROM system_settings WHERE key = ?',
       [key]
-    );
+    ) as SettingRow | undefined;
 
     if (!row) {
       return null;
@@ -179,11 +189,11 @@ export class SystemSettingsService {
   /**
    * Validate a value against its JSON schema
    */
-  validate(key: string, value: any): void {
+  validate(key: string, value: SettingValue): void {
     const row = UserDatabaseService.get(
       'SELECT validation_schema, data_type FROM system_settings WHERE key = ?',
       [key]
-    );
+    ) as SettingRow | undefined;
 
     if (!row || !row.validation_schema) {
       return; // No validation schema defined
@@ -200,9 +210,9 @@ export class SystemSettingsService {
   /**
    * Validate value against JSON schema
    */
-  private validateAgainstSchema(value: any, schema: any, key: string): void {
+  private validateAgainstSchema(value: SettingValue, schema: Record<string, unknown>, key: string): void {
     // Type validation
-    if (schema.type) {
+    if (typeof schema.type === 'string') {
       const actualType = this.getType(value);
 
       // Allow integers when schema expects 'number' (e.g., 0, 1 are valid for float settings)
@@ -215,26 +225,30 @@ export class SystemSettingsService {
     }
 
     // Enum validation
-    if (schema.enum && !schema.enum.includes(value)) {
-      throw new Error(`Setting '${key}' must be one of: ${schema.enum.join(', ')}`);
+    if (Array.isArray(schema.enum)) {
+      if (!schema.enum.includes(value)) {
+        throw new Error(`Setting '${key}' must be one of: ${schema.enum.join(', ')}`);
+      }
     }
 
     // Number/Integer validation
     if (schema.type === 'integer' || schema.type === 'number') {
-      if (schema.minimum !== undefined && value < schema.minimum) {
-        throw new Error(`Setting '${key}' must be >= ${schema.minimum}`);
-      }
-      if (schema.maximum !== undefined && value > schema.maximum) {
-        throw new Error(`Setting '${key}' must be <= ${schema.maximum}`);
+      if (typeof value === 'number') {
+        if (typeof schema.minimum === 'number' && value < schema.minimum) {
+          throw new Error(`Setting '${key}' must be >= ${schema.minimum}`);
+        }
+        if (typeof schema.maximum === 'number' && value > schema.maximum) {
+          throw new Error(`Setting '${key}' must be <= ${schema.maximum}`);
+        }
       }
     }
 
     // String validation
-    if (schema.type === 'string') {
-      if (schema.minLength !== undefined && value.length < schema.minLength) {
+    if (schema.type === 'string' && typeof value === 'string') {
+      if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
         throw new Error(`Setting '${key}' must be at least ${schema.minLength} characters`);
       }
-      if (schema.maxLength !== undefined && value.length > schema.maxLength) {
+      if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
         throw new Error(`Setting '${key}' must be at most ${schema.maxLength} characters`);
       }
     }
@@ -243,7 +257,7 @@ export class SystemSettingsService {
   /**
    * Get JavaScript type name for validation
    */
-  private getType(value: any): string {
+  private getType(value: SettingValue): string {
     if (typeof value === 'boolean') return 'boolean';
     if (typeof value === 'string') return 'string';
     if (typeof value === 'number') {
@@ -258,7 +272,7 @@ export class SystemSettingsService {
   /**
    * Parse value based on data type
    */
-  private parseValue(value: string | null, dataType: string): any {
+  private parseValue(value: string | null, dataType: SettingDataType): SettingValue | null {
     if (value === null || value === undefined) {
       return null;
     }
@@ -266,9 +280,7 @@ export class SystemSettingsService {
     switch (dataType) {
       case 'boolean':
         return value === '1' || value === 'true';
-      case 'integer':
-        return parseInt(value, 10);
-      case 'float':
+      case 'number':
         return parseFloat(value);
       case 'json':
         try {
@@ -285,11 +297,11 @@ export class SystemSettingsService {
   /**
    * Stringify value for storage
    */
-  private stringifyValue(value: any): string {
+  private stringifyValue(value: SettingValue): string {
     if (typeof value === 'boolean') {
       return value ? '1' : '0';
     }
-    if (typeof value === 'object') {
+    if (typeof value === 'object' && value !== null) {
       return JSON.stringify(value);
     }
     return String(value);

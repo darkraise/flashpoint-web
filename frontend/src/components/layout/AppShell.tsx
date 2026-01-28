@@ -28,10 +28,10 @@ export function AppShell({ children }: AppShellProps) {
 
       <Header />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         <Sidebar isOpen={sidebarOpen} />
 
-        <main id="main-content" className="flex-1 overflow-auto bg-background p-6">
+        <main id="main-content" className="flex-1 overflow-auto bg-background p-6 min-h-0">
           {children}
         </main>
       </div>

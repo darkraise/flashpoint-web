@@ -11,6 +11,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  assetsInclude: ['**/*.wasm'],
   build: {
     rollupOptions: {
       output: {
@@ -58,6 +59,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'credentialless',
+      'Cross-Origin-Opener-Policy': 'same-origin'
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3100',
@@ -68,5 +73,8 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  optimizeDeps: {
+    exclude: ['*.wasm']
   }
 });

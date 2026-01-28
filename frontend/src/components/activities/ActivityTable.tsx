@@ -1,14 +1,16 @@
-import { useState, useEffect, memo, useMemo } from 'react';
-import { ColumnDef } from '@tanstack/react-table';
-import { ChevronDown, Info, AlertCircle } from 'lucide-react';
+import { useState, useEffect, memo, useMemo, useCallback, useRef, useTransition } from 'react';
+import { ColumnDef, SortingState } from '@tanstack/react-table';
+import { ChevronDown, AlertCircle } from 'lucide-react';
 import { useActivities } from '../../hooks/useActivities';
 import { useDebounce } from '../../hooks/useDebounce';
 import { ActivityFilters } from '../../types/auth';
+import { getApiErrorMessage } from '@/utils/errorUtils';
 import { DataTable } from '../ui/data-table';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { DatePicker } from '../ui/date-picker';
 import { FormattedDate } from '../common/FormattedDate';
 import {
   Collapsible,
@@ -18,7 +20,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
 
@@ -33,42 +34,6 @@ interface ActivityLog {
   userAgent: string | null;
   createdAt: string;
 }
-
-interface ActivityTableProps {
-  dashboardFilter?: string;
-}
-
-// Helper to get filter display info
-const getDashboardFilterInfo = (filter: string) => {
-  const filterMap: Record<string, { label: string; hint: string; suggestion?: string }> = {
-    auth: {
-      label: 'Authentication Events',
-      hint: 'Try filtering by action: "login", "logout", "register", or "auth.login.failed"',
-      suggestion: 'login'
-    },
-    failed: {
-      label: 'Failed Operations',
-      hint: 'Look for actions containing "fail" or "error" in the action column',
-    },
-    system: {
-      label: 'System Events',
-      hint: 'Look for entries with "System" in the User column',
-    },
-    users: {
-      label: 'Unique Active Users',
-      hint: 'View all user activities below',
-    },
-    peak: {
-      label: 'Peak Activity Hour',
-      hint: 'View all activities below',
-    },
-    total: {
-      label: 'Total Activities',
-      hint: 'Showing all activities',
-    },
-  };
-  return filterMap[filter] || null;
-};
 
 // Constants
 const PAGINATION_LIMIT = 20;
@@ -90,6 +55,8 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
   {
     accessorKey: 'createdAt',
     header: 'Timestamp',
+    enableSorting: true,
+    sortDescFirst: true,
     cell: ({ row }) => {
       const timestamp = row.getValue('createdAt') as string;
       return (
@@ -102,6 +69,7 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
   {
     accessorKey: 'username',
     header: 'User',
+    enableSorting: true,
     cell: ({ row }) => {
       const username = row.getValue('username') as string | null;
       return (
@@ -114,6 +82,7 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
   {
     accessorKey: 'action',
     header: 'Action',
+    enableSorting: true,
     cell: ({ row }) => {
       const action = row.getValue('action') as string;
       return (
@@ -126,6 +95,7 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
   {
     accessorKey: 'resource',
     header: 'Resource',
+    enableSorting: true,
     cell: ({ row }) => {
       const resource = row.getValue('resource') as string | null;
       const resourceId = row.original.resourceId;
@@ -142,6 +112,7 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
   {
     accessorKey: 'ipAddress',
     header: 'IP Address',
+    enableSorting: true,
     cell: ({ row }) => {
       const ipAddress = row.getValue('ipAddress') as string | null;
       return (
@@ -154,69 +125,61 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
   {
     accessorKey: 'userAgent',
     header: 'User Agent',
+    enableSorting: false,
     cell: ({ row }) => {
       const userAgent = row.getValue('userAgent') as string | null;
       if (!userAgent) {
         return <div className="text-muted-foreground text-xs">-</div>;
       }
       return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-muted-foreground text-xs max-w-xs truncate cursor-help">
-                {userAgent}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-md">
-              <p className="text-xs break-all">{userAgent}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="text-muted-foreground text-xs max-w-xs truncate cursor-help">
+              {userAgent}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-md">
+            <p className="text-xs break-all">{userAgent}</p>
+          </TooltipContent>
+        </Tooltip>
       );
     },
   },
 ];
 
-function ActivityTableComponent({ dashboardFilter }: ActivityTableProps) {
+function ActivityTableComponent() {
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const limit = PAGINATION_LIMIT;
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<'createdAt' | 'username' | 'action' | 'resource' | 'ipAddress'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Ref to track current sorting state without closure issues
+  const sortingStateRef = useRef<SortingState>([{ id: 'createdAt', desc: true }]);
+
+  // Transition for deferred state updates
+  const [, startTransition] = useTransition();
 
   // Immediate input values (not debounced)
   const [usernameInput, setUsernameInput] = useState('');
   const [actionInput, setActionInput] = useState('');
   const [resourceInput, setResourceInput] = useState('');
-  const [startDateInput, setStartDateInput] = useState('');
-  const [endDateInput, setEndDateInput] = useState('');
+  const [startDateInput, setStartDateInput] = useState<Date | undefined>(undefined);
+  const [endDateInput, setEndDateInput] = useState<Date | undefined>(undefined);
   const [dateRangeError, setDateRangeError] = useState<string>('');
 
   // Debounced values for API calls
   const debouncedUsername = useDebounce(usernameInput, DEBOUNCE_DELAY);
   const debouncedAction = useDebounce(actionInput, DEBOUNCE_DELAY);
   const debouncedResource = useDebounce(resourceInput, DEBOUNCE_DELAY);
-  const debouncedStartDate = useDebounce(startDateInput, DEBOUNCE_DELAY);
-  const debouncedEndDate = useDebounce(endDateInput, DEBOUNCE_DELAY);
 
-  // Auto-expand filters and apply suggestion when dashboard filter changes
-  useEffect(() => {
-    if (dashboardFilter) {
-      const filterInfo = getDashboardFilterInfo(dashboardFilter);
-      if (filterInfo?.suggestion && !actionInput) {
-        setActionInput(filterInfo.suggestion);
-      }
-      setShowFilters(true);
-      setPage(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dashboardFilter]);
 
   // Validate date range
   useEffect(() => {
-    if (debouncedStartDate && debouncedEndDate) {
-      const start = new Date(debouncedStartDate);
-      const end = new Date(debouncedEndDate);
-
-      if (end < start) {
+    if (startDateInput && endDateInput) {
+      if (endDateInput < startDateInput) {
         setDateRangeError('End date must be after or equal to start date');
       } else {
         setDateRangeError('');
@@ -224,27 +187,61 @@ function ActivityTableComponent({ dashboardFilter }: ActivityTableProps) {
     } else {
       setDateRangeError('');
     }
-  }, [debouncedStartDate, debouncedEndDate]);
+  }, [startDateInput, endDateInput]);
 
-  // Build filters object from debounced values
+  // Build filters object - convert Date objects to ISO strings for API
   // Only include dates if the range is valid
-  const hasValidDateRange = !dateRangeError || (!debouncedStartDate && !debouncedEndDate);
+  const hasValidDateRange = !dateRangeError || (!startDateInput && !endDateInput);
   const filters: ActivityFilters = useMemo(() => ({
     username: debouncedUsername || undefined,
     action: debouncedAction || undefined,
     resource: debouncedResource || undefined,
-    startDate: hasValidDateRange ? (debouncedStartDate || undefined) : undefined,
-    endDate: hasValidDateRange ? (debouncedEndDate || undefined) : undefined,
-  }), [debouncedUsername, debouncedAction, debouncedResource, debouncedStartDate, debouncedEndDate, hasValidDateRange]);
+    startDate: hasValidDateRange && startDateInput ? startDateInput.toISOString() : undefined,
+    endDate: hasValidDateRange && endDateInput ? endDateInput.toISOString() : undefined,
+    sortBy,
+    sortOrder,
+  }), [debouncedUsername, debouncedAction, debouncedResource, startDateInput, endDateInput, hasValidDateRange, sortBy, sortOrder]);
 
   const { data, isLoading, isError, error } = useActivities(page, limit, filters);
+
+  // Convert sorting state to TanStack Table format
+  const sortingState: SortingState = useMemo(() => [
+    { id: sortBy, desc: sortOrder === 'desc' }
+  ], [sortBy, sortOrder]);
+
+  // Keep ref in sync with sortingState
+  useEffect(() => {
+    sortingStateRef.current = sortingState;
+  }, [sortingState]);
+
+  // Handle sorting changes from DataTable
+  const handleSortingChange = useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+    // Use the ref to get the current state, avoiding stale closure
+    const newSorting = typeof updaterOrValue === 'function'
+      ? updaterOrValue(sortingStateRef.current)
+      : updaterOrValue;
+
+    // Wrap state updates in transition to defer prop changes
+    startTransition(() => {
+      if (newSorting.length === 0) {
+        // Reset to default when cleared
+        setSortBy('createdAt');
+        setSortOrder('desc');
+      } else {
+        const { id, desc } = newSorting[0];
+        setSortBy(id as typeof sortBy);
+        setSortOrder(desc ? 'desc' : 'asc');
+      }
+      setPage(1); // Reset to first page on sort change
+    });
+  }, []); // Empty dependency array - callback is stable
 
   const handleClearFilters = () => {
     setUsernameInput('');
     setActionInput('');
     setResourceInput('');
-    setStartDateInput('');
-    setEndDateInput('');
+    setStartDateInput(undefined);
+    setEndDateInput(undefined);
     setDateRangeError('');
     setPage(1);
   };
@@ -265,33 +262,13 @@ function ActivityTableComponent({ dashboardFilter }: ActivityTableProps) {
   if (isError) {
     return (
       <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-destructive">
-        Error loading activity logs:{' '}
-        {(error as any)?.response?.data?.error?.message || 'Unknown error'}
+        Error loading activity logs: {getApiErrorMessage(error, 'Unknown error')}
       </div>
     );
   }
 
-  const dashboardFilterInfo = dashboardFilter ? getDashboardFilterInfo(dashboardFilter) : null;
-
   return (
     <div className="space-y-4">
-      {/* Dashboard Filter Indicator */}
-      {dashboardFilterInfo && (
-        <div className="flex items-start gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
-          <Info className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="default" className="font-semibold">
-                {dashboardFilterInfo.label}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {dashboardFilterInfo.hint}
-            </p>
-          </div>
-        </div>
-      )}
-
       <Collapsible open={showFilters} onOpenChange={setShowFilters}>
         <div className="flex items-center justify-between">
           <CollapsibleTrigger asChild>
@@ -368,30 +345,30 @@ function ActivityTableComponent({ dashboardFilter }: ActivityTableProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start-date-filter">Start Date</Label>
-                  <Input
+                  <DatePicker
                     id="start-date-filter"
-                    type="datetime-local"
-                    value={startDateInput}
-                    onChange={(e) => {
-                      setStartDateInput(e.target.value);
+                    date={startDateInput}
+                    onDateChange={(date) => {
+                      setStartDateInput(date);
                       setPage(1);
                     }}
                     placeholder="Filter by start date"
+                    clearable={true}
                     className={dateRangeError ? 'border-destructive' : ''}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="end-date-filter">End Date</Label>
-                  <Input
+                  <DatePicker
                     id="end-date-filter"
-                    type="datetime-local"
-                    value={endDateInput}
-                    onChange={(e) => {
-                      setEndDateInput(e.target.value);
+                    date={endDateInput}
+                    onDateChange={(date) => {
+                      setEndDateInput(date);
                       setPage(1);
                     }}
                     placeholder="Filter by end date"
+                    clearable={true}
                     className={dateRangeError ? 'border-destructive' : ''}
                   />
                 </div>
@@ -413,8 +390,11 @@ function ActivityTableComponent({ dashboardFilter }: ActivityTableProps) {
         data={data?.data || []}
         pagination={data?.pagination}
         onPageChange={setPage}
+        sorting={sortingState}
+        onSortingChange={handleSortingChange}
         isLoading={isLoading}
         emptyMessage="No activity logs found"
+        caption="Activity logs showing user actions and system events"
       />
     </div>
   );

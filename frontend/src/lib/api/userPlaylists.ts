@@ -1,0 +1,105 @@
+import { apiClient } from './client';
+import type {
+  UserPlaylist,
+  CreatePlaylistData,
+  UpdatePlaylistData,
+  PlaylistStats,
+} from '@/types/playlist';
+import type { Game } from '@/types/game';
+
+/**
+ * User Playlists API
+ *
+ * Manages user-created custom playlists
+ */
+export const userPlaylistsApi = {
+  /**
+   * Get all user playlists
+   */
+  getAll: async (): Promise<UserPlaylist[]> => {
+    const { data } = await apiClient.get<UserPlaylist[]>('/user-playlists');
+    return data;
+  },
+
+  /**
+   * Get user playlist statistics
+   */
+  getStats: async (): Promise<PlaylistStats> => {
+    const { data } = await apiClient.get<PlaylistStats>('/user-playlists/stats');
+    return data;
+  },
+
+  /**
+   * Get playlist by ID
+   */
+  getById: async (id: number): Promise<UserPlaylist> => {
+    const { data } = await apiClient.get<UserPlaylist>(`/user-playlists/${id}`);
+    return data;
+  },
+
+  /**
+   * Get games in a playlist
+   */
+  getGames: async (id: number): Promise<Game[]> => {
+    const { data} = await apiClient.get<Game[]>(`/user-playlists/${id}/games`);
+    return data;
+  },
+
+  /**
+   * Create a new playlist
+   */
+  create: async (playlistData: CreatePlaylistData): Promise<UserPlaylist> => {
+    const { data } = await apiClient.post<UserPlaylist>('/user-playlists', playlistData);
+    return data;
+  },
+
+  /**
+   * Update playlist information
+   */
+  update: async (id: number, playlistData: UpdatePlaylistData): Promise<UserPlaylist> => {
+    const { data } = await apiClient.patch<UserPlaylist>(`/user-playlists/${id}`, playlistData);
+    return data;
+  },
+
+  /**
+   * Delete a playlist
+   */
+  delete: async (id: number): Promise<void> => {
+    await apiClient.delete(`/user-playlists/${id}`);
+  },
+
+  /**
+   * Add games to a playlist
+   */
+  addGames: async (id: number, gameIds: string[]): Promise<void> => {
+    await apiClient.post(`/user-playlists/${id}/games`, { gameIds });
+  },
+
+  /**
+   * Remove games from a playlist
+   */
+  removeGames: async (id: number, gameIds: string[]): Promise<void> => {
+    await apiClient.delete(`/user-playlists/${id}/games`, { data: { gameIds } });
+  },
+
+  /**
+   * Reorder games in a playlist
+   */
+  reorderGames: async (id: number, gameIdOrder: string[]): Promise<void> => {
+    await apiClient.put(`/user-playlists/${id}/games/reorder`, { gameIdOrder });
+  },
+
+  /**
+   * Copy a Flashpoint playlist to user playlists
+   */
+  copyFlashpointPlaylist: async (
+    flashpointPlaylistId: string,
+    newTitle?: string
+  ): Promise<UserPlaylist> => {
+    const { data } = await apiClient.post<UserPlaylist>('/user-playlists/copy-flashpoint', {
+      flashpointPlaylistId,
+      newTitle,
+    });
+    return data;
+  },
+};

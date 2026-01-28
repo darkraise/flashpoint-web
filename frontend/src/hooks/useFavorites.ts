@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { favoritesApi } from '@/lib/api';
+import { FavoritesStats } from '@/types/favorite';
 import { useFeatureFlags } from './useFeatureFlags';
 import { useDialog } from '@/contexts/DialogContext';
+import { getErrorMessage } from '@/types/api-error';
 
 /**
  * Hook to fetch all user favorites
@@ -93,7 +95,7 @@ export function useToggleFavorite() {
       });
 
       // Update stats optimistically
-      queryClient.setQueryData(['favorites', 'stats'], (old: any) => {
+      queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
         const previousIds = queryClient.getQueryData<string[]>(['favorites', 'game-ids']) || [];
         const wasAdded = !previousIds.includes(gameId);
@@ -107,12 +109,12 @@ export function useToggleFavorite() {
     },
 
     // Rollback on error
-    onError: (err: any, _gameId, context) => {
+    onError: (err: unknown, _gameId, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
       // Show error toast
-      const message = err?.response?.data?.error?.message || 'Failed to toggle favorite';
+      const message = getErrorMessage(err) || 'Failed to toggle favorite';
       showToast(message, 'error');
     },
 
@@ -153,7 +155,7 @@ export function useAddFavorite() {
       });
 
       // Update stats
-      queryClient.setQueryData(['favorites', 'stats'], (old: any) => {
+      queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
         return { ...old, totalFavorites: (old.totalFavorites || 0) + 1 };
       });
@@ -161,11 +163,11 @@ export function useAddFavorite() {
       return { previousIds };
     },
 
-    onError: (err: any, _gameId, context) => {
+    onError: (err: unknown, _gameId, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
-      const message = err?.response?.data?.error?.message || 'Failed to add favorite';
+      const message = getErrorMessage(err) || 'Failed to add favorite';
       showToast(message, 'error');
     },
 
@@ -203,7 +205,7 @@ export function useRemoveFavorite() {
       });
 
       // Update stats
-      queryClient.setQueryData(['favorites', 'stats'], (old: any) => {
+      queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
         return { ...old, totalFavorites: Math.max(0, (old.totalFavorites || 0) - 1) };
       });
@@ -211,11 +213,11 @@ export function useRemoveFavorite() {
       return { previousIds };
     },
 
-    onError: (err: any, _gameId, context) => {
+    onError: (err: unknown, _gameId, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
-      const message = err?.response?.data?.error?.message || 'Failed to remove favorite';
+      const message = getErrorMessage(err) || 'Failed to remove favorite';
       showToast(message, 'error');
     },
 
@@ -254,7 +256,7 @@ export function useBatchAddFavorites() {
       });
 
       // Update stats
-      queryClient.setQueryData(['favorites', 'stats'], (old: any) => {
+      queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
         const previousIds = queryClient.getQueryData<string[]>(['favorites', 'game-ids']) || [];
         const newIds = gameIds.filter(id => !previousIds.includes(id));
@@ -264,11 +266,11 @@ export function useBatchAddFavorites() {
       return { previousIds };
     },
 
-    onError: (err: any, _gameIds, context) => {
+    onError: (err: unknown, _gameIds, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
-      const message = err?.response?.data?.error?.message || 'Failed to add favorites';
+      const message = getErrorMessage(err) || 'Failed to add favorites';
       showToast(message, 'error');
     },
 
@@ -306,7 +308,7 @@ export function useBatchRemoveFavorites() {
       });
 
       // Update stats
-      queryClient.setQueryData(['favorites', 'stats'], (old: any) => {
+      queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
         const removedCount = gameIds.length;
         return { ...old, totalFavorites: Math.max(0, (old.totalFavorites || 0) - removedCount) };
@@ -315,11 +317,11 @@ export function useBatchRemoveFavorites() {
       return { previousIds };
     },
 
-    onError: (err: any, _gameIds, context) => {
+    onError: (err: unknown, _gameIds, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
-      const message = err?.response?.data?.error?.message || 'Failed to remove favorites';
+      const message = getErrorMessage(err) || 'Failed to remove favorites';
       showToast(message, 'error');
     },
 
@@ -355,7 +357,7 @@ export function useClearAllFavorites() {
       queryClient.setQueryData<string[]>(['favorites', 'game-ids'], []);
 
       // Update stats
-      queryClient.setQueryData(['favorites', 'stats'], (old: any) => {
+      queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
         return { ...old, totalFavorites: 0 };
       });
@@ -363,11 +365,11 @@ export function useClearAllFavorites() {
       return { previousIds };
     },
 
-    onError: (err: any, _, context) => {
+    onError: (err: unknown, _, context) => {
       if (context?.previousIds) {
         queryClient.setQueryData(['favorites', 'game-ids'], context.previousIds);
       }
-      const message = err?.response?.data?.error?.message || 'Failed to clear favorites';
+      const message = getErrorMessage(err) || 'Failed to clear favorites';
       showToast(message, 'error');
     },
 

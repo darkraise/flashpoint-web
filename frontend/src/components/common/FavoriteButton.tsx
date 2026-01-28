@@ -4,6 +4,7 @@ import { useToggleFavorite } from "@/hooks/useFavorites";
 import { useAuthStore } from "@/store/auth";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/types/api-error";
 
 interface FavoriteButtonProps {
   gameId: string;
@@ -45,8 +46,8 @@ export function FavoriteButton({
             : "Removed from favorites"
         );
       },
-      onError: (error: any) => {
-        toast.error(error?.response?.data?.error?.message || "Failed to toggle favorite");
+      onError: (error: unknown) => {
+        toast.error(getErrorMessage(error) || "Failed to toggle favorite");
       }
     });
   };

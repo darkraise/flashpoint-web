@@ -24,12 +24,12 @@ export class AuthSettingsService {
     const latestUpdate = this.getLatestUpdate();
 
     return {
-      guestAccessEnabled: authSettings.guestAccessEnabled ?? true,
-      userRegistrationEnabled: authSettings.userRegistrationEnabled ?? true,
-      requireEmailVerification: authSettings.requireEmailVerification ?? false,
-      sessionTimeoutMinutes: authSettings.sessionTimeoutMinutes ?? 60,
-      maxLoginAttempts: authSettings.maxLoginAttempts ?? 5,
-      lockoutDurationMinutes: authSettings.lockoutDurationMinutes ?? 15,
+      guestAccessEnabled: typeof authSettings.guestAccessEnabled === 'boolean' ? authSettings.guestAccessEnabled : true,
+      userRegistrationEnabled: typeof authSettings.userRegistrationEnabled === 'boolean' ? authSettings.userRegistrationEnabled : true,
+      requireEmailVerification: typeof authSettings.requireEmailVerification === 'boolean' ? authSettings.requireEmailVerification : false,
+      sessionTimeoutMinutes: typeof authSettings.sessionTimeoutMinutes === 'number' ? authSettings.sessionTimeoutMinutes : 60,
+      maxLoginAttempts: typeof authSettings.maxLoginAttempts === 'number' ? authSettings.maxLoginAttempts : 5,
+      lockoutDurationMinutes: typeof authSettings.lockoutDurationMinutes === 'number' ? authSettings.lockoutDurationMinutes : 15,
       updatedAt: latestUpdate.updatedAt,
       updatedBy: latestUpdate.updatedBy
     };
