@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ViewOptions } from '@/components/common/ViewOptions';
 import { CreateUserPlaylistDialog } from '@/components/playlist/CreateUserPlaylistDialog';
+import { PlaylistIcon } from '@/components/playlist/PlaylistIcon';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
@@ -111,19 +112,36 @@ export function UserPlaylistDetailView() {
 
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold">{playlist.title}</h1>
-            {playlist.isPublic && (
-              <Badge variant="secondary">Public</Badge>
-            )}
-          </div>
-          {playlist.description && (
-            <p className="text-muted-foreground">{playlist.description}</p>
+        <div className="flex gap-4">
+          {/* Playlist Icon */}
+          {playlist.icon && (
+            <div className="flex-shrink-0">
+              <div className="p-4 bg-primary/20 rounded-xl border-2 border-primary/30">
+                <PlaylistIcon
+                  iconName={playlist.icon}
+                  size={48}
+                  className="text-primary"
+                  aria-label={`${playlist.title} icon`}
+                />
+              </div>
+            </div>
           )}
-          <p className="text-sm text-muted-foreground mt-2">
-            {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
-          </p>
+
+          {/* Playlist Info */}
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold">{playlist.title}</h1>
+              {playlist.isPublic && (
+                <Badge variant="secondary">Public</Badge>
+              )}
+            </div>
+            {playlist.description && (
+              <p className="text-muted-foreground">{playlist.description}</p>
+            )}
+            <p className="text-sm text-muted-foreground mt-2">
+              {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
+            </p>
+          </div>
         </div>
 
         {/* Actions */}

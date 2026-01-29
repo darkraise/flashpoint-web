@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { PlaylistService, CreatePlaylistDto, AddGamesToPlaylistDto } from '../services/PlaylistService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { authenticate, softAuth } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { requireFeature } from '../middleware/featureFlags';
 import { logActivity } from '../middleware/activityLogger';
@@ -10,12 +10,11 @@ import { logActivity } from '../middleware/activityLogger';
 const router = Router();
 const playlistService = new PlaylistService();
 
-// Apply soft auth first so admins can bypass feature flags
-// softAuth populates req.user if token exists, but never throws errors
-router.use(softAuth);
+// Global softAuth (from server.ts) already populates req.user for all routes
+// No need to apply softAuth again at router level
 
 // Apply feature flag check to all routes in this router
-// Admins with settings.update permission will bypass this check
+// Admins with settings.update permission will bypass this check (via global softAuth)
 router.use(requireFeature('enablePlaylists'));
 
 // GET /api/playlists - List all playlists

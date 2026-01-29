@@ -1,19 +1,17 @@
 import { Router } from 'express';
 import { StatisticsService } from '../services/StatisticsService';
 import { requireFeature } from '../middleware/featureFlags';
-import { softAuth } from '../middleware/auth';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 
 const router = Router();
 const statisticsService = new StatisticsService();
 
-// Apply soft auth first so admins can bypass feature flags
-// softAuth populates req.user if token exists, but never throws errors
-router.use(softAuth);
+// Global softAuth (from server.ts) already populates req.user for all routes
+// No need to apply softAuth again at router level
 
 // Apply feature flag check to all routes in this router
-// Admins with settings.update permission will bypass this check
+// Admins with settings.update permission will bypass this check (via global softAuth)
 router.use(requireFeature('enableStatistics'));
 
 /**

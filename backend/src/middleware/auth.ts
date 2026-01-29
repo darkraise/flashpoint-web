@@ -13,7 +13,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError(401, 'No token provided');
+      throw new AppError(401, 'No token provided', true, 'NO_TOKEN');
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
@@ -44,7 +44,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     } else {
       // No token - check if guest access is enabled
       if (!authService.isGuestAccessEnabled()) {
-        throw new AppError(401, 'Authentication required');
+        throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
       }
 
       // Set guest user with read-only permissions

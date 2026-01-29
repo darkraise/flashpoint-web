@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ListVideo, Trash2, Edit, MoreVertical } from 'lucide-react';
+import { Trash2, Edit, MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { UserPlaylist } from '@/types/playlist';
+import { PlaylistIcon } from './PlaylistIcon';
 
 interface PlaylistCardProps {
   playlist: UserPlaylist;
@@ -37,29 +38,32 @@ export function PlaylistCard({
   };
 
   return (
-    <Card className="group overflow-hidden hover:ring-2 hover:ring-primary/80 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 relative">
-      <Link to={`/playlists/${playlist.id}`}>
-        <CardContent className="p-6 flex flex-col items-center justify-center min-h-[200px] bg-gradient-to-br from-primary/10 to-accent/10 relative">
+    <Card className="group overflow-hidden hover:ring-2 hover:ring-primary/80 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 relative flex flex-col h-full">
+      <Link to={`/playlists/${playlist.id}`} className="flex flex-col flex-1">
+        <CardContent className="p-6 flex flex-col items-center justify-center flex-1 bg-gradient-to-br from-primary/10 to-accent/10 relative">
           <div className="p-4 bg-primary/20 rounded-full mb-4">
-            <ListVideo size={48} className="text-primary" />
+            <PlaylistIcon
+              iconName={playlist.icon}
+              size={48}
+              className="text-primary"
+              aria-label={`${playlist.title} icon`}
+            />
           </div>
 
           <div className="text-center">
             <h3 className="font-semibold text-lg mb-1" title={playlist.title}>
               {playlist.title}
             </h3>
-            {playlist.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2 max-w-[200px]">
-                {playlist.description}
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground line-clamp-2 max-w-[200px] min-h-[2rem]">
+              {playlist.description || '\u00A0'}
+            </p>
           </div>
 
-          {playlist.isPublic && (
+          {/* {playlist.isPublic && (
             <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
               Public
             </Badge>
-          )}
+          )} */}
         </CardContent>
 
         <CardFooter className="p-3 flex items-center justify-between border-t bg-muted/30">

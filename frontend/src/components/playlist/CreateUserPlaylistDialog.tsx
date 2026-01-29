@@ -14,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useCreateUserPlaylist, useUpdateUserPlaylist } from '@/hooks/useUserPlaylists';
 import { UserPlaylist } from '@/types/playlist';
+import { IconSelector } from './IconSelector';
+import type { PlaylistIconName } from '@/lib/playlistIcons';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/types/api-error';
 
@@ -32,6 +34,7 @@ export function CreateUserPlaylistDialog({
 }: CreateUserPlaylistDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [icon, setIcon] = useState<PlaylistIconName | null>(null);
 
   const createPlaylist = useCreateUserPlaylist();
   const updatePlaylist = useUpdateUserPlaylist();
@@ -43,9 +46,11 @@ export function CreateUserPlaylistDialog({
     if (playlist) {
       setTitle(playlist.title);
       setDescription(playlist.description || '');
+      setIcon(playlist.icon || null);
     } else {
       setTitle('');
       setDescription('');
+      setIcon(null);
     }
   }, [playlist, isOpen]);
 
@@ -66,6 +71,7 @@ export function CreateUserPlaylistDialog({
           data: {
             title: title.trim(),
             description: description.trim() || undefined,
+            icon: icon || undefined,
           },
         });
         toast.success('Playlist updated successfully');
@@ -73,6 +79,7 @@ export function CreateUserPlaylistDialog({
         result = await createPlaylist.mutateAsync({
           title: title.trim(),
           description: description.trim() || undefined,
+          icon: icon || undefined,
         });
         toast.success('Playlist created successfully');
       }
@@ -136,6 +143,18 @@ export function CreateUserPlaylistDialog({
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
               />
+            </div>
+
+            <div className="space-y-2">
+              <IconSelector
+                value={icon}
+                onChange={setIcon}
+                label="Icon (Optional)"
+                disabled={createPlaylist.isPending || updatePlaylist.isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                Choose an icon to represent your playlist
+              </p>
             </div>
           </DialogBody>
 

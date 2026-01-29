@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userPlaylistsApi } from '@/lib/api';
+import type { PlaylistWithGames } from '@/lib/api/userPlaylists';
 import {
   UpdatePlaylistData,
   UserPlaylist,
@@ -57,9 +58,14 @@ export function useUpdateUserPlaylist() {
     mutationFn: ({ id, data }: { id: number; data: UpdatePlaylistData }) =>
       userPlaylistsApi.update(id, data),
     onSuccess: (updated) => {
+      // Update the playlists list cache
       queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
         return old.map((playlist) => (playlist.id === updated.id ? updated : playlist));
       });
+
+      // Update the single playlist detail cache
+      queryClient.setQueryData(['user-playlist', updated.id], updated);
+
       showToast('Playlist updated successfully', 'success');
     },
     onError: (error: unknown) => {
@@ -137,36 +143,72 @@ export function useAddGamesToUserPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
 
-  return useMutation({
+  return useMutation<
+    PlaylistWithGames,
+    unknown,
+    { id: number; gameIds: string[] },
+    { previousPlaylist: unknown; previousGames: unknown; previousPlaylists: unknown }
+  >({
     mutationFn: ({ id, gameIds }: { id: number; gameIds: string[] }) =>
       userPlaylistsApi.addGames(id, gameIds),
 
-    onMutate: async ({ id, gameIds: _gameIds }) => {
+    onMutate: async ({ id }) => {
+      // Cancel outgoing refetches to prevent race conditions
+      await queryClient.cancelQueries({ queryKey: ['user-playlist', id] });
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
-      const previousGames = queryClient.getQueryData(['user-playlist', id, 'games']);
+      await queryClient.cancelQueries({ queryKey: ['user-playlists'] });
 
-      // Optimistically add games (will be verified when backend returns updated playlist)
-      return { previousGames };
+      // Snapshot previous values for rollback
+      const previousPlaylist = queryClient.getQueryData(['user-playlist', id]);
+      const previousGames = queryClient.getQueryData(['user-playlist', id, 'games']);
+      const previousPlaylists = queryClient.getQueryData(['user-playlists']);
+
+      return { previousPlaylist, previousGames, previousPlaylists };
+    },
+
+    onSuccess: (response, variables) => {
+      // Update single playlist cache with new gameCount
+      queryClient.setQueryData(['user-playlist', variables.id], {
+        id: response.id,
+        userId: response.userId,
+        title: response.title,
+        description: response.description,
+        icon: response.icon,
+        createdAt: response.createdAt,
+        updatedAt: response.updatedAt,
+        isPublic: response.isPublic,
+        gameCount: response.gameCount, // Updated count from backend
+      });
+
+      // Update games list cache
+      queryClient.setQueryData(['user-playlist', variables.id, 'games'], response.games);
+
+      // Update playlists list cache
+      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
+        return old.map((playlist) =>
+          playlist.id === variables.id
+            ? { ...playlist, gameCount: response.gameCount }
+            : playlist
+        );
+      });
+
+      showToast('Games added to playlist', 'success');
     },
 
     onError: (err: unknown, variables, context) => {
-      if (context?.previousGames) {
-        queryClient.setQueryData(
-          ['user-playlist', variables.id, 'games'],
-          context.previousGames
-        );
+      // Rollback all caches on error
+      if (context?.previousPlaylist) {
+        queryClient.setQueryData(['user-playlist', variables.id], context.previousPlaylist);
       }
+      if (context?.previousGames) {
+        queryClient.setQueryData(['user-playlist', variables.id, 'games'], context.previousGames);
+      }
+      if (context?.previousPlaylists) {
+        queryClient.setQueryData(['user-playlists'], context.previousPlaylists);
+      }
+
       const message = getErrorMessage(err) || 'Failed to add games to playlist';
       showToast(message, 'error');
-    },
-
-    onSuccess: (_, variables) => {
-      // Invalidate queries to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['user-playlist', variables.id] });
-      queryClient.invalidateQueries({
-        queryKey: ['user-playlist', variables.id, 'games'],
-      });
-      showToast('Games added to playlist', 'success');
     },
   });
 }
@@ -179,37 +221,80 @@ export function useRemoveGamesFromUserPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
 
-  return useMutation({
+  return useMutation<
+    PlaylistWithGames,
+    unknown,
+    { id: number; gameIds: string[] },
+    { previousPlaylist: unknown; previousGames: unknown; previousPlaylists: unknown }
+  >({
     mutationFn: ({ id, gameIds }: { id: number; gameIds: string[] }) =>
       userPlaylistsApi.removeGames(id, gameIds),
 
     onMutate: async ({ id, gameIds }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['user-playlist', id] });
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
-      const previousGames = queryClient.getQueryData(['user-playlist', id, 'games']);
+      await queryClient.cancelQueries({ queryKey: ['user-playlists'] });
 
-      // Optimistically remove games
-      queryClient.setQueryData<Game[]>(['user-playlist', id, 'games'], (old = []) => {
-        return old.filter((game) => !gameIds.includes(game.id));
+      // Snapshot previous values for rollback
+      const previousPlaylist = queryClient.getQueryData(['user-playlist', id]);
+      const previousGames = queryClient.getQueryData<Game[]>(['user-playlist', id, 'games']);
+      const previousPlaylists = queryClient.getQueryData(['user-playlists']);
+
+      // Optimistically remove games from cache for immediate feedback
+      if (previousGames) {
+        queryClient.setQueryData<Game[]>(
+          ['user-playlist', id, 'games'],
+          previousGames.filter((game) => !gameIds.includes(game.id))
+        );
+      }
+
+      return { previousPlaylist, previousGames, previousPlaylists };
+    },
+
+    onSuccess: (response, variables) => {
+      // Update single playlist cache with new gameCount
+      queryClient.setQueryData(['user-playlist', variables.id], {
+        id: response.id,
+        userId: response.userId,
+        title: response.title,
+        description: response.description,
+        icon: response.icon,
+        createdAt: response.createdAt,
+        updatedAt: response.updatedAt,
+        isPublic: response.isPublic,
+        gameCount: response.gameCount, // Updated count from backend
       });
 
-      return { previousGames };
+      // Update games list cache with authoritative backend response
+      queryClient.setQueryData(['user-playlist', variables.id, 'games'], response.games);
+
+      // Update playlists list cache
+      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
+        return old.map((playlist) =>
+          playlist.id === variables.id
+            ? { ...playlist, gameCount: response.gameCount }
+            : playlist
+        );
+      });
+
+      showToast('Games removed from playlist', 'success');
     },
 
     onError: (err: unknown, variables, context) => {
-      if (context?.previousGames) {
-        queryClient.setQueryData(
-          ['user-playlist', variables.id, 'games'],
-          context.previousGames
-        );
+      // Rollback all caches on error
+      if (context?.previousPlaylist) {
+        queryClient.setQueryData(['user-playlist', variables.id], context.previousPlaylist);
       }
+      if (context?.previousGames) {
+        queryClient.setQueryData(['user-playlist', variables.id, 'games'], context.previousGames);
+      }
+      if (context?.previousPlaylists) {
+        queryClient.setQueryData(['user-playlists'], context.previousPlaylists);
+      }
+
       const message = getErrorMessage(err) || 'Failed to remove games from playlist';
       showToast(message, 'error');
-    },
-
-    onSuccess: (_, variables) => {
-      // Invalidate queries to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['user-playlist', variables.id] });
-      showToast('Games removed from playlist', 'success');
     },
   });
 }

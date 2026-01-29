@@ -5,7 +5,8 @@ export class AppError extends Error {
   constructor(
     public statusCode: number,
     public message: string,
-    public isOperational = true
+    public isOperational = true,
+    public code?: string
   ) {
     super(message);
     Object.setPrototypeOf(this, AppError.prototype);
@@ -58,7 +59,8 @@ export function errorHandler(
     return res.status(err.statusCode).json({
       error: {
         message: err.message,
-        statusCode: err.statusCode
+        statusCode: err.statusCode,
+        ...(err.code && { code: err.code })
       }
     });
   }

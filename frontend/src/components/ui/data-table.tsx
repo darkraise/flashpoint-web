@@ -11,7 +11,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown } from "lucide-react"
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+
+import { getSortIcon } from "./data-table-utils"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -60,12 +62,17 @@ export function DataTable<TData, TValue>({
   // Use controlled sorting if provided, otherwise use internal state
   const sorting = controlledSorting ?? internalSorting
 
-  const setSorting: (updater: SortingState | ((old: SortingState) => SortingState)) => void = React.useCallback(
-    (updater) => {
+  const setSorting = React.useCallback(
+    (updater: SortingState | ((old: SortingState) => SortingState)) => {
       if (onControlledSortingChange) {
         onControlledSortingChange(updater)
       } else {
-        setInternalSorting(updater as any)
+        // Properly handle both function and value updaters
+        if (typeof updater === 'function') {
+          setInternalSorting((old) => updater(old))
+        } else {
+          setInternalSorting(updater)
+        }
       }
     },
     [onControlledSortingChange]
@@ -150,10 +157,7 @@ export function DataTable<TData, TValue>({
                             }
                           >
                             {flexRender(header.column.columnDef.header, header.getContext())}
-                            {{
-                              asc: <ArrowUp className="h-4 w-4" aria-hidden="true" />,
-                              desc: <ArrowDown className="h-4 w-4" aria-hidden="true" />,
-                            }[header.column.getIsSorted() as string] ?? null}
+                            {getSortIcon(header.column.getIsSorted())}
                           </div>
                         )}
                       </TableHead>

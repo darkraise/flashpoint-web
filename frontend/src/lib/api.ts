@@ -56,6 +56,13 @@ import { SystemSettings, PublicSettings } from '@/types/settings';
 import { JobStatusEnriched, JobLogsResponse } from '@/types/jobs';
 import { useAuthStore } from '@/store/auth';
 
+/**
+ * Playlist with games array (returned from add/remove operations)
+ */
+export interface PlaylistWithGames extends UserPlaylist {
+  games: Game[];
+}
+
 const api = axios.create({
   baseURL: '/api',
   headers: {
@@ -543,12 +550,14 @@ export const userPlaylistsApi = {
     await api.delete(`/user-playlists/${id}`);
   },
 
-  addGames: async (id: number, gameIds: string[]): Promise<void> => {
-    await api.post(`/user-playlists/${id}/games`, { gameIds });
+  addGames: async (id: number, gameIds: string[]): Promise<PlaylistWithGames> => {
+    const { data } = await api.post<PlaylistWithGames>(`/user-playlists/${id}/games`, { gameIds });
+    return data;
   },
 
-  removeGames: async (id: number, gameIds: string[]): Promise<void> => {
-    await api.delete(`/user-playlists/${id}/games`, { data: { gameIds } });
+  removeGames: async (id: number, gameIds: string[]): Promise<PlaylistWithGames> => {
+    const { data } = await api.delete<PlaylistWithGames>(`/user-playlists/${id}/games`, { data: { gameIds } });
+    return data;
   },
 
   reorderGames: async (id: number, gameIdOrder: string[]): Promise<void> => {
@@ -720,6 +729,19 @@ export const githubApi = {
 // Axios Interceptors
 // ===================================
 
+// Token refresh state management to prevent race conditions
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach(cb => cb(token));
+  refreshSubscribers = [];
+}
+
 // Request interceptor - Add JWT token to requests
 api.interceptors.request.use(
   (config) => {
@@ -749,6 +771,11 @@ api.interceptors.response.use(
 
     const status = error.response.status;
 
+    // Note: We do NOT handle 403 errors here. Following HTTP standards:
+    // - 401 = Authentication failure (invalid/expired token) - handled below
+    // - 403 = Authorization failure (valid token, insufficient permissions) - let calling code handle
+    // The backend follows these standards, so we should too.
+
     // Handle 404 errors - show toast notification
     if (status === 404) {
       const { toast } = await import('sonner');
@@ -772,7 +799,18 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // If a token refresh is already in progress, wait for it
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((newToken) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            resolve(api(originalRequest));
+          });
+        });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         const refreshToken = useAuthStore.getState().refreshToken;
@@ -792,6 +830,9 @@ api.interceptors.response.use(
         // Update the access token in the store
         useAuthStore.getState().updateAccessToken(tokens.accessToken);
 
+        // Notify all waiting requests of the new token
+        onTokenRefreshed(tokens.accessToken);
+
         // Update the authorization header and retry the original request
         originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
         return api(originalRequest);
@@ -802,6 +843,8 @@ api.interceptors.response.use(
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

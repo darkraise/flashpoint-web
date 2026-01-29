@@ -1,3 +1,5 @@
+import type { PlaylistIconName } from '@/lib/playlistIcons';
+
 /**
  * User Playlist Types
  */
@@ -7,7 +9,7 @@ export interface UserPlaylist {
   userId: number;
   title: string;
   description: string | null;
-  icon: string | null;
+  icon: PlaylistIconName | null;
   createdAt: string;
   updatedAt: string;
   isPublic: boolean;
@@ -26,13 +28,13 @@ export interface PlaylistGame {
 export interface CreatePlaylistData {
   title: string;
   description?: string;
-  icon?: string;
+  icon?: PlaylistIconName | null;
 }
 
 export interface UpdatePlaylistData {
   title?: string;
   description?: string;
-  icon?: string;
+  icon?: PlaylistIconName | null;
 }
 
 export interface PlaylistStats {

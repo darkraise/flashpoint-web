@@ -2,8 +2,69 @@ import { UserDatabaseService } from './UserDatabaseService';
 import { ActivityLog, LogActivityData } from '../types/auth';
 import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../utils/pagination';
 import { ActivityBreakdownRow, UserBreakdownRow, ResourceBreakdownRow, IpBreakdownRow } from '../types/database-rows';
+import { TimeRange, getHoursFromTimeRange } from '../utils/timeRangeUtils';
+import { AUTH_ACTIONS, categorizeAction } from '../utils/activityUtils';
+
+/**
+ * Generate SQL IN clause from AUTH_ACTIONS constant.
+ * Keeps the constant as the single source of truth for auth action strings.
+ */
+const AUTH_ACTIONS_SQL = `'${AUTH_ACTIONS.join("', '")}'`;
+
+interface ActivityFilters {
+  userId?: number;
+  username?: string;
+  action?: string;
+  resource?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 export class ActivityService {
+  /**
+   * Build WHERE clause from filters for reuse across queries
+   */
+  private buildWhereClause(filters?: ActivityFilters): { sql: string; params: unknown[] } {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (filters?.userId !== undefined) {
+      conditions.push('user_id = ?');
+      params.push(filters.userId);
+    }
+
+    if (filters?.username) {
+      conditions.push('username LIKE ?');
+      params.push(`%${filters.username}%`);
+    }
+
+    if (filters?.action) {
+      conditions.push('action LIKE ?');
+      params.push(`${filters.action}%`);
+    }
+
+    if (filters?.resource) {
+      conditions.push('resource LIKE ?');
+      params.push(`${filters.resource}%`);
+    }
+
+    if (filters?.startDate) {
+      conditions.push('created_at >= ?');
+      params.push(filters.startDate);
+    }
+
+    if (filters?.endDate) {
+      conditions.push('created_at <= ?');
+      params.push(filters.endDate);
+    }
+
+    const sql = conditions.length > 0
+      ? 'WHERE ' + conditions.join(' AND ')
+      : '';
+
+    return { sql, params };
+  }
+
   /**
    * Log activity
    */
@@ -33,20 +94,12 @@ export class ActivityService {
   async getLogs(
     page: number = 1,
     limit: number = 50,
-    filters?: {
-      userId?: number;
-      username?: string;
-      action?: string;
-      resource?: string;
-      startDate?: string;
-      endDate?: string;
-    },
+    filters?: ActivityFilters,
     sortBy: string = 'createdAt',
     sortOrder: 'asc' | 'desc' = 'desc'
   ): Promise<PaginatedResponse<ActivityLog>> {
     const offset = calculateOffset(page, limit);
 
-    // Map frontend column names to database column names
     const columnMap: Record<string, string> = {
       createdAt: 'created_at',
       username: 'username',
@@ -57,88 +110,24 @@ export class ActivityService {
     const dbColumn = columnMap[sortBy] || 'created_at';
     const order = sortOrder.toUpperCase();
 
-    let sql = `
+    const { sql: whereClause, params: whereParams } = this.buildWhereClause(filters);
+
+    const sql = `
       SELECT id, user_id as userId, username, action, resource, resource_id as resourceId,
              details, ip_address as ipAddress, user_agent as userAgent, created_at as createdAt
       FROM activity_logs
-      WHERE 1=1
+      ${whereClause}
+      ORDER BY ${dbColumn} ${order}
+      LIMIT ? OFFSET ?
     `;
 
-    const params: any[] = [];
-
-    if (filters?.userId) {
-      sql += ' AND user_id = ?';
-      params.push(filters.userId);
-    }
-
-    if (filters?.username) {
-      sql += ' AND username LIKE ?';
-      params.push(`%${filters.username}%`);
-    }
-
-    if (filters?.action) {
-      sql += ' AND action LIKE ?';
-      params.push(`${filters.action}%`);
-    }
-
-    if (filters?.resource) {
-      sql += ' AND resource LIKE ?';
-      params.push(`${filters.resource}%`);
-    }
-
-    if (filters?.startDate) {
-      sql += ' AND created_at >= ?';
-      params.push(filters.startDate);
-    }
-
-    if (filters?.endDate) {
-      sql += ' AND created_at <= ?';
-      params.push(filters.endDate);
-    }
-
-    sql += ` ORDER BY ${dbColumn} ${order} LIMIT ? OFFSET ?`;
-    params.push(limit, offset);
-
-    const logs = UserDatabaseService.all<ActivityLog>(sql, params).map(log => ({
+    const logs = UserDatabaseService.all<ActivityLog>(sql, [...whereParams, limit, offset]).map(log => ({
       ...log,
       details: log.details ? JSON.parse(log.details as string) : null
     }));
 
-    // Count total
-    let countSql = 'SELECT COUNT(*) as count FROM activity_logs WHERE 1=1';
-    const countParams: any[] = [];
-
-    if (filters?.userId) {
-      countSql += ' AND user_id = ?';
-      countParams.push(filters.userId);
-    }
-
-    if (filters?.username) {
-      countSql += ' AND username LIKE ?';
-      countParams.push(`%${filters.username}%`);
-    }
-
-    if (filters?.action) {
-      countSql += ' AND action LIKE ?';
-      countParams.push(`${filters.action}%`);
-    }
-
-    if (filters?.resource) {
-      countSql += ' AND resource LIKE ?';
-      countParams.push(`${filters.resource}%`);
-    }
-
-    if (filters?.startDate) {
-      countSql += ' AND created_at >= ?';
-      countParams.push(filters.startDate);
-    }
-
-    if (filters?.endDate) {
-      countSql += ' AND created_at <= ?';
-      countParams.push(filters.endDate);
-    }
-
-    const total = UserDatabaseService.get<{ count: number }>(countSql, countParams)?.count || 0;
+    const countSql = `SELECT COUNT(*) as count FROM activity_logs ${whereClause}`;
+    const total = UserDatabaseService.get<{ count: number }>(countSql, whereParams)?.count || 0;
 
     return createPaginatedResponse(logs, total, page, limit);
   }
@@ -157,8 +146,7 @@ export class ActivityService {
   /**
    * Get aggregate statistics for dashboard
    */
-  async getStats(timeRange: '24h' | '7d' | '30d' = '24h', customRange?: { startDate?: string; endDate?: string }) {
-    // Calculate time window
+  async getStats(timeRange: TimeRange = '24h', customRange?: { startDate?: string; endDate?: string }) {
     let startDate: string;
     let endDate: string = new Date().toISOString();
 
@@ -166,7 +154,7 @@ export class ActivityService {
       startDate = customRange.startDate;
       endDate = customRange.endDate;
     } else {
-      const hours = timeRange === '24h' ? 24 : timeRange === '7d' ? 168 : 720; // 24h, 7d, 30d
+      const hours = getHoursFromTimeRange(timeRange);
       startDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
     }
 
@@ -183,7 +171,7 @@ export class ActivityService {
       `SELECT
         COUNT(*) as total,
         COUNT(DISTINCT user_id) as uniqueUsers,
-        COUNT(CASE WHEN action IN ('login', 'logout', 'register', 'auth.login.failed') THEN 1 END) as authEvents,
+        COUNT(CASE WHEN action IN (${AUTH_ACTIONS_SQL}) THEN 1 END) as authEvents,
         COUNT(CASE WHEN action IN ('login', 'register') THEN 1 END) as authSuccessful,
         COUNT(CASE WHEN action = 'auth.login.failed' THEN 1 END) as authFailed,
         COUNT(CASE WHEN action LIKE '%fail%' OR action LIKE '%error%' THEN 1 END) as failedOperations,
@@ -212,7 +200,7 @@ export class ActivityService {
       `SELECT
         COUNT(*) as total,
         COUNT(DISTINCT user_id) as uniqueUsers,
-        COUNT(CASE WHEN action IN ('login', 'logout', 'register', 'auth.login.failed') THEN 1 END) as authEvents
+        COUNT(CASE WHEN action IN (${AUTH_ACTIONS_SQL}) THEN 1 END) as authEvents
        FROM activity_logs
        WHERE created_at >= ? AND created_at < ?`,
       [previousPeriodStart, startDate]
@@ -283,7 +271,7 @@ export class ActivityService {
       `SELECT
         ${groupFormat} as timestamp,
         COUNT(*) as total,
-        COUNT(CASE WHEN action IN ('login', 'logout', 'register', 'auth.login.failed') THEN 1 END) as authEvents,
+        COUNT(CASE WHEN action IN (${AUTH_ACTIONS_SQL}) THEN 1 END) as authEvents,
         COUNT(CASE WHEN action LIKE '%fail%' OR action LIKE '%error%' THEN 1 END) as failedActions,
         COUNT(DISTINCT user_id) as uniqueUsers
        FROM activity_logs
@@ -313,8 +301,8 @@ export class ActivityService {
   /**
    * Get top actions by frequency
    */
-  async getTopActions(limit: number = 10, timeRange: '24h' | '7d' | '30d' = '24h') {
-    const hours = timeRange === '24h' ? 24 : timeRange === '7d' ? 168 : 720;
+  async getTopActions(limit: number = 10, timeRange: TimeRange = '24h') {
+    const hours = getHoursFromTimeRange(timeRange);
     const startDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
     // Get total count for percentage calculation
@@ -364,20 +352,6 @@ export class ActivityService {
       exampleTimestamp: string;
     }>;
 
-    // Categorize actions
-    const categorizeAction = (action: string): 'auth' | 'crud' | 'error' | 'system' => {
-      if (action.includes('auth') || action.includes('login') || action.includes('logout') || action.includes('register')) {
-        return 'auth';
-      }
-      if (action.includes('fail') || action.includes('error')) {
-        return 'error';
-      }
-      if (action.includes('create') || action.includes('update') || action.includes('delete')) {
-        return 'crud';
-      }
-      return 'system';
-    };
-
     return {
       data: topActions.map(action => ({
         action: action.action,
@@ -403,9 +377,9 @@ export class ActivityService {
   async getBreakdown(
     groupBy: 'resource' | 'user' | 'ip',
     limit: number = 10,
-    timeRange: '24h' | '7d' | '30d' = '24h'
+    timeRange: TimeRange = '24h'
   ) {
-    const hours = timeRange === '24h' ? 24 : timeRange === '7d' ? 168 : 720;
+    const hours = getHoursFromTimeRange(timeRange);
     const startDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
     // Get total count for percentage calculation

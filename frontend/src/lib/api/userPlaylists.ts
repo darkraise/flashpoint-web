@@ -8,6 +8,13 @@ import type {
 import type { Game } from '@/types/game';
 
 /**
+ * Playlist with games array (returned from add/remove operations)
+ */
+export interface PlaylistWithGames extends UserPlaylist {
+  games: Game[];
+}
+
+/**
  * User Playlists API
  *
  * Manages user-created custom playlists
@@ -71,15 +78,23 @@ export const userPlaylistsApi = {
   /**
    * Add games to a playlist
    */
-  addGames: async (id: number, gameIds: string[]): Promise<void> => {
-    await apiClient.post(`/user-playlists/${id}/games`, { gameIds });
+  addGames: async (id: number, gameIds: string[]): Promise<PlaylistWithGames> => {
+    const { data } = await apiClient.post<PlaylistWithGames>(
+      `/user-playlists/${id}/games`,
+      { gameIds }
+    );
+    return data;
   },
 
   /**
    * Remove games from a playlist
    */
-  removeGames: async (id: number, gameIds: string[]): Promise<void> => {
-    await apiClient.delete(`/user-playlists/${id}/games`, { data: { gameIds } });
+  removeGames: async (id: number, gameIds: string[]): Promise<PlaylistWithGames> => {
+    const { data } = await apiClient.delete<PlaylistWithGames>(
+      `/user-playlists/${id}/games`,
+      { data: { gameIds } }
+    );
+    return data;
   },
 
   /**

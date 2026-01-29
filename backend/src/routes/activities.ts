@@ -5,14 +5,25 @@ import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { requireFeature } from '../middleware/featureFlags';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { validateDateRange } from '../middleware/dateValidation';
 
 const router = Router();
 const activityService = new ActivityService();
 
+// Pagination and limit constants
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 50;
+const MAX_PAGE_LIMIT = 100;
+const MAX_ACTIONS_LIMIT = 50;
+const MAX_BREAKDOWN_LIMIT = 50;
+const DEFAULT_TREND_DAYS = 7;
+const MAX_TREND_DAYS = 30;
+const DEFAULT_TIME_RANGE = '24h' as const;
+
 // Validation schema for activity query parameters
 const activityQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
+  page: z.coerce.number().int().min(1).default(DEFAULT_PAGE),
+  limit: z.coerce.number().int().min(1).max(MAX_PAGE_LIMIT).default(DEFAULT_LIMIT),
   userId: z.coerce.number().int().optional(),
   username: z.string().optional(),
   action: z.string().optional(),
@@ -34,6 +45,7 @@ router.get(
   '/',
   authenticate,
   requirePermission('activities.read'),
+  validateDateRange(),
   asyncHandler(async (req, res) => {
     // Validate and parse query parameters
     const queryResult = activityQuerySchema.safeParse(req.query);
@@ -57,26 +69,6 @@ router.get(
     if (startDate) filters.startDate = startDate;
     if (endDate) filters.endDate = endDate;
 
-    // Validate date range
-    if (filters.startDate && filters.endDate) {
-      const startDateObj = new Date(filters.startDate);
-      const endDateObj = new Date(filters.endDate);
-
-      if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid date format'
-        });
-      }
-
-      if (endDateObj < startDateObj) {
-        return res.status(400).json({
-          success: false,
-          error: 'End date must be after or equal to start date'
-        });
-      }
-    }
-
     const result = await activityService.getLogs(page, limit, filters, sortBy, sortOrder);
 
     res.json(result);
@@ -92,7 +84,7 @@ router.get(
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || '24h';
+    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
     const customRange = req.query.startDate && req.query.endDate
       ? {
           startDate: req.query.startDate as string,
@@ -122,7 +114,7 @@ router.get(
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    const days = Math.min(parseInt(req.query.days as string) || 7, 30);
+    const days = Math.min(parseInt(req.query.days as string) || DEFAULT_TREND_DAYS, MAX_TREND_DAYS);
 
     const result = await activityService.getTrend(days);
 
@@ -142,8 +134,8 @@ router.get(
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || '24h';
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, MAX_ACTIONS_LIMIT);
+    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
 
     const result = await activityService.getTopActions(limit, timeRange);
 
@@ -164,8 +156,8 @@ router.get(
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
     const groupBy = (req.query.groupBy as 'resource' | 'user' | 'ip') || 'resource';
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || '24h';
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, MAX_BREAKDOWN_LIMIT);
+    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
 
     // Validate groupBy parameter
     if (!['resource', 'user', 'ip'].includes(groupBy)) {

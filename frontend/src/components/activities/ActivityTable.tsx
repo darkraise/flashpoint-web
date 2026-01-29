@@ -1,15 +1,17 @@
-import { useState, useEffect, memo, useMemo, useCallback, useRef, useTransition } from 'react';
+import { useState, memo, useMemo, useCallback, useTransition } from 'react';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { ChevronDown, AlertCircle } from 'lucide-react';
 import { useActivities } from '../../hooks/useActivities';
+import { useActivityFilters } from '../../hooks/useActivityFilters';
 import { useDebounce } from '../../hooks/useDebounce';
 import { ActivityFilters } from '../../types/auth';
 import { getApiErrorMessage } from '@/utils/errorUtils';
+import { getActionBadgeVariant } from '@/utils/activityUtils';
 import { DataTable } from '../ui/data-table';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { FilterInput } from './FilterInput';
 import { DatePicker } from '../ui/date-picker';
 import { FormattedDate } from '../common/FormattedDate';
 import {
@@ -38,17 +40,6 @@ interface ActivityLog {
 // Constants
 const PAGINATION_LIMIT = 20;
 const DEBOUNCE_DELAY = 500;
-
-// Helper to get badge variant based on action type
-const getActionBadgeVariant = (action: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
-  if (action.includes('fail') || action.includes('error')) {
-    return 'destructive';
-  }
-  if (action.startsWith('auth') || action === 'login' || action === 'logout' || action === 'register') {
-    return 'default';
-  }
-  return 'secondary';
-};
 
 // Columns definition - moved outside component to prevent recreation on every render
 const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
@@ -156,51 +147,29 @@ function ActivityTableComponent() {
   const [sortBy, setSortBy] = useState<'createdAt' | 'username' | 'action' | 'resource' | 'ipAddress'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Ref to track current sorting state without closure issues
-  const sortingStateRef = useRef<SortingState>([{ id: 'createdAt', desc: true }]);
-
   // Transition for deferred state updates
   const [, startTransition] = useTransition();
 
-  // Immediate input values (not debounced)
-  const [usernameInput, setUsernameInput] = useState('');
-  const [actionInput, setActionInput] = useState('');
-  const [resourceInput, setResourceInput] = useState('');
-  const [startDateInput, setStartDateInput] = useState<Date | undefined>(undefined);
-  const [endDateInput, setEndDateInput] = useState<Date | undefined>(undefined);
-  const [dateRangeError, setDateRangeError] = useState<string>('');
+  // Consolidated filter state with date range validation
+  const { filters: filterState, updateFilter, clearFilters } = useActivityFilters();
 
   // Debounced values for API calls
-  const debouncedUsername = useDebounce(usernameInput, DEBOUNCE_DELAY);
-  const debouncedAction = useDebounce(actionInput, DEBOUNCE_DELAY);
-  const debouncedResource = useDebounce(resourceInput, DEBOUNCE_DELAY);
-
-
-  // Validate date range
-  useEffect(() => {
-    if (startDateInput && endDateInput) {
-      if (endDateInput < startDateInput) {
-        setDateRangeError('End date must be after or equal to start date');
-      } else {
-        setDateRangeError('');
-      }
-    } else {
-      setDateRangeError('');
-    }
-  }, [startDateInput, endDateInput]);
+  const debouncedUsername = useDebounce(filterState.username, DEBOUNCE_DELAY);
+  const debouncedAction = useDebounce(filterState.action, DEBOUNCE_DELAY);
+  const debouncedResource = useDebounce(filterState.resource, DEBOUNCE_DELAY);
 
   // Build filters object - convert Date objects to ISO strings for API
   // Only include dates if the range is valid
-  const hasValidDateRange = !dateRangeError || (!startDateInput && !endDateInput);
+  const hasValidDateRange = !filterState.dateRangeError || (!filterState.startDate && !filterState.endDate);
   const filters: ActivityFilters = useMemo(() => ({
     username: debouncedUsername || undefined,
     action: debouncedAction || undefined,
     resource: debouncedResource || undefined,
-    startDate: hasValidDateRange && startDateInput ? startDateInput.toISOString() : undefined,
-    endDate: hasValidDateRange && endDateInput ? endDateInput.toISOString() : undefined,
+    startDate: hasValidDateRange && filterState.startDate ? filterState.startDate.toISOString() : undefined,
+    endDate: hasValidDateRange && filterState.endDate ? filterState.endDate.toISOString() : undefined,
     sortBy,
     sortOrder,
-  }), [debouncedUsername, debouncedAction, debouncedResource, startDateInput, endDateInput, hasValidDateRange, sortBy, sortOrder]);
+  }), [debouncedUsername, debouncedAction, debouncedResource, filterState.startDate, filterState.endDate, hasValidDateRange, sortBy, sortOrder]);
 
   const { data, isLoading, isError, error } = useActivities(page, limit, filters);
 
@@ -209,16 +178,10 @@ function ActivityTableComponent() {
     { id: sortBy, desc: sortOrder === 'desc' }
   ], [sortBy, sortOrder]);
 
-  // Keep ref in sync with sortingState
-  useEffect(() => {
-    sortingStateRef.current = sortingState;
-  }, [sortingState]);
-
   // Handle sorting changes from DataTable
   const handleSortingChange = useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
-    // Use the ref to get the current state, avoiding stale closure
     const newSorting = typeof updaterOrValue === 'function'
-      ? updaterOrValue(sortingStateRef.current)
+      ? updaterOrValue(sortingState)
       : updaterOrValue;
 
     // Wrap state updates in transition to defer prop changes
@@ -234,29 +197,24 @@ function ActivityTableComponent() {
       }
       setPage(1); // Reset to first page on sort change
     });
-  }, []); // Empty dependency array - callback is stable
+  }, [sortingState]);
 
-  const handleClearFilters = () => {
-    setUsernameInput('');
-    setActionInput('');
-    setResourceInput('');
-    setStartDateInput(undefined);
-    setEndDateInput(undefined);
-    setDateRangeError('');
+  const handleClearFilters = useCallback(() => {
+    clearFilters();
     setPage(1);
-  };
+  }, [clearFilters]);
 
   // Check if any filters are active
   const hasActiveFilters =
-    usernameInput || actionInput || resourceInput || startDateInput || endDateInput;
+    filterState.username || filterState.action || filterState.resource || filterState.startDate || filterState.endDate;
 
   // Count active filters
   const activeFilterCount = [
-    usernameInput,
-    actionInput,
-    resourceInput,
-    startDateInput,
-    endDateInput,
+    filterState.username,
+    filterState.action,
+    filterState.resource,
+    filterState.startDate,
+    filterState.endDate,
   ].filter(Boolean).length;
 
   if (isError) {
@@ -298,47 +256,32 @@ function ActivityTableComponent() {
         <CollapsibleContent className="mt-4">
           <div className="rounded-lg border bg-card p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="username-filter">Username</Label>
-                <Input
-                  id="username-filter"
-                  type="text"
-                  value={usernameInput}
-                  onChange={(e) => {
-                    setUsernameInput(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Filter by username"
-                />
-              </div>
+              <FilterInput
+                id="username-filter"
+                label="Username"
+                value={filterState.username}
+                onChange={(val) => updateFilter('username', val)}
+                placeholder="Filter by username"
+                onPageReset={() => setPage(1)}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="action-filter">Action (prefix match)</Label>
-                <Input
-                  id="action-filter"
-                  type="text"
-                  value={actionInput}
-                  onChange={(e) => {
-                    setActionInput(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="e.g. login, auth, users"
-                />
-              </div>
+              <FilterInput
+                id="action-filter"
+                label="Action (prefix match)"
+                value={filterState.action}
+                onChange={(val) => updateFilter('action', val)}
+                placeholder="e.g. login, auth, users"
+                onPageReset={() => setPage(1)}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="resource-filter">Resource (prefix match)</Label>
-                <Input
-                  id="resource-filter"
-                  type="text"
-                  value={resourceInput}
-                  onChange={(e) => {
-                    setResourceInput(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="e.g. users, roles"
-                />
-              </div>
+              <FilterInput
+                id="resource-filter"
+                label="Resource (prefix match)"
+                value={filterState.resource}
+                onChange={(val) => updateFilter('resource', val)}
+                placeholder="e.g. users, roles"
+                onPageReset={() => setPage(1)}
+              />
             </div>
 
             <div className="space-y-2">
@@ -347,14 +290,14 @@ function ActivityTableComponent() {
                   <Label htmlFor="start-date-filter">Start Date</Label>
                   <DatePicker
                     id="start-date-filter"
-                    date={startDateInput}
+                    date={filterState.startDate}
                     onDateChange={(date) => {
-                      setStartDateInput(date);
+                      updateFilter('startDate', date);
                       setPage(1);
                     }}
                     placeholder="Filter by start date"
                     clearable={true}
-                    className={dateRangeError ? 'border-destructive' : ''}
+                    className={filterState.dateRangeError ? 'border-destructive' : ''}
                   />
                 </div>
 
@@ -362,22 +305,22 @@ function ActivityTableComponent() {
                   <Label htmlFor="end-date-filter">End Date</Label>
                   <DatePicker
                     id="end-date-filter"
-                    date={endDateInput}
+                    date={filterState.endDate}
                     onDateChange={(date) => {
-                      setEndDateInput(date);
+                      updateFilter('endDate', date);
                       setPage(1);
                     }}
                     placeholder="Filter by end date"
                     clearable={true}
-                    className={dateRangeError ? 'border-destructive' : ''}
+                    className={filterState.dateRangeError ? 'border-destructive' : ''}
                   />
                 </div>
               </div>
 
-              {dateRangeError && (
+              {filterState.dateRangeError && (
                 <div className="text-sm text-destructive flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
-                  {dateRangeError}
+                  {filterState.dateRangeError}
                 </div>
               )}
             </div>

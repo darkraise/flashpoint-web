@@ -39,6 +39,19 @@ export class UserPlaylistService {
   private userDb: typeof UserDatabaseService;
   private gameService: GameService;
 
+  // Reusable SELECT columns with aliases for type consistency
+  private static readonly PLAYLIST_COLUMNS = `
+    id,
+    user_id AS userId,
+    title,
+    description,
+    icon,
+    created_at AS createdAt,
+    updated_at AS updatedAt,
+    is_public AS isPublic,
+    game_count AS gameCount
+  `.trim();
+
   constructor() {
     this.userDb = UserDatabaseService;
     this.gameService = new GameService();
@@ -51,7 +64,7 @@ export class UserPlaylistService {
     const db = this.userDb.getDatabase();
 
     const stmt = db.prepare(`
-      SELECT *
+      SELECT ${UserPlaylistService.PLAYLIST_COLUMNS}
       FROM user_playlists
       WHERE user_id = ?
       ORDER BY updated_at DESC
@@ -67,7 +80,7 @@ export class UserPlaylistService {
     const db = this.userDb.getDatabase();
 
     const stmt = db.prepare(`
-      SELECT *
+      SELECT ${UserPlaylistService.PLAYLIST_COLUMNS}
       FROM user_playlists
       WHERE id = ? AND user_id = ?
     `);
