@@ -3,15 +3,15 @@ import { GameService } from '../services/GameService';
 import { gameDataService } from '../services/GameDataService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { optionalAuth } from '../middleware/auth';
+import { sharedAccessAuth, validateSharedGameAccess } from '../middleware/auth';
 import { logActivity } from '../middleware/activityLogger';
 import { z } from 'zod';
 
 const router = Router();
 const gameService = new GameService();
 
-// Apply optional auth middleware to all routes
-router.use(optionalAuth);
+// Apply shared access auth middleware to all routes
+router.use(sharedAccessAuth);
 
 // Custom boolean parser that handles string 'false' correctly
 const booleanSchema = z.preprocess((val) => {
@@ -95,6 +95,7 @@ router.get('/filter-options', asyncHandler(async (req, res) => {
 // GET /api/games/:id - Get single game by ID
 router.get(
   '/:id',
+  validateSharedGameAccess('id'),
   logActivity('games.view', 'games', (req, res) => ({
     platform: res.locals.game?.platformName,
     library: res.locals.game?.library,
@@ -116,7 +117,7 @@ router.get(
 );
 
 // GET /api/games/:id/related - Get related games
-router.get('/:id/related', asyncHandler(async (req, res) => {
+router.get('/:id/related', validateSharedGameAccess('id'), asyncHandler(async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
   const relatedGames = await gameService.getRelatedGames(req.params.id, limit);
 
@@ -138,6 +139,7 @@ router.get('/random', asyncHandler(async (req, res) => {
 // GET /api/games/:id/launch - Get game launch data
 router.get(
   '/:id/launch',
+  validateSharedGameAccess('id'),
   logActivity('games.launch.request', 'games', (req, res) => ({
     platform: res.locals.platform,
     canPlayInBrowser: res.locals.canPlayInBrowser,

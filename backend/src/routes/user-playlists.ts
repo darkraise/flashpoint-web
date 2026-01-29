@@ -385,4 +385,130 @@ router.post(
   })
 );
 
+/**
+ * POST /api/user-playlists/:id/share/enable
+ * Enable sharing for a playlist
+ */
+router.post(
+  '/:id/share/enable',
+  authenticate,
+  requirePermission('playlists.update'),
+  logActivity('playlists.share.enable', 'user_playlists'),
+  asyncHandler(async (req, res) => {
+    if (!req.user) {
+      throw new AppError(401, 'Authentication required');
+    }
+
+    const playlistId = parseInt(req.params.id, 10);
+    if (isNaN(playlistId)) {
+      throw new AppError(400, 'Invalid playlist ID');
+    }
+
+    const { expiresAt, showOwner } = req.body;
+
+    const shareData = playlistService.enableSharing(playlistId, req.user.id, {
+      expiresAt,
+      showOwner
+    });
+
+    if (!shareData) {
+      throw new AppError(404, 'Playlist not found');
+    }
+
+    res.json(shareData);
+  })
+);
+
+/**
+ * POST /api/user-playlists/:id/share/disable
+ * Disable sharing for a playlist
+ */
+router.post(
+  '/:id/share/disable',
+  authenticate,
+  requirePermission('playlists.update'),
+  logActivity('playlists.share.disable', 'user_playlists'),
+  asyncHandler(async (req, res) => {
+    if (!req.user) {
+      throw new AppError(401, 'Authentication required');
+    }
+
+    const playlistId = parseInt(req.params.id, 10);
+    if (isNaN(playlistId)) {
+      throw new AppError(400, 'Invalid playlist ID');
+    }
+
+    const playlist = playlistService.disableSharing(playlistId, req.user.id);
+
+    if (!playlist) {
+      throw new AppError(404, 'Playlist not found');
+    }
+
+    res.json({ success: true });
+  })
+);
+
+/**
+ * POST /api/user-playlists/:id/share/regenerate
+ * Regenerate share token (invalidates old links)
+ */
+router.post(
+  '/:id/share/regenerate',
+  authenticate,
+  requirePermission('playlists.update'),
+  logActivity('playlists.share.regenerate', 'user_playlists'),
+  asyncHandler(async (req, res) => {
+    if (!req.user) {
+      throw new AppError(401, 'Authentication required');
+    }
+
+    const playlistId = parseInt(req.params.id, 10);
+    if (isNaN(playlistId)) {
+      throw new AppError(400, 'Invalid playlist ID');
+    }
+
+    const shareData = playlistService.regenerateShareToken(playlistId, req.user.id);
+
+    if (!shareData) {
+      throw new AppError(404, 'Playlist not found');
+    }
+
+    res.json(shareData);
+  })
+);
+
+/**
+ * PATCH /api/user-playlists/:id/share/settings
+ * Update share settings (expiry, show_owner) without regenerating token
+ */
+router.patch(
+  '/:id/share/settings',
+  authenticate,
+  requirePermission('playlists.update'),
+  logActivity('playlists.share.update_settings', 'user_playlists'),
+  asyncHandler(async (req, res) => {
+    if (!req.user) {
+      throw new AppError(401, 'Authentication required');
+    }
+
+    const playlistId = parseInt(req.params.id, 10);
+    if (isNaN(playlistId)) {
+      throw new AppError(400, 'Invalid playlist ID');
+    }
+
+    const { expiresAt, showOwner } = req.body;
+
+    const shareData = playlistService.updateShareSettings(playlistId, req.user.id, {
+      expiresAt,
+      showOwner
+    });
+
+    if (!shareData) {
+      throw new AppError(404, 'Playlist not found');
+    }
+
+    res.json(shareData);
+  })
+);
+
 export default router;

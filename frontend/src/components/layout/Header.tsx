@@ -20,7 +20,12 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
-export function Header() {
+interface HeaderProps {
+  hideSidebarToggle?: boolean;
+  hideSearch?: boolean;
+}
+
+export function Header({ hideSidebarToggle = false, hideSearch = false }: HeaderProps) {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const toggleSidebarCollapsed = useUIStore(
     (state) => state.toggleSidebarCollapsed,
@@ -99,25 +104,29 @@ export function Header() {
               </div>
             </Link>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleMenuClick}
-              aria-label="Toggle sidebar"
-              title={
-                window.innerWidth < 1024
-                  ? "Toggle sidebar"
-                  : "Toggle sidebar width"
-              }
-            >
-              <Menu size={20} />
-            </Button>
+            {!hideSidebarToggle && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleMenuClick}
+                aria-label="Toggle sidebar"
+                title={
+                  window.innerWidth < 1024
+                    ? "Toggle sidebar"
+                    : "Toggle sidebar width"
+                }
+              >
+                <Menu size={20} />
+              </Button>
+            )}
           </div>
 
           {/* Center: Search Bar (Desktop only) */}
-          <div className="flex-1 max-w-2xl mx-auto hidden md:block">
-            <SearchBar />
-          </div>
+          {!hideSearch && (
+            <div className="flex-1 max-w-2xl mx-auto hidden md:block">
+              <SearchBar />
+            </div>
+          )}
 
           {/* Right: GitHub, Theme Settings & User Menu */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -202,9 +211,11 @@ export function Header() {
       </div>
 
       {/* Mobile Search Bar (below main header) */}
-      <div className="md:hidden px-4 pb-3">
-        <SearchBar />
-      </div>
+      {!hideSearch && (
+        <div className="md:hidden px-4 pb-3">
+          <SearchBar />
+        </div>
+      )}
     </header>
   );
 }

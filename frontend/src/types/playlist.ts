@@ -14,6 +14,9 @@ export interface UserPlaylist {
   updatedAt: string;
   isPublic: boolean;
   gameCount: number;
+  shareToken?: string | null;
+  shareExpiresAt?: string | null;
+  showOwner?: boolean;
 }
 
 export interface PlaylistGame {
@@ -57,4 +60,31 @@ export interface RemoveGamesFromPlaylistData {
 
 export interface ReorderGamesData {
   gameIdOrder: string[];
+}
+
+/**
+ * Shared Playlist Types (anonymous access)
+ */
+
+export interface SharedPlaylist {
+  id: number;
+  title: string;
+  description: string | null;
+  icon: PlaylistIconName | null;
+  gameCount: number;
+  createdAt: string;
+  updatedAt: string;
+  ownerUsername?: string; // Conditionally included if showOwner=true
+}
+
+export interface ShareLinkData {
+  shareToken: string;
+  shareUrl: string;
+  expiresAt: string | null;
+  showOwner: boolean;
+}
+
+export interface EnableSharingOptions {
+  expiresAt?: string | null;
+  showOwner?: boolean;
 }

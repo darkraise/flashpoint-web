@@ -10,6 +10,7 @@ import { cn } from '@/lib';
 import { SidebarItem } from './SidebarItem';
 import { SidebarSection } from './SidebarSection';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -28,7 +29,15 @@ export function Sidebar({ isOpen }: SidebarProps) {
   const setSidebarOpen = useUIStore((state) => state.setSidebarOpen);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const isGuest = useAuthStore((state) => state.isGuest);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { enablePlaylists, enableFavorites, enableStatistics } = useFeatureFlags();
+  const { data: publicSettings } = usePublicSettings();
+
+  // Check if viewing a shared playlist as an anonymous user with guest access OFF
+  const isViewingSharedPlaylistWithoutGuestAccess =
+    !isAuthenticated &&
+    location.pathname.startsWith('/playlists/shared/') &&
+    publicSettings?.auth?.guestAccessEnabled === false;
 
   // On mobile, always show labels (never collapse). On desktop, respect sidebarCollapsed state.
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
@@ -130,17 +139,19 @@ export function Sidebar({ isOpen }: SidebarProps) {
             transition: isMobile ? undefined : 'padding 500ms ease-out',
           }}
         >
-          {/* Game Navigation */}
-          <div className="space-y-1">
-            {gameNavItems.map((item) => (
-              <SidebarItem
-                key={item.path}
-                {...item}
-                collapsed={effectiveCollapsed}
-                onClick={handleNavItemClick}
-              />
-            ))}
-          </div>
+          {/* Game Navigation - Hidden when viewing shared playlist without guest access */}
+          {!isViewingSharedPlaylistWithoutGuestAccess && (
+            <div className="space-y-1">
+              {gameNavItems.map((item) => (
+                <SidebarItem
+                  key={item.path}
+                  {...item}
+                  collapsed={effectiveCollapsed}
+                  onClick={handleNavItemClick}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Library Navigation - Hidden for guests and when no library features are enabled */}
           {!isGuest && libraryNavItems.length > 0 && (

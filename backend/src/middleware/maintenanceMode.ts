@@ -13,6 +13,7 @@ const MINIMAL_PUBLIC_PATHS = [
   '/api/auth/refresh',          // Token refresh
   '/api/settings/public',       // UI needs public settings
   '/proxy',                     // Game images, logos, screenshots, and game files
+  '/api/playlists/shared',      // Anonymous shared playlist access (bypasses guest access settings)
 ];
 
 /**

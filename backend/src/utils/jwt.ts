@@ -48,3 +48,40 @@ export function verifyToken(token: string): JWTPayload {
     throw error;
   }
 }
+
+/**
+ * Shared Access Payload interface for temporary playlist access tokens
+ */
+export interface SharedAccessPayload {
+  type: 'shared_access';
+  shareToken: string;
+  playlistId: number;
+}
+
+/**
+ * Generate shared access token (60 minutes, non-refreshable)
+ * Used for temporary access to shared playlists and their games
+ * @param payload - Share token and playlist ID
+ * @returns Signed JWT token
+ */
+export function generateSharedAccessToken(payload: Omit<SharedAccessPayload, 'type'>): string {
+  return jwt.sign(
+    { ...payload, type: 'shared_access' },
+    config.jwtSecret,
+    { expiresIn: '60m' } // 60 minutes, non-refreshable
+  );
+}
+
+/**
+ * Verify and decode shared access token
+ * @param token - JWT token to verify
+ * @returns Decoded shared access payload
+ * @throws Error if token is invalid, expired, or wrong type
+ */
+export function verifySharedAccessToken(token: string): SharedAccessPayload {
+  const payload = jwt.verify(token, config.jwtSecret) as SharedAccessPayload;
+  if (payload.type !== 'shared_access') {
+    throw new Error('Invalid token type');
+  }
+  return payload;
+}

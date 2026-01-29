@@ -61,7 +61,7 @@ export const useAuthStore = create<AuthState>()(
           username: 'Guest',
           email: 'guest@flashpoint.local',
           role: 'guest',
-          permissions: ['games.read', 'playlists.read']
+          permissions: ['games.read', 'playlists.read', 'games.play']
         };
         set({
           user: guestUser,

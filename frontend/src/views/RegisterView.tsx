@@ -1,9 +1,9 @@
 import { RegisterForm } from '../components/auth/RegisterForm';
 
+/**
+ * RegisterView - Registration page using PublicLayout
+ * Layout handles centering
+ */
 export function RegisterView() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <RegisterForm />
-    </div>
-  );
+  return <RegisterForm />;
 }

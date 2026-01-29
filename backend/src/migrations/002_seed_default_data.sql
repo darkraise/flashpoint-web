@@ -58,10 +58,11 @@ INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 2, id FROM permissions
 WHERE resource NOT IN ('users', 'roles', 'settings', 'activities');
 
--- Assign permissions to guest role (read-only for games and playlists)
+-- Assign permissions to guest role (read-only for games and playlists, plus games.play)
 INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 3, id FROM permissions
-WHERE action = 'read' AND resource IN ('games', 'playlists');
+WHERE (action = 'read' AND resource IN ('games', 'playlists'))
+   OR name = 'games.play';
 
 -- ===================================
 -- SEED SYSTEM SETTINGS: AUTH

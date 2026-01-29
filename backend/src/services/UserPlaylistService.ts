@@ -1,6 +1,8 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { GameService, Game } from './GameService';
 import { logger } from '../utils/logger';
+import { config } from '../config';
+import crypto from 'crypto';
 
 export interface UserPlaylist {
   id: number;
@@ -12,6 +14,9 @@ export interface UserPlaylist {
   updatedAt: string;
   isPublic: boolean;
   gameCount: number;
+  shareToken?: string | null;
+  shareExpiresAt?: string | null;
+  showOwner?: boolean;
 }
 
 export interface PlaylistGame {
@@ -35,6 +40,18 @@ export interface UpdatePlaylistData {
   icon?: string;
 }
 
+export interface EnableSharingOptions {
+  expiresAt?: string | null;
+  showOwner?: boolean;
+}
+
+export interface ShareLinkData {
+  shareToken: string;
+  shareUrl: string;
+  expiresAt: string | null;
+  showOwner: boolean;
+}
+
 export class UserPlaylistService {
   private userDb: typeof UserDatabaseService;
   private gameService: GameService;
@@ -49,7 +66,10 @@ export class UserPlaylistService {
     created_at AS createdAt,
     updated_at AS updatedAt,
     is_public AS isPublic,
-    game_count AS gameCount
+    game_count AS gameCount,
+    share_token AS shareToken,
+    share_expires_at AS shareExpiresAt,
+    show_owner AS showOwner
   `.trim();
 
   constructor() {
@@ -396,5 +416,314 @@ export class UserPlaylistService {
     `);
 
     return stmt.get(userId) as { totalPlaylists: number; totalGames: number };
+  }
+
+  /**
+   * Enable sharing for a playlist
+   * Generates share token if needed, sets is_public=true
+   */
+  enableSharing(
+    playlistId: number,
+    userId: number,
+    options: EnableSharingOptions = {}
+  ): ShareLinkData | null {
+    const db = this.userDb.getDatabase();
+
+    // Verify ownership
+    const playlist = this.getPlaylistById(playlistId, userId);
+    if (!playlist) {
+      logger.warn(`Cannot enable sharing for playlist ${playlistId}: not found or not owned by user ${userId}`);
+      return null;
+    }
+
+    // Generate token if missing, otherwise reuse existing token
+    const shareToken = playlist.shareToken || crypto.randomUUID();
+
+    // Update database
+    const stmt = db.prepare(`
+      UPDATE user_playlists
+      SET is_public = 1,
+          share_token = ?,
+          share_expires_at = ?,
+          show_owner = ?,
+          updated_at = datetime('now')
+      WHERE id = ? AND user_id = ?
+    `);
+
+    stmt.run(
+      shareToken,
+      options.expiresAt || null,
+      options.showOwner ? 1 : 0,
+      playlistId,
+      userId
+    );
+
+    logger.info(`Enabled sharing for playlist ${playlistId} (user ${userId})`);
+
+    // Get frontend URL from CORS origin (where frontend is hosted)
+    const frontendUrl = config.corsOrigin;
+
+    return {
+      shareToken,
+      shareUrl: `${frontendUrl}/playlists/shared/${shareToken}`,
+      expiresAt: options.expiresAt || null,
+      showOwner: options.showOwner || false
+    };
+  }
+
+  /**
+   * Disable sharing for a playlist (sets is_public=false)
+   * Preserves token for re-enabling later
+   */
+  disableSharing(playlistId: number, userId: number): UserPlaylist | null {
+    const db = this.userDb.getDatabase();
+
+    // Verify ownership
+    const playlist = this.getPlaylistById(playlistId, userId);
+    if (!playlist) {
+      logger.warn(`Cannot disable sharing for playlist ${playlistId}: not found or not owned by user ${userId}`);
+      return null;
+    }
+
+    const stmt = db.prepare(`
+      UPDATE user_playlists
+      SET is_public = 0,
+          updated_at = datetime('now')
+      WHERE id = ? AND user_id = ?
+    `);
+
+    stmt.run(playlistId, userId);
+
+    logger.info(`Disabled sharing for playlist ${playlistId} (user ${userId})`);
+
+    return this.getPlaylistById(playlistId, userId);
+  }
+
+  /**
+   * Regenerate share token (invalidates old links)
+   */
+  regenerateShareToken(playlistId: number, userId: number): ShareLinkData | null {
+    const db = this.userDb.getDatabase();
+
+    // Verify ownership
+    const playlist = this.getPlaylistById(playlistId, userId);
+    if (!playlist) {
+      logger.warn(`Cannot regenerate token for playlist ${playlistId}: not found or not owned by user ${userId}`);
+      return null;
+    }
+
+    // Generate new token
+    const newToken = crypto.randomUUID();
+
+    const stmt = db.prepare(`
+      UPDATE user_playlists
+      SET share_token = ?,
+          updated_at = datetime('now')
+      WHERE id = ? AND user_id = ?
+    `);
+
+    stmt.run(newToken, playlistId, userId);
+
+    logger.info(`Regenerated share token for playlist ${playlistId} (user ${userId})`);
+
+    // Get frontend URL from CORS origin (where frontend is hosted)
+    const frontendUrl = config.corsOrigin;
+
+    return {
+      shareToken: newToken,
+      shareUrl: `${frontendUrl}/playlists/shared/${newToken}`,
+      expiresAt: playlist.shareExpiresAt || null,
+      showOwner: playlist.showOwner || false
+    };
+  }
+
+  /**
+   * Update share settings (expiry, show_owner) without regenerating token
+   */
+  updateShareSettings(
+    playlistId: number,
+    userId: number,
+    options: EnableSharingOptions
+  ): ShareLinkData | null {
+    const db = this.userDb.getDatabase();
+
+    // Verify ownership
+    const playlist = this.getPlaylistById(playlistId, userId);
+    if (!playlist) {
+      logger.warn(`Cannot update share settings for playlist ${playlistId}: not found or not owned by user ${userId}`);
+      return null;
+    }
+
+    if (!playlist.shareToken) {
+      logger.warn(`Cannot update share settings for playlist ${playlistId}: sharing not enabled`);
+      return null;
+    }
+
+    const stmt = db.prepare(`
+      UPDATE user_playlists
+      SET share_expires_at = ?,
+          show_owner = ?,
+          updated_at = datetime('now')
+      WHERE id = ? AND user_id = ?
+    `);
+
+    stmt.run(
+      options.expiresAt !== undefined ? options.expiresAt : playlist.shareExpiresAt,
+      options.showOwner !== undefined ? (options.showOwner ? 1 : 0) : (playlist.showOwner ? 1 : 0),
+      playlistId,
+      userId
+    );
+
+    logger.info(`Updated share settings for playlist ${playlistId} (user ${userId})`);
+
+    // Get frontend URL from CORS origin (where frontend is hosted)
+    const frontendUrl = config.corsOrigin;
+
+    return {
+      shareToken: playlist.shareToken,
+      shareUrl: `${frontendUrl}/playlists/shared/${playlist.shareToken}`,
+      expiresAt: options.expiresAt !== undefined ? options.expiresAt : (playlist.shareExpiresAt || null),
+      showOwner: options.showOwner !== undefined ? options.showOwner : (playlist.showOwner || false)
+    };
+  }
+
+  /**
+   * Get playlist by share token (no ownership check)
+   * Validates token, expiry, and is_public flag
+   */
+  getPlaylistByShareToken(shareToken: string): UserPlaylist | null {
+    const db = this.userDb.getDatabase();
+
+    const stmt = db.prepare(`
+      SELECT ${UserPlaylistService.PLAYLIST_COLUMNS}
+      FROM user_playlists
+      WHERE share_token = ?
+        AND is_public = 1
+        AND (share_expires_at IS NULL OR share_expires_at > datetime('now'))
+    `);
+
+    const playlist = stmt.get(shareToken) as UserPlaylist | undefined;
+
+    if (!playlist) {
+      logger.debug(`Shared playlist not found or expired for token: ${shareToken.substring(0, 8)}...`);
+      return null;
+    }
+
+    return playlist;
+  }
+
+  /**
+   * Check if a game is in a shared playlist
+   * Used for validating shared access to individual games
+   */
+  isGameInSharedPlaylist(shareToken: string, gameId: string): boolean {
+    const db = this.userDb.getDatabase();
+
+    // First validate the share token
+    const playlist = this.getPlaylistByShareToken(shareToken);
+    if (!playlist) {
+      return false;
+    }
+
+    // Check if game is in the playlist
+    const stmt = db.prepare(`
+      SELECT 1
+      FROM user_playlist_games
+      WHERE playlist_id = ? AND game_id = ?
+      LIMIT 1
+    `);
+
+    const result = stmt.get(playlist.id, gameId);
+    return !!result;
+  }
+
+  /**
+   * Get games for shared playlist (no ownership check)
+   */
+  async getSharedPlaylistGames(shareToken: string): Promise<Game[]> {
+    const db = this.userDb.getDatabase();
+
+    // Validate share token first
+    const playlist = this.getPlaylistByShareToken(shareToken);
+    if (!playlist) {
+      logger.warn(`Cannot get games for shared playlist: token invalid or expired`);
+      return [];
+    }
+
+    const stmt = db.prepare(`
+      SELECT game_id
+      FROM user_playlist_games
+      WHERE playlist_id = ?
+      ORDER BY order_index ASC
+    `);
+
+    const playlistGames = stmt.all(playlist.id) as { game_id: string }[];
+
+    if (playlistGames.length === 0) {
+      return [];
+    }
+
+    // Get full game data for these IDs
+    const gameIds = playlistGames.map((pg) => pg.game_id);
+    const games = await this.gameService.getGamesByIds(gameIds);
+
+    return games;
+  }
+
+  /**
+   * Clone shared playlist to user's account
+   * Creates new playlist with same title (+ " (Copy)"), description, icon
+   * Copies all games with same order
+   */
+  cloneSharedPlaylist(
+    shareToken: string,
+    userId: number,
+    newTitle?: string
+  ): UserPlaylist | null {
+    const db = this.userDb.getDatabase();
+
+    // Get shared playlist
+    const sourcePlaylist = this.getPlaylistByShareToken(shareToken);
+    if (!sourcePlaylist) {
+      logger.warn(`Cannot clone shared playlist: token invalid or expired`);
+      return null;
+    }
+
+    // Create new playlist
+    const title = newTitle || `${sourcePlaylist.title} (Copy)`;
+    const newPlaylist = this.createPlaylist(userId, {
+      title,
+      description: sourcePlaylist.description || undefined,
+      icon: sourcePlaylist.icon || undefined
+    });
+
+    // Copy games with same order
+    const gamesStmt = db.prepare(`
+      SELECT game_id, order_index, notes
+      FROM user_playlist_games
+      WHERE playlist_id = ?
+      ORDER BY order_index
+    `);
+
+    const games = gamesStmt.all(sourcePlaylist.id) as {
+      game_id: string;
+      order_index: number;
+      notes: string | null;
+    }[];
+
+    if (games.length > 0) {
+      const insertStmt = db.prepare(`
+        INSERT INTO user_playlist_games (playlist_id, game_id, order_index, notes)
+        VALUES (?, ?, ?, ?)
+      `);
+
+      for (const game of games) {
+        insertStmt.run(newPlaylist.id, game.game_id, game.order_index, game.notes);
+      }
+    }
+
+    logger.info(`Cloned shared playlist "${sourcePlaylist.title}" to user ${userId} as "${title}"`);
+
+    return this.getPlaylistById(newPlaylist.id, userId);
   }
 }

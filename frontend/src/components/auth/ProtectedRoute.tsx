@@ -1,6 +1,7 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth';
 import { useFeatureFlags } from '../../hooks/useFeatureFlags';
+import { useSharedPlaylistAccess } from '../../hooks/useSharedPlaylistAccess';
 import { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
@@ -12,6 +13,7 @@ interface ProtectedRouteProps {
   requireRole?: string;
   requireFeature?: 'enablePlaylists' | 'enableFavorites' | 'enableStatistics';
   fallbackPath?: string;
+  allowSharedAccess?: boolean; // NEW: Allow access via shared playlist token
 }
 
 /**
@@ -26,11 +28,35 @@ export function ProtectedRoute({
   requireAllPermissions = false,
   requireRole,
   requireFeature,
-  fallbackPath = '/login'
+  fallbackPath = '/login',
+  allowSharedAccess = false, // NEW
 }: ProtectedRouteProps) {
   const location = useLocation();
   const { isAuthenticated, isGuest, hasPermission, hasAnyPermission, hasAllPermissions: hasAll, hasRole } = useAuthStore();
   const featureFlags = useFeatureFlags();
+
+  // Get gameId from route params if checking shared access
+  const params = useParams<{ id?: string }>();
+  const gameId = params.id || null;
+
+  // Check shared playlist access if enabled
+  const { hasAccess: hasSharedAccess, isLoading: isCheckingShared } = useSharedPlaylistAccess(
+    allowSharedAccess ? gameId : null
+  );
+
+  // Show loading while checking shared access
+  if (allowSharedAccess && isCheckingShared) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Grant access if shared access is valid (bypass auth requirements)
+  if (allowSharedAccess && hasSharedAccess) {
+    return <>{children}</>;
+  }
 
   // Check authentication - allow guests if not strictly requiring auth
   if (requireAuth && !isAuthenticated && !isGuest) {

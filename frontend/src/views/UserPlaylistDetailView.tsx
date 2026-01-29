@@ -6,13 +6,14 @@ import {
   useDeleteUserPlaylist,
 } from '@/hooks/useUserPlaylists';
 import { useFavoriteGameIds } from '@/hooks/useFavorites';
-import { ArrowLeft, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, MoreVertical, Share2 } from 'lucide-react';
 import { GameGrid } from '@/components/library/GameGrid';
 import { GameList } from '@/components/library/GameList';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ViewOptions } from '@/components/common/ViewOptions';
 import { CreateUserPlaylistDialog } from '@/components/playlist/CreateUserPlaylistDialog';
+import { SharePlaylistDialog } from '@/components/playlist/SharePlaylistDialog';
 import { PlaylistIcon } from '@/components/playlist/PlaylistIcon';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
@@ -54,6 +55,7 @@ export function UserPlaylistDetailView() {
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   const deletePlaylist = useDeleteUserPlaylist();
 
@@ -132,7 +134,7 @@ export function UserPlaylistDetailView() {
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold">{playlist.title}</h1>
               {playlist.isPublic && (
-                <Badge variant="secondary">Public</Badge>
+                <Badge variant="secondary">Shared</Badge>
               )}
             </div>
             {playlist.description && (
@@ -158,6 +160,10 @@ export function UserPlaylistDetailView() {
               <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                 <Edit size={16} className="mr-2" />
                 Edit Playlist
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsShareDialogOpen(true)}>
+                <Share2 size={16} className="mr-2" />
+                Share Playlist
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setIsDeleteDialogOpen(true)}
@@ -199,6 +205,13 @@ export function UserPlaylistDetailView() {
       <CreateUserPlaylistDialog
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
+        playlist={playlist}
+      />
+
+      {/* Share Dialog */}
+      <SharePlaylistDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
         playlist={playlist}
       />
 

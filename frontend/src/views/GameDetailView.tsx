@@ -1,14 +1,19 @@
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useGame } from '@/hooks/useGames';
 import { useDownload } from '@/hooks/useDownload';
 import { useGameStats } from '@/hooks/usePlayTracking';
+import { useSharedAccessToken } from '@/hooks/useSharedAccessToken';
+import { sharedPlaylistsApi } from '@/lib/api/sharedPlaylists';
+import { useAuthStore } from '@/store/auth';
 import { ArrowLeft, Play, ImageIcon, Loader2, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
+import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 
 // Helper function to format duration in seconds
 function formatDuration(seconds: number): string {
@@ -25,7 +30,32 @@ function formatDuration(seconds: number): string {
 export function GameDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: game, isLoading, error, refetch } = useGame(id!);
+  const [searchParams] = useSearchParams();
+  const shareToken = searchParams.get('shareToken');
+  const { isAuthenticated } = useAuthStore();
+  const { generateToken, hasValidToken, isGenerating } = useSharedAccessToken();
+
+  // Generate shared access token if accessing via shareToken (for anonymous users)
+  useEffect(() => {
+    if (shareToken && !isAuthenticated && !hasValidToken) {
+      generateToken(shareToken).catch(console.error);
+    }
+  }, [shareToken, isAuthenticated, hasValidToken, generateToken]);
+
+  // Wait for token generation before fetching game data
+  const canFetchGame = !shareToken || isAuthenticated || hasValidToken;
+
+  const { data: game, isLoading: isLoadingGame, error, refetch } = useGame(id!, { enabled: canFetchGame });
+
+  // Fetch shared playlist metadata if accessed via shareToken
+  const { data: sharedPlaylist } = useQuery({
+    queryKey: ['sharedPlaylist', shareToken],
+    queryFn: () => sharedPlaylistsApi.getByToken(shareToken!),
+    enabled: !!shareToken,
+    retry: false,
+  });
+
+  const isLoading = isLoadingGame || isGenerating;
   const { progress, isDownloading, startDownload } = useDownload(id!);
   const { data: gameStatsData } = useGameStats();
   const { formatDate } = useDateTimeFormat();
@@ -133,16 +163,27 @@ export function GameDetailView() {
   const needsDataDownload = game.presentOnDisk === 0;
 
   // Build breadcrumb items
-  const breadcrumbItems = [
-    { label: 'Browse', href: '/browse' },
-    { label: game.title, active: true }
-  ];
+  const breadcrumbItems = shareToken && sharedPlaylist
+    ? [
+        { label: sharedPlaylist.title, href: `/playlists/shared/${shareToken}` },
+        { label: game.title, active: true }
+      ]
+    : shareToken
+    ? [{ label: game.title, active: true }]
+    : [
+        { label: 'Browse', href: '/browse' },
+        { label: game.title, active: true }
+      ];
 
   return (
     <ErrorBoundary>
       <div className="max-w-6xl mx-auto space-y-6">
       {/* Breadcrumbs Navigation */}
-      <Breadcrumbs items={breadcrumbItems} />
+      <Breadcrumbs
+        items={breadcrumbItems}
+        homeLabel={shareToken ? "Shared" : "Home"}
+        homeHref={shareToken ? "#" : "/"}
+      />
 
       <button
         onClick={() => navigate(-1)}
@@ -228,7 +269,7 @@ export function GameDetailView() {
                   </button>
                 ) : (
                   <Link
-                    to={`/games/${game.id}/play`}
+                    to={buildSharedGameUrl(`/games/${game.id}/play`, shareToken)}
                     className="group inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all hover:scale-105 active:scale-95 ring-2 ring-primary/20 hover:ring-primary/40 w-full sm:w-auto"
                     title="Play Game"
                   >

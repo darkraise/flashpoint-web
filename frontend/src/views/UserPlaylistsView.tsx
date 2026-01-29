@@ -1,15 +1,16 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { PlaylistCard } from "@/components/playlist/PlaylistCard";
-import { CreateUserPlaylistDialog } from "@/components/playlist/CreateUserPlaylistDialog";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { PlaylistCard } from '@/components/playlist/PlaylistCard';
+import { CreateUserPlaylistDialog } from '@/components/playlist/CreateUserPlaylistDialog';
+import { SharePlaylistDialog } from '@/components/playlist/SharePlaylistDialog';
 import {
   useUserPlaylists,
   useUserPlaylistStats,
   useDeleteUserPlaylist,
-} from "@/hooks/useUserPlaylists";
-import { UserPlaylist } from "@/types/playlist";
-import { ListVideo, Plus } from "lucide-react";
-import { toast } from "sonner";
+} from '@/hooks/useUserPlaylists';
+import { UserPlaylist } from '@/types/playlist';
+import { ListVideo, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,16 +20,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 
 export function UserPlaylistsView() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingPlaylist, setEditingPlaylist] = useState<UserPlaylist | null>(
-    null,
-  );
-  const [deletingPlaylist, setDeletingPlaylist] = useState<UserPlaylist | null>(
-    null,
-  );
+  const [editingPlaylist, setEditingPlaylist] = useState<UserPlaylist | null>(null);
+  const [deletingPlaylist, setDeletingPlaylist] = useState<UserPlaylist | null>(null);
+  const [sharingPlaylist, setSharingPlaylist] = useState<UserPlaylist | null>(null);
 
   const { data: playlists = [], isLoading, error } = useUserPlaylists();
   const { data: stats } = useUserPlaylistStats();
@@ -43,17 +41,19 @@ export function UserPlaylistsView() {
     setDeletingPlaylist(playlist);
   };
 
+  const handleShare = (playlist: UserPlaylist) => {
+    setSharingPlaylist(playlist);
+  };
+
   const confirmDelete = async () => {
     if (!deletingPlaylist) return;
 
     try {
       await deletePlaylist.mutateAsync(deletingPlaylist.id);
-      toast.success("Playlist deleted successfully");
+      toast.success('Playlist deleted successfully');
       setDeletingPlaylist(null);
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.error?.message || "Failed to delete playlist",
-      );
+      toast.error(error?.response?.data?.error?.message || 'Failed to delete playlist');
     }
   };
 
@@ -92,14 +92,12 @@ export function UserPlaylistsView() {
             <p className="text-muted-foreground mt-1">
               {stats ? (
                 <>
-                  {stats.totalPlaylists}{" "}
-                  {stats.totalPlaylists === 1 ? "playlist" : "playlists"} with{" "}
-                  {stats.totalGames} {stats.totalGames === 1 ? "game" : "games"}
+                  {stats.totalPlaylists} {stats.totalPlaylists === 1 ? 'playlist' : 'playlists'}{' '}
+                  with {stats.totalGames} {stats.totalGames === 1 ? 'game' : 'games'}
                 </>
               ) : (
                 <>
-                  {playlists.length}{" "}
-                  {playlists.length === 1 ? "playlist" : "playlists"}
+                  {playlists.length} {playlists.length === 1 ? 'playlist' : 'playlists'}
                 </>
               )}
             </p>
@@ -129,13 +127,14 @@ export function UserPlaylistsView() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 py-2">
           {playlists.map((playlist) => (
             <PlaylistCard
               key={playlist.id}
               playlist={playlist}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onShare={handleShare}
             />
           ))}
         </div>
@@ -148,6 +147,15 @@ export function UserPlaylistsView() {
         playlist={editingPlaylist || undefined}
       />
 
+      {/* Share Dialog */}
+      {sharingPlaylist && (
+        <SharePlaylistDialog
+          isOpen={!!sharingPlaylist}
+          onClose={() => setSharingPlaylist(null)}
+          playlist={sharingPlaylist}
+        />
+      )}
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog
         open={!!deletingPlaylist}
@@ -157,21 +165,18 @@ export function UserPlaylistsView() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Playlist</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deletingPlaylist?.title}"? This
-              action cannot be undone. All games in this playlist will remain in
-              your library.
+              Are you sure you want to delete "{deletingPlaylist?.title}"? This action cannot be
+              undone. All games in this playlist will remain in your library.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletePlaylist.isPending}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={deletePlaylist.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={deletePlaylist.isPending}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {deletePlaylist.isPending ? "Deleting..." : "Delete"}
+              {deletePlaylist.isPending ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

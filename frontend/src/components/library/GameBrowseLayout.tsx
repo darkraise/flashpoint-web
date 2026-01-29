@@ -57,9 +57,7 @@ export function GameBrowseLayout({
     yearFrom: searchParams.get('yearFrom')
       ? parseInt(searchParams.get('yearFrom')!, 10)
       : undefined,
-    yearTo: searchParams.get('yearTo')
-      ? parseInt(searchParams.get('yearTo')!, 10)
-      : undefined,
+    yearTo: searchParams.get('yearTo') ? parseInt(searchParams.get('yearTo')!, 10) : undefined,
     sortBy: searchParams.get('sortBy') || 'title',
     sortOrder: (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc',
     page: parseInt(searchParams.get('page') || '1', 10),
@@ -113,7 +111,7 @@ export function GameBrowseLayout({
         id: 'search',
         label: 'Search',
         value: filters.search,
-        category: 'Search'
+        category: 'Search',
       });
     }
 
@@ -122,7 +120,7 @@ export function GameBrowseLayout({
         id: 'platform',
         label: 'Platform',
         value: filters.platform,
-        category: 'Platform'
+        category: 'Platform',
       });
     }
 
@@ -132,7 +130,7 @@ export function GameBrowseLayout({
           id: `series-${index}`,
           label: 'Series',
           value: series,
-          category: 'Series'
+          category: 'Series',
         });
       });
     }
@@ -143,7 +141,7 @@ export function GameBrowseLayout({
           id: `developers-${index}`,
           label: 'Developer',
           value: dev,
-          category: 'Developer'
+          category: 'Developer',
         });
       });
     }
@@ -154,7 +152,7 @@ export function GameBrowseLayout({
           id: `publishers-${index}`,
           label: 'Publisher',
           value: pub,
-          category: 'Publisher'
+          category: 'Publisher',
         });
       });
     }
@@ -165,7 +163,7 @@ export function GameBrowseLayout({
           id: `playModes-${index}`,
           label: 'Play Mode',
           value: mode,
-          category: 'Play Mode'
+          category: 'Play Mode',
         });
       });
     }
@@ -176,7 +174,7 @@ export function GameBrowseLayout({
           id: `languages-${index}`,
           label: 'Language',
           value: lang,
-          category: 'Language'
+          category: 'Language',
         });
       });
     }
@@ -187,7 +185,7 @@ export function GameBrowseLayout({
           id: `tags-${index}`,
           label: 'Tag',
           value: tag,
-          category: 'Tag'
+          category: 'Tag',
         });
       });
     }
@@ -203,42 +201,60 @@ export function GameBrowseLayout({
     } else if (chipId === 'platform') {
       newParams.delete('platform');
     } else if (chipId.startsWith('series-')) {
-      const remaining = filters.series?.split(',').filter((_, i) => chipId !== `series-${i}`).join(',');
+      const remaining = filters.series
+        ?.split(',')
+        .filter((_, i) => chipId !== `series-${i}`)
+        .join(',');
       if (remaining) {
         newParams.set('series', remaining);
       } else {
         newParams.delete('series');
       }
     } else if (chipId.startsWith('developers-')) {
-      const remaining = filters.developers?.split(',').filter((_, i) => chipId !== `developers-${i}`).join(',');
+      const remaining = filters.developers
+        ?.split(',')
+        .filter((_, i) => chipId !== `developers-${i}`)
+        .join(',');
       if (remaining) {
         newParams.set('developers', remaining);
       } else {
         newParams.delete('developers');
       }
     } else if (chipId.startsWith('publishers-')) {
-      const remaining = filters.publishers?.split(',').filter((_, i) => chipId !== `publishers-${i}`).join(',');
+      const remaining = filters.publishers
+        ?.split(',')
+        .filter((_, i) => chipId !== `publishers-${i}`)
+        .join(',');
       if (remaining) {
         newParams.set('publishers', remaining);
       } else {
         newParams.delete('publishers');
       }
     } else if (chipId.startsWith('playModes-')) {
-      const remaining = filters.playModes?.split(',').filter((_, i) => chipId !== `playModes-${i}`).join(',');
+      const remaining = filters.playModes
+        ?.split(',')
+        .filter((_, i) => chipId !== `playModes-${i}`)
+        .join(',');
       if (remaining) {
         newParams.set('playModes', remaining);
       } else {
         newParams.delete('playModes');
       }
     } else if (chipId.startsWith('languages-')) {
-      const remaining = filters.languages?.split(',').filter((_, i) => chipId !== `languages-${i}`).join(',');
+      const remaining = filters.languages
+        ?.split(',')
+        .filter((_, i) => chipId !== `languages-${i}`)
+        .join(',');
       if (remaining) {
         newParams.set('languages', remaining);
       } else {
         newParams.delete('languages');
       }
     } else if (chipId.startsWith('tags-')) {
-      const remaining = filters.tags?.split(',').filter((_, i) => chipId !== `tags-${i}`).join(',');
+      const remaining = filters.tags
+        ?.split(',')
+        .filter((_, i) => chipId !== `tags-${i}`)
+        .join(',');
       if (remaining) {
         newParams.set('tags', remaining);
       } else {

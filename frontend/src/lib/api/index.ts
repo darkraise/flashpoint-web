@@ -33,6 +33,7 @@ export { rolesApi } from './roles';
 
 // User Playlists
 export { userPlaylistsApi } from './userPlaylists';
+export { sharedPlaylistsApi } from './sharedPlaylists';
 
 // Favorites
 export { favoritesApi } from './favorites';

@@ -11,6 +11,7 @@ import { RemoveFavoriteButton } from '@/components/common/RemoveFavoriteButton';
 import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
+import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 
 interface GameCardProps {
   game: Game;
@@ -20,6 +21,7 @@ interface GameCardProps {
   showAddToPlaylistButton?: boolean;
   favoriteGameIds?: Set<string>; // Optional: for performance optimization
   isFavoritePage?: boolean; // NEW: Are we on favorites page?
+  shareToken?: string | null; // Optional: for shared playlist navigation
 }
 
 const GameCardComponent = function GameCard({
@@ -30,6 +32,7 @@ const GameCardComponent = function GameCard({
   showAddToPlaylistButton = true,
   favoriteGameIds,
   isFavoritePage = false,
+  shareToken = null,
 }: GameCardProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -46,9 +49,13 @@ const GameCardComponent = function GameCard({
   const isFavorited = favoriteGameIds?.has(game.id) ?? false;
   const isPlayable = game.platformName === 'Flash' || game.platformName === 'HTML5';
 
+  // Build URLs with shareToken if present
+  const gameDetailUrl = buildSharedGameUrl(`/games/${game.id}`, shareToken);
+  const gamePlayUrl = buildSharedGameUrl(`/games/${game.id}/play`, shareToken);
+
   // Handle navigation to game details (for clicking on image/footer area)
   const handleCardClick = () => {
-    navigate(`/games/${game.id}`);
+    navigate(gameDetailUrl);
   };
 
   return (
@@ -169,7 +176,7 @@ const GameCardComponent = function GameCard({
                   className="h-11 w-11 p-0 ml-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg border-none hover:shadow-xl hover:shadow-primary/40"
                 >
                   <Link
-                    to={`/games/${game.id}/play`}
+                    to={gamePlayUrl}
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Play ${game.title}`}
                   >
@@ -269,7 +276,8 @@ export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
     prevProps.showRemoveButton !== nextProps.showRemoveButton ||
     prevProps.showFavoriteIndicator !== nextProps.showFavoriteIndicator ||
     prevProps.showAddToPlaylistButton !== nextProps.showAddToPlaylistButton ||
-    prevProps.isFavoritePage !== nextProps.isFavoritePage
+    prevProps.isFavoritePage !== nextProps.isFavoritePage ||
+    prevProps.shareToken !== nextProps.shareToken
   ) {
     return false;
   }

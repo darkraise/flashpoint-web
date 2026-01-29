@@ -11,6 +11,8 @@ export interface BreadcrumbItem {
 interface BreadcrumbsProps {
   items: BreadcrumbItem[];
   showHome?: boolean;
+  homeLabel?: string;
+  homeHref?: string;
   className?: string;
 }
 
@@ -18,7 +20,13 @@ interface BreadcrumbsProps {
  * Breadcrumbs navigation component for wayfinding
  * Helps users understand their location in the app hierarchy
  */
-export function Breadcrumbs({ items, showHome = true, className }: BreadcrumbsProps) {
+export function Breadcrumbs({
+  items,
+  showHome = true,
+  homeLabel = "Home",
+  homeHref = "/",
+  className
+}: BreadcrumbsProps) {
   return (
     <nav aria-label="Breadcrumb" className={cn("flex items-center gap-2 text-sm", className)}>
       <ol className="flex items-center gap-2 flex-wrap">
@@ -26,12 +34,12 @@ export function Breadcrumbs({ items, showHome = true, className }: BreadcrumbsPr
           <>
             <li>
               <Link
-                to="/"
+                to={homeHref}
                 className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Home"
+                aria-label={homeLabel}
               >
                 <Home size={16} />
-                <span className="hidden sm:inline">Home</span>
+                <span className="hidden sm:inline">{homeLabel}</span>
               </Link>
             </li>
             {items.length > 0 && (

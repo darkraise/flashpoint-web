@@ -1,21 +1,24 @@
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, MoreVertical } from 'lucide-react';
+import { Trash2, Edit, MoreVertical, Share2, Link2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { UserPlaylist } from '@/types/playlist';
 import { PlaylistIcon } from './PlaylistIcon';
+import { toast } from 'sonner';
 
 interface PlaylistCardProps {
   playlist: UserPlaylist;
   onEdit?: (playlist: UserPlaylist) => void;
   onDelete?: (playlist: UserPlaylist) => void;
+  onShare?: (playlist: UserPlaylist) => void;
   showActions?: boolean;
 }
 
@@ -23,6 +26,7 @@ export function PlaylistCard({
   playlist,
   onEdit,
   onDelete,
+  onShare,
   showActions = true,
 }: PlaylistCardProps) {
   const handleEdit = (e: React.MouseEvent) => {
@@ -37,49 +41,73 @@ export function PlaylistCard({
     onDelete?.(playlist);
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onShare?.(playlist);
+  };
+
+  const handleCopyShareLink = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!playlist.shareToken) return;
+
+    const shareUrl = `${window.location.origin}/playlists/shared/${playlist.shareToken}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Share link copied to clipboard');
+    } catch (error) {
+      toast.error('Failed to copy link');
+    }
+  };
+
   return (
-    <Card className="group overflow-hidden hover:ring-2 hover:ring-primary/80 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 relative flex flex-col h-full">
-      <Link to={`/playlists/${playlist.id}`} className="flex flex-col flex-1">
-        <CardContent className="p-6 flex flex-col items-center justify-center flex-1 bg-gradient-to-br from-primary/10 to-accent/10 relative">
-          <div className="p-4 bg-primary/20 rounded-full mb-4">
-            <PlaylistIcon
-              iconName={playlist.icon}
-              size={48}
-              className="text-primary"
-              aria-label={`${playlist.title} icon`}
-            />
-          </div>
-
-          <div className="text-center">
-            <h3 className="font-semibold text-lg mb-1" title={playlist.title}>
-              {playlist.title}
-            </h3>
-            <p className="text-xs text-muted-foreground line-clamp-2 max-w-[200px] min-h-[2rem]">
-              {playlist.description || '\u00A0'}
-            </p>
-          </div>
-
-          {/* {playlist.isPublic && (
-            <Badge variant="secondary" className="absolute top-2 left-2 text-xs">
-              Public
-            </Badge>
-          )} */}
-        </CardContent>
-
-        <CardFooter className="p-3 flex items-center justify-between border-t bg-muted/30">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
+    <Card className="group overflow-hidden hover:ring-2 hover:ring-primary/80 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+      <div className="flex items-start gap-4 p-4">
+        {/* COLUMN 1: Icon + Game Count */}
+        <Link to={`/playlists/${playlist.id}`} className="flex-shrink-0">
+          <div className="flex flex-col items-center gap-2">
+            <div className="p-3 bg-primary/10 rounded-lg">
+              <PlaylistIcon
+                iconName={playlist.icon}
+                size={32}
+                className="text-primary"
+                aria-label={`${playlist.title} icon`}
+              />
+            </div>
+            <Badge variant="outline" className="text-xs font-normal bg-primary/5">
               {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
             </Badge>
           </div>
+        </Link>
 
-          {showActions && (onEdit || onDelete) && (
+        {/* COLUMN 2: Content */}
+        <Link to={`/playlists/${playlist.id}`} className="flex-1 min-w-0">
+          <div className="space-y-1">
+            {/* Row 1: Playlist Name */}
+            <CardTitle className="text-lg font-semibold truncate" title={playlist.title}>
+              {playlist.title}
+            </CardTitle>
+
+            {/* Row 2: Description */}
+            <CardDescription className="text-sm line-clamp-2">
+              {playlist.description || 'No description'}
+            </CardDescription>
+          </div>
+        </Link>
+
+        {/* COLUMN 3: Action Buttons */}
+        <div className="flex flex-col gap-2 flex-shrink-0">
+          {/* Menu Button (always visible) */}
+          {showActions && (onEdit || onDelete || onShare) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.preventDefault()}>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 p-0 border border-primary/20 hover:bg-accent/50 transition-all duration-200"
+                  aria-label="More options"
                 >
                   <MoreVertical size={16} />
                 </Button>
@@ -89,6 +117,12 @@ export function PlaylistCard({
                   <DropdownMenuItem onClick={handleEdit}>
                     <Edit size={16} className="mr-2" />
                     Edit
+                  </DropdownMenuItem>
+                )}
+                {onShare && (
+                  <DropdownMenuItem onClick={handleShare}>
+                    <Share2 size={16} className="mr-2" />
+                    Share
                   </DropdownMenuItem>
                 )}
                 {onDelete && (
@@ -103,8 +137,26 @@ export function PlaylistCard({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-        </CardFooter>
-      </Link>
+
+          {/* Share Indicator Button (icon only) */}
+          {playlist.isPublic && playlist.shareToken ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-8 w-8 p-0 bg-primary/90 hover:bg-primary text-primary-foreground shadow-sm transition-all hover:shadow-md"
+                  onClick={handleCopyShareLink}
+                  aria-label="Copy share link"
+                >
+                  <Link2 size={16} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Click to copy share link</TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
+      </div>
     </Card>
   );
 }

@@ -8,9 +8,10 @@ interface GameListProps {
   showAddToPlaylistButton?: boolean;
   favoriteGameIds?: Set<string>; // Optional: for performance optimization
   isFavoritePage?: boolean;
+  shareToken?: string | null; // Optional: for shared playlist navigation
 }
 
-export function GameList({ games, showFavoriteButton = true, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false }: GameListProps) {
+export function GameList({ games, showFavoriteButton = true, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null }: GameListProps) {
   const listColumns = useUIStore((state) => state.listColumns);
 
   if (games.length === 0) {
@@ -41,6 +42,7 @@ export function GameList({ games, showFavoriteButton = true, showAddToPlaylistBu
           showAddToPlaylistButton={showAddToPlaylistButton}
           favoriteGameIds={favoriteGameIds}
           isFavoritePage={isFavoritePage}
+          shareToken={shareToken}
         />
       ))}
     </div>

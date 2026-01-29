@@ -1,8 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/AuthService';
 import { AppError } from './errorHandler';
+import { verifySharedAccessToken, SharedAccessPayload } from '../utils/jwt';
+import { UserPlaylistService } from '../services/UserPlaylistService';
+import { asyncHandler } from './asyncHandler';
 
 const authService = new AuthService();
+const playlistService = new UserPlaylistService();
+
+/**
+ * Extend Express Request to include sharedAccess property
+ */
+declare global {
+  namespace Express {
+    interface Request {
+      sharedAccess?: SharedAccessPayload;
+    }
+  }
+}
 
 /**
  * Authenticate user from JWT token
@@ -94,4 +109,96 @@ export const softAuth = async (req: Request, res: Response, next: NextFunction) 
     req.user = undefined;
     next();
   }
+};
+
+/**
+ * Middleware that handles both regular authentication and shared access tokens
+ * Order: 1) Regular JWT Bearer token -> req.user
+ *        2) Shared access token (SharedAccess prefix) -> req.sharedAccess
+ *        3) Guest access (if enabled) -> req.user (guest)
+ */
+export const sharedAccessAuth = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader) {
+      // Check for shared access token first
+      if (authHeader.startsWith('SharedAccess ')) {
+        const token = authHeader.substring(13);
+        try {
+          const payload = verifySharedAccessToken(token);
+
+          // Validate the shareToken is still valid
+          const playlist = playlistService.getPlaylistByShareToken(payload.shareToken);
+          if (!playlist) {
+            throw new AppError(401, 'Shared access token invalid or expired', true, 'SHARED_ACCESS_INVALID');
+          }
+
+          req.sharedAccess = payload;
+          return next();
+        } catch (error) {
+          if (error instanceof AppError) throw error;
+          throw new AppError(401, 'Invalid shared access token', true, 'SHARED_ACCESS_INVALID');
+        }
+      }
+
+      // Check for regular JWT token
+      if (authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const user = await authService.verifyAccessToken(token);
+        req.user = user;
+        return next();
+      }
+    }
+
+    // No valid token - check guest access
+    if (!authService.isGuestAccessEnabled()) {
+      throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
+    }
+
+    // Set guest user
+    req.user = {
+      id: 0,
+      username: 'guest',
+      email: '',
+      role: 'guest',
+      permissions: ['games.read', 'playlists.read', 'games.play']
+    };
+
+    next();
+  }
+);
+
+/**
+ * Validates that a game is accessible via shared access token
+ * Must be used after sharedAccessAuth middleware
+ */
+export const validateSharedGameAccess = (gameIdParam: string = 'id') => {
+  return asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    // If regular user auth, skip validation
+    if (req.user) {
+      return next();
+    }
+
+    // If shared access, validate game is in playlist
+    if (req.sharedAccess) {
+      const gameId = req.params[gameIdParam];
+      if (!gameId) {
+        throw new AppError(400, 'Game ID required');
+      }
+
+      const isInPlaylist = playlistService.isGameInSharedPlaylist(
+        req.sharedAccess.shareToken,
+        gameId
+      );
+
+      if (!isInPlaylist) {
+        throw new AppError(403, 'Game not accessible via this shared playlist', true, 'GAME_NOT_IN_SHARED_PLAYLIST');
+      }
+
+      return next();
+    }
+
+    throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
+  });
 };

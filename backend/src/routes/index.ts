@@ -20,6 +20,7 @@ import systemSettingsRouter from './system-settings';
 import jobsRouter from './jobs';
 import playTrackingRouter from './play-tracking';
 import userPlaylistsRouter from './user-playlists';
+import sharedPlaylistsRouter from './shared-playlists';
 import favoritesRouter from './favorites';
 import ruffleRouter from './ruffle';
 import githubRouter from './github';
@@ -54,6 +55,7 @@ export function setupRoutes(app: Express): void {
 
   // User playlists and favorites
   app.use('/api/user-playlists', userPlaylistsRouter);
+  app.use('/api/playlists/shared', sharedPlaylistsRouter);
   app.use('/api/favorites', favoritesRouter);
 
   // API routes

@@ -10,6 +10,7 @@ import { RemoveFavoriteButton } from '@/components/common/RemoveFavoriteButton';
 import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
+import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 
 interface GameListItemProps {
   game: Game;
@@ -19,9 +20,10 @@ interface GameListItemProps {
   showAddToPlaylistButton?: boolean;
   favoriteGameIds?: Set<string>; // Optional: for performance optimization
   isFavoritePage?: boolean;
+  shareToken?: string | null; // Optional: for shared playlist navigation
 }
 
-export function GameListItem({ game, showFavoriteButton = true, showRemoveButton = false, showFavoriteIndicator = false, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false }: GameListItemProps) {
+export function GameListItem({ game, showFavoriteButton = true, showRemoveButton = false, showFavoriteIndicator = false, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null }: GameListItemProps) {
   const [imageError, setImageError] = useState(false);
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
 
@@ -39,13 +41,17 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
   const isFavorited = favoriteGameIds?.has(game.id) ?? false;
   const isPlayable = game.platformName === 'Flash' || game.platformName === 'HTML5';
 
+  // Build URLs with shareToken if present
+  const gameDetailUrl = buildSharedGameUrl(`/games/${game.id}`, shareToken);
+  const gamePlayUrl = buildSharedGameUrl(`/games/${game.id}/play`, shareToken);
+
   return (
     <Card className="group overflow-hidden hover:bg-accent hover:shadow-md hover:border-primary/20 hover:z-10 relative transition-all">
       <CardContent className="p-3">
         <div className="flex items-center gap-3">
           {/* Thumbnail */}
           <Link
-            to={`/games/${game.id}`}
+            to={gameDetailUrl}
             className="flex-shrink-0 w-24 h-16 bg-muted rounded overflow-hidden border shadow-sm"
           >
             {imageUrl && !imageError ? (
@@ -65,7 +71,7 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
 
           {/* Game Info */}
           <div className="flex-1 min-w-0 space-y-1">
-            <Link to={`/games/${game.id}`}>
+            <Link to={gameDetailUrl}>
               <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors" title={game.title}>
                 {game.title}
               </h3>
@@ -147,7 +153,7 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
                 asChild
               >
                 <Link
-                  to={`/games/${game.id}/play`}
+                  to={gamePlayUrl}
                   title="Play Game"
                   aria-label="Play Game"
                 >

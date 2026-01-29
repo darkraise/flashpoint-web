@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { apiClient as api } from './api/client';
 import { Game, PaginatedResult, GameFilters, FilterOptions, Playlist, GameLaunchData } from '@/types/game';
 import {
   LoginCredentials,
@@ -62,13 +62,6 @@ import { useAuthStore } from '@/store/auth';
 export interface PlaylistWithGames extends UserPlaylist {
   games: Game[];
 }
-
-const api = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
 
 export const gamesApi = {
   search: async (filters: GameFilters): Promise<PaginatedResult<Game>> => {

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/auth';
+import { useSharedAccessStore } from '@/store/sharedAccess';
 import type { AuthTokens } from '@/types/auth';
 
 /**
@@ -23,14 +24,25 @@ export const apiClient = axios.create({
 // ===================================
 
 /**
- * Adds JWT access token to all outgoing requests
+ * Adds authentication token to all outgoing requests
+ * Priority: 1) Regular JWT Bearer token, 2) Shared access token
  */
 apiClient.interceptors.request.use(
   (config) => {
+    // First, try regular JWT token
     const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      return config;
     }
+
+    // Second, try shared access token
+    const sharedToken = useSharedAccessStore.getState().getToken();
+    if (sharedToken) {
+      config.headers.Authorization = `SharedAccess ${sharedToken}`;
+      return config;
+    }
+
     return config;
   },
   (error) => {
@@ -81,6 +93,17 @@ apiClient.interceptors.response.use(
 
     // If error is 401 and we haven't retried yet
     if (status === 401 && !originalRequest._retry) {
+      const errorCode = error.response.data?.code;
+
+      // Handle shared access token errors differently
+      if (errorCode === 'SHARED_ACCESS_INVALID' || originalRequest.headers?.Authorization?.startsWith('SharedAccess ')) {
+        useSharedAccessStore.getState().clearToken();
+        const { toast } = await import('sonner');
+        toast.error('Your shared access has expired. Return to the playlist to continue browsing.');
+        // Don't redirect to login for shared access - let the UI handle it
+        return Promise.reject(error);
+      }
+
       // Don't retry the refresh endpoint itself (prevents infinite loop)
       if (originalRequest.url?.includes('/auth/refresh')) {
         const { toast } = await import('sonner');

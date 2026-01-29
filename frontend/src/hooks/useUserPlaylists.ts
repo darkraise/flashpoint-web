@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userPlaylistsApi } from '@/lib/api';
+import { userPlaylistsApi } from '@/lib/api/userPlaylists';
+import { sharedPlaylistsApi } from '@/lib/api/sharedPlaylists';
 import type { PlaylistWithGames } from '@/lib/api/userPlaylists';
 import {
   UpdatePlaylistData,
   UserPlaylist,
   PlaylistStats,
+  EnableSharingOptions,
+  ShareLinkData,
 } from '@/types/playlist';
 import { Game } from '@/types/game';
 import { useFeatureFlags } from './useFeatureFlags';
@@ -389,6 +392,125 @@ export function useCopyFlashpointPlaylist() {
 
     onError: (err: unknown) => {
       const message = getErrorMessage(err) || 'Failed to copy playlist';
+      showToast(message, 'error');
+    },
+  });
+}
+
+/**
+ * Hook to enable sharing for a user playlist
+ */
+export function useEnableSharing() {
+  const queryClient = useQueryClient();
+  const { showToast } = useDialog();
+
+  return useMutation<
+    ShareLinkData,
+    unknown,
+    { id: number; options?: EnableSharingOptions }
+  >({
+    mutationFn: ({ id, options }) => userPlaylistsApi.enableSharing(id, options),
+
+    onSuccess: (_, variables) => {
+      // Invalidate playlist queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
+      queryClient.invalidateQueries({ queryKey: ['user-playlist', variables.id] });
+
+      showToast('Sharing enabled', 'success');
+    },
+
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err) || 'Failed to enable sharing';
+      showToast(message, 'error');
+    },
+  });
+}
+
+/**
+ * Hook to disable sharing for a user playlist
+ */
+export function useDisableSharing() {
+  const queryClient = useQueryClient();
+  const { showToast } = useDialog();
+
+  return useMutation<{ success: boolean }, unknown, number>({
+    mutationFn: (id: number) => userPlaylistsApi.disableSharing(id),
+
+    onSuccess: (_, id) => {
+      // Invalidate playlist queries
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
+      queryClient.invalidateQueries({ queryKey: ['user-playlist', id] });
+
+      showToast('Sharing disabled', 'success');
+    },
+
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err) || 'Failed to disable sharing';
+      showToast(message, 'error');
+    },
+  });
+}
+
+/**
+ * Hook to regenerate share token (invalidates old links)
+ */
+export function useRegenerateShareToken() {
+  const queryClient = useQueryClient();
+  const { showToast } = useDialog();
+
+  return useMutation<ShareLinkData, unknown, number>({
+    mutationFn: (id: number) => userPlaylistsApi.regenerateShareToken(id),
+
+    onSuccess: (_, id) => {
+      // Invalidate playlist queries
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
+      queryClient.invalidateQueries({ queryKey: ['user-playlist', id] });
+
+      showToast('Share link regenerated', 'success');
+    },
+
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err) || 'Failed to regenerate link';
+      showToast(message, 'error');
+    },
+  });
+}
+
+/**
+ * Hook to clone a shared playlist to the authenticated user's account
+ */
+export function useCloneSharedPlaylist() {
+  const queryClient = useQueryClient();
+  const { showToast } = useDialog();
+
+  return useMutation<
+    UserPlaylist,
+    unknown,
+    { shareToken: string; newTitle?: string }
+  >({
+    mutationFn: ({ shareToken, newTitle }) =>
+      sharedPlaylistsApi.clonePlaylist(shareToken, newTitle),
+
+    onSuccess: (newPlaylist) => {
+      // Add to list cache
+      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
+        return [newPlaylist, ...old];
+      });
+
+      // Add to single-item cache
+      queryClient.setQueryData(['user-playlist', newPlaylist.id], newPlaylist);
+
+      // Update stats
+      queryClient.setQueryData<PlaylistStats>(['user-playlists', 'stats'], (old) => {
+        if (!old) return old;
+        return { ...old, totalPlaylists: (old.totalPlaylists || 0) + 1 };
+      });
+
+      showToast('Playlist cloned successfully', 'success');
+    },
+
+    onError: (err: unknown) => {
+      const message = getErrorMessage(err) || 'Failed to clone playlist';
       showToast(message, 'error');
     },
   });

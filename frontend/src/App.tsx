@@ -1,14 +1,17 @@
-import { Routes, Route, Navigate, useNavigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AppShell } from './components/layout/AppShell';
+import { MainLayout } from './components/layout/MainLayout';
+import { PublicLayout } from './components/layout/PublicLayout';
+import { SharedLayout } from './components/layout/SharedLayout';
+import { ErrorLayout } from './components/layout/ErrorLayout';
+import { ParticleNetworkBackground } from './components/auth/ParticleNetworkBackground';
 import { UnauthorizedView } from './views/UnauthorizedView';
 import { MaintenancePage } from './views/MaintenancePage';
 import { NotFoundView } from './components/error/NotFoundView';
 import { ServerErrorView } from './components/error/ServerErrorView';
 import { NetworkErrorView } from './components/error/NetworkErrorView';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { MaintenanceGuard } from './components/common/MaintenanceGuard';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NetworkStatusIndicator } from './components/common/NetworkStatusIndicator';
 import { MobileWarningDialog } from './components/common/MobileWarningDialog';
@@ -39,6 +42,7 @@ const PlaylistsView = lazy(() => import('./views/PlaylistsView').then(m => ({ de
 const PlaylistDetailView = lazy(() => import('./views/PlaylistDetailView').then(m => ({ default: m.PlaylistDetailView })));
 const UserPlaylistsView = lazy(() => import('./views/UserPlaylistsView').then(m => ({ default: m.UserPlaylistsView })));
 const UserPlaylistDetailView = lazy(() => import('./views/UserPlaylistDetailView').then(m => ({ default: m.UserPlaylistDetailView })));
+const SharedPlaylistView = lazy(() => import('./views/SharedPlaylistView').then(m => ({ default: m.SharedPlaylistView })));
 
 // Admin views
 const SettingsView = lazy(() => import('./views/SettingsView').then(m => ({ default: m.SettingsView })));
@@ -48,8 +52,9 @@ const RolesView = lazy(() => import('./views/RolesView').then(m => ({ default: m
 const ActivitiesView = lazy(() => import('./views/ActivitiesView').then(m => ({ default: m.ActivitiesView })));
 
 function App() {
-  const { isAuthenticated, isGuest, clearAuth } = useAuthStore();
+  const { isAuthenticated, isGuest, clearAuth, setGuestMode } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: publicSettings } = usePublicSettings();
 
   // Check if guest access is enabled when user is in guest mode
@@ -59,6 +64,21 @@ function App() {
     enabled: isGuest,
     refetchInterval: isGuest ? 30000 : false // Refetch every 30 seconds if guest
   });
+
+  // Initialize guest mode for anonymous users
+  // This allows them to view/play games from shared playlists even if guest access is OFF
+  // Exclude auth pages (login, register) from automatic guest initialization
+  useEffect(() => {
+    const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
+    if (isAuthPage && isGuest && !isAuthenticated) {
+      // Clear guest mode when navigating to auth pages
+      clearAuth();
+    } else if (!isAuthenticated && !isGuest && !isAuthPage) {
+      // Initialize guest mode for non-auth pages
+      setGuestMode();
+    }
+  }, [isAuthenticated, isGuest, location.pathname, setGuestMode, clearAuth]);
 
   // Update browser title from site name in public settings
   useEffect(() => {
@@ -70,12 +90,23 @@ function App() {
   }, [publicSettings]);
 
   // Redirect guest users if guest access is disabled
+  // Shared playlist and game access (from shared playlists) is handled by ProtectedRoute with allowSharedAccess prop
   useEffect(() => {
-    if (isGuest && authSettings && !authSettings.guestAccessEnabled) {
+    const pathname = location.pathname;
+    const searchParams = new URLSearchParams(location.search);
+    const hasShareToken = searchParams.has('shareToken');
+
+    // Always allow shared playlist route (anonymous access)
+    const isSharedPlaylistPath = pathname.startsWith('/playlists/shared/');
+
+    // Allow game pages with shareToken (coming from shared playlists)
+    const isGamePageWithShareToken = pathname.startsWith('/games/') && hasShareToken;
+
+    if (isGuest && authSettings && !authSettings.guestAccessEnabled && !isSharedPlaylistPath && !isGamePageWithShareToken) {
       clearAuth();
       navigate('/login', { replace: true });
     }
-  }, [isGuest, authSettings, clearAuth, navigate]);
+  }, [isGuest, authSettings, location.pathname, location.search, clearAuth, navigate]);
 
   return (
     <ErrorBoundary>
@@ -84,183 +115,207 @@ function App() {
         <MobileWarningDialog />
         <Toaster />
         <Routes>
-      {/* Auth routes (no AppShell) */}
-      <Route path="/login" element={
-        <Suspense fallback={<RouteLoadingFallback />}>
-          <LoginView />
-        </Suspense>
-      } />
-      <Route path="/register" element={
-        <Suspense fallback={<RouteLoadingFallback />}>
-          <RegisterView />
-        </Suspense>
-      } />
-      <Route path="/unauthorized" element={<UnauthorizedView />} />
-      <Route path="/maintenance" element={<MaintenancePage />} />
+          {/* ==================== PUBLIC LAYOUT ==================== */}
+          <Route element={<PublicLayout background={<ParticleNetworkBackground />} />}>
+            <Route path="/login" element={
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <LoginView />
+              </Suspense>
+            } />
+          </Route>
 
-      {/* Error pages (no AppShell) */}
-      <Route path="/error/500" element={<ServerErrorView />} />
-      <Route path="/error/network" element={<NetworkErrorView />} />
+          <Route element={<PublicLayout />}>
+            <Route path="/register" element={
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <RegisterView />
+              </Suspense>
+            } />
+          </Route>
 
-      {/* Dev-only test routes */}
-      {import.meta.env.DEV && (
-        <>
-          <Route path="/_dev/404" element={<NotFoundView />} />
-          <Route path="/_dev/500" element={<ServerErrorView />} />
-          <Route path="/_dev/network" element={<NetworkErrorView />} />
-          <Route path="/_dev/403" element={<UnauthorizedView />} />
-        </>
-      )}
+          {/* ==================== SHARED LAYOUT ==================== */}
+          <Route element={<SharedLayout />}>
+            <Route path="/playlists/shared/:shareToken" element={
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <SharedPlaylistView />
+              </Suspense>
+            } />
+            <Route path="/games/:id/shared" element={
+              <ProtectedRoute requireAuth={false} allowSharedAccess={true}>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <GameDetailView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/games/:id/play-shared" element={
+              <ProtectedRoute requirePermission="games.play" allowSharedAccess={true}>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <GamePlayerView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+          </Route>
 
-      {/* Main app routes (with AppShell + MaintenanceGuard) */}
-      <Route element={
-        <MaintenanceGuard>
-          <AppShell>
-            <Outlet />
-          </AppShell>
-        </MaintenanceGuard>
-      }>
-        <Route path="/" element={
-          isAuthenticated || isGuest ? (
-            <Navigate to="/flash-games" replace />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        } />
+          {/* ==================== ERROR LAYOUT ==================== */}
+          <Route element={<ErrorLayout />}>
+            <Route path="/unauthorized" element={<UnauthorizedView />} />
+            <Route path="/error/500" element={<ServerErrorView />} />
+            <Route path="/error/network" element={<NetworkErrorView />} />
+            <Route path="*" element={<NotFoundView />} />
+            {import.meta.env.DEV && (
+              <>
+                <Route path="/_dev/404" element={<NotFoundView />} />
+                <Route path="/_dev/500" element={<ServerErrorView />} />
+                <Route path="/_dev/network" element={<NetworkErrorView />} />
+                <Route path="/_dev/403" element={<UnauthorizedView />} />
+              </>
+            )}
+          </Route>
 
-        {/* Public/guest accessible routes */}
-        <Route path="/flash-games" element={
-          <ProtectedRoute requireAuth={false}>
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <FlashGamesView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/html5-games" element={
-          <ProtectedRoute requireAuth={false}>
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <HTML5GamesView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/browse" element={
-          <ProtectedRoute requireAuth={false}>
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <BrowseView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/animations" element={
-          <ProtectedRoute requireAuth={false}>
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <AnimationsView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/games/:id" element={
-          <ProtectedRoute requireAuth={false}>
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <GameDetailView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
+          {/* ==================== STANDALONE ==================== */}
+          <Route path="/maintenance" element={<MaintenancePage />} />
 
-        {/* Protected routes - require authentication */}
-        <Route path="/dashboard" element={
-          <ProtectedRoute requireFeature="enableStatistics">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <DashboardView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/games/:id/play" element={
-          <ProtectedRoute requirePermission="games.play">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <GamePlayerView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/favorites" element={
-          <ProtectedRoute requireFeature="enableFavorites">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <FavoritesView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/playlists" element={
-          <ProtectedRoute requireFeature="enablePlaylists">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <UserPlaylistsView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/playlists/:id" element={
-          <ProtectedRoute requireFeature="enablePlaylists">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <UserPlaylistDetailView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/flashpoint-playlists" element={
-          <ProtectedRoute requireFeature="enablePlaylists">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <PlaylistsView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/flashpoint-playlists/:id" element={
-          <ProtectedRoute requireFeature="enablePlaylists">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <PlaylistDetailView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
+          {/* ==================== MAIN LAYOUT ==================== */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={
+              isAuthenticated || isGuest ? (
+                <Navigate to="/flash-games" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            } />
 
-        {/* User management routes */}
-        <Route path="/users" element={
-          <ProtectedRoute requirePermission="users.read">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <UsersView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/roles" element={
-          <ProtectedRoute requirePermission="roles.read">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <RolesView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-        <Route path="/activities" element={
-          <ProtectedRoute requirePermission="activities.read" requireFeature="enableStatistics">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <ActivitiesView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
+            {/* Public/guest accessible routes */}
+            <Route path="/flash-games" element={
+              <ProtectedRoute requireAuth={false}>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <FlashGamesView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/html5-games" element={
+              <ProtectedRoute requireAuth={false}>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <HTML5GamesView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/browse" element={
+              <ProtectedRoute requireAuth={false}>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <BrowseView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/animations" element={
+              <ProtectedRoute requireAuth={false}>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <AnimationsView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/games/:id" element={
+              <ProtectedRoute requireAuth={false} allowSharedAccess={true}>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <GameDetailView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
 
-        {/* Jobs */}
-        <Route path="/jobs" element={
-          <ProtectedRoute requirePermission="settings.update">
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <JobsView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
+            {/* Game player - normal authenticated access */}
+            <Route path="/games/:id/play" element={
+              <ProtectedRoute requirePermission="games.play">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <GamePlayerView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
 
-        {/* Settings */}
-        <Route path="/settings" element={
-          <ProtectedRoute>
-            <Suspense fallback={<RouteLoadingFallback />}>
-              <SettingsView />
-            </Suspense>
-          </ProtectedRoute>
-        } />
-      </Route>
+            {/* Protected routes - require authentication */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute requireFeature="enableStatistics">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <DashboardView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/favorites" element={
+              <ProtectedRoute requireFeature="enableFavorites">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <FavoritesView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/playlists" element={
+              <ProtectedRoute requireFeature="enablePlaylists">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <UserPlaylistsView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/playlists/:id" element={
+              <ProtectedRoute requireFeature="enablePlaylists">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <UserPlaylistDetailView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/flashpoint-playlists" element={
+              <ProtectedRoute requireFeature="enablePlaylists">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <PlaylistsView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/flashpoint-playlists/:id" element={
+              <ProtectedRoute requireFeature="enablePlaylists">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <PlaylistDetailView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
 
-      {/* 404 catch-all - MUST BE LAST, no AppShell */}
-      <Route path="*" element={<NotFoundView />} />
-      </Routes>
+            {/* User management routes */}
+            <Route path="/users" element={
+              <ProtectedRoute requirePermission="users.read">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <UsersView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/roles" element={
+              <ProtectedRoute requirePermission="roles.read">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <RolesView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="/activities" element={
+              <ProtectedRoute requirePermission="activities.read" requireFeature="enableStatistics">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <ActivitiesView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Jobs */}
+            <Route path="/jobs" element={
+              <ProtectedRoute requirePermission="settings.update">
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <JobsView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Settings */}
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <SettingsView />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+          </Route>
+        </Routes>
       </TooltipProvider>
     </ErrorBoundary>
   );

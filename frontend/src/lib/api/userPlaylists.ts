@@ -4,6 +4,8 @@ import type {
   CreatePlaylistData,
   UpdatePlaylistData,
   PlaylistStats,
+  ShareLinkData,
+  EnableSharingOptions,
 } from '@/types/playlist';
 import type { Game } from '@/types/game';
 
@@ -115,6 +117,54 @@ export const userPlaylistsApi = {
       flashpointPlaylistId,
       newTitle,
     });
+    return data;
+  },
+
+  /**
+   * Enable sharing for a playlist
+   */
+  enableSharing: async (
+    id: number,
+    options?: EnableSharingOptions
+  ): Promise<ShareLinkData> => {
+    const { data } = await apiClient.post<ShareLinkData>(
+      `/user-playlists/${id}/share/enable`,
+      options
+    );
+    return data;
+  },
+
+  /**
+   * Disable sharing for a playlist
+   */
+  disableSharing: async (id: number): Promise<{ success: boolean }> => {
+    const { data } = await apiClient.post<{ success: boolean }>(
+      `/user-playlists/${id}/share/disable`
+    );
+    return data;
+  },
+
+  /**
+   * Regenerate share token (invalidates old links)
+   */
+  regenerateShareToken: async (id: number): Promise<ShareLinkData> => {
+    const { data } = await apiClient.post<ShareLinkData>(
+      `/user-playlists/${id}/share/regenerate`
+    );
+    return data;
+  },
+
+  /**
+   * Update share settings (expiry, show_owner) without regenerating token
+   */
+  updateShareSettings: async (
+    id: number,
+    options: EnableSharingOptions
+  ): Promise<ShareLinkData> => {
+    const { data } = await apiClient.patch<ShareLinkData>(
+      `/user-playlists/${id}/share/settings`,
+      options
+    );
     return data;
   },
 };

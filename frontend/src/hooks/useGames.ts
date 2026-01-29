@@ -14,11 +14,11 @@ export function useGames(filters: GameFilters) {
   });
 }
 
-export function useGame(id: string) {
+export function useGame(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['game', id],
     queryFn: () => gamesApi.getById(id),
-    enabled: !!id
+    enabled: !!id && (options?.enabled !== false)
   });
 }
 
