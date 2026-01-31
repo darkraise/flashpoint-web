@@ -106,16 +106,34 @@ GAME_SERVICE_PROXY_URL=http://192.168.1.100:22500
 GAME_SERVICE_GAMEZIP_URL=http://192.168.1.100:22501
 ```
 
-### Image CDN URLs
+### Image CDN URLs (Optional)
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `EXTERNAL_IMAGE_URLS` | string | See below | Comma-separated CDN URLs for image fallback |
+| `EXTERNAL_IMAGE_URLS` | string | Read from Flashpoint preferences | Comma-separated CDN URLs for image fallback |
 
-**Default:**
+**Default:** Read from Flashpoint preferences (`onDemandBaseUrl`)
+
+**Description:** Comma-separated list of external CDN URLs to use as fallback when serving game images/logos/screenshots. If not set, the backend will automatically read the CDN URL from Flashpoint's preferences file.
+
+**Preference Source:** `.preferences.defaults.json` or `preferences.json` → `onDemandBaseUrl`
+
+**Priority:**
+1. Environment variable (if set)
+2. Flashpoint preferences `onDemandBaseUrl` (automatic)
+3. Hardcoded defaults:
+   - `https://infinity.flashpointarchive.org/Flashpoint/Data/Images`
+   - `https://infinity.unstable.life/Flashpoint/Data/Images`
+
+**When to set manually:**
+- Using custom CDN mirrors not in Flashpoint preferences
+- Testing with different image sources
+- Overriding Flashpoint's default CDN
+
+**Example:**
 
 ```bash
-EXTERNAL_IMAGE_URLS=https://infinity.flashpointarchive.org/Flashpoint/Data/Images,https://infinity.unstable.life/Flashpoint/Data/Images
+EXTERNAL_IMAGE_URLS=https://custom-cdn.example.com/images,https://backup-cdn.example.com/images
 ```
 
 **Usage:**

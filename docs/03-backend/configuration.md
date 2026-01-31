@@ -154,12 +154,20 @@ export const config = {
 
 ### External Resources
 
-#### `EXTERNAL_IMAGE_URLS`
+#### `EXTERNAL_IMAGE_URLS` (Optional)
 - **Type**: string (comma-separated)
-- **Default**: `https://infinity.flashpointarchive.org/Flashpoint/Data/Images,https://infinity.unstable.life/Flashpoint/Data/Images`
-- **Description**: CDN URLs for image fallback
+- **Default**: Read from Flashpoint preferences (`onDemandBaseUrl`)
+- **Description**: CDN URLs for image fallback. If not set, the backend automatically reads from Flashpoint's preferences file (`.preferences.defaults.json` or `preferences.json`)
+- **Priority**:
+  1. Environment variable (if set)
+  2. Flashpoint preferences `onDemandBaseUrl` (automatic)
+  3. Hardcoded defaults:
+     - `https://infinity.flashpointarchive.org/Flashpoint/Data/Images`
+     - `https://infinity.unstable.life/Flashpoint/Data/Images`
+- **When to set manually**: Use custom CDN mirrors, testing, or overriding Flashpoint's default CDN
 - **Usage**:
   ```bash
+  # Optional - only set if overriding Flashpoint preferences
   EXTERNAL_IMAGE_URLS=https://cdn1.example.com,https://cdn2.example.com
   ```
 

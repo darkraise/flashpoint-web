@@ -58,12 +58,6 @@ export const config = {
   gameServiceGameZipUrl: process.env.GAME_SERVICE_GAMEZIP_URL || 'http://localhost:22501',
   gameServerHttpPort: parseInt(process.env.GAME_SERVICE_GAMEZIP_URL?.split(':')[2] || process.env.GAME_SERVER_HTTP_PORT || '22501', 10),
 
-  // External image CDN URLs (for image fallback)
-  externalImageUrls: (process.env.EXTERNAL_IMAGE_URLS ||
-    'https://infinity.flashpointarchive.org/Flashpoint/Data/Images,' +
-    'https://infinity.unstable.life/Flashpoint/Data/Images'
-  ).split(','),
-
   // Redis
   redisEnabled: process.env.REDIS_ENABLED === 'true',
   redisHost: process.env.REDIS_HOST || 'localhost',
@@ -92,3 +86,19 @@ export const config = {
   // Home Page Configuration
   homeRecentHours: parseInt(process.env.HOME_RECENT_HOURS || '24', 10)
 };
+
+/**
+ * Get external image URLs for CDN fallback.
+ * This is resolved dynamically from Flashpoint preferences or environment variable.
+ *
+ * Priority:
+ * 1. EXTERNAL_IMAGE_URLS environment variable
+ * 2. Flashpoint preferences (onDemandBaseUrl)
+ * 3. Hardcoded defaults
+ *
+ * @returns Promise<string[]> Array of image CDN URLs
+ */
+export async function getExternalImageUrls(): Promise<string[]> {
+  const { ImageUrlService } = await import('./services/ImageUrlService');
+  return ImageUrlService.getExternalImageUrls();
+}

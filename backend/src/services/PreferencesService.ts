@@ -12,6 +12,15 @@ export interface GameDataSource {
 export interface FlashpointPreferences {
   gameDataSources: GameDataSource[];
   dataPacksFolderPath: string;
+
+  // Image-related preferences
+  imageFolderPath?: string;
+  logoFolderPath?: string;
+  playlistFolderPath?: string;
+  onDemandImages?: boolean;
+  onDemandBaseUrl?: string;
+  onDemandImagesCompressed?: boolean;
+
   [key: string]: any;
 }
 
@@ -67,7 +76,9 @@ export class PreferencesService {
 
       logger.info('Preferences loaded successfully', {
         sourceCount: parsed.gameDataSources?.length || 0,
-        dataPacksPath: parsed.dataPacksFolderPath
+        dataPacksPath: parsed.dataPacksFolderPath,
+        imageFolderPath: parsed.imageFolderPath,
+        onDemandBaseUrl: parsed.onDemandBaseUrl
       });
     } catch (error) {
       logger.error('Failed to load preferences:', error);

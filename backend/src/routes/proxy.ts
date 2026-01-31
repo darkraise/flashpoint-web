@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { config } from '../config';
+import { config, getExternalImageUrls } from '../config';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 import path from 'path';
@@ -159,10 +159,13 @@ router.get('/images/:path(*)', asyncHandler(async (req, res, next) => {
     });
   }
 
+  // Get external image URLs dynamically from preferences
+  const externalImageUrls = await getExternalImageUrls();
+
   await serveFileWithFallback(
     localPath,
     relativePath,
-    config.externalImageUrls,
+    externalImageUrls,
     res,
     next
   );
@@ -184,8 +187,11 @@ router.get('/logos/:path(*)', asyncHandler(async (req, res, next) => {
     });
   }
 
+  // Get external image URLs dynamically from preferences
+  const externalImageUrls = await getExternalImageUrls();
+
   // For logos, the external path should include 'Logos' subdirectory
-  const externalUrls = config.externalImageUrls.map(url => `${url}/../Logos`);
+  const externalUrls = externalImageUrls.map(url => `${url}/../Logos`);
 
   await serveFileWithFallback(
     localPath,
@@ -212,10 +218,13 @@ router.get('/screenshots/:path(*)', asyncHandler(async (req, res, next) => {
     });
   }
 
+  // Get external image URLs dynamically from preferences
+  const externalImageUrls = await getExternalImageUrls();
+
   await serveFileWithFallback(
     localPath,
     relativePath,
-    config.externalImageUrls,
+    externalImageUrls,
     res,
     next
   );
