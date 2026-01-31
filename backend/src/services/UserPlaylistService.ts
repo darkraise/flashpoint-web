@@ -460,8 +460,8 @@ export class UserPlaylistService {
 
     logger.info(`Enabled sharing for playlist ${playlistId} (user ${userId})`);
 
-    // Get frontend URL from CORS origin (where frontend is hosted)
-    const frontendUrl = config.corsOrigin;
+    // Get frontend URL (where frontend is hosted)
+    const frontendUrl = config.domain;
 
     return {
       shareToken,
@@ -526,8 +526,8 @@ export class UserPlaylistService {
 
     logger.info(`Regenerated share token for playlist ${playlistId} (user ${userId})`);
 
-    // Get frontend URL from CORS origin (where frontend is hosted)
-    const frontendUrl = config.corsOrigin;
+    // Get frontend URL (where frontend is hosted)
+    const frontendUrl = config.domain;
 
     return {
       shareToken: newToken,
@@ -576,8 +576,8 @@ export class UserPlaylistService {
 
     logger.info(`Updated share settings for playlist ${playlistId} (user ${userId})`);
 
-    // Get frontend URL from CORS origin (where frontend is hosted)
-    const frontendUrl = config.corsOrigin;
+    // Get frontend URL (where frontend is hosted)
+    const frontendUrl = config.domain;
 
     return {
       shareToken: playlist.shareToken,

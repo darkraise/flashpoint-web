@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { List as ListIcon, ListVideo, Settings, Heart, Gamepad2, Film, Users, Shield, Activity, BarChart3, Clock, LucideIcon } from 'lucide-react';
+import { List as ListIcon, ListVideo, Settings, Heart, Gamepad2, Film, Users, Shield, Activity, BarChart3, Clock, Home, LucideIcon } from 'lucide-react';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { RoleGuard } from '../common/RoleGuard';
@@ -54,6 +54,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
   });
 
   const gameNavItems: NavItem[] = [
+    { path: '/', icon: Home, label: 'Home' },
     { path: '/flash-games', iconImage: '/images/Flash.png', label: 'Flash Games' },
     { path: '/html5-games', iconImage: '/images/HTML5.png', label: 'HTML5 Games' },
     { path: '/animations', icon: Film, label: 'Animations' },

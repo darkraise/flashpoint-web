@@ -3,40 +3,103 @@
 **/npm-debug.log
 **/.npm
 
+# Keep package-lock.json for reproducible builds (DO NOT exclude)
+# Only exclude backups
+**/package-lock.json.bak
+
 # Build artifacts (will be built in container)
 **/dist
 **/build
 
 # Development files
 **/.git
+**/.github
 **/.gitignore
+**/.gitattributes
 **/.env
 **/.env.local
+**/.env.*.local
 **/.vscode
 **/.idea
+**/.editorconfig
+**/.prettierrc
+**/.prettierignore
+**/.eslintrc*
+**/.eslintignore
+
+# Docker files (don't need in containers)
+**/Dockerfile*
+**/docker-compose*.yml
+**/.dockerignore
+
+# Database files (user.db should be in volume, not image)
+**/user.db
+**/user.db-journal
+**/user.db-wal
+**/user.db-shm
+**/*.sqlite-journal
+**/*.sqlite-wal
+**/*.sqlite-shm
 
 # Testing
 **/coverage
 **/.nyc_output
 **/test
+**/tests
+**/__tests__
 **/*.test.ts
 **/*.test.js
+**/*.test.tsx
+**/*.test.jsx
 **/*.spec.ts
 **/*.spec.js
+**/*.spec.tsx
+**/*.spec.jsx
+**/vitest.config.ts
+**/jest.config.js
+
+# EXCEPTION: Keep migrations (needed at runtime)
+!**/src/migrations
+!**/src/migrations/**
 
 # Documentation
 **/*.md
 !README.md
+**/docs
 
 # Temporary files
 **/tmp
 **/temp
 **/.cache
+**/.turbo
 
 # OS files
 **/.DS_Store
 **/Thumbs.db
+**/desktop.ini
 
 # Logs
 **/logs
 **/*.log
+
+# CI/CD
+**/.gitlab-ci.yml
+**/.travis.yml
+**/Jenkinsfile
+**/.circleci
+**/.github/workflows
+
+# IDE
+**/*.swp
+**/*.swo
+**/*~
+**/.project
+**/.settings
+**/.classpath
+**/.c9
+**/.idea
+
+# Other
+**/.history
+**/.vs
+**/nbproject

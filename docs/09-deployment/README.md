@@ -118,7 +118,7 @@ See [Production Setup](./production-setup.md) for complete guide.
 **Key Variables:**
 - `FLASHPOINT_PATH` - Path to Flashpoint installation
 - `JWT_SECRET` - Authentication secret key
-- `CORS_ORIGIN` - Allowed frontend origins
+- `DOMAIN` - Allowed frontend origins
 - Rate limiting configuration
 - Redis cache settings
 - Logging levels

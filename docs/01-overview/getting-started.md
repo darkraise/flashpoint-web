@@ -212,7 +212,7 @@ GAME_SERVICE_PROXY_URL=http://localhost:22500
 GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
 
 # Frontend origin for CORS
-CORS_ORIGIN=http://localhost:5173
+DOMAIN=http://localhost:5173
 
 # =============================================================================
 # Optional: Customize if needed
@@ -526,7 +526,7 @@ GAMEZIPSERVER_PORT=22503
 
 **Solution**:
 1. Verify backend is running: `curl http://localhost:3100/health`
-2. Check `CORS_ORIGIN` in `backend/.env` matches frontend URL
+2. Check `DOMAIN` in `backend/.env` matches frontend URL
 3. Ensure Vite proxy is configured in `frontend/vite.config.ts`
 
 ### Issue: Games don't load or show 404 errors

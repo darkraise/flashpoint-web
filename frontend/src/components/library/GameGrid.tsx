@@ -1,5 +1,5 @@
 import { Game } from '@/types/game';
-import { GameCard } from './GameCard';
+import { GameCard, BreadcrumbContext } from './GameCard';
 import { useUIStore } from '@/store/ui';
 
 interface GameGridProps {
@@ -9,6 +9,7 @@ interface GameGridProps {
   favoriteGameIds?: Set<string>; // Optional: for performance optimization
   isFavoritePage?: boolean;
   shareToken?: string | null; // Optional: for shared playlist navigation
+  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
 }
 
 export function GameGrid({
@@ -18,6 +19,7 @@ export function GameGrid({
   favoriteGameIds,
   isFavoritePage = false,
   shareToken = null,
+  breadcrumbContext,
 }: GameGridProps) {
   const cardSize = useUIStore((state) => state.cardSize);
 
@@ -48,6 +50,7 @@ export function GameGrid({
           favoriteGameIds={favoriteGameIds}
           isFavoritePage={isFavoritePage}
           shareToken={shareToken}
+          breadcrumbContext={breadcrumbContext}
         />
       ))}
     </div>

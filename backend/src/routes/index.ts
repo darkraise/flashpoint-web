@@ -24,8 +24,20 @@ import sharedPlaylistsRouter from './shared-playlists';
 import favoritesRouter from './favorites';
 import ruffleRouter from './ruffle';
 import githubRouter from './github';
+import healthRouter from './health';
+import cacheRouter from './cache';
+import metricsRouter from './metrics';
 
 export function setupRoutes(app: Express): void {
+  // Health check routes
+  app.use('/api/health', healthRouter);
+
+  // Cache management routes
+  app.use('/api/cache', cacheRouter);
+
+  // Performance metrics routes
+  app.use('/api/metrics', metricsRouter);
+
   // Authentication routes
   app.use('/api/auth', authRouter);
 

@@ -31,27 +31,32 @@ function getJwtSecret(): string {
   return devSecret;
 }
 
+// Get base Flashpoint path and derive all other paths from it
+const getFlashpointPath = (): string => {
+  return process.env.FLASHPOINT_PATH || 'D:/Flashpoint';
+};
+
+const flashpointPath = getFlashpointPath();
+
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '3100', 10),
   host: process.env.HOST || '0.0.0.0',
 
-  // Flashpoint paths
-  flashpointPath: process.env.FLASHPOINT_PATH || 'D:/Flashpoint',
-  flashpointDbPath: process.env.FLASHPOINT_DB_PATH || 'D:/Flashpoint/Data/flashpoint.sqlite',
-  flashpointHtdocsPath: process.env.FLASHPOINT_HTDOCS_PATH || 'D:/Flashpoint/Legacy/htdocs',
-  flashpointImagesPath: process.env.FLASHPOINT_IMAGES_PATH || 'D:/Flashpoint/Data/Images',
-  flashpointLogosPath: process.env.FLASHPOINT_LOGOS_PATH || 'D:/Flashpoint/Data/Logos',
-  flashpointPlaylistsPath: process.env.FLASHPOINT_PLAYLISTS_PATH || 'D:/Flashpoint/Data/Playlists',
+  // Flashpoint paths (all derived from FLASHPOINT_PATH)
+  flashpointPath,
+  flashpointDbPath: `${flashpointPath}/Data/flashpoint.sqlite`,
+  flashpointHtdocsPath: `${flashpointPath}/Legacy/htdocs`,
+  flashpointImagesPath: `${flashpointPath}/Data/Images`,
+  flashpointLogosPath: `${flashpointPath}/Data/Logos`,
+  flashpointPlaylistsPath: `${flashpointPath}/Data/Playlists`,
+  flashpointGamesPath: `${flashpointPath}/Data/Games`,
 
   // Game Service URLs (external service, not built-in)
   gameServerUrl: process.env.GAME_SERVICE_PROXY_URL || process.env.GAME_SERVER_URL || 'http://localhost:22500',
   gameServiceGameZipUrl: process.env.GAME_SERVICE_GAMEZIP_URL || 'http://localhost:22501',
   gameServerHttpPort: parseInt(process.env.GAME_SERVICE_GAMEZIP_URL?.split(':')[2] || process.env.GAME_SERVER_HTTP_PORT || '22501', 10),
-
-  // Flashpoint paths for game service
-  flashpointGamesPath: process.env.FLASHPOINT_GAMES_PATH || 'D:/Flashpoint/Data/Games',
 
   // External image CDN URLs (for image fallback)
   externalImageUrls: (process.env.EXTERNAL_IMAGE_URLS ||
@@ -64,8 +69,8 @@ export const config = {
   redisHost: process.env.REDIS_HOST || 'localhost',
   redisPort: parseInt(process.env.REDIS_PORT || '6379', 10),
 
-  // CORS
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  // Frontend domain (used for CORS and share URL generation)
+  domain: process.env.DOMAIN || 'http://localhost:5173',
 
   // Rate limiting
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
@@ -82,5 +87,8 @@ export const config = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
 
   // Security
-  bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10)
+  bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10),
+
+  // Home Page Configuration
+  homeRecentHours: parseInt(process.env.HOME_RECENT_HOURS || '24', 10)
 };

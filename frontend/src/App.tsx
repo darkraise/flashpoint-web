@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MainLayout } from './components/layout/MainLayout';
@@ -28,6 +28,7 @@ const LoginView = lazy(() => import('./views/LoginView').then(m => ({ default: m
 const RegisterView = lazy(() => import('./views/RegisterView').then(m => ({ default: m.RegisterView })));
 
 // Game browsing views
+const HomeView = lazy(() => import('./views/HomeView').then(m => ({ default: m.HomeView })));
 const BrowseView = lazy(() => import('./views/BrowseView').then(m => ({ default: m.BrowseView })));
 const FlashGamesView = lazy(() => import('./views/FlashGamesView').then(m => ({ default: m.FlashGamesView })));
 const HTML5GamesView = lazy(() => import('./views/HTML5GamesView').then(m => ({ default: m.HTML5GamesView })));
@@ -177,11 +178,11 @@ function App() {
           {/* ==================== MAIN LAYOUT ==================== */}
           <Route element={<MainLayout />}>
             <Route path="/" element={
-              isAuthenticated || isGuest ? (
-                <Navigate to="/flash-games" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              <ProtectedRoute requireAuth={false}>
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <HomeView />
+                </Suspense>
+              </ProtectedRoute>
             } />
 
             {/* Public/guest accessible routes */}

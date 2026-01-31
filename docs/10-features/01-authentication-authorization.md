@@ -543,7 +543,7 @@ JWT_EXPIRES_IN=1h
 REFRESH_TOKEN_EXPIRES_IN=30d
 
 # CORS origin (frontend URL)
-CORS_ORIGIN=http://localhost:5173
+DOMAIN=http://localhost:5173
 ```
 
 ### Auth Settings (Database)

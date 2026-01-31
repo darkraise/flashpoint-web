@@ -13,6 +13,8 @@ export interface GameSearchQuery {
   tags?: string[];
   yearFrom?: number;
   yearTo?: number;
+  dateAddedSince?: string; // ISO 8601 timestamp - filter games added after this date
+  dateModifiedSince?: string; // ISO 8601 timestamp - filter games modified after this date
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   page: number;
@@ -183,6 +185,17 @@ export class GameService {
         params.push(`${query.yearTo}-12-31`);
       }
 
+      // Date filtering for Home page "Recent Games" sections
+      if (query.dateAddedSince) {
+        sql += ` AND g.dateAdded >= ?`;
+        params.push(query.dateAddedSince);
+      }
+
+      if (query.dateModifiedSince) {
+        sql += ` AND g.dateModified >= ?`;
+        params.push(query.dateModifiedSince);
+      }
+
       if (!query.showBroken) {
         sql += ` AND (g.broken = 0 OR g.broken IS NULL)`;
       }
@@ -209,6 +222,16 @@ export class GameService {
       // Apply pagination
       sql += ` LIMIT ? OFFSET ?`;
       params.push(query.limit, offset);
+
+      // Log SQL query for debugging (only if date filters are used)
+      if (query.dateAddedSince || query.dateModifiedSince) {
+        logger.debug('[GameService] Executing query with date filters', {
+          dateAddedSince: query.dateAddedSince,
+          dateModifiedSince: query.dateModifiedSince,
+          sortBy: query.sortBy,
+          params: params
+        });
+      }
 
       // OPTIMIZATION: Single query execution with window function for count
       const games = DatabaseService.all(sql, params) as (Game & { total_count: number })[];
@@ -254,7 +277,17 @@ export class GameService {
         totalPages: Math.ceil(total / query.limit)
       };
     } catch (error) {
-      logger.error('Error searching games:', error);
+      logger.error('Error searching games:', {
+        error: error instanceof Error ? error.message : String(error),
+        query: {
+          dateAddedSince: query.dateAddedSince,
+          dateModifiedSince: query.dateModifiedSince,
+          sortBy: query.sortBy,
+          library: query.library,
+          page: query.page,
+          limit: query.limit
+        }
+      });
       throw error;
     }
   }
@@ -466,6 +499,7 @@ export class GameService {
       title: 'g.orderTitle',
       releaseDate: 'g.releaseDate',
       dateAdded: 'g.dateAdded',
+      dateModified: 'g.dateModified',
       developer: 'g.developer'
     };
     return columnMap[sortBy] || 'g.orderTitle';
@@ -725,6 +759,57 @@ export class GameService {
     } catch (error) {
       logger.error('Error getting year range:', error);
       return { min: 1970, max: new Date().getFullYear() };
+    }
+  }
+
+  /**
+   * Get most played games globally (across all users)
+   * Returns games with highest play counts from user tracking data
+   */
+  async getMostPlayedGames(limit = 20): Promise<Game[]> {
+    try {
+      const { UserDatabaseService } = await import('./UserDatabaseService');
+
+      // Get most played game IDs from user database with aggregated stats
+      const mostPlayedStats = UserDatabaseService.all(
+        `SELECT
+          game_id,
+          SUM(total_plays) as total_plays,
+          SUM(total_playtime_seconds) as total_playtime
+         FROM user_game_stats
+         GROUP BY game_id
+         ORDER BY total_plays DESC, total_playtime DESC
+         LIMIT ?`,
+        [limit]
+      ) as Array<{ game_id: string; total_plays: number; total_playtime: number }>;
+
+      if (mostPlayedStats.length === 0) {
+        return [];
+      }
+
+      // Get game IDs for query
+      const gameIds = mostPlayedStats.map(stat => stat.game_id);
+
+      // Fetch full game details from flashpoint database using list fields
+      const placeholders = gameIds.map(() => '?').join(',');
+      const sql = `
+        SELECT ${this.getColumnSelection('list')}
+        FROM game g
+        WHERE g.id IN (${placeholders})
+      `;
+
+      const games = DatabaseService.all(sql, gameIds) as Game[];
+
+      // Sort games by the original play count order
+      const gameMap = new Map(games.map(game => [game.id, game]));
+      const sortedGames = gameIds
+        .map(id => gameMap.get(id))
+        .filter((game): game is Game => game !== undefined);
+
+      return sortedGames;
+    } catch (error) {
+      logger.error('Error getting most played games:', error);
+      return [];
     }
   }
 }

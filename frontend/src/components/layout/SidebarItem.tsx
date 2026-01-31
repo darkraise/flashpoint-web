@@ -33,11 +33,6 @@ export function SidebarItem({
       return location.pathname === itemPath && location.search === `?${itemQuery}`;
     }
 
-    // Home page (/) should highlight Flash Games
-    if (location.pathname === '/' && itemPath === '/flash-games') {
-      return true;
-    }
-
     return location.pathname === itemPath;
   })();
 

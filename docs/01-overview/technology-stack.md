@@ -105,7 +105,7 @@ Flashpoint Web is built with modern, production-ready technologies chosen for th
 **Key middleware used**:
 ```typescript
 // CORS for frontend origin
-app.use(cors({ origin: process.env.CORS_ORIGIN }));
+app.use(cors({ origin: process.env.DOMAIN }));
 
 // Security headers
 app.use(helmet());

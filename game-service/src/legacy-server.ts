@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import { logger } from './utils/logger';
 import { ConfigManager } from './config';
 import { getMimeType } from './mimeTypes';
+import { sanitizeAndValidatePath, sanitizeUrlPath } from './utils/pathSecurity';
 import axios from 'axios';
 import zlib from 'zlib';
 import { promisify } from 'util';
@@ -30,6 +31,14 @@ export class LegacyServer {
    * @param urlPath The path from the request (e.g., "/path/file.swf")
    */
   async serveLegacy(hostname: string, urlPath: string): Promise<LegacyFileResponse> {
+    // Sanitize URL path to prevent null bytes and dangerous patterns
+    try {
+      urlPath = sanitizeUrlPath(urlPath);
+    } catch (error) {
+      logger.error(`[LegacyServer] Invalid URL path: ${urlPath}`);
+      throw new Error('Invalid URL path');
+    }
+
     // Strip port from hostname
     const host = hostname.split(':')[0];
 
@@ -47,6 +56,9 @@ export class LegacyServer {
       logger.debug(`[LegacyServer] Trying: ${candidate.path} (${candidate.type})`);
 
       try {
+        // Validate path is within allowed base directory before accessing
+        this.validateCandidatePath(candidate.path, candidate.type);
+
         const stats = await fs.stat(candidate.path);
 
         if (stats.isFile()) {
@@ -54,7 +66,7 @@ export class LegacyServer {
           return await this.serveFile(candidate.path, candidate.type === 'cgi-bin');
         }
       } catch (error) {
-        // File doesn't exist, continue to next candidate
+        // File doesn't exist or path validation failed, continue to next candidate
         continue;
       }
     }
@@ -160,6 +172,33 @@ export class LegacyServer {
     }
 
     return candidates;
+  }
+
+  /**
+   * Validate that a candidate path is within its allowed base directory
+   * @param candidatePath The full path to validate
+   * @param candidateType The type of candidate (e.g., 'exact', 'cgi-bin', 'override:*')
+   * @throws Error if the path escapes its allowed base directory
+   */
+  private validateCandidatePath(candidatePath: string, candidateType: string): void {
+    // Determine the allowed base directory based on candidate type
+    let allowedBase: string;
+
+    if (candidateType === 'cgi-bin' || candidateType === 'cgi-bin-no-query') {
+      allowedBase = this.settings.legacyCGIBINPath;
+    } else {
+      // All other types use htdocs path
+      allowedBase = this.settings.legacyHTDOCSPath;
+    }
+
+    // Validate that the candidate path is within the allowed base
+    // This will throw an error if directory traversal is detected
+    try {
+      sanitizeAndValidatePath(allowedBase, candidatePath);
+    } catch (error) {
+      logger.warn(`[Security] Path validation failed for ${candidateType}: ${candidatePath}`);
+      throw error;
+    }
   }
 
   /**

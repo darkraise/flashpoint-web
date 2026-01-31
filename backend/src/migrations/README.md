@@ -2,271 +2,331 @@
 
 This directory contains SQL migration scripts for the user database (`user.db`).
 
-## Migration Naming Convention
+## Current Migration Strategy (Simplified)
 
-All migration files follow this naming pattern:
+**Date:** 2026-01-30
+**Status:** Consolidated into single migration file
 
-```
-XXX_description.sql
-```
+All previous migrations have been consolidated into a single comprehensive migration file:
 
-Where:
-- `XXX` = Three-digit version number (001, 002, 003, etc.)
-- `description` = Descriptive name in kebab-case
+- **`001_complete_schema.sql`** - Complete database schema with all tables, indexes, triggers, seed data
 
-**Examples:**
-- `001_user-schema.sql` - Initial schema
-- `002_create-user-settings.sql` - Create user_settings table
-- `003_drop-legacy-theme-columns.sql` - Drop legacy theme columns
+This migration is **idempotent** and safe to run multiple times.
 
-## Migration Order
+### What's Included:
 
-Migrations are executed in numerical order based on the version prefix:
+✅ **All Tables** (15 total):
+- Users & Authentication (users, roles, permissions, role_permissions, refresh_tokens)
+- Activity Tracking (activity_logs, login_attempts)
+- Game Play Tracking (user_game_plays, user_game_stats, user_stats)
+- User Data (user_settings, user_playlists, user_playlist_games, user_favorites)
+- System (system_settings, job_execution_logs)
 
-| Version | File | Description | Status |
-|---------|------|-------------|--------|
-| 001 | `001_user-schema.sql` | Base database schema with users, roles, permissions, and core tables (without auth_settings) | ✅ Active |
-| 002 | `002_create-user-settings.sql` | Creates extensible `user_settings` key-value table for theme and future preferences | ✅ Active |
-| 003 | `003_create-system-settings.sql` | Creates `system_settings` key-value table for flexible system-wide configuration and seeds all default settings | ✅ Active |
-| 004 | `004_add-validation-schemas.sql` | Adds JSON Schema validation rules to all system settings for runtime validation | ✅ Active |
+✅ **All Indexes** (50+ optimized indexes):
+- Basic indexes for foreign keys and lookups
+- Composite indexes for complex queries
+- Partial indexes for conditional queries
+- Performance indexes for frequently-accessed patterns
 
-**Historical (Removed):**
-- ~~002_add-theme-color.sql~~ - Removed (replaced by user_settings table)
-- ~~003_add-surface-color.sql~~ - Removed (replaced by user_settings table)
-- ~~003_drop-legacy-theme-columns.sql~~ - Never created (theme columns removed directly in migration 001)
-- ~~004_drop-auth-settings-table.sql~~ - Removed (auth_settings table never created in migration 001)
-- ~~auth_settings table~~ - Never created (replaced by system_settings key-value store from the start)
+✅ **All Triggers**:
+- Auto-update playlist game_count
 
-## How Migrations Work
+✅ **All Seed Data**:
+- Default roles (admin, user, guest)
+- Default permissions (18 permissions)
+- Role-permission mappings
+- System settings (35+ default settings)
+
+✅ **Playlist Sharing Features**:
+- share_token, share_expires_at, show_owner columns
+- Unique indexes for secure sharing
+
+## Migration Execution
 
 Migrations are automatically executed on server startup by `UserDatabaseService.ts`:
 
-1. **Schema Creation** (`createTables()`):
-   - Runs `001_user-schema.sql` if database doesn't exist
-   - Creates all base tables
+1. **Bootstrap** - Creates migration registry table (`migrations_applied`)
+2. **Schema Creation** - Runs `001_complete_schema.sql` if database doesn't exist
+3. **Idempotent** - Safe to run multiple times (uses `IF NOT EXISTS` everywhere)
 
-2. **Migration Execution** (`runMigrations()`):
-   - Checks if each migration is needed (e.g., column/table doesn't exist)
-   - Executes migration SQL if needed
-   - Logs migration execution to console
+### Migration Registry (`bootstrap.sql`)
 
-3. **Idempotency**:
-   - Each migration checks if changes already exist
-   - Safe to run multiple times without side effects
-   - Uses defensive SQL (`IF NOT EXISTS`, column checks)
+The migration system tracks applied migrations in the `migrations_applied` table:
 
-## Adding New Migrations
+```sql
+CREATE TABLE IF NOT EXISTS migrations_applied (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  version TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  checksum TEXT NOT NULL,
+  executed_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  execution_time_ms INTEGER
+);
+```
 
-To add a new migration:
+This allows:
+- Detecting which migrations have been applied
+- Preventing duplicate execution
+- Verifying migration integrity with checksums
+- Tracking execution performance
 
-1. **Create the migration file** with the next version number:
+## Archived Migrations
+
+Previous migration files (001-014) have been moved to `archived/` directory for reference:
+
+- `001_initialize_schema_OLD.sql` - Original schema definition
+- `002_seed_default_data.sql` - Original seed data
+- `003_add_playlist_share_tokens.sql` - Playlist sharing feature
+- `004_grant_play_permission_to_guests.sql` - Guest permissions
+- `014_add_performance_indexes.sql` - Performance optimization indexes
+
+These are kept for historical reference but are no longer executed.
+
+## Adding New Migrations (Future)
+
+When you need to modify the database schema after deployment:
+
+### Option 1: Simple Changes (Recommended)
+
+For new columns, indexes, or seed data:
+
+1. **Create a new migration file** with the next version number:
    ```bash
    cd backend/src/migrations
-   touch 005_your-migration-name.sql
+   touch 002_your_migration_name.sql
    ```
 
-   Current version: **004** (next available: **005**)
+   Current version: **001** (next available: **002**)
 
-2. **Write defensive SQL** using conditional checks:
+2. **Write idempotent SQL** using defensive checks:
    ```sql
+   -- Migration 002: Description of changes
+   -- Created: 2026-MM-DD
+
    -- Add new column (defensive)
    ALTER TABLE users ADD COLUMN IF NOT EXISTS new_column TEXT;
 
-   -- Create new table (defensive)
-   CREATE TABLE IF NOT EXISTS new_table (
-     id INTEGER PRIMARY KEY
-   );
-
-   -- Add index (defensive)
+   -- Create new index (defensive)
    CREATE INDEX IF NOT EXISTS idx_name ON table(column);
+
+   -- Insert new seed data (defensive)
+   INSERT OR IGNORE INTO system_settings (key, value, ...) VALUES (...);
    ```
 
-3. **Update `UserDatabaseService.ts`** in the `runMigrations()` method:
+3. **Update `UserDatabaseService.ts`** to run the new migration:
    ```typescript
-   // Migration 005: Your description
-   const hasNewFeature = /* check if migration needed */;
-   if (!hasNewFeature) {
-     logger.info('[UserDB] Running migration: 005_your-migration-name');
-     const migrationPath = path.join(__dirname, '../migrations/005_your-migration-name.sql');
-     if (fs.existsSync(migrationPath)) {
-       const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-       this.db!.exec(migrationSQL);
-       logger.info('[UserDB] Migration completed: 005_your-migration-name');
-     }
-   }
+   // In runMigrations() method, after the 001 migration:
+
+   // Migration 002: Your description
+   await this.executeMigration('002_your_migration_name.sql');
    ```
 
 4. **Test the migration**:
-   - Delete `backend/user.db` (backup if needed)
-   - Run `npm run dev` in backend
+   - Backup `backend/user.db`
+   - Restart backend server
    - Check console logs for migration execution
-   - Verify database schema with SQLite browser
+   - Verify changes with SQLite browser
+
+### Option 2: Major Schema Changes
+
+For breaking changes or complete restructuring:
+
+1. Create a new comprehensive migration (e.g., `002_schema_v2.sql`)
+2. Archive the old migration (`001_complete_schema.sql` → `archived/`)
+3. Update documentation
 
 ## Migration Best Practices
 
 ### ✅ DO:
+
 - Use version prefixes (001, 002, etc.)
-- Write defensive SQL with `IF NOT EXISTS` checks
-- Add comments explaining what the migration does
-- Test migrations on fresh database
-- Include rollback instructions in comments if needed
-- Create indexes for frequently queried columns
-- Use transactions for complex migrations
+- Write idempotent SQL with `IF NOT EXISTS` checks
+- Add comments explaining changes
+- Test on fresh database AND existing database
+- Include rollback instructions if complex
+- Create indexes for new columns that will be queried
+- Use `INSERT OR IGNORE` for seed data
+- Check migration into version control
 
 ### ❌ DON'T:
+
 - Skip version numbers
-- Modify existing migration files after they've been applied
+- Modify existing migration files after deployment
 - Assume data exists without checking
 - Use `DROP TABLE` without backup strategy
-- Forget to update UserDatabaseService.ts
+- Forget to test on both fresh and existing databases
+- Deploy without testing migrations locally first
 
 ## Example Migration Template
 
 ```sql
--- Migration 005: Description of what this migration does
--- Created: 2026-01-XX
--- Rollback: Instructions for manual rollback if needed
+-- ============================================================================
+-- Migration 002: Add User Notification Preferences
+-- ============================================================================
+-- Created: 2026-MM-DD
+-- Purpose: Add email notification settings for users
+-- Rollback: ALTER TABLE users DROP COLUMN IF EXISTS email_notifications_enabled;
+-- ============================================================================
 
--- Add new column
-ALTER TABLE users ADD COLUMN IF NOT EXISTS example_column TEXT DEFAULT 'default_value';
+-- Add new column to users table
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS email_notifications_enabled BOOLEAN DEFAULT 1;
 
--- Create index for performance
-CREATE INDEX IF NOT EXISTS idx_users_example ON users(example_column);
+-- Create index for filtering
+CREATE INDEX IF NOT EXISTS idx_users_email_notif
+ON users(email_notifications_enabled)
+WHERE email_notifications_enabled = 1;
 
--- Data migration (if needed)
-UPDATE users SET example_column = 'value' WHERE condition;
+-- Add system setting
+INSERT OR IGNORE INTO system_settings
+(key, value, data_type, category, description, is_public, default_value)
+VALUES
+('notifications.email_enabled', '1', 'boolean', 'notifications',
+ 'Enable email notifications', 0, '1');
+
+-- ============================================================================
 ```
 
-## Special Case: Dropping Columns in SQLite
+## Special Cases
 
-SQLite doesn't support `DROP COLUMN` in older versions. Migration 003 demonstrates how to drop columns by recreating the table:
+### Dropping Columns in SQLite
+
+SQLite doesn't support `DROP COLUMN` easily. To drop a column:
 
 ```sql
--- Create new table without unwanted columns
+-- 1. Create new table without unwanted column
 CREATE TABLE users_new (
   id INTEGER PRIMARY KEY,
-  -- ... columns you want to keep
+  username TEXT NOT NULL,
+  -- ... other columns (excluding the one to drop)
 );
 
--- Copy data
-INSERT INTO users_new SELECT id, ... FROM users;
+-- 2. Copy data
+INSERT INTO users_new
+SELECT id, username, ... FROM users;
 
--- Drop old table
+-- 3. Drop old table
 DROP TABLE users;
 
--- Rename new table
+-- 4. Rename new table
 ALTER TABLE users_new RENAME TO users;
 
--- Recreate indexes
+-- 5. Recreate indexes and triggers
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+```
+
+### Complex Data Migrations
+
+For complex data transformations, use transactions:
+
+```sql
+BEGIN TRANSACTION;
+
+-- Perform migrations
+UPDATE users SET role_id = 2 WHERE role_id IS NULL;
+INSERT INTO user_stats SELECT user_id, ... FROM user_game_plays GROUP BY user_id;
+
+-- Verify data integrity
+-- Add CHECK constraints or validation queries here
+
+COMMIT;
 ```
 
 ## Troubleshooting
 
 ### Migration not running
+
 - Check console logs for error messages
 - Verify migration file exists in `backend/src/migrations/`
-- Ensure correct naming convention
-- Check UserDatabaseService.ts includes migration check
+- Ensure correct naming convention (XXX_description.sql)
+- Check `UserDatabaseService.ts` includes migration execution
 
 ### Database locked error
+
 - Close Flashpoint Launcher if running
 - Close any SQLite browser tools
 - Restart backend server
+- Check no other process has `user.db` open
 
 ### Migration fails midway
-- Check SQL syntax
-- Review console error logs
+
+- Check SQL syntax errors in logs
+- Review migration logic
 - Restore from backup if needed
 - Fix migration SQL and restart
 
-## Schema Visualization
+### Migration checksum mismatch
 
-Current database structure after all migrations:
+If you see checksum warnings:
+- Migration file was modified after being applied
+- This is usually safe if changes are additive
+- Check `migrations_applied` table for recorded checksum
+
+## Database Schema Overview
+
+After running `001_complete_schema.sql`, the database contains:
 
 ```
 user.db
-├── users (base schema only, theme columns removed in migration 003)
-│   ├── id
-│   ├── username
-│   ├── email
-│   ├── password_hash
-│   ├── role_id
-│   ├── is_active
-│   ├── created_at
-│   ├── updated_at
-│   └── last_login_at
-│
-├── user_settings (002) ← Extensible key-value for per-user settings
-│   ├── id
-│   ├── user_id (FK → users.id)
-│   ├── setting_key (e.g., 'theme_mode', 'primary_color')
-│   ├── setting_value
-│   ├── created_at
-│   └── updated_at
-│
-├── system_settings (003) ← Extensible key-value for global settings
-│   ├── id
-│   ├── key (e.g., 'auth.user_registration_enabled', 'app.site_name')
-│   ├── value
-│   ├── data_type (boolean, integer, string, json, float)
-│   ├── category (auth, app, metadata, features, game, etc.)
-│   ├── description
-│   ├── is_public
-│   ├── default_value
-│   ├── validation_schema
-│   ├── updated_at
-│   └── updated_by (FK → users.id)
-│
-├── roles
-├── permissions
-├── role_permissions
-├── user_roles (if using many-to-many)
-├── refresh_tokens
-├── activity_logs
-├── login_attempts
-├── user_game_plays
-├── user_game_stats
-└── user_stats
+├── users                    - User accounts
+├── roles                    - RBAC roles (admin, user, guest)
+├── permissions              - Available permissions
+├── role_permissions         - Role-permission mappings
+├── refresh_tokens           - JWT refresh tokens
+├── activity_logs            - User activity audit trail
+├── login_attempts           - Login attempt tracking for lockout
+├── user_game_plays          - Individual play sessions
+├── user_game_stats          - Aggregated per-game stats
+├── user_stats               - Overall user statistics
+├── user_settings            - Per-user key-value settings
+├── system_settings          - Global key-value configuration
+├── user_playlists           - User-created playlists
+├── user_playlist_games      - Playlist-game relationships
+├── user_favorites           - Favorited games
+├── job_execution_logs       - Background job tracking
+└── migrations_applied       - Migration tracking (bootstrap.sql)
 ```
 
-## Future Enhancements
+**Total:** 16 tables, 50+ indexes, 2 triggers, 35+ default settings
 
-### Per-User Settings (`user_settings` table)
-Potential future settings to add (no migrations needed!):
+## System Settings Categories
 
-- Display preferences: `grid_view_mode`, `items_per_page`
-- Notifications: `email_notifications`, `desktop_notifications`
-- Accessibility: `reduced_motion`, `high_contrast`, `font_size`
-- Gameplay: `default_ruffle_scale`, `auto_fullscreen`
+The `system_settings` table contains configuration organized by category:
 
-### System-Wide Settings (`system_settings` table)
-Already seeded with common settings (no migrations needed to add more!):
+- **auth** - Authentication and security settings
+- **app** - Application-wide settings (site name, theme, date format)
+- **metadata** - Metadata sync configuration
+- **features** - Feature flags (playlists, favorites, statistics)
+- **storage** - Storage and retention settings
+- **rate_limit** - API rate limiting
+- **jobs** - Background job scheduling
 
-**Auth Settings:**
-- `auth.guest_access_enabled`, `auth.user_registration_enabled`
-- `auth.require_email_verification`, `auth.session_timeout_minutes`
-- `auth.max_login_attempts`, `auth.lockout_duration_minutes`
+Add new settings without migrations:
 
-**App Settings:**
-- `app.site_name`, `app.maintenance_mode`
-- `app.default_theme`, `app.default_primary_color`
+```sql
+INSERT OR IGNORE INTO system_settings
+(key, value, data_type, category, description, is_public, default_value)
+VALUES
+('category.new_setting', 'value', 'boolean', 'category', 'Description', 0, 'value');
+```
 
-**Metadata Settings:**
-- `metadata.auto_sync_enabled`, `metadata.sync_interval_minutes`
-- `metadata.sync_tags`, `metadata.sync_platforms`
+## Historical Notes
 
-**Feature Flags:**
-- `features.enable_playlists`, `features.enable_favorites`
-- `features.enable_statistics`, `features.enable_activity_log`
-- `features.enable_user_profiles`
+### Consolidation (2026-01-30)
 
+Previous migration strategy used 14+ separate files:
+- `001_initialize_schema.sql` - Base tables
+- `002_seed_default_data.sql` - Seed data
+- `003-013` - Incremental changes
+- `014_add_performance_indexes.sql` - Performance optimization
 
-**Storage Settings:**
-- `storage.cache_size_mb`, `storage.log_retention_days`
-- `storage.temp_file_retention_days`
+**Consolidated into:** Single `001_complete_schema.sql` file
 
-**Rate Limiting:**
-- `rate_limit.api_requests_per_minute`, `rate_limit.enable_rate_limiting`
+**Benefits:**
+- ✅ Simpler deployment (one file vs many)
+- ✅ Guaranteed consistency (all-or-nothing)
+- ✅ Easier testing (single execution)
+- ✅ Clearer dependencies (everything in order)
+- ✅ Better documentation (complete picture in one place)
 
-To add new settings, just insert a row into `system_settings` - no schema changes required! 🎉
+**Archived migrations** preserved in `archived/` for reference.

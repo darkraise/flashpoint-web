@@ -435,7 +435,7 @@ Access to XMLHttpRequest blocked by CORS policy
 import cors from 'cors';
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.DOMAIN || 'http://localhost:5173',
   credentials: true,  // Important for cookies
   exposedHeaders: ['X-Total-Count'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -834,7 +834,7 @@ npm run dev
 | `EADDRINUSE` | Any | Port already in use | Kill process or change port |
 | `database is locked` | Backend | Multiple DB connections | Close Flashpoint Launcher |
 | `Token expired` | Backend | JWT expired | Implement token refresh |
-| `CORS policy` | Frontend | CORS misconfigured | Check CORS_ORIGIN in backend .env |
+| `CORS policy` | Frontend | CORS misconfigured | Check DOMAIN in backend .env |
 | `Ruffle is not defined` | Frontend | Ruffle files missing | Run `npm run copy-ruffle` |
 | `Module not found` | Any | Missing dependency | Run `npm install` |
 | `Type error` | Frontend/Backend | TypeScript issue | Run `npm run typecheck` |

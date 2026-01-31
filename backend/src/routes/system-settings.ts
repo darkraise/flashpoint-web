@@ -55,6 +55,13 @@ router.get(
 router.get('/public', async (req: Request, res: Response) => {
   try {
     const publicSettings = systemSettings.getPublicSettings();
+
+    // Add environment-based config values to public settings
+    if (!publicSettings.app) {
+      publicSettings.app = {};
+    }
+    publicSettings.app.homeRecentHours = require('../config').config.homeRecentHours;
+
     res.json(publicSettings);
   } catch (error) {
     logger.error('Failed to get public settings:', error);

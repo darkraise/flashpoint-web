@@ -106,6 +106,19 @@ export const gamesApi = {
   cancelDownload: async (id: string): Promise<{ success: boolean; cancelled: boolean; message: string }> => {
     const { data } = await api.delete(`/games/${id}/download`);
     return data;
+  },
+
+  getMostPlayed: async (limit = 20): Promise<PaginatedResult<Game>> => {
+    const { data } = await api.get<{ success: boolean; data: Game[]; total: number }>('/games/most-played', {
+      params: { limit }
+    });
+    return {
+      data: data.data,
+      total: data.total,
+      page: 1,
+      limit,
+      totalPages: 1
+    };
   }
 };
 
@@ -715,6 +728,44 @@ export const githubApi = {
   getStarCount: async (): Promise<{ stars: number }> => {
     const { data } = await api.get<{ success: boolean; data: { stars: number } }>('/github/stars');
     return data.data;
+  }
+};
+
+// ===================================
+// Updates/Metadata API
+// ===================================
+
+export interface MetadataSyncStatus {
+  isRunning: boolean;
+  stage: string;
+  progress: number;
+  message: string;
+  error?: string;
+  result?: {
+    gamesUpdated: number;
+    gamesDeleted: number;
+    tagsUpdated: number;
+    platformsUpdated: number;
+  };
+}
+
+export const updatesApi = {
+  /**
+   * Start metadata sync in background
+   * Returns immediately with sync started status
+   */
+  startMetadataSync: async (): Promise<{ success: boolean; message: string; status: MetadataSyncStatus }> => {
+    const { data } = await api.post('/updates/metadata/sync');
+    return data;
+  },
+
+  /**
+   * Get current metadata sync status
+   * Used for polling during sync process
+   */
+  getMetadataSyncStatus: async (): Promise<MetadataSyncStatus> => {
+    const { data } = await api.get<MetadataSyncStatus>('/updates/metadata/sync/status');
+    return data;
   }
 };
 

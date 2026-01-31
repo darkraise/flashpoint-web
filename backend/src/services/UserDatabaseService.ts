@@ -1,6 +1,7 @@
 import BetterSqlite3 from 'better-sqlite3';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { measureQueryPerformance } from '../utils/queryPerformance';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcrypt';
@@ -227,13 +228,16 @@ export class UserDatabaseService {
    */
   static exec<T = any>(sql: string, params: any[] = []): T[] {
     const db = this.getDatabase();
-    try {
-      const stmt = db.prepare(sql);
-      return stmt.all(params) as T[];
-    } catch (error) {
-      logger.error('[UserDB] Query error:', { sql, params, error });
-      throw error;
-    }
+
+    return measureQueryPerformance(() => {
+      try {
+        const stmt = db.prepare(sql);
+        return stmt.all(params) as T[];
+      } catch (error) {
+        logger.error('[UserDB] Query error:', { sql, params, error });
+        throw error;
+      }
+    }, sql, params);
   }
 
   /**
@@ -241,14 +245,17 @@ export class UserDatabaseService {
    */
   static get<T = any>(sql: string, params: any[] = []): T | undefined {
     const db = this.getDatabase();
-    try {
-      const stmt = db.prepare(sql);
-      const result = stmt.get(params);
-      return result as T | undefined;
-    } catch (error) {
-      logger.error('[UserDB] Get error:', { sql, params, error });
-      throw error;
-    }
+
+    return measureQueryPerformance(() => {
+      try {
+        const stmt = db.prepare(sql);
+        const result = stmt.get(params);
+        return result as T | undefined;
+      } catch (error) {
+        logger.error('[UserDB] Get error:', { sql, params, error });
+        throw error;
+      }
+    }, sql, params);
   }
 
   /**
@@ -263,17 +270,20 @@ export class UserDatabaseService {
    */
   static run(sql: string, params: any[] = []): BetterSqlite3.RunResult {
     const db = this.getDatabase();
-    try {
-      const stmt = db.prepare(sql);
-      return stmt.run(params);
-    } catch (error) {
-      logger.error('[UserDB] Run error:', { sql, params });
-      logger.error('[UserDB] Error details:', error);
-      if (error instanceof Error) {
-        logger.error('[UserDB] Error stack:', error.stack);
+
+    return measureQueryPerformance(() => {
+      try {
+        const stmt = db.prepare(sql);
+        return stmt.run(params);
+      } catch (error) {
+        logger.error('[UserDB] Run error:', { sql, params });
+        logger.error('[UserDB] Error details:', error);
+        if (error instanceof Error) {
+          logger.error('[UserDB] Error stack:', error.stack);
+        }
+        throw error;
       }
-      throw error;
-    }
+    }, sql, params);
   }
 
   /**

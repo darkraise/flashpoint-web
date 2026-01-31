@@ -315,7 +315,7 @@ GAME_SERVICE_PROXY_URL=http://localhost:22500
 GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
 
 # Frontend origin for CORS
-CORS_ORIGIN=http://localhost:5173
+DOMAIN=http://localhost:5173
 ```
 
 Optional: JWT*SECRET, REDIS_ENABLED, LOG_LEVEL, RATE_LIMIT*\*
@@ -503,6 +503,45 @@ Background job runs every 6 hours to clean up abandoned sessions.
 1. Add typed method to appropriate API object in `lib/api.ts`
 2. Import and use the API method in components
 3. Test with maintenance mode enabled
+
+---
+
+### 2026-01-29: Game Service Directory Traversal Protection
+
+**Issue:** Game service lacked comprehensive path validation, potentially allowing directory traversal attacks through crafted URLs.
+
+**Implementation:** Created centralized security utilities in `game-service/src/utils/pathSecurity.ts`:
+
+1. **Path Sanitization & Validation**:
+   - `sanitizeAndValidatePath()` - Ensures paths stay within allowed directories
+   - Platform-aware (Windows case-insensitive, Unix case-sensitive)
+   - Validates resolved paths against base directories
+
+2. **URL Path Sanitization**:
+   - `sanitizeUrlPath()` - Detects null bytes, URL-encoded traversal, backslash attacks
+   - Runs before path resolution for early detection
+
+3. **Applied to both servers**:
+   - **Legacy Server**: URL sanitization + path validation before all file access
+   - **GameZip Server**: URL sanitization in file requests
+
+**Test Coverage**: 17 comprehensive test cases (all passing)
+
+**Security Guarantees**:
+- ✅ Blocks `../../../etc/passwd` attempts
+- ✅ Blocks absolute path escapes (`/etc/passwd`)
+- ✅ Blocks URL-encoded traversal (`..%2F`, `..%5C`)
+- ✅ Blocks null byte injection (`file.swf\0.txt`)
+- ✅ Blocks backslash traversal (`..\..\..\`)
+- ✅ All blocked attempts logged with full details
+
+**Key Lesson:** Always validate that resolved file paths stay within allowed base directories. Use `path.resolve()` and check the resolved path starts with the base directory. Never trust user input, even after URL decoding.
+
+**Documentation**:
+- Detailed guide: `docs/13-security/directory-traversal-protection.md`
+- Updated: `docs/12-reference/security-measures.md`
+
+**Phase**: Phase 1 (Security) - Critical priority fix from comprehensive project review
 
 ---
 

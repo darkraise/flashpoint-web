@@ -80,6 +80,6 @@ Optional:
 - `PORT` - Server port (default: 3100)
 - `NODE_ENV` - Environment (development/production)
 - `GAME_SERVER_URL` - Game Server URL (default: http://localhost:22500)
-- `CORS_ORIGIN` - Frontend origin (default: http://localhost:5173)
+- `DOMAIN` - Frontend origin (default: http://localhost:5173)
 
 See `.env.example` for all options.

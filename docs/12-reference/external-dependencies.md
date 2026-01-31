@@ -136,7 +136,7 @@ This document provides a comprehensive reference for all external npm packages u
 **Configuration:**
 ```javascript
 {
-  origin: process.env.CORS_ORIGIN,
+  origin: process.env.DOMAIN,
   credentials: true,
   optionsSuccessStatus: 200
 }

@@ -6,7 +6,7 @@ Complete REST API reference for Flashpoint Web backend service.
 
 Development: `http://localhost:3100/api`
 
-Production: Configure via `CORS_ORIGIN` environment variable
+Production: Configure via `DOMAIN` environment variable
 
 ## Authentication
 

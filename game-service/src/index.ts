@@ -13,9 +13,10 @@ async function main() {
     logger.info('========================================');
 
     // Get configuration from environment
+    // All paths are derived from FLASHPOINT_PATH
     const flashpointPath = process.env.FLASHPOINT_PATH || 'D:/Flashpoint';
-    const flashpointHtdocsPath = process.env.FLASHPOINT_HTDOCS_PATH || path.join(flashpointPath, 'Legacy', 'htdocs');
-    const flashpointGamesPath = process.env.FLASHPOINT_GAMES_PATH || path.join(flashpointPath, 'Data', 'Games');
+    const flashpointHtdocsPath = path.join(flashpointPath, 'Legacy', 'htdocs');
+    const flashpointGamesPath = path.join(flashpointPath, 'Data', 'Games');
     const proxyPort = parseInt(process.env.PROXY_PORT || '22500', 10);
     const gameZipPort = parseInt(process.env.GAMEZIPSERVER_PORT || '22501', 10);
     const externalFallbackUrls = (process.env.EXTERNAL_FALLBACK_URLS ||

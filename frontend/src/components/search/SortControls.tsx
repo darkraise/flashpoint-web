@@ -29,6 +29,7 @@ export function SortControls({
         <option value="title">Title</option>
         <option value="releaseDate">Release Date</option>
         <option value="dateAdded">Date Added</option>
+        <option value="dateModified">Date Modified</option>
         <option value="developer">Developer</option>
       </select>
       <Button

@@ -104,7 +104,7 @@ Required variables:
 - `FLASHPOINT_PATH` - Path to Flashpoint installation
 - `FLASHPOINT_DB_PATH` - Path to flashpoint.sqlite
 - `GAME_SERVICE_PROXY_URL` - URL to game-service proxy (default: http://localhost:22500)
-- `CORS_ORIGIN` - Frontend URL (default: http://localhost:5173)
+- `DOMAIN` - Frontend URL (default: http://localhost:5173)
 
 ## Core Concepts
 
@@ -317,7 +317,7 @@ npm test -- --coverage
 
 1. Set `NODE_ENV=production`
 2. Set secure `JWT_SECRET`
-3. Configure proper `CORS_ORIGIN`
+3. Configure proper `DOMAIN`
 4. Build: `npm run build`
 5. Start: `npm start`
 6. Monitor logs and errors

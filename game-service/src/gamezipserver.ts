@@ -7,6 +7,8 @@ import { ConfigManager } from './config';
 import { getMimeType } from './mimeTypes';
 import { injectPolyfills } from './utils/htmlInjector';
 import { setCorsHeaders, setCorsHeadersWithMaxAge } from './utils/cors';
+import { sanitizeUrlPath } from './utils/pathSecurity';
+import { validateGameId, validateHostname } from './validation/schemas';
 
 /**
  * GameZip Server - Serves files from mounted ZIP archives
@@ -122,11 +124,12 @@ export class GameZipServer {
       return;
     }
 
-    // Validate mount ID to prevent path traversal
-    // ID should not contain path separators or traversal sequences
-    if (id.includes('/') || id.includes('\\') || id.includes('..') || id.includes('\0')) {
+    // Validate mount ID using Zod schema (prevents path traversal)
+    try {
+      validateGameId(id);
+    } catch (error) {
       logger.warn(`[Security] Invalid mount ID detected: ${id}`);
-      this.sendError(res, 400, 'Invalid mount ID');
+      this.sendError(res, 400, error instanceof Error ? error.message : 'Invalid mount ID');
       return;
     }
 
@@ -246,6 +249,24 @@ export class GameZipServer {
       // Regular: GET /path HTTP/1.1
       hostname = req.headers.host || 'localhost';
       urlPath = req.url;
+    }
+
+    // Validate hostname using Zod schema
+    try {
+      hostname = validateHostname(hostname);
+    } catch (error) {
+      logger.error(`[GameZipServer] Invalid hostname: ${hostname}`);
+      this.sendError(res, 400, error instanceof Error ? error.message : 'Invalid hostname');
+      return;
+    }
+
+    // Sanitize URL path to prevent null bytes and dangerous patterns
+    try {
+      urlPath = sanitizeUrlPath(urlPath);
+    } catch (error) {
+      logger.error(`[GameZipServer] Invalid URL path: ${urlPath}`);
+      this.sendError(res, 400, 'Invalid URL path');
+      return;
     }
 
     // Strip query string from path for ZIP file lookup

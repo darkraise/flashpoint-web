@@ -117,29 +117,43 @@ const registerSchema = z.object({
 
 ### Path Traversal Prevention
 
-**Game Service**: `game-service/src/gamezipserver.ts`
+**Status**: ✅ **Comprehensive Protection Implemented** (2026-01-29)
 
-**ZIP Mount ID Validation** (lines 131-135):
+**Centralized Security Utilities**: `game-service/src/utils/pathSecurity.ts`
+
+The game-service now has comprehensive directory traversal protection through centralized validation utilities:
+
+**1. Path Sanitization & Validation**:
 ```typescript
-// Reject IDs with path traversal sequences
-if (id.includes('/') || id.includes('\\') ||
-    id.includes('..') || id.includes('\0')) {
-  this.sendError(res, 400, 'Invalid mount ID');
-  return;
-}
+sanitizeAndValidatePath(basePath: string, requestPath: string): string
 ```
+- Normalizes paths and ensures they stay within allowed directories
+- Platform-aware (Windows/Unix)
+- Blocks: `../`, absolute paths, null bytes, URL-encoded traversal
 
-**ZIP Path Validation** (lines 156-169):
+**2. URL Path Sanitization**:
 ```typescript
-// Ensure ZIP files are within allowed directory
-const resolvedZipPath = path.resolve(normalizedZipPath);
-const resolvedGamesPath = path.resolve(allowedGamesPath);
-
-if (!resolvedZipPath.startsWith(resolvedGamesPath)) {
-  this.sendError(res, 403, 'Forbidden: ZIP file must be within games directory');
-  return;
-}
+sanitizeUrlPath(urlPath: string): string
 ```
+- Detects null bytes (`\0`)
+- Blocks URL-encoded directory traversal (`..%2F`, `..%5C`)
+- Blocks backslash path traversal (`..\\`)
+
+**Implementation Coverage**:
+
+**Legacy Server** (`game-service/src/legacy-server.ts`):
+- ✅ URL path sanitization at entry point
+- ✅ Path validation before all file access
+- ✅ Separate validation for htdocs and cgi-bin paths
+
+**GameZip Server** (`game-service/src/gamezipserver.ts`):
+- ✅ URL path sanitization in file requests
+- ✅ Mount ID validation (prevents path separators)
+- ✅ ZIP path validation (ensures files within games directory)
+
+**Test Coverage**: 17 tests (all passing) in `pathSecurity.test.ts`
+
+**For detailed information**: See `docs/13-security/directory-traversal-protection.md`
 
 ---
 
@@ -240,7 +254,7 @@ function sanitizeBody(body: any): any {
 
 ```typescript
 cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.DOMAIN || 'http://localhost:5173',
   credentials: true
 })
 ```
@@ -388,7 +402,7 @@ res.status(500).json({
 - [x] Rate limiting (login, registration)
 - [x] Input validation (Zod schemas)
 - [x] SQL injection prevention (parameterized queries)
-- [x] Path traversal prevention
+- [x] Path traversal prevention (comprehensive, with 17 test cases)
 - [x] DoS protection (request size limits, LRU cache)
 - [x] Sensitive data sanitization in logs
 - [x] Activity logging
@@ -416,5 +430,5 @@ res.status(500).json({
 
 ---
 
-**Last Updated**: 2026-01-27
-**Review Status**: Comprehensive
+**Last Updated**: 2026-01-29
+**Review Status**: Comprehensive (Enhanced path traversal protection)

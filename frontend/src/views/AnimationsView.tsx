@@ -9,6 +9,7 @@ export function AnimationsView() {
     <GameBrowseLayout
       title="Browse Animations"
       library="theatre"
+      breadcrumbContext={{ label: 'Animations', href: '/animations' }}
     />
   );
 }

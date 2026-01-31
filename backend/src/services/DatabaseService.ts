@@ -1,7 +1,18 @@
 import BetterSqlite3 from 'better-sqlite3';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { measureQueryPerformance } from '../utils/queryPerformance';
 import fs from 'fs';
+
+// Import GameSearchCache for cache invalidation
+// Using dynamic import to avoid circular dependency
+let GameSearchCache: any = null;
+try {
+  GameSearchCache = require('./GameSearchCache').GameSearchCache;
+} catch (error) {
+  // GameSearchCache may not be available in all contexts
+  logger.debug('GameSearchCache not available for cache invalidation');
+}
 
 export class DatabaseService {
   private static db: BetterSqlite3.Database | null = null;
@@ -111,6 +122,12 @@ export class DatabaseService {
       // Update modification time
       this.lastModifiedTime = stats.mtimeMs;
 
+      // Invalidate game search cache since database changed
+      if (GameSearchCache) {
+        GameSearchCache.clearCache();
+        logger.info('Game search cache invalidated due to database reload');
+      }
+
       logger.info('Database connection reopened successfully');
     } catch (error) {
       logger.error('Failed to reload database from disk:', error);
@@ -157,53 +174,61 @@ export class DatabaseService {
   static exec<T = any>(sql: string, params: any[] = []): T[] {
     const db = this.getDatabase();
 
-    try {
-      const stmt = db.prepare(sql);
-      return stmt.all(params) as T[];
-    } catch (error) {
-      logger.error('Database query error:', { sql, params, error });
-      throw error;
-    }
+    return measureQueryPerformance(() => {
+      try {
+        const stmt = db.prepare(sql);
+        return stmt.all(params) as T[];
+      } catch (error) {
+        logger.error('Database query error:', { sql, params, error });
+        throw error;
+      }
+    }, sql, params);
   }
 
   // Helper method to get a single row
   static get<T = any>(sql: string, params: any[] = []): T | undefined {
     const db = this.getDatabase();
 
-    try {
-      const stmt = db.prepare(sql);
-      const result = stmt.get(params);
-      return result as T | undefined;
-    } catch (error) {
-      logger.error('Database get error:', error);
-      throw error;
-    }
+    return measureQueryPerformance(() => {
+      try {
+        const stmt = db.prepare(sql);
+        const result = stmt.get(params);
+        return result as T | undefined;
+      } catch (error) {
+        logger.error('Database get error:', error);
+        throw error;
+      }
+    }, sql, params);
   }
 
   // Helper method to get all rows
   static all<T = any>(sql: string, params: any[] = []): T[] {
     const db = this.getDatabase();
 
-    try {
-      const stmt = db.prepare(sql);
-      return stmt.all(params) as T[];
-    } catch (error) {
-      logger.error('Database all error:', error);
-      throw error;
-    }
+    return measureQueryPerformance(() => {
+      try {
+        const stmt = db.prepare(sql);
+        return stmt.all(params) as T[];
+      } catch (error) {
+        logger.error('Database all error:', error);
+        throw error;
+      }
+    }, sql, params);
   }
 
   // Helper method to run INSERT/UPDATE/DELETE queries (doesn't return rows)
   static run(sql: string, params: any[] = []): void {
     const db = this.getDatabase();
 
-    try {
-      const stmt = db.prepare(sql);
-      stmt.run(params);
-    } catch (error) {
-      logger.error('Database run error:', { sql, params, error });
-      throw error;
-    }
+    measureQueryPerformance(() => {
+      try {
+        const stmt = db.prepare(sql);
+        stmt.run(params);
+      } catch (error) {
+        logger.error('Database run error:', { sql, params, error });
+        throw error;
+      }
+    }, sql, params);
   }
 
   // Save database changes to disk

@@ -6,10 +6,14 @@ import { requireFeature } from '../middleware/featureFlags';
 import { logActivity } from '../middleware/activityLogger';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { rateLimitStandard } from '../middleware/rateLimiter';
 import { z } from 'zod';
 
 const router = Router();
 const playlistService = new UserPlaylistService();
+
+// Apply rate limiting to prevent abuse
+router.use(rateLimitStandard);
 
 // Global softAuth (from server.ts) already populates req.user for all routes
 // No need to apply softAuth again at router level

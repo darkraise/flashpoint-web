@@ -423,10 +423,10 @@ export const authenticateToken = async (
 
 ```bash
 # Single domain
-CORS_ORIGIN=https://flashpoint.example.com
+DOMAIN=https://flashpoint.example.com
 
 # Multiple domains
-CORS_ORIGIN=https://flashpoint.example.com,https://www.flashpoint.example.com
+DOMAIN=https://flashpoint.example.com,https://www.flashpoint.example.com
 ```
 
 **Nginx CORS Headers:**
@@ -454,7 +454,7 @@ location /api/ {
 // backend/src/middleware/cors.ts
 import cors from 'cors';
 
-const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [];
+const allowedOrigins = process.env.DOMAIN?.split(',') || [];
 
 export const corsMiddleware = cors({
   origin: (origin, callback) => {

@@ -10,6 +10,7 @@ export function FlashGamesView() {
       title="Flash Games"
       library="arcade"
       platform="Flash"
+      breadcrumbContext={{ label: 'Flash Games', href: '/flash-games' }}
     />
   );
 }

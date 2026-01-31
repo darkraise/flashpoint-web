@@ -13,6 +13,11 @@ import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 
+export interface BreadcrumbContext {
+  label: string;
+  href: string;
+}
+
 interface GameCardProps {
   game: Game;
   showFavoriteButton?: boolean;
@@ -22,6 +27,7 @@ interface GameCardProps {
   favoriteGameIds?: Set<string>; // Optional: for performance optimization
   isFavoritePage?: boolean; // NEW: Are we on favorites page?
   shareToken?: string | null; // Optional: for shared playlist navigation
+  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
 }
 
 const GameCardComponent = function GameCard({
@@ -33,6 +39,7 @@ const GameCardComponent = function GameCard({
   favoriteGameIds,
   isFavoritePage = false,
   shareToken = null,
+  breadcrumbContext,
 }: GameCardProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -55,7 +62,9 @@ const GameCardComponent = function GameCard({
 
   // Handle navigation to game details (for clicking on image/footer area)
   const handleCardClick = () => {
-    navigate(gameDetailUrl);
+    navigate(gameDetailUrl, {
+      state: breadcrumbContext ? { breadcrumbContext } : undefined
+    });
   };
 
   return (
@@ -277,7 +286,9 @@ export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
     prevProps.showFavoriteIndicator !== nextProps.showFavoriteIndicator ||
     prevProps.showAddToPlaylistButton !== nextProps.showAddToPlaylistButton ||
     prevProps.isFavoritePage !== nextProps.isFavoritePage ||
-    prevProps.shareToken !== nextProps.shareToken
+    prevProps.shareToken !== nextProps.shareToken ||
+    prevProps.breadcrumbContext?.label !== nextProps.breadcrumbContext?.label ||
+    prevProps.breadcrumbContext?.href !== nextProps.breadcrumbContext?.href
   ) {
     return false;
   }

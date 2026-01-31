@@ -782,7 +782,7 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 import cors from 'cors';
 
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.DOMAIN || 'http://localhost:5173',
   credentials: true,
   exposedHeaders: ['X-Total-Count']
 }));

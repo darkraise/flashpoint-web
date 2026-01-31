@@ -59,12 +59,19 @@ export class PlayTrackingService {
 
   /**
    * End a play session
+   * OPTIMIZED: Single query to get session data and calculate duration, then single UPDATE
    */
   async endPlaySession(sessionId: string): Promise<void> {
     try {
-      // Get the session
+      // OPTIMIZATION: Get session and calculate duration in single query
       const session = UserDatabaseService.get(
-        `SELECT * FROM user_game_plays WHERE session_id = ? AND ended_at IS NULL`,
+        `SELECT
+           user_id,
+           game_id,
+           game_title,
+           CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER) as duration_seconds
+         FROM user_game_plays
+         WHERE session_id = ? AND ended_at IS NULL`,
         [sessionId]
       );
 
@@ -73,21 +80,15 @@ export class PlayTrackingService {
         return;
       }
 
-      // Calculate duration
-      const duration = UserDatabaseService.get(
-        `SELECT CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER) as duration
-         FROM user_game_plays WHERE session_id = ?`,
-        [sessionId]
-      );
+      const durationSeconds = session.duration_seconds || 0;
 
-      const durationSeconds = duration?.duration || 0;
-
-      // Update session
+      // OPTIMIZATION: Single UPDATE statement with inline duration calculation
       UserDatabaseService.run(
         `UPDATE user_game_plays
-         SET ended_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), duration_seconds = ?
+         SET ended_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+             duration_seconds = CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER)
          WHERE session_id = ?`,
-        [durationSeconds, sessionId]
+        [sessionId]
       );
 
       // Update aggregated stats

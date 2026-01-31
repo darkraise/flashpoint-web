@@ -157,7 +157,7 @@ GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
 
 # Server configuration
 PORT=3100
-CORS_ORIGIN=http://localhost:5173
+DOMAIN=http://localhost:5173
 
 # JWT secret (change in production!)
 JWT_SECRET=your-secret-key-change-in-production
@@ -599,7 +599,7 @@ Use this checklist to verify your setup:
 | `GAME_SERVICE_PROXY_URL` | Yes | - | Game service proxy URL |
 | `GAME_SERVICE_GAMEZIP_URL` | Yes | - | Game service GameZip URL |
 | `PORT` | No | 3100 | Backend server port |
-| `CORS_ORIGIN` | Yes | - | Frontend URL for CORS |
+| `DOMAIN` | Yes | - | Frontend URL for CORS |
 | `JWT_SECRET` | No | auto | JWT signing secret |
 | `JWT_EXPIRES_IN` | No | 7d | JWT expiration |
 | `LOG_LEVEL` | No | info | Logging level |

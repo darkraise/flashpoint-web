@@ -14,7 +14,8 @@
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "test": "vitest",
-    "fix-paths": "tsx scripts/fix-absolute-paths.ts"
+    "fix-paths": "tsx scripts/fix-absolute-paths.ts",
+    "benchmark:games": "tsx src/utils/benchmarkGameSearch.ts"
   },
   "keywords": [
     "flashpoint",
@@ -25,6 +26,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.69.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.211.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.211.0",
+    "@opentelemetry/resources": "^2.5.0",
+    "@opentelemetry/sdk-node": "^0.211.0",
+    "@opentelemetry/semantic-conventions": "^1.39.0",
     "@types/cheerio": "^0.22.35",
     "@types/node-cron": "^3.0.11",
     "adm-zip": "^0.5.16",
@@ -41,6 +49,7 @@
     "helmet": "^7.1.0",
     "http-proxy-middleware": "^2.0.6",
     "jsonwebtoken": "^9.0.3",
+    "lru-cache": "^11.2.5",
     "node-cron": "^4.2.1",
     "node-stream-zip": "^1.15.0",
     "redis": "^4.6.13",

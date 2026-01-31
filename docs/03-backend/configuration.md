@@ -218,15 +218,15 @@ export const config = {
 
 ### CORS Configuration
 
-#### `CORS_ORIGIN`
+#### `DOMAIN`
 - **Type**: string
 - **Default**: `http://localhost:5173`
 - **Required**: Yes
 - **Description**: Allowed origin for CORS requests (frontend URL)
 - **Usage**:
   ```bash
-  CORS_ORIGIN=http://localhost:5173  # Development
-  CORS_ORIGIN=https://flashpoint.example.com  # Production
+  DOMAIN=http://localhost:5173  # Development
+  DOMAIN=https://flashpoint.example.com  # Production
   ```
 
 ### Rate Limiting
@@ -326,7 +326,7 @@ JWT_EXPIRES_IN=1h
 BCRYPT_SALT_ROUNDS=10
 
 # CORS
-CORS_ORIGIN=http://localhost:5173
+DOMAIN=http://localhost:5173
 
 # Logging
 LOG_LEVEL=debug
@@ -362,7 +362,7 @@ JWT_EXPIRES_IN=1h
 BCRYPT_SALT_ROUNDS=12
 
 # CORS
-CORS_ORIGIN=https://flashpoint.example.com
+DOMAIN=https://flashpoint.example.com
 
 # Redis (optional)
 REDIS_ENABLED=true
@@ -407,7 +407,7 @@ JWT_EXPIRES_IN=1h
 BCRYPT_SALT_ROUNDS=12
 
 # CORS
-CORS_ORIGIN=${CORS_ORIGIN}  # Pass from environment
+DOMAIN=${DOMAIN}  # Pass from environment
 
 # Redis
 REDIS_ENABLED=true
@@ -438,7 +438,7 @@ port: parseInt(process.env.PORT || '3100', 10)
 
 - [ ] Set `NODE_ENV=production`
 - [ ] Generate secure `JWT_SECRET` (min 32 characters)
-- [ ] Set correct `CORS_ORIGIN` (your frontend URL)
+- [ ] Set correct `DOMAIN` (your frontend URL)
 - [ ] Increase `BCRYPT_SALT_ROUNDS` to 12+
 - [ ] Set appropriate `LOG_LEVEL` (info or warn)
 - [ ] Configure rate limiting for your expected traffic
@@ -462,7 +462,7 @@ port: parseInt(process.env.PORT || '3100', 10)
 **Docker**:
 ```bash
 # Pass secrets via environment
-docker run -e JWT_SECRET=$JWT_SECRET -e CORS_ORIGIN=$CORS_ORIGIN ...
+docker run -e JWT_SECRET=$JWT_SECRET -e DOMAIN=$DOMAIN ...
 
 # Or use Docker secrets
 docker secret create jwt_secret jwt_secret.txt
@@ -497,7 +497,7 @@ Solution: Change PORT or stop other process using port 3100
 ```
 Access to fetch at 'http://localhost:3100/api/games' from origin
 'http://localhost:5174' has been blocked by CORS policy
-Solution: Set CORS_ORIGIN=http://localhost:5174
+Solution: Set DOMAIN=http://localhost:5174
 ```
 
 **JWT verification failed**:

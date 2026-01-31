@@ -25,7 +25,7 @@ import { useAuthStore } from "@/store/auth";
 import { useDialog } from "@/contexts/DialogContext";
 import { useMountEffect } from "@/hooks/useMountEffect";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ruffleApi } from "@/lib/api";
+import { ruffleApi, updatesApi } from "@/lib/api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -126,17 +126,12 @@ export function UpdateSettingsTab({
     }
 
     try {
-      const startResponse = await fetch("/api/updates/metadata/sync", {
-        method: "POST",
-      });
+      const startResult = await updatesApi.startMetadataSync();
 
-      if (!startResponse.ok) {
-        if (startResponse.status === 409) {
-          showToast("Sync is already in progress", "warning");
-          setIsSyncingMetadata(false);
-          return;
-        }
-        throw new Error("Failed to start metadata sync");
+      if (!startResult.success) {
+        showToast("Sync is already in progress", "warning");
+        setIsSyncingMetadata(false);
+        return;
       }
 
       showToast("Metadata sync started. Polling for progress...", "info");
@@ -144,14 +139,7 @@ export function UpdateSettingsTab({
       // Poll for status updates
       pollIntervalRef.current = setInterval(async () => {
         try {
-          const statusResponse = await fetch(
-            "/api/updates/metadata/sync/status",
-          );
-          if (!statusResponse.ok) {
-            throw new Error("Failed to get sync status");
-          }
-
-          const status = await statusResponse.json();
+          const status = await updatesApi.getMetadataSyncStatus();
 
           if (status.isRunning) {
             setSyncProgress(status.progress);
@@ -205,11 +193,16 @@ export function UpdateSettingsTab({
         setSyncMessage("");
         showToast("Sync timeout - please check server logs", "warning");
       }, 600000);
-    } catch (err) {
-      const errorMsg =
-        err instanceof Error ? err.message : "Failed to sync metadata";
-      setError(errorMsg);
-      showToast(errorMsg, "error");
+    } catch (err: any) {
+      // Handle 409 conflict (sync already in progress)
+      if (err?.response?.status === 409) {
+        showToast("Sync is already in progress", "warning");
+      } else {
+        const errorMsg = err?.response?.data?.error || err?.message || "Failed to sync metadata";
+        setError(errorMsg);
+        showToast(errorMsg, "error");
+      }
+
       setIsSyncingMetadata(false);
       setSyncProgress(0);
       setSyncMessage("");

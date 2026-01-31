@@ -70,6 +70,7 @@ export function PlaylistDetailView() {
           <GameGrid
             games={playlist.games}
             favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
+            breadcrumbContext={{ label: playlist.title, href: `/flashpoint-playlists/${id}` }}
           />
         </>
       ) : (

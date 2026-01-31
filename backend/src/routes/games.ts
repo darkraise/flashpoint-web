@@ -1,14 +1,19 @@
 import { Router } from 'express';
 import { GameService } from '../services/GameService';
+import { GameSearchCache } from '../services/GameSearchCache';
 import { gameDataService } from '../services/GameDataService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { sharedAccessAuth, validateSharedGameAccess } from '../middleware/auth';
 import { logActivity } from '../middleware/activityLogger';
+import { rateLimitStandard } from '../middleware/rateLimiter';
 import { z } from 'zod';
 
 const router = Router();
 const gameService = new GameService();
+
+// Apply rate limiting to prevent abuse
+router.use(rateLimitStandard);
 
 // Apply shared access auth middleware to all routes
 router.use(sharedAccessAuth);
@@ -33,7 +38,9 @@ const searchQuerySchema = z.object({
   tags: z.string().optional(),
   yearFrom: z.coerce.number().int().min(1970).max(2100).optional(),
   yearTo: z.coerce.number().int().min(1970).max(2100).optional(),
-  sortBy: z.enum(['title', 'releaseDate', 'dateAdded', 'developer']).default('title'),
+  dateAddedSince: z.string().datetime().optional(),
+  dateModifiedSince: z.string().datetime().optional(),
+  sortBy: z.enum(['title', 'releaseDate', 'dateAdded', 'dateModified', 'developer']).default('title'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
@@ -59,7 +66,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const query = searchQuerySchema.parse(req.query);
 
-    const result = await gameService.searchGames({
+    // Use cached search for performance (5-minute TTL)
+    const result = await GameSearchCache.searchGames({
       search: query.search,
       platforms: query.platform?.split(',').filter(Boolean),
       series: query.series?.split(',').filter(Boolean),
@@ -71,6 +79,8 @@ router.get(
       tags: query.tags?.split(',').filter(Boolean),
       yearFrom: query.yearFrom,
       yearTo: query.yearTo,
+      dateAddedSince: query.dateAddedSince,
+      dateModifiedSince: query.dateModifiedSince,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
       page: query.page,
@@ -90,6 +100,18 @@ router.get(
 router.get('/filter-options', asyncHandler(async (req, res) => {
   const filterOptions = await gameService.getFilterOptions();
   res.json(filterOptions);
+}));
+
+// GET /api/games/most-played - Get most played games globally
+router.get('/most-played', asyncHandler(async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+  const games = await gameService.getMostPlayedGames(limit);
+
+  res.json({
+    success: true,
+    data: games,
+    total: games.length
+  });
 }));
 
 // GET /api/games/:id - Get single game by ID

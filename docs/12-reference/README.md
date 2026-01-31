@@ -175,7 +175,7 @@ FLASHPOINT_PATH=D:/Flashpoint
 FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
 GAME_SERVICE_PROXY_URL=http://localhost:22500
 GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
-CORS_ORIGIN=http://localhost:5173
+DOMAIN=http://localhost:5173
 JWT_SECRET=your-secret-key
 JWT_EXPIRES_IN=1h
 ```

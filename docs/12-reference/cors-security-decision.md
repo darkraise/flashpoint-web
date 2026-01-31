@@ -57,7 +57,7 @@ All sensitive operations are handled by the backend service (port 3100) which ha
 ```typescript
 // backend/src/server.ts
 cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: process.env.DOMAIN || 'http://localhost:5173',
   credentials: true
 })
 ```

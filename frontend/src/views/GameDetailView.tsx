@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGame } from '@/hooks/useGames';
@@ -14,6 +14,7 @@ import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
+import { BreadcrumbContext } from '@/components/library/GameCard';
 
 // Helper function to format duration in seconds
 function formatDuration(seconds: number): string {
@@ -30,10 +31,14 @@ function formatDuration(seconds: number): string {
 export function GameDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const shareToken = searchParams.get('shareToken');
   const { isAuthenticated } = useAuthStore();
   const { generateToken, hasValidToken, isGenerating } = useSharedAccessToken();
+
+  // Get breadcrumb context from navigation state
+  const breadcrumbContext = location.state?.breadcrumbContext as BreadcrumbContext | undefined;
 
   // Generate shared access token if accessing via shareToken (for anonymous users)
   useEffect(() => {
@@ -170,6 +175,11 @@ export function GameDetailView() {
       ]
     : shareToken
     ? [{ label: game.title, active: true }]
+    : breadcrumbContext
+    ? [
+        { label: breadcrumbContext.label, href: breadcrumbContext.href },
+        { label: game.title, active: true }
+      ]
     : [
         { label: 'Browse', href: '/browse' },
         { label: game.title, active: true }

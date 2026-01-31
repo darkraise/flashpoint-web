@@ -2,8 +2,12 @@ import { Router } from 'express';
 import { DatabaseService } from '../services/DatabaseService';
 import { optionalAuth } from '../middleware/auth';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { rateLimitStandard } from '../middleware/rateLimiter';
 
 const router = Router();
+
+// Apply rate limiting to prevent abuse
+router.use(rateLimitStandard);
 
 // Apply optional auth middleware to all routes
 router.use(optionalAuth);

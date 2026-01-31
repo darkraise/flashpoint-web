@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { memo } from 'react';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +23,7 @@ interface PlaylistCardProps {
   showActions?: boolean;
 }
 
-export function PlaylistCard({
+const PlaylistCardComponent = function PlaylistCard({
   playlist,
   onEdit,
   onDelete,
@@ -159,4 +160,33 @@ export function PlaylistCard({
       </div>
     </Card>
   );
-}
+};
+
+// Memoize component to prevent unnecessary re-renders
+// Only re-render if playlist properties change
+export const PlaylistCard = memo(PlaylistCardComponent, (prevProps, nextProps) => {
+  // Re-render if playlist ID changed
+  if (prevProps.playlist.id !== nextProps.playlist.id) {
+    return false;
+  }
+
+  // Re-render if playlist data changed
+  if (
+    prevProps.playlist.title !== nextProps.playlist.title ||
+    prevProps.playlist.description !== nextProps.playlist.description ||
+    prevProps.playlist.icon !== nextProps.playlist.icon ||
+    prevProps.playlist.gameCount !== nextProps.playlist.gameCount ||
+    prevProps.playlist.isPublic !== nextProps.playlist.isPublic ||
+    prevProps.playlist.shareToken !== nextProps.playlist.shareToken
+  ) {
+    return false;
+  }
+
+  // Re-render if showActions changed
+  if (prevProps.showActions !== nextProps.showActions) {
+    return false;
+  }
+
+  // Don't re-render - props are effectively the same
+  return true;
+});

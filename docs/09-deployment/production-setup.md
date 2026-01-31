@@ -136,7 +136,7 @@ GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
 
 # Security (CHANGE THESE!)
 JWT_SECRET=<generate-strong-random-secret-64-chars>
-CORS_ORIGIN=https://yourdomain.com
+DOMAIN=https://yourdomain.com
 
 # Rate limiting
 RATE_LIMIT_WINDOW_MS=60000

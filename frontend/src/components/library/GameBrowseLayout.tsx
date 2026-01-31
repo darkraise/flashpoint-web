@@ -14,12 +14,14 @@ import { PaginationWithInfo } from '@/components/ui/pagination';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { GameFilters } from '@/types/game';
+import { BreadcrumbContext } from './GameCard';
 
 interface GameBrowseLayoutProps {
   title: string;
   library: 'arcade' | 'theatre';
   platform?: string;
   headerContent?: ReactNode;
+  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
 }
 
 /**
@@ -31,6 +33,7 @@ export function GameBrowseLayout({
   library,
   platform,
   headerContent,
+  breadcrumbContext,
 }: GameBrowseLayoutProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const viewMode = useUIStore((state) => state.viewMode);
@@ -350,11 +353,13 @@ export function GameBrowseLayout({
             <GameGrid
               games={data.data}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
+              breadcrumbContext={breadcrumbContext}
             />
           ) : (
             <GameList
               games={data.data}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
+              breadcrumbContext={breadcrumbContext}
             />
           )}
 

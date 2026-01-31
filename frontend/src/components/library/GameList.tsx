@@ -1,6 +1,7 @@
 import { Game } from '@/types/game';
 import { GameListItem } from './GameListItem';
 import { useUIStore } from '@/store/ui';
+import { BreadcrumbContext } from './GameCard';
 
 interface GameListProps {
   games: Game[];
@@ -9,9 +10,10 @@ interface GameListProps {
   favoriteGameIds?: Set<string>; // Optional: for performance optimization
   isFavoritePage?: boolean;
   shareToken?: string | null; // Optional: for shared playlist navigation
+  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
 }
 
-export function GameList({ games, showFavoriteButton = true, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null }: GameListProps) {
+export function GameList({ games, showFavoriteButton = true, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null, breadcrumbContext }: GameListProps) {
   const listColumns = useUIStore((state) => state.listColumns);
 
   if (games.length === 0) {
@@ -43,6 +45,7 @@ export function GameList({ games, showFavoriteButton = true, showAddToPlaylistBu
           favoriteGameIds={favoriteGameIds}
           isFavoritePage={isFavoritePage}
           shareToken={shareToken}
+          breadcrumbContext={breadcrumbContext}
         />
       ))}
     </div>

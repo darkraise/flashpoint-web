@@ -191,11 +191,13 @@ export function UserPlaylistDetailView() {
             <GameGrid
               games={games}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
+              breadcrumbContext={{ label: playlist.title, href: `/playlists/${playlist.id}` }}
             />
           ) : (
             <GameList
               games={games}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
+              breadcrumbContext={{ label: playlist.title, href: `/playlists/${playlist.id}` }}
             />
           )}
         </>

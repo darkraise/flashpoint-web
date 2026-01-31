@@ -1,3 +1,6 @@
+// IMPORTANT: OpenTelemetry must be imported FIRST for auto-instrumentation
+import './telemetry';
+
 import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -7,6 +10,8 @@ import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { softAuth } from './middleware/auth';
 import { maintenanceMode } from './middleware/maintenanceMode';
+import { requestTimeout, TimeoutConfig } from './middleware/requestTimeout';
+import { performanceTracking } from './middleware/performanceTracking';
 import { setupRoutes } from './routes';
 import { DatabaseService } from './services/DatabaseService';
 import { UserDatabaseService } from './services/UserDatabaseService';
@@ -32,7 +37,7 @@ async function startServer() {
 
   // CORS
   app.use(cors({
-    origin: config.corsOrigin,
+    origin: config.domain,
     credentials: true
   }));
 
@@ -43,11 +48,19 @@ async function startServer() {
   // Compression
   app.use(compression());
 
+  // Request timeout (30 seconds default)
+  // Prevents hanging requests from consuming resources
+  app.use(requestTimeout(TimeoutConfig.DEFAULT));
+
   // Request logging
   app.use((req, res, next) => {
     logger.info(`${req.method} ${req.path}`);
     next();
   });
+
+  // Performance tracking
+  // Track response times for all endpoints
+  app.use(performanceTracking);
 
   // Soft authentication - populates req.user if token exists (doesn't throw errors)
   // MUST be applied before maintenance mode check so it can identify admins

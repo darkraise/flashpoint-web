@@ -350,7 +350,7 @@ services:
       - GAME_SERVICE_PROXY_URL=http://game-service:22500
       - GAME_SERVICE_GAMEZIP_URL=http://game-service:22501
       - JWT_SECRET=${JWT_SECRET}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost}
+      - DOMAIN=${DOMAIN:-http://localhost}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
       - RATE_LIMIT_MAX_REQUESTS=${RATE_LIMIT_MAX_REQUESTS:-100}

@@ -50,40 +50,28 @@ HOST=127.0.0.1
 
 ### Flashpoint Paths
 
-All paths must point to your Flashpoint installation directory.
-
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
-| `FLASHPOINT_PATH` | string | Yes | Root directory of Flashpoint installation |
-| `FLASHPOINT_DB_PATH` | string | Yes | Path to flashpoint.sqlite database |
-| `FLASHPOINT_HTDOCS_PATH` | string | Yes | Path to Legacy/htdocs directory |
-| `FLASHPOINT_IMAGES_PATH` | string | Yes | Path to Data/Images directory |
-| `FLASHPOINT_LOGOS_PATH` | string | Yes | Path to Data/Logos directory |
-| `FLASHPOINT_PLAYLISTS_PATH` | string | Yes | Path to Data/Playlists directory |
-| `FLASHPOINT_GAMES_PATH` | string | Yes | Path to Data/Games directory |
+| `FLASHPOINT_PATH` | string | Yes | Root directory of Flashpoint installation. All other paths are automatically derived from this. |
+
+**Automatically derived paths:**
+- Database: `${FLASHPOINT_PATH}/Data/flashpoint.sqlite`
+- HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
+- Images: `${FLASHPOINT_PATH}/Data/Images`
+- Logos: `${FLASHPOINT_PATH}/Data/Logos`
+- Playlists: `${FLASHPOINT_PATH}/Data/Playlists`
+- Games: `${FLASHPOINT_PATH}/Data/Games`
 
 **Example (Windows):**
 
 ```bash
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=D:/Flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=D:/Flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=D:/Flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
 ```
 
 **Example (Linux):**
 
 ```bash
 FLASHPOINT_PATH=/data/flashpoint
-FLASHPOINT_DB_PATH=/data/flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=/data/flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=/data/flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=/data/flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=/data/flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
 ```
 
 **Example (Docker):**
@@ -91,12 +79,6 @@ FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
 ```bash
 # Inside container (mounted from host)
 FLASHPOINT_PATH=/data/flashpoint
-FLASHPOINT_DB_PATH=/data/flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=/data/flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=/data/flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=/data/flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=/data/flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
 ```
 
 ### Game Service URLs
@@ -144,13 +126,14 @@ When images are not found locally, the backend will try fetching from these URLs
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `JWT_SECRET` | string | `change-in-production-use-long-random-string` | Secret key for JWT signing (min 32 chars) |
-| `JWT_EXPIRATION` | string | `1h` | Access token expiration time |
-| `JWT_REFRESH_EXPIRATION` | string | `7d` | Refresh token expiration time |
+| `JWT_SECRET` | string | `INSECURE-CHANGE-THIS-IN-PRODUCTION` | Secret key for JWT signing (CRITICAL: must change in production!) |
+| `JWT_EXPIRES_IN` | string | `1h` | Access token expiration time (examples: 15m, 1h, 7d) |
+| `BCRYPT_SALT_ROUNDS` | number | `10` | Bcrypt salt rounds for password hashing (higher = more secure but slower) |
+| `USER_DB_PATH` | string | `./user.db` | Path to user database SQLite file |
 
 **CRITICAL: Change JWT_SECRET in production!**
 
-Generate a secure secret:
+Generate a secure secret (64+ characters recommended):
 
 ```bash
 # Linux/Mac
@@ -167,30 +150,31 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 ```bash
 JWT_SECRET=a1b2c3d4e5f6789012345678901234567890abcdefghijklmnopqrstuvwxyz0123
-JWT_EXPIRATION=1h
-JWT_REFRESH_EXPIRATION=7d
+JWT_EXPIRES_IN=1h
+BCRYPT_SALT_ROUNDS=12
+USER_DB_PATH=./data/user.db
 ```
 
 ### CORS Configuration
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `CORS_ORIGIN` | string | `http://localhost:5173` | Allowed CORS origin (frontend URL) |
+| `DOMAIN` | string | `http://localhost:5173` | Allowed CORS origin (frontend URL) |
 
 **Examples:**
 
 ```bash
 # Development
-CORS_ORIGIN=http://localhost:5173
+DOMAIN=http://localhost:5173
 
 # Production (single domain)
-CORS_ORIGIN=https://flashpoint.example.com
+DOMAIN=https://flashpoint.example.com
 
 # Production (multiple domains - comma-separated)
-CORS_ORIGIN=https://flashpoint.example.com,https://www.flashpoint.example.com
+DOMAIN=https://flashpoint.example.com,https://www.flashpoint.example.com
 
 # Allow all origins (NOT RECOMMENDED)
-CORS_ORIGIN=*
+DOMAIN=*
 ```
 
 ### Rate Limiting
@@ -226,9 +210,6 @@ RATE_LIMIT_MAX_REQUESTS=0
 | `REDIS_ENABLED` | boolean | `false` | Enable Redis caching |
 | `REDIS_HOST` | string | `localhost` | Redis server hostname |
 | `REDIS_PORT` | number | `6379` | Redis server port |
-| `REDIS_PASSWORD` | string | - | Redis password (if required) |
-| `REDIS_DB` | number | `0` | Redis database number |
-| `REDIS_TTL` | number | `3600` | Default cache TTL in seconds |
 
 **Examples:**
 
@@ -241,13 +222,10 @@ REDIS_ENABLED=true
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# Remote Redis with auth
+# Remote Redis
 REDIS_ENABLED=true
 REDIS_HOST=redis.example.com
 REDIS_PORT=6379
-REDIS_PASSWORD=secretpassword
-REDIS_DB=0
-REDIS_TTL=3600
 ```
 
 ### Logging
@@ -255,9 +233,6 @@ REDIS_TTL=3600
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `LOG_LEVEL` | string | `info` | Logging level: `error`, `warn`, `info`, `debug` |
-| `LOG_FILE` | string | - | Path to log file (optional) |
-| `LOG_MAX_SIZE` | string | `10m` | Maximum log file size |
-| `LOG_MAX_FILES` | number | `10` | Maximum number of log files to keep |
 
 **Examples:**
 
@@ -267,31 +242,49 @@ LOG_LEVEL=debug
 
 # Production (minimal)
 LOG_LEVEL=warn
-LOG_FILE=/var/log/flashpoint-backend.log
-LOG_MAX_SIZE=10m
-LOG_MAX_FILES=30
 ```
 
-### Database Configuration
+### OpenTelemetry (Optional - Observability & Monitoring)
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `USER_DB_PATH` | string | `./data/user.db` | Path to user database |
-| `DB_POOL_SIZE` | number | `10` | Database connection pool size |
-| `DB_BUSY_TIMEOUT` | number | `5000` | SQLite busy timeout in milliseconds |
+| `OTEL_ENABLED` | boolean | `false` | Enable/disable OpenTelemetry telemetry collection |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | string | `http://localhost:4318` | OTLP endpoint URL (HTTP protocol) |
+| `OTEL_SERVICE_NAME` | string | `flashpoint-web-backend` | Service name for identifying this service in traces/metrics |
+| `OTEL_TRACES_ENABLED` | boolean | `true` | Enable/disable distributed tracing |
+| `OTEL_METRICS_ENABLED` | boolean | `true` | Enable/disable metrics collection |
+| `OTEL_METRICS_EXPORT_INTERVAL` | number | `60000` | Metrics export interval in milliseconds (default: 60000 = 1 minute) |
+| `OTEL_LOG_LEVEL` | string | `info` | OpenTelemetry log level (error, warn, info, debug) |
+
+**Compatible Backends:**
+- Jaeger (distributed tracing)
+- Prometheus (metrics via OTLP)
+- Grafana Cloud
+- New Relic
+- Datadog
+- Any OTLP-compatible backend
 
 **Examples:**
 
 ```bash
-# Development
-USER_DB_PATH=./data/user.db
-DB_POOL_SIZE=5
-DB_BUSY_TIMEOUT=5000
+# Disabled (default)
+OTEL_ENABLED=false
 
-# Production
-USER_DB_PATH=/opt/flashpoint-web/backend/data/user.db
-DB_POOL_SIZE=20
-DB_BUSY_TIMEOUT=10000
+# Local Jaeger instance
+OTEL_ENABLED=true
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_SERVICE_NAME=flashpoint-web-backend
+OTEL_TRACES_ENABLED=true
+OTEL_METRICS_ENABLED=true
+
+# Grafana Cloud
+OTEL_ENABLED=true
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-us-central-0.grafana.net/otlp
+OTEL_SERVICE_NAME=flashpoint-web-production
+OTEL_TRACES_ENABLED=true
+OTEL_METRICS_ENABLED=true
+OTEL_METRICS_EXPORT_INTERVAL=30000
+OTEL_LOG_LEVEL=warn
 ```
 
 ## Game Service Environment Variables
@@ -322,22 +315,20 @@ GAMEZIPSERVER_PORT=8501
 
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
-| `FLASHPOINT_PATH` | string | Yes | Root Flashpoint directory |
-| `FLASHPOINT_HTDOCS_PATH` | string | Yes | Legacy htdocs directory |
-| `FLASHPOINT_GAMES_PATH` | string | Yes | Games directory (ZIP files) |
+| `FLASHPOINT_PATH` | string | Yes | Root Flashpoint directory. All other paths are automatically derived from this. |
+
+**Automatically derived paths:**
+- HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
+- Games: `${FLASHPOINT_PATH}/Data/Games`
 
 **Examples:**
 
 ```bash
 # Windows
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
 
 # Linux
 FLASHPOINT_PATH=/data/flashpoint
-FLASHPOINT_HTDOCS_PATH=/data/flashpoint/Legacy/htdocs
-FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
 ```
 
 ### Proxy Configuration
@@ -345,8 +336,7 @@ FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `PROXY_CHUNK_SIZE` | number | `8192` | Chunk size for streaming files (bytes) |
-| `ALLOW_CROSS_DOMAIN` | boolean | `true` | Enable CORS headers |
-| `EXTERNAL_FALLBACK_URLS` | string | See below | CDN URLs for external fallback |
+| `EXTERNAL_FALLBACK_URLS` | string | See below | Comma-separated CDN URLs for external fallback |
 
 **Default Fallback URLs:**
 
@@ -359,33 +349,30 @@ EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/h
 ```bash
 # Default settings
 PROXY_CHUNK_SIZE=8192
-ALLOW_CROSS_DOMAIN=true
 
-# Large files optimization
+# Large files optimization (64KB chunks)
 PROXY_CHUNK_SIZE=65536
-ALLOW_CROSS_DOMAIN=true
 
 # Single fallback URL
 EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
+
+# Custom fallback URLs
+EXTERNAL_FALLBACK_URLS=https://cdn1.example.com,https://cdn2.example.com
 ```
 
 ### Advanced Features
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `ENABLE_CGI` | boolean | `false` | Enable CGI script execution |
-| `ENABLE_HTACCESS` | boolean | `false` | Enable .htaccess processing |
-| `CACHE_DIR` | string | - | Directory for cached files |
-| `CACHE_MAX_SIZE` | string | `1G` | Maximum cache size |
+| `ENABLE_CGI` | boolean | `false` | Enable CGI script execution (experimental) |
+| `ENABLE_HTACCESS` | boolean | `false` | Enable .htaccess processing (experimental) |
 
 **Examples:**
 
 ```bash
-# Advanced features enabled
+# Enable advanced features (use with caution)
 ENABLE_CGI=true
 ENABLE_HTACCESS=true
-CACHE_DIR=/var/cache/flashpoint-game-service
-CACHE_MAX_SIZE=5G
 ```
 
 ### Logging
@@ -467,7 +454,7 @@ Location: Docker Compose `.env` or `docker-compose.yml`
 | `PROXY_PORT` | number | `22500` | Game proxy exposed port |
 | `GAMEZIP_PORT` | number | `22501` | GameZip exposed port |
 | `LOG_LEVEL` | string | `info` | Logging level for all services |
-| `CORS_ORIGIN` | string | `http://localhost` | CORS origin |
+| `DOMAIN` | string | `http://localhost` | CORS origin |
 
 **Docker Compose .env file:**
 
@@ -480,7 +467,7 @@ API_PORT=3100
 PROXY_PORT=22500
 GAMEZIP_PORT=22501
 LOG_LEVEL=info
-CORS_ORIGIN=http://localhost
+DOMAIN=http://localhost
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 ```
 
@@ -493,7 +480,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 cat > .env << EOF
 FLASHPOINT_HOST_PATH=/data/flashpoint
 JWT_SECRET=$(openssl rand -hex 64)
-CORS_ORIGIN=https://flashpoint.example.com
+DOMAIN=https://flashpoint.example.com
 EOF
 
 # Start with .env
@@ -548,7 +535,7 @@ GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
 
 # Security (weak for dev only)
 JWT_SECRET=development-secret-change-in-production
-CORS_ORIGIN=http://localhost:5173
+DOMAIN=http://localhost:5173
 
 # Rate limiting (lenient)
 RATE_LIMIT_WINDOW_MS=60000
@@ -586,7 +573,7 @@ GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
 
 # Security (CHANGE THESE!)
 JWT_SECRET=CHANGE-THIS-TO-A-RANDOM-64-CHARACTER-STRING
-CORS_ORIGIN=https://flashpoint.example.com
+DOMAIN=https://flashpoint.example.com
 
 # Rate limiting
 RATE_LIMIT_WINDOW_MS=60000
@@ -626,7 +613,7 @@ GAMEZIP_PORT=22501
 
 # Security
 JWT_SECRET=CHANGE-THIS-TO-A-RANDOM-64-CHARACTER-STRING
-CORS_ORIGIN=https://flashpoint.example.com
+DOMAIN=https://flashpoint.example.com
 
 # Logging
 LOG_LEVEL=warn
@@ -681,7 +668,7 @@ These variables MUST be set or the application will fail to start:
 
 **Production (Backend):**
 - `JWT_SECRET` (must be changed from default)
-- `CORS_ORIGIN` (must match frontend URL)
+- `DOMAIN` (must match frontend URL)
 
 ### Checking Configuration
 
@@ -701,7 +688,7 @@ node -e "require('dotenv').config(); const fs=require('fs'); console.log(fs.exis
 1. **Never commit .env files** to version control
 2. **Use strong JWT secrets** in production (64+ characters)
 3. **Restrict CORS origins** to your domain only
-4. **Use HTTPS** in production (update CORS_ORIGIN)
+4. **Use HTTPS** in production (update DOMAIN)
 5. **Limit exposed ports** in Docker (don't expose all services)
 6. **Rotate secrets** periodically
 7. **Use environment-specific files** (.env.production, .env.development)

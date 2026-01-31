@@ -1,0 +1,99 @@
+name: Performance Budget Check
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/performance-budget.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  check-bundle-size:
+    name: Check Bundle Size
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Check performance budget
+        working-directory: frontend
+        run: npm run check-bundle
+
+      - name: Generate bundle analysis
+        if: always()
+        working-directory: frontend
+        run: |
+          if [ -f stats.html ]; then
+            echo "📊 Bundle analysis generated"
+          fi
+
+      - name: Upload bundle stats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-stats
+          path: frontend/stats.html
+          retention-days: 30
+
+      - name: Comment PR with bundle size
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Read performance budget
+            const budgetPath = path.join(process.env.GITHUB_WORKSPACE, 'frontend/performance-budget.json');
+            const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'));
+
+            // Get bundle sizes
+            const distDir = path.join(process.env.GITHUB_WORKSPACE, 'frontend/dist');
+            const files = fs.readdirSync(distDir, { recursive: true });
+
+            const jsFiles = files.filter(f => f.endsWith('.js'));
+            const totalSize = jsFiles.reduce((sum, f) => {
+              return sum + fs.statSync(path.join(distDir, f)).size;
+            }, 0);
+
+            const totalKB = Math.round(totalSize / 1024);
+            const budgetMax = budget.budgets.totalJavaScript.max;
+            const percentage = Math.round((totalKB / budgetMax) * 100);
+
+            const status = totalKB > budgetMax ? '🔴 OVER BUDGET' : totalKB > budget.budgets.totalJavaScript.warning ? '⚠️ WARNING' : '✅ PASS';
+
+            const comment = `## Bundle Size Report
+
+            ${status}
+
+            **Total JavaScript:** ${totalKB}KB / ${budgetMax}KB (${percentage}%)
+
+            📊 [View detailed bundle analysis](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Game } from '@/types/game';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
+import { BreadcrumbContext } from './GameCard';
 
 interface GameListItemProps {
   game: Game;
@@ -21,13 +22,15 @@ interface GameListItemProps {
   favoriteGameIds?: Set<string>; // Optional: for performance optimization
   isFavoritePage?: boolean;
   shareToken?: string | null; // Optional: for shared playlist navigation
+  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
 }
 
-export function GameListItem({ game, showFavoriteButton = true, showRemoveButton = false, showFavoriteIndicator = false, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null }: GameListItemProps) {
+export function GameListItem({ game, showFavoriteButton = true, showRemoveButton = false, showFavoriteIndicator = false, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null, breadcrumbContext }: GameListItemProps) {
   const [imageError, setImageError] = useState(false);
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
 
   const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
 
   // Prefer logo over screenshot for list view
   const imagePath = game.logoPath || game.screenshotPath;
@@ -45,14 +48,21 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
   const gameDetailUrl = buildSharedGameUrl(`/games/${game.id}`, shareToken);
   const gamePlayUrl = buildSharedGameUrl(`/games/${game.id}/play`, shareToken);
 
+  // Handle navigation to game details with breadcrumb context
+  const handleNavigateToDetails = () => {
+    navigate(gameDetailUrl, {
+      state: breadcrumbContext ? { breadcrumbContext } : undefined
+    });
+  };
+
   return (
     <Card className="group overflow-hidden hover:bg-accent hover:shadow-md hover:border-primary/20 hover:z-10 relative transition-all">
       <CardContent className="p-3">
         <div className="flex items-center gap-3">
           {/* Thumbnail */}
-          <Link
-            to={gameDetailUrl}
-            className="flex-shrink-0 w-24 h-16 bg-muted rounded overflow-hidden border shadow-sm"
+          <div
+            onClick={handleNavigateToDetails}
+            className="flex-shrink-0 w-24 h-16 bg-muted rounded overflow-hidden border shadow-sm cursor-pointer"
           >
             {imageUrl && !imageError ? (
               <img
@@ -67,15 +77,15 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
                 <ImageIcon size={20} className="text-muted-foreground opacity-50" />
               </div>
             )}
-          </Link>
+          </div>
 
           {/* Game Info */}
           <div className="flex-1 min-w-0 space-y-1">
-            <Link to={gameDetailUrl}>
+            <div onClick={handleNavigateToDetails} className="cursor-pointer">
               <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors" title={game.title}>
                 {game.title}
               </h3>
-            </Link>
+            </div>
 
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="secondary">{game.platformName}</Badge>
