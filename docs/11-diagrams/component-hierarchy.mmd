@@ -1,0 +1,326 @@
+%% Frontend Component Hierarchy
+%% React component organization and data flow
+
+---
+title: Frontend Component Hierarchy
+---
+graph TB
+    App[App.tsx<br/>Root Component]
+
+    subgraph "Layout Components"
+        MainLayout[MainLayout]
+        Header[Header<br/>Logo, Nav, User Menu]
+        Sidebar[Sidebar<br/>Navigation, Filters]
+        Footer[Footer]
+    end
+
+    subgraph "Route Components (Views)"
+        BrowseView[BrowseView<br/>Game Library]
+        GameDetailView[GameDetailView<br/>Game Details]
+        GamePlayerView[GamePlayerView<br/>Game Player]
+        PlaylistsView[PlaylistsView<br/>User Playlists]
+        SettingsView[SettingsView<br/>User Settings]
+        UsersView[UsersView<br/>User Management]
+        LoginView[LoginView<br/>Authentication]
+        RegisterView[RegisterView<br/>Registration]
+    end
+
+    subgraph "Game Components"
+        GameBrowseLayout[GameBrowseLayout<br/>Grid/List Toggle]
+        GameCard[GameCard<br/>Game Thumbnail]
+        GamePlayer[GamePlayer<br/>Player Container]
+        RufflePlayer[RufflePlayer<br/>Flash Emulator]
+        HTML5Player[HTML5Player<br/>HTML5 IFrame]
+        GameInfo[GameInfo<br/>Metadata Display]
+        GameMetadata[GameMetadata<br/>Detailed Info]
+    end
+
+    subgraph "Filter Components"
+        FilterPanel[FilterPanel<br/>All Filters]
+        PlatformFilter[PlatformFilter]
+        TagFilter[TagFilter]
+        LibraryFilter[LibraryFilter]
+        SearchBar[SearchBar]
+    end
+
+    subgraph "Common Components"
+        ViewOptions[ViewOptions<br/>Grid/List Toggle]
+        Pagination[Pagination]
+        LoadingSpinner[LoadingSpinner]
+        ErrorBoundary[ErrorBoundary]
+        Toast[Toast Notifications]
+        Modal[Modal Dialog]
+        Button[Button]
+        Input[Input]
+    end
+
+    subgraph "Theme Components"
+        ThemePicker[ThemePicker<br/>Theme Selection]
+        PrimaryColorPicker[PrimaryColorPicker<br/>Color Selection]
+    end
+
+    App --> ErrorBoundary
+    ErrorBoundary --> MainLayout
+
+    MainLayout --> Header
+    MainLayout --> Sidebar
+    MainLayout --> BrowseView
+    MainLayout --> GameDetailView
+    MainLayout --> GamePlayerView
+    MainLayout --> PlaylistsView
+    MainLayout --> SettingsView
+    MainLayout --> UsersView
+    MainLayout --> Footer
+
+    App --> LoginView
+    App --> RegisterView
+
+    Header --> ThemePicker
+
+    Sidebar --> FilterPanel
+    FilterPanel --> PlatformFilter
+    FilterPanel --> TagFilter
+    FilterPanel --> LibraryFilter
+    FilterPanel --> SearchBar
+
+    BrowseView --> GameBrowseLayout
+    BrowseView --> ViewOptions
+    BrowseView --> Pagination
+    GameBrowseLayout --> GameCard
+
+    GameDetailView --> GameInfo
+    GameDetailView --> GameMetadata
+    GameDetailView --> Button
+
+    GamePlayerView --> GamePlayer
+    GamePlayer --> RufflePlayer
+    GamePlayer --> HTML5Player
+
+    SettingsView --> ThemePicker
+    SettingsView --> PrimaryColorPicker
+
+    App --> Toast
+    App --> LoadingSpinner
+
+    style App fill:#e1f5ff,stroke:#333,stroke-width:3px
+    style MainLayout fill:#61dafb,stroke:#333,stroke-width:2px
+    style BrowseView fill:#90ee90,stroke:#333,stroke-width:2px
+    style GamePlayer fill:#ffd700,stroke:#333,stroke-width:2px
+
+---
+title: Component Data Flow
+---
+graph LR
+    subgraph "Data Sources"
+        TanStackQuery[TanStack Query<br/>Server State]
+        AuthStore[Auth Store<br/>Zustand]
+        ThemeStore[Theme Store<br/>Zustand]
+        UIStore[UI Store<br/>Zustand]
+        URLParams[URL Search Params]
+    end
+
+    subgraph "Custom Hooks"
+        useGames[useGames]
+        useGameDetail[useGameDetail]
+        useAuth[useAuth]
+        useTheme[useTheme]
+        useFilters[useFilters]
+        usePlayTracking[usePlayTracking]
+    end
+
+    subgraph "Components"
+        BrowseView[BrowseView]
+        GameCard[GameCard]
+        GamePlayer[GamePlayer]
+        FilterPanel[FilterPanel]
+        Header[Header]
+    end
+
+    URLParams --> useFilters
+    useFilters --> BrowseView
+
+    TanStackQuery --> useGames
+    useGames --> BrowseView
+    BrowseView --> GameCard
+
+    TanStackQuery --> useGameDetail
+    useGameDetail --> GamePlayer
+
+    AuthStore --> useAuth
+    useAuth --> Header
+
+    ThemeStore --> useTheme
+    useTheme --> Header
+    useTheme --> BrowseView
+
+    UIStore --> FilterPanel
+
+    GamePlayer --> usePlayTracking
+    usePlayTracking --> TanStackQuery
+
+    style TanStackQuery fill:#61dafb,stroke:#333,stroke-width:2px
+    style AuthStore fill:#90ee90,stroke:#333,stroke-width:2px
+    style ThemeStore fill:#90ee90,stroke:#333,stroke-width:2px
+
+---
+title: State Management Architecture
+---
+graph TB
+    subgraph "Server State - TanStack Query"
+        direction LR
+        Games[Games Cache]
+        GameDetail[Game Detail Cache]
+        Playlists[Playlists Cache]
+        UserData[User Data Cache]
+        PlayStats[Play Stats Cache]
+    end
+
+    subgraph "Client State - Zustand"
+        direction LR
+        Auth[Auth Store<br/>user, tokens]
+        Theme[Theme Store<br/>mode, color]
+        UI[UI Store<br/>sidebar, view]
+    end
+
+    subgraph "URL State - React Router"
+        direction LR
+        Search[Search Params<br/>filters, page]
+        Route[Route Params<br/>:id, :slug]
+    end
+
+    subgraph "Local Storage"
+        direction LR
+        AuthLS[auth tokens]
+        ThemeLS[theme preferences]
+    end
+
+    API[Backend API] -->|Fetch/Mutate| Games
+    API -->|Fetch| GameDetail
+    API -->|Fetch/Mutate| Playlists
+    API -->|Fetch/Mutate| UserData
+    API -->|Fetch/Mutate| PlayStats
+
+    Auth <-.Persist.-> AuthLS
+    Theme <-.Persist.-> ThemeLS
+
+    Components[React Components] -->|Read| Games
+    Components -->|Read| Auth
+    Components -->|Read| Theme
+    Components -->|Read| UI
+    Components -->|Read| Search
+    Components -->|Navigate| Route
+
+    Search -->|Trigger Refetch| Games
+
+    style Games fill:#61dafb,stroke:#333,stroke-width:2px
+    style Auth fill:#90ee90,stroke:#333,stroke-width:2px
+    style Theme fill:#90ee90,stroke:#333,stroke-width:2px
+
+---
+title: Component Lifecycle - Browse View
+---
+sequenceDiagram
+    participant Router
+    participant BrowseView
+    participant useGames
+    participant TanStackQuery
+    participant API
+    participant GameCard
+
+    Router->>BrowseView: Navigate to /browse
+    BrowseView->>BrowseView: Mount component
+
+    BrowseView->>useGames: useGames({filters})
+    useGames->>TanStackQuery: useQuery(['games', filters])
+
+    alt Cache hit
+        TanStackQuery-->>useGames: Cached data
+        useGames-->>BrowseView: {data, isLoading: false}
+        BrowseView->>GameCard: Render game cards
+    else Cache miss
+        TanStackQuery->>TanStackQuery: Set isLoading: true
+        TanStackQuery-->>useGames: {data: undefined, isLoading: true}
+        useGames-->>BrowseView: Loading state
+        BrowseView->>BrowseView: Show skeleton loaders
+
+        TanStackQuery->>API: gamesApi.search(filters)
+        API->>Backend: GET /api/games
+        Backend-->>API: Games data
+        API-->>TanStackQuery: Response
+
+        TanStackQuery->>TanStackQuery: Update cache
+        TanStackQuery-->>useGames: {data, isLoading: false}
+        useGames-->>BrowseView: Fresh data
+        BrowseView->>GameCard: Render game cards
+    end
+
+    User->>GameCard: Click "Play"
+    GameCard->>Router: navigate('/play/:id')
+
+---
+title: Component Lifecycle - Game Player
+---
+sequenceDiagram
+    participant Router
+    participant GamePlayerView
+    participant useGameDetail
+    participant usePlayTracking
+    participant GamePlayer
+    participant Ruffle
+
+    Router->>GamePlayerView: Navigate to /play/:id
+    GamePlayerView->>GamePlayerView: Extract gameId from params
+
+    par Fetch game data
+        GamePlayerView->>useGameDetail: useGameDetail(gameId)
+        useGameDetail->>API: GET /api/games/:id/launch
+        API-->>useGameDetail: Launch data
+        useGameDetail-->>GamePlayerView: {contentUrl, platform}
+    and Start play session
+        GamePlayerView->>usePlayTracking: usePlayTracking(gameId)
+        usePlayTracking->>API: POST /api/play-tracking/start
+        API-->>usePlayTracking: {sessionId}
+    end
+
+    GamePlayerView->>GamePlayer: Pass contentUrl
+    GamePlayer->>GamePlayer: Determine player type
+
+    alt Flash game
+        GamePlayer->>Ruffle: Initialize Ruffle
+        Ruffle->>Ruffle: Load game
+        Ruffle-->>GamePlayer: Game playing
+    else HTML5 game
+        GamePlayer->>GamePlayer: Create iframe
+        GamePlayer-->>GamePlayer: Game playing
+    end
+
+    User->>Router: Navigate away
+    Router->>GamePlayerView: Unmount component
+    GamePlayerView->>usePlayTracking: Cleanup effect
+    usePlayTracking->>API: POST /api/play-tracking/end
+    API-->>usePlayTracking: Session ended
+
+---
+title: Protected Route Pattern
+---
+graph TB
+    Route[Route Definition]
+    ProtectedRoute[ProtectedRoute<br/>Component]
+    AuthCheck{User<br/>Authenticated?}
+    PermCheck{Has Required<br/>Permission?}
+    TargetComponent[Target Component<br/>e.g., UsersView]
+    LoginRedirect[Redirect to /login]
+    ForbiddenPage[Forbidden Page]
+
+    Route --> ProtectedRoute
+    ProtectedRoute --> AuthCheck
+
+    AuthCheck -->|No| LoginRedirect
+    AuthCheck -->|Yes| PermCheck
+
+    PermCheck -->|No| ForbiddenPage
+    PermCheck -->|Yes| TargetComponent
+
+    style TargetComponent fill:#90ee90,stroke:#333,stroke-width:2px
+    style LoginRedirect fill:#ffcccb,stroke:#333,stroke-width:2px
+    style ForbiddenPage fill:#ffcccb,stroke:#333,stroke-width:2px

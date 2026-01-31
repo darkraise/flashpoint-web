@@ -1,0 +1,92 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+*.min.js
+*.min.css
+
+# Coverage
+coverage/
+**/coverage/
+.nyc_output/
+
+# Cache
+.cache/
+.turbo/
+.eslintcache
+.stylelintcache
+
+# Database files
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.pnpm-store/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Public/static assets (usually pre-minified)
+**/public/ruffle/
+**/public/assets/
+
+# Generated types
+*.d.ts
+!src/**/*.d.ts
+!frontend/src/**/*.d.ts
+!backend/src/**/*.d.ts
+!game-service/src/**/*.d.ts
+
+# Documentation (preserve original formatting)
+CHANGELOG.md
+LICENSE
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Flashpoint data (external, not part of project)
+Data/
+Legacy/
+
+# Compiled output from vite
+vite.config.js
+frontend/vite.config.js

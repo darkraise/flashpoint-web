@@ -1,0 +1,61 @@
+{
+  "name": "flashpoint-web-app",
+  "version": "1.0.0",
+  "description": "Flashpoint Archive web application - monorepo for backend, frontend, and game-service",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:game-service\" --names \"backend,frontend,game-service\" --prefix-colors \"blue,green,magenta\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:game-service": "cd game-service && npm run dev",
+    "dev:backend-only": "cd backend && npm run dev",
+    "dev:frontend-only": "cd frontend && npm run dev",
+    "dev:game-service-only": "cd game-service && npm run dev",
+    "install:all": "npm run install:backend && npm run install:frontend && npm run install:game-service",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:game-service": "cd game-service && npm install",
+    "build": "npm run build:backend && npm run build:frontend && npm run build:game-service",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:game-service": "cd game-service && npm run build",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:game-service\" --names \"backend,game-service\" --prefix-colors \"blue,magenta\"",
+    "start:backend": "cd backend && npm start",
+    "start:game-service": "cd game-service && npm start",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend && npm run typecheck:game-service",
+    "typecheck:backend": "cd backend && npm run typecheck",
+    "typecheck:frontend": "cd frontend && npm run typecheck",
+    "typecheck:game-service": "cd game-service && npm run typecheck",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md,yml,yaml}\"",
+    "format:backend": "cd backend && npm run format",
+    "format:frontend": "cd frontend && npm run format",
+    "format:game-service": "cd game-service && npm run format",
+    "clean": "npm run clean:backend && npm run clean:frontend && npm run clean:game-service",
+    "clean:backend": "cd backend && rm -rf dist node_modules",
+    "clean:frontend": "cd frontend && rm -rf dist node_modules",
+    "clean:game-service": "cd game-service && rm -rf dist node_modules"
+  },
+  "keywords": [
+    "flashpoint",
+    "archive",
+    "games",
+    "web-app",
+    "monorepo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "workspaces": [
+    "backend",
+    "frontend",
+    "game-service"
+  ]
+}

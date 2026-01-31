@@ -1,0 +1,41 @@
+{
+  "budgets": {
+    "initialBundle": {
+      "max": 500,
+      "warning": 450,
+      "unit": "KB",
+      "description": "Initial JavaScript bundle (index.js)"
+    },
+    "totalJavaScript": {
+      "max": 2000,
+      "warning": 1800,
+      "unit": "KB",
+      "description": "Total JavaScript size (all chunks)"
+    },
+    "totalAssets": {
+      "max": 3000,
+      "warning": 2700,
+      "unit": "KB",
+      "description": "Total asset size (JS + CSS + fonts)"
+    },
+    "chunkSize": {
+      "max": 600,
+      "warning": 500,
+      "unit": "KB",
+      "description": "Maximum individual chunk size"
+    },
+    "cssSize": {
+      "max": 100,
+      "warning": 80,
+      "unit": "KB",
+      "description": "Total CSS size"
+    }
+  },
+  "thresholds": {
+    "criticalPath": {
+      "timeToInteractive": 3000,
+      "firstContentfulPaint": 1500,
+      "description": "Critical rendering metrics (milliseconds)"
+    }
+  }
+}

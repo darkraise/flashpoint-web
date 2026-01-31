@@ -1,0 +1,204 @@
+%% Play Session Tracking Flow
+%% Complete lifecycle of play session tracking from start to end
+
+---
+title: Play Session Lifecycle
+---
+sequenceDiagram
+    participant User
+    participant GamePlayer
+    participant usePlayTracking
+    participant API
+    participant Backend
+    participant PlayTrackingService
+    participant UserDB
+    participant FlashpointDB
+
+    User->>GamePlayer: Game loaded and playing
+    GamePlayer->>usePlayTracking: useEffect on mount
+
+    usePlayTracking->>usePlayTracking: Generate sessionId<br/>crypto.randomUUID()
+
+    usePlayTracking->>API: playTrackingApi.startSession()
+    Note over usePlayTracking,API: {<br/>  gameId,<br/>  gameTitle,<br/>  sessionId<br/>}
+
+    API->>Backend: POST /api/play-tracking/start
+    Backend->>PlayTrackingService: startSession(userId, gameId, sessionId)
+
+    PlayTrackingService->>UserDB: BEGIN TRANSACTION
+
+    PlayTrackingService->>UserDB: INSERT INTO user_game_plays
+    Note over UserDB: (user_id, game_id, game_title,<br/>started_at, session_id)
+
+    PlayTrackingService->>UserDB: INSERT OR IGNORE INTO user_game_stats
+    Note over UserDB: (user_id, game_id, game_title,<br/>first_played_at)
+
+    PlayTrackingService->>UserDB: INSERT OR IGNORE INTO user_stats
+    Note over UserDB: (user_id, first_play_at)
+
+    PlayTrackingService->>UserDB: COMMIT
+    UserDB-->>PlayTrackingService: Session created
+
+    PlayTrackingService->>FlashpointDB: UPDATE game<br/>SET playCounter = playCounter + 1,<br/>lastPlayed = NOW()<br/>WHERE id = ?
+
+    PlayTrackingService-->>Backend: Session started
+    Backend-->>API: {success: true, sessionId}
+    API-->>usePlayTracking: Session active
+
+    Note over User,GamePlayer: User plays game...
+
+    alt User closes game normally
+        User->>GamePlayer: Navigate away or close
+        GamePlayer->>usePlayTracking: useEffect cleanup
+
+        usePlayTracking->>API: playTrackingApi.endSession(sessionId)
+        API->>Backend: POST /api/play-tracking/end
+        Backend->>PlayTrackingService: endSession(sessionId, duration)
+
+        PlayTrackingService->>UserDB: BEGIN TRANSACTION
+
+        PlayTrackingService->>UserDB: UPDATE user_game_plays<br/>SET ended_at = NOW(),<br/>duration_seconds = ?<br/>WHERE session_id = ?
+
+        PlayTrackingService->>UserDB: SELECT * FROM user_game_plays<br/>WHERE session_id = ?
+        UserDB-->>PlayTrackingService: Session data
+
+        PlayTrackingService->>UserDB: UPDATE user_game_stats<br/>SET total_plays = total_plays + 1,<br/>total_playtime_seconds = total_playtime_seconds + ?,<br/>last_played_at = NOW()<br/>WHERE user_id = ? AND game_id = ?
+
+        PlayTrackingService->>UserDB: UPDATE user_stats<br/>SET total_sessions = total_sessions + 1,<br/>total_playtime_seconds = total_playtime_seconds + ?,<br/>last_play_at = NOW()<br/>WHERE user_id = ?
+
+        PlayTrackingService->>FlashpointDB: UPDATE game<br/>SET playtime = playtime + ?<br/>WHERE id = ?
+
+        PlayTrackingService->>UserDB: COMMIT
+        PlayTrackingService-->>Backend: Session ended
+        Backend-->>API: {success: true}
+
+    else User abandons session (browser crash, etc.)
+        Note over User: Session remains active<br/>in database
+
+        rect rgb(255, 240, 240)
+            Note over Backend: Background cleanup job<br/>runs every 6 hours
+
+            Backend->>PlayTrackingService: cleanupAbandonedSessions()
+            PlayTrackingService->>UserDB: SELECT * FROM user_game_plays<br/>WHERE ended_at IS NULL<br/>AND started_at < datetime('now', '-24 hours')
+
+            UserDB-->>PlayTrackingService: Abandoned sessions
+
+            loop For each abandoned session
+                PlayTrackingService->>UserDB: UPDATE user_game_plays<br/>SET ended_at = datetime(started_at, '+30 minutes'),<br/>duration_seconds = 1800<br/>WHERE id = ?
+
+                PlayTrackingService->>UserDB: UPDATE statistics tables
+            end
+        end
+    end
+
+---
+title: Play Statistics Aggregation
+---
+graph TB
+    subgraph "Session Data"
+        Session[user_game_plays<br/>Individual Sessions]
+    end
+
+    subgraph "Aggregated Statistics"
+        PerGame[user_game_stats<br/>Per-Game Totals]
+        Overall[user_stats<br/>Overall User Totals]
+        FlashpointStats[game.playCounter<br/>game.playtime<br/>Global Statistics]
+    end
+
+    subgraph "Reporting"
+        RecentGames[Recently Played Games]
+        TopGames[Most Played Games]
+        UserDashboard[User Dashboard Stats]
+        GlobalLeaderboard[Global Game Rankings]
+    end
+
+    Session -->|Aggregate by game| PerGame
+    Session -->|Aggregate by user| Overall
+    Session -->|Update global| FlashpointStats
+
+    PerGame --> TopGames
+    PerGame --> RecentGames
+    Overall --> UserDashboard
+    FlashpointStats --> GlobalLeaderboard
+
+    style Session fill:#61dafb,stroke:#333,stroke-width:2px
+    style PerGame fill:#90ee90,stroke:#333,stroke-width:2px
+    style Overall fill:#90ee90,stroke:#333,stroke-width:2px
+    style FlashpointStats fill:#ff9999,stroke:#333,stroke-width:2px
+
+---
+title: Cleanup Job Flow
+---
+sequenceDiagram
+    participant CronJob
+    participant PlayTrackingService
+    participant UserDB
+    participant Logger
+
+    Note over CronJob: Runs every 6 hours
+
+    CronJob->>PlayTrackingService: cleanupAbandonedSessions()
+
+    PlayTrackingService->>UserDB: SELECT * FROM user_game_plays<br/>WHERE ended_at IS NULL<br/>AND started_at < datetime('now', '-24 hours')
+
+    UserDB-->>PlayTrackingService: List of abandoned sessions
+
+    alt No abandoned sessions
+        PlayTrackingService->>Logger: info('No abandoned sessions')
+        PlayTrackingService-->>CronJob: Complete
+    else Has abandoned sessions
+        PlayTrackingService->>Logger: info('Found {count} abandoned sessions')
+
+        PlayTrackingService->>UserDB: BEGIN TRANSACTION
+
+        loop For each session
+            Note over PlayTrackingService: Estimate 30 minute playtime
+
+            PlayTrackingService->>UserDB: UPDATE user_game_plays<br/>SET ended_at = datetime(started_at, '+30 minutes'),<br/>duration_seconds = 1800,<br/>abandoned = 1<br/>WHERE id = ?
+
+            PlayTrackingService->>UserDB: UPDATE user_game_stats<br/>SET total_plays = total_plays + 1,<br/>total_playtime_seconds = total_playtime_seconds + 1800<br/>WHERE user_id = ? AND game_id = ?
+
+            PlayTrackingService->>UserDB: UPDATE user_stats<br/>SET total_sessions = total_sessions + 1,<br/>total_playtime_seconds = total_playtime_seconds + 1800<br/>WHERE user_id = ?
+        end
+
+        PlayTrackingService->>UserDB: COMMIT
+
+        PlayTrackingService->>Logger: info('Cleaned up {count} sessions')
+        PlayTrackingService-->>CronJob: Complete
+    end
+
+---
+title: Real-time Statistics Query
+---
+sequenceDiagram
+    participant User
+    participant Component
+    participant API
+    participant Backend
+    participant PlayTrackingService
+    participant UserDB
+
+    User->>Component: View profile/statistics
+
+    Component->>API: playTrackingApi.getUserStats()
+    API->>Backend: GET /api/play-tracking/stats
+    Backend->>PlayTrackingService: getUserStats(userId)
+
+    par Get overall stats
+        PlayTrackingService->>UserDB: SELECT * FROM user_stats<br/>WHERE user_id = ?
+        UserDB-->>PlayTrackingService: Overall statistics
+    and Get game stats
+        PlayTrackingService->>UserDB: SELECT * FROM user_game_stats<br/>WHERE user_id = ?<br/>ORDER BY total_playtime_seconds DESC<br/>LIMIT 10
+        UserDB-->>PlayTrackingService: Top 10 games
+    and Get recent sessions
+        PlayTrackingService->>UserDB: SELECT * FROM user_game_plays<br/>WHERE user_id = ?<br/>AND ended_at IS NOT NULL<br/>ORDER BY started_at DESC<br/>LIMIT 10
+        UserDB-->>PlayTrackingService: Recent 10 sessions
+    end
+
+    PlayTrackingService->>PlayTrackingService: Calculate additional metrics
+    Note over PlayTrackingService: - Average session duration<br/>- Favorite platform<br/>- Play streak<br/>- Achievement progress
+
+    PlayTrackingService-->>Backend: Complete statistics
+    Backend-->>API: Statistics response
+    API-->>Component: Display stats
+    Component->>User: Render statistics dashboard
