@@ -120,10 +120,10 @@ router.get(
       caches: {
         permissions: permissionCacheStats,
         gameSearch: {
-          size: gameSearchCacheStats.size,
-          max: gameSearchCacheStats.max,
+          size: gameSearchCacheStats.primary.size,
+          max: gameSearchCacheStats.primary.max,
           ttl: '5 minutes',
-          hitRate: gameSearchCacheStats.size > 0 ? 'active' : 'idle'
+          hitRate: gameSearchCacheStats.primary.size > 0 ? 'active' : 'idle'
         }
       },
       memory: memoryFormatted,

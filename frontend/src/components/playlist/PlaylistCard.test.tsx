@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, render, within, waitFor } from '@testing-library/react';
+import { screen, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { PlaylistCard } from './PlaylistCard';
 import type { UserPlaylist } from '@/types/playlist';
-import { toast } from 'sonner';
 
 // Mock dependencies
 vi.mock('sonner', () => ({
@@ -25,7 +24,7 @@ vi.mock('./PlaylistIcon', () => ({
 
 describe('PlaylistCard', () => {
   const mockPlaylist: UserPlaylist = {
-    id: 'playlist-1',
+    id: 1,
     userId: 1,
     title: 'Test Playlist',
     description: 'A test playlist description',
@@ -39,7 +38,7 @@ describe('PlaylistCard', () => {
 
   const mockPublicPlaylist: UserPlaylist = {
     ...mockPlaylist,
-    id: 'playlist-2',
+    id: 2,
     title: 'Public Playlist',
     isPublic: true,
     shareToken: 'test-share-token',

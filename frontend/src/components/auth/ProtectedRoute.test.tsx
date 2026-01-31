@@ -15,7 +15,7 @@ vi.mock('@/hooks/useFeatureFlags', () => ({
 }));
 
 vi.mock('@/hooks/useSharedPlaylistAccess', () => ({
-  useSharedPlaylistAccess: (gameId: string | null) => ({
+  useSharedPlaylistAccess: (_gameId: string | null) => ({
     hasAccess: false,
     isLoading: false,
   }),

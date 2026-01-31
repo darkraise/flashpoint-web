@@ -3,7 +3,7 @@ import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
-import { Resource } from '@opentelemetry/resources';
+import { resourceFromAttributes } from '@opentelemetry/resources';
 import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 import { logger } from '../utils/logger';
 
@@ -68,7 +68,7 @@ export function initializeTelemetry(): void {
     });
 
     // Create resource (service metadata)
-    const resource = new Resource({
+    const resource = resourceFromAttributes({
       [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
       [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion,
       environment: process.env.NODE_ENV || 'development'

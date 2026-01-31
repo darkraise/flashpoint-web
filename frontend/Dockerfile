@@ -23,8 +23,9 @@ COPY frontend ./frontend/
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
-# Build application
-RUN npm run build --workspace=frontend
+# Build application (run from frontend directory)
+WORKDIR /app/frontend
+RUN npm run build
 
 # =============================================================================
 # Stage 2: Production - Nginx serving static files

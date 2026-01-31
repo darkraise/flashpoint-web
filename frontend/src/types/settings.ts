@@ -16,6 +16,7 @@ export interface AppSettings {
   maintenanceMessage: string;
   defaultTheme?: string;
   defaultPrimaryColor?: string;
+  homeRecentHours?: number;
 }
 
 /**
@@ -83,7 +84,7 @@ export interface SystemSettings {
  * Public settings available without authentication
  */
 export interface PublicSettings {
-  app: Pick<AppSettings, 'siteName' | 'maintenanceMode' | 'maintenanceMessage'>;
+  app: Pick<AppSettings, 'siteName' | 'maintenanceMode' | 'maintenanceMessage' | 'homeRecentHours'>;
   auth: Pick<AuthSettings, 'guestAccessEnabled' | 'userRegistrationEnabled'>;
   features?: Partial<FeatureSettings>;
 }

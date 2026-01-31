@@ -22,8 +22,9 @@ RUN npm ci --workspace=game-service --include-workspace-root
 # Copy game-service source code
 COPY game-service ./game-service/
 
-# Build TypeScript
-RUN npm run build --workspace=game-service
+# Build TypeScript (run from game-service directory)
+WORKDIR /app/game-service
+RUN npm run build
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime

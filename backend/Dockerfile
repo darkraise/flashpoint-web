@@ -19,8 +19,9 @@ RUN npm ci --workspace=backend --include-workspace-root
 # Copy backend source code
 COPY backend ./backend/
 
-# Build TypeScript
-RUN npm run build --workspace=backend
+# Build TypeScript (run from backend directory)
+WORKDIR /app/backend
+RUN npm run build
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime

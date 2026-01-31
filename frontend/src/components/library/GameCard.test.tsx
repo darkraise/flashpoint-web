@@ -106,7 +106,7 @@ describe('GameCard', () => {
     });
 
     it('should render without developer if not provided', () => {
-      const gameWithoutDev = { ...mockFlashGame, developer: undefined };
+      const gameWithoutDev = { ...mockFlashGame, developer: '' };
       renderGameCard(gameWithoutDev);
 
       expect(screen.getByText('Test Flash Game')).toBeInTheDocument();

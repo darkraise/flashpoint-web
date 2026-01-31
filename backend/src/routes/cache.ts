@@ -21,10 +21,10 @@ router.get(
 
     res.json({
       gameSearch: {
-        size: gameSearchStats.size,
-        max: gameSearchStats.max,
-        ttl: gameSearchStats.ttl,
-        hitRate: gameSearchStats.size > 0 ? 'active' : 'idle'
+        size: gameSearchStats.primary.size,
+        max: gameSearchStats.primary.max,
+        ttl: gameSearchStats.primary.ttl,
+        hitRate: gameSearchStats.primary.size > 0 ? 'active' : 'idle'
       },
       permissions: {
         enabled: true,
