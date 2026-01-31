@@ -14,7 +14,8 @@ COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/
 
 # Install dependencies for frontend workspace
-RUN npm ci --workspace=frontend --include-workspace-root
+# Use npm ci with frozen lockfile for faster, reproducible builds
+RUN npm ci --workspace=frontend --include-workspace-root --prefer-offline --no-audit
 
 # Copy frontend source code
 COPY frontend ./frontend/

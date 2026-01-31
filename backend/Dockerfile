@@ -14,7 +14,8 @@ COPY package.json package-lock.json ./
 COPY backend/package.json ./backend/
 
 # Install all dependencies for the backend workspace
-RUN npm ci --workspace=backend --include-workspace-root
+# Use npm ci with frozen lockfile for faster, reproducible builds
+RUN npm ci --workspace=backend --include-workspace-root --prefer-offline --no-audit
 
 # Copy backend source code
 COPY backend ./backend/
@@ -46,13 +47,13 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/backend/package.json ./backend/
 
 # Install production dependencies only for backend workspace
-RUN npm ci --workspace=backend --include-workspace-root --omit=dev
+RUN npm ci --workspace=backend --include-workspace-root --omit=dev --prefer-offline --no-audit
 
 # Copy built application
 COPY --from=builder /app/backend/dist ./backend/dist
 
-# Copy migration files (needed at runtime)
-COPY --from=builder /app/backend/src/migrations ./backend/src/migrations
+# Copy migration files to dist directory (needed at runtime)
+COPY --from=builder /app/backend/src/migrations ./backend/dist/migrations
 
 # Create non-root user
 RUN addgroup -g 1001 -S flashpoint && \

@@ -17,7 +17,8 @@ COPY package.json package-lock.json ./
 COPY game-service/package.json ./game-service/
 
 # Install all dependencies for game-service workspace
-RUN npm ci --workspace=game-service --include-workspace-root
+# Use npm ci with frozen lockfile for faster, reproducible builds
+RUN npm ci --workspace=game-service --include-workspace-root --prefer-offline --no-audit
 
 # Copy game-service source code
 COPY game-service ./game-service/
@@ -49,7 +50,7 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/game-service/package.json ./game-service/
 
 # Install production dependencies only for game-service workspace
-RUN npm ci --workspace=game-service --include-workspace-root --omit=dev
+RUN npm ci --workspace=game-service --include-workspace-root --omit=dev --prefer-offline --no-audit
 
 # Copy built application
 COPY --from=builder /app/game-service/dist ./game-service/dist
