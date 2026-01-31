@@ -10,17 +10,20 @@ WORKDIR /app
 # Install build dependencies for native modules
 RUN apk add --no-cache python3 make g++
 
-# Copy package files
-COPY package*.json ./
+# Copy workspace root package files
+COPY package.json package-lock.json ./
 
-# Install all dependencies for build
-RUN npm ci
+# Copy game-service package files
+COPY game-service/package.json ./game-service/
 
-# Copy source code
-COPY . .
+# Install all dependencies for game-service workspace
+RUN npm ci --workspace=game-service --include-workspace-root
+
+# Copy game-service source code
+COPY game-service ./game-service/
 
 # Build TypeScript
-RUN npm run build
+RUN npm run build --workspace=game-service
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime
@@ -38,14 +41,17 @@ WORKDIR /app
 # Install runtime dependencies (curl for health checks, tzdata for timezone)
 RUN apk add --no-cache curl tzdata
 
-# Copy package files
-COPY --from=builder /app/package*.json ./
+# Copy workspace root package files
+COPY --from=builder /app/package.json /app/package-lock.json ./
 
-# Install production dependencies only (no build tools needed)
-RUN npm ci --only=production
+# Copy game-service package files
+COPY --from=builder /app/game-service/package.json ./game-service/
+
+# Install production dependencies only for game-service workspace
+RUN npm ci --workspace=game-service --include-workspace-root --omit=dev
 
 # Copy built application
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/game-service/dist ./game-service/dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S flashpoint && \
@@ -56,6 +62,9 @@ RUN chown -R flashpoint:flashpoint /app
 
 # Switch to non-root user
 USER flashpoint
+
+# Set working directory to game-service
+WORKDIR /app/game-service
 
 # Expose ports
 EXPOSE 22500 22501

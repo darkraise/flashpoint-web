@@ -16,13 +16,13 @@ jobs:
       matrix:
         service:
           - name: backend
-            context: ./backend
+            context: .
             dockerfile: ./backend/Dockerfile
           - name: frontend
-            context: ./frontend
+            context: .
             dockerfile: ./frontend/Dockerfile
           - name: game-service
-            context: ./game-service
+            context: .
             dockerfile: ./game-service/Dockerfile
 
     permissions:

@@ -7,21 +7,24 @@ FROM node:20.18.2-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy workspace root package files
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm ci
+# Copy frontend package files
+COPY frontend/package.json ./frontend/
 
-# Copy source code
-COPY . .
+# Install dependencies for frontend workspace
+RUN npm ci --workspace=frontend --include-workspace-root
+
+# Copy frontend source code
+COPY frontend ./frontend/
 
 # Build argument for API URL (injected at build time)
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
 # Build application
-RUN npm run build
+RUN npm run build --workspace=frontend
 
 # =============================================================================
 # Stage 2: Production - Nginx serving static files
@@ -38,10 +41,10 @@ LABEL org.opencontainers.image.source="https://github.com/darkraise/flashpoint-w
 RUN apk add --no-cache curl tzdata
 
 # Copy built files from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Create non-root user and set permissions
 RUN addgroup -g 1001 -S flashpoint && \
