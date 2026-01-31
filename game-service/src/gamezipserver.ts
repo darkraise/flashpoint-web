@@ -72,6 +72,17 @@ export class GameZipServer {
 
     logger.info(`[GameZipServer] ${method} ${url}`);
 
+    // Health check endpoint
+    if (method === 'GET' && url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'healthy',
+        service: 'flashpoint-gamezip-server',
+        timestamp: new Date().toISOString()
+      }));
+      return;
+    }
+
     // Handle different request types
     if (method === 'OPTIONS') {
       this.handleOptionsRequest(req, res);

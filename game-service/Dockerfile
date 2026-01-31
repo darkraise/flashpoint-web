@@ -72,7 +72,7 @@ EXPOSE 22500 22501
 
 # Health check (check proxy server port)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl --fail http://localhost:22500/ || exit 1
+  CMD curl --fail http://localhost:22500/health || exit 1
 
 # Production command
 CMD ["node", "dist/index.js"]

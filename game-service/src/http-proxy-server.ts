@@ -40,6 +40,17 @@ export async function createHTTPProxyServer(options: ProxyServerOptions): Promis
   // Create HTTP server
   const server = http.createServer(async (req, res) => {
     try {
+      // Health check endpoint
+      if (req.url === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          status: 'healthy',
+          service: 'flashpoint-game-service',
+          timestamp: new Date().toISOString()
+        }));
+        return;
+      }
+
       // Handle CORS preflight
       if (req.method === 'OPTIONS') {
         requestHandler.handleOptionsRequest(req, res);
