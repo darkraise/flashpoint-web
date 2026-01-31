@@ -17,7 +17,7 @@ import { NetworkStatusIndicator } from './components/common/NetworkStatusIndicat
 import { MobileWarningDialog } from './components/common/MobileWarningDialog';
 import { RouteLoadingFallback } from './components/common/RouteLoadingFallback';
 import { useAuthStore } from './store/auth';
-import { authSettingsApi } from './lib/api';
+import { authSettingsApi, authApi } from './lib/api';
 import { usePublicSettings } from './hooks/usePublicSettings';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -26,6 +26,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 // Auth views
 const LoginView = lazy(() => import('./views/LoginView').then(m => ({ default: m.LoginView })));
 const RegisterView = lazy(() => import('./views/RegisterView').then(m => ({ default: m.RegisterView })));
+const InitialSetupView = lazy(() => import('./views/InitialSetupView').then(m => ({ default: m.InitialSetupView })));
 
 // Game browsing views
 const HomeView = lazy(() => import('./views/HomeView').then(m => ({ default: m.HomeView })));
@@ -58,6 +59,14 @@ function App() {
   const location = useLocation();
   const { data: publicSettings } = usePublicSettings();
 
+  // Check if system needs initial setup (no users exist)
+  const { data: setupStatus } = useQuery({
+    queryKey: ['setupStatus'],
+    queryFn: () => authApi.getSetupStatus(),
+    refetchOnWindowFocus: false,
+    staleTime: 60000 // Cache for 1 minute
+  });
+
   // Check if guest access is enabled when user is in guest mode
   const { data: authSettings } = useQuery({
     queryKey: ['authSettings'],
@@ -66,11 +75,24 @@ function App() {
     refetchInterval: isGuest ? 30000 : false // Refetch every 30 seconds if guest
   });
 
+  // Handle initial setup redirects
+  useEffect(() => {
+    const isSetupPage = location.pathname === '/setup';
+
+    if (setupStatus?.needsSetup && !isSetupPage) {
+      // System needs setup and user is not on setup page - redirect to setup
+      navigate('/setup', { replace: true });
+    } else if (!setupStatus?.needsSetup && isSetupPage) {
+      // System doesn't need setup but user is on setup page - redirect to home
+      navigate('/', { replace: true });
+    }
+  }, [setupStatus, location.pathname, navigate]);
+
   // Initialize guest mode for anonymous users
   // This allows them to view/play games from shared playlists even if guest access is OFF
-  // Exclude auth pages (login, register) from automatic guest initialization
+  // Exclude auth pages (login, register, setup) from automatic guest initialization
   useEffect(() => {
-    const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+    const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/setup';
 
     if (isAuthPage && isGuest && !isAuthenticated) {
       // Clear guest mode when navigating to auth pages
@@ -123,9 +145,14 @@ function App() {
                 <LoginView />
               </Suspense>
             } />
+            <Route path="/setup" element={
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <InitialSetupView />
+              </Suspense>
+            } />
           </Route>
 
-          <Route element={<PublicLayout />}>
+          <Route element={<PublicLayout background={<ParticleNetworkBackground />} />}>
             <Route path="/register" element={
               <Suspense fallback={<RouteLoadingFallback />}>
                 <RegisterView />

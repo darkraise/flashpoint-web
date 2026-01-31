@@ -23,9 +23,14 @@ export function useLogin() {
  */
 export function useRegister() {
   const { register } = useAuthContext();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (userData: RegisterData) => register(userData),
+    onSuccess: () => {
+      // Invalidate setup status query so app knows a user now exists
+      queryClient.invalidateQueries({ queryKey: ['setupStatus'] });
+    },
     onError: (error) => {
       logger.error('Registration error:', error);
     }

@@ -31,12 +31,9 @@ export function HomeSection({
             <p className="text-muted-foreground text-sm mt-1">{description}</p>
           </div>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+        <div className="flex gap-4 overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent py-2">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex-shrink-0 w-48 h-72 bg-muted/50 rounded-xl animate-pulse"
-            />
+            <div key={i} className="flex-shrink-0 w-48 h-72 bg-muted/50 rounded-xl animate-pulse" />
           ))}
         </div>
       </section>
@@ -53,10 +50,8 @@ export function HomeSection({
             <p className="text-muted-foreground text-sm mt-1">{description}</p>
           </div>
         </div>
-        <div className="text-center py-16 border-2 border-dashed border-muted rounded-xl">
-          <p className="text-muted-foreground">
-            No games found in this time period
-          </p>
+        <div className="text-center py-16 border-2 border-dashed border-primary/50 rounded-xl">
+          <p className="text-muted-foreground">No games found in this time period</p>
           <Link to="/browse">
             <Button variant="link" className="mt-2">
               Browse All Games
@@ -86,7 +81,7 @@ export function HomeSection({
 
       {/* Horizontal Scrolling Game Cards */}
       <div className="relative">
-        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent py-2">
           {games.map((game) => (
             <div key={game.id} className="flex-shrink-0 w-48">
               <GameCard

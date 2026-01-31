@@ -31,7 +31,11 @@ export function HomeView() {
 
   // Fetch recent games and most played games
   const { data: recentAdded, isLoading: loadingAdded } = useRecentGames('added', 20, recentHours);
-  const { data: recentUpdated, isLoading: loadingUpdated } = useRecentGames('modified', 20, recentHours);
+  const { data: recentUpdated, isLoading: loadingUpdated } = useRecentGames(
+    'modified',
+    20,
+    recentHours
+  );
   const { data: mostPlayed, isLoading: loadingMostPlayed } = useMostPlayedGames(20);
 
   // Fetch favorite IDs for performance
@@ -49,7 +53,7 @@ export function HomeView() {
           Welcome to Flashpoint Archive
         </h1>
         <p className="text-muted-foreground text-lg">
-          Discover recently added and updated games from the preservation archive
+          Discover recently active games from the preservation archive
         </p>
       </div>
 

@@ -109,7 +109,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                 <input
                   id="site-name"
                   type="text"
-                  className="flex-1 px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                   value={siteNameInput}
                   onChange={(e) => setSiteNameInput(e.target.value)}
                   onKeyDown={(e) => {

@@ -47,7 +47,7 @@ export function RegisterForm() {
   const { data: settings } = useQuery({
     queryKey: ['authSettings'],
     queryFn: () => authSettingsApi.get(),
-    enabled: isPublicSettingsLoaded && !publicSettings?.app.maintenanceMode
+    enabled: isPublicSettingsLoaded && !publicSettings?.app?.maintenanceMode
   });
 
   const form = useForm<RegisterFormValues>({
@@ -74,20 +74,47 @@ export function RegisterForm() {
   };
 
   // Only show registration disabled screen if NOT in maintenance mode and registration is disabled
-  if (!publicSettings?.app.maintenanceMode && settings && !settings.userRegistrationEnabled) {
+  if (!publicSettings?.app?.maintenanceMode && settings && !settings.userRegistrationEnabled) {
     return (
-      <div className="w-full max-w-md">
-        <div className="bg-card border shadow-xl rounded-2xl px-8 py-8 mb-4 relative overflow-hidden">
-          {/* Decorative gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 pointer-events-none" />
+      <div className="w-full max-w-md animate-fade-in-up">
+        {/* Gradient Border Wrapper */}
+        <div
+          className="p-[2px] rounded-2xl relative"
+          style={{
+            background: `linear-gradient(135deg,
+              hsl(var(--primary) / 0.6) 0%,
+              hsl(var(--primary) / 0.3) 25%,
+              hsl(var(--primary) / 0.5) 50%,
+              hsl(var(--primary) / 0.3) 75%,
+              hsl(var(--primary) / 0.6) 100%)`
+          }}
+        >
+          {/* Glassmorphism card with backdrop-blur */}
+          <div className="bg-card/70 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-6 relative overflow-hidden">
+            {/* Multi-layer gradient backgrounds */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-primary/12 pointer-events-none" aria-hidden="true" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/20 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
 
-          {/* Theme Toggle in top-right corner */}
-          <div className="absolute top-4 right-4 z-10">
-            <ThemePicker />
-          </div>
+            {/* Prismatic Light Glow */}
+            <div
+              className="absolute inset-0 pointer-events-none prismatic-form-glow"
+              style={{
+                background: `radial-gradient(
+                  ellipse 80% 60% at 50% 40%,
+                  hsl(var(--primary) / var(--prismatic-glow-opacity)) 0%,
+                  transparent 70%
+                )`
+              }}
+              aria-hidden="true"
+            />
 
-          {/* Logo Section */}
-          <div className="relative mb-8 flex flex-col items-center">
+            {/* Theme Toggle in top-right corner */}
+            <div className="absolute top-4 right-4 z-10">
+              <ThemePicker />
+            </div>
+
+            {/* Logo Section */}
+            <div className="relative mb-6 flex flex-col items-center">
             <div className="mb-4 w-24 h-24 flex items-center justify-center">
               <img
                 src="/images/logo.png"
@@ -103,10 +130,11 @@ export function RegisterForm() {
             </p>
           </div>
 
-          <div className="relative text-center">
-            <Link to="/login" className="inline-flex items-center justify-center text-sm text-primary font-semibold hover:underline">
-              ← Back to Login
-            </Link>
+            <div className="relative text-center">
+              <Link to="/login" className="inline-flex items-center justify-center text-sm text-primary font-semibold hover:underline">
+                ← Back to Login
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -114,10 +142,37 @@ export function RegisterForm() {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-card border shadow-xl rounded-2xl px-8 py-8 mb-4 relative overflow-hidden">
-        {/* Decorative gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 pointer-events-none" />
+    <div className="w-full max-w-md animate-fade-in-up">
+      {/* Gradient Border Wrapper */}
+      <div
+        className="p-[2px] rounded-2xl relative"
+        style={{
+          background: `linear-gradient(135deg,
+            hsl(var(--primary) / 0.6) 0%,
+            hsl(var(--primary) / 0.3) 25%,
+            hsl(var(--primary) / 0.5) 50%,
+            hsl(var(--primary) / 0.3) 75%,
+            hsl(var(--primary) / 0.6) 100%)`
+        }}
+      >
+        {/* Glassmorphism card with backdrop-blur */}
+        <div className="bg-card/70 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-6 relative overflow-hidden">
+          {/* Multi-layer gradient backgrounds */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-primary/12 pointer-events-none" aria-hidden="true" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/20 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
+
+          {/* Prismatic Light Glow */}
+          <div
+            className="absolute inset-0 pointer-events-none prismatic-form-glow"
+            style={{
+              background: `radial-gradient(
+                ellipse 80% 60% at 50% 40%,
+                hsl(var(--primary) / var(--prismatic-glow-opacity)) 0%,
+                transparent 70%
+              )`
+            }}
+            aria-hidden="true"
+          />
 
         {/* Theme Toggle in top-right corner */}
         <div className="absolute top-4 right-4 z-10">
@@ -125,7 +180,7 @@ export function RegisterForm() {
         </div>
 
         {/* Logo and Title Section */}
-        <div className="relative mb-8 flex flex-col items-center">
+        <div className="relative mb-6 flex flex-col items-center">
           <div className="mb-4 w-24 h-24 flex items-center justify-center">
             <img
               src="/images/logo.png"
@@ -142,7 +197,7 @@ export function RegisterForm() {
         </div>
 
         {/* Maintenance Mode Notice */}
-        {publicSettings?.app.maintenanceMode && (
+        {publicSettings?.app?.maintenanceMode && (
           <Alert
             className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100"
             role="alert"
@@ -151,7 +206,7 @@ export function RegisterForm() {
             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertDescription className="ml-2">
               <strong className="font-semibold">Maintenance Mode:</strong>{' '}
-              {publicSettings.app.maintenanceMessage ||
+              {publicSettings?.app?.maintenanceMessage ||
                 'The system is currently under maintenance. Some features may be unavailable.'}
             </AlertDescription>
           </Alert>
@@ -177,7 +232,7 @@ export function RegisterForm() {
                     <Input
                       placeholder="Choose a username"
                       autoFocus
-                      className="h-11"
+                      className="h-10"
                       {...field}
                     />
                   </FormControl>
@@ -196,7 +251,7 @@ export function RegisterForm() {
                     <Input
                       type="email"
                       placeholder="you@example.com"
-                      className="h-11"
+                      className="h-10"
                       {...field}
                     />
                   </FormControl>
@@ -215,7 +270,7 @@ export function RegisterForm() {
                     <Input
                       type="password"
                       placeholder="Create a strong password"
-                      className="h-11"
+                      className="h-10"
                       {...field}
                     />
                   </FormControl>
@@ -234,7 +289,7 @@ export function RegisterForm() {
                     <Input
                       type="password"
                       placeholder="Confirm your password"
-                      className="h-11"
+                      className="h-10"
                       {...field}
                     />
                   </FormControl>
@@ -243,10 +298,10 @@ export function RegisterForm() {
               )}
             />
 
-            <div className="pt-4">
+            <div className="pt-2">
               <Button
                 type="submit"
-                className="w-full h-11 text-base font-semibold shadow-md hover:shadow-lg transition-all"
+                className="w-full h-10 text-base font-semibold shadow-md hover:shadow-lg transition-all"
                 disabled={registerMutation.isPending}
               >
                 {registerMutation.isPending ? (
@@ -262,13 +317,14 @@ export function RegisterForm() {
           </form>
         </Form>
 
-        <div className="relative mt-6 pt-6 border-t">
+        <div className="relative mt-4 pt-4 border-t border-border/50">
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{' '}
             <Link to="/login" className="text-primary font-semibold hover:underline">
               Sign in
             </Link>
           </p>
+        </div>
         </div>
       </div>
     </div>

@@ -10,6 +10,8 @@ const systemSettings = new CachedSystemSettingsService();
 const MINIMAL_PUBLIC_PATHS = [
   '/health',                    // Health checks for monitoring
   '/api/auth/login',            // Admin needs to login
+  '/api/auth/register',         // Initial admin setup (first user)
+  '/api/auth/setup-status',     // Check if system needs initial setup
   '/api/auth/refresh',          // Token refresh
   '/api/settings/public',       // UI needs public settings
   '/proxy',                     // Game images, logos, screenshots, and game files

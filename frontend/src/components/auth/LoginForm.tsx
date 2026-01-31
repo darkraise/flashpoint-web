@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ThemePicker } from '@/components/theme/ThemePicker';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -33,6 +33,7 @@ interface LocationState {
   from?: {
     pathname: string;
   };
+  setupComplete?: boolean;
 }
 
 export function LoginForm() {
@@ -40,6 +41,7 @@ export function LoginForm() {
   const { login, loginAsGuest } = useAuth();
 
   const from = (location.state as LocationState)?.from?.pathname || '/';
+  const setupComplete = (location.state as LocationState)?.setupComplete || false;
 
   // Fetch public settings first to check maintenance mode
   const { data: publicSettings, isSuccess: isPublicSettingsLoaded } = useQuery({
@@ -52,7 +54,7 @@ export function LoginForm() {
   const { data: authSettings } = useQuery({
     queryKey: ['authSettings'],
     queryFn: () => authSettingsApi.get(),
-    enabled: isPublicSettingsLoaded && !publicSettings?.app.maintenanceMode
+    enabled: isPublicSettingsLoaded && !publicSettings?.app?.maintenanceMode
   });
 
   const form = useForm<LoginFormValues>({
@@ -83,7 +85,7 @@ export function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md lg:max-w-lg animate-fade-in-up">
+    <div className="w-full max-w-md animate-fade-in-up">
       {/* Gradient Border Wrapper */}
       <div
         className="p-[2px] rounded-2xl relative"
@@ -97,7 +99,7 @@ export function LoginForm() {
         }}
       >
         {/* Glassmorphism card with backdrop-blur */}
-        <div className="bg-card/70 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-10 lg:px-10 lg:py-12 relative overflow-hidden">
+        <div className="bg-card/70 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-6 relative overflow-hidden">
         {/* Multi-layer gradient backgrounds */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-primary/12 pointer-events-none" aria-hidden="true" />
         <div className="absolute inset-0 bg-gradient-to-t from-background/20 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
@@ -121,24 +123,39 @@ export function LoginForm() {
         </div>
 
         {/* Logo and Title Section */}
-        <div className="relative mb-8 flex flex-col items-center">
-          <div className="mb-6 w-24 h-24 lg:w-28 lg:h-28 flex items-center justify-center">
+        <div className="relative mb-6 flex flex-col items-center">
+          <div className="mb-4 w-24 h-24 flex items-center justify-center">
             <img
               src="/images/logo.png"
               alt="Flashpoint Archive"
               className="w-full h-full object-contain drop-shadow-2xl"
             />
           </div>
-          <h1 className="text-3xl lg:text-4xl font-bold text-foreground text-center mb-2 tracking-tight">
+          <h1 className="text-3xl font-bold text-foreground text-center mb-2 tracking-tight">
             Welcome Back
           </h1>
-          <p className="text-sm lg:text-base text-muted-foreground text-center">
+          <p className="text-sm text-muted-foreground text-center">
             Sign in to access Flashpoint Archive
           </p>
         </div>
 
+        {/* Setup Complete Notice */}
+        {setupComplete && !error && (
+          <Alert
+            className="mb-6 border-green-500/50 bg-green-500/10 text-green-900 dark:text-green-100 animate-slide-in-down"
+            role="alert"
+            aria-live="polite"
+          >
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertDescription className="ml-2">
+              <strong className="font-semibold">Setup Complete!</strong>{' '}
+              Your administrator account has been created successfully. Please sign in to continue.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Maintenance Mode Notice */}
-        {publicSettings?.app.maintenanceMode && (
+        {publicSettings?.app?.maintenanceMode && (
           <Alert
             className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100 animate-slide-in-down"
             role="alert"
@@ -147,7 +164,7 @@ export function LoginForm() {
             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertDescription className="ml-2">
               <strong className="font-semibold">Maintenance Mode:</strong>{' '}
-              {publicSettings.app.maintenanceMessage ||
+              {publicSettings?.app?.maintenanceMessage ||
                 'The system is currently under maintenance. Some features may be unavailable.'}
             </AlertDescription>
           </Alert>
@@ -165,7 +182,7 @@ export function LoginForm() {
         )}
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="relative space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="relative space-y-4">
             <FormField
               control={form.control}
               name="username"
@@ -179,7 +196,7 @@ export function LoginForm() {
                       placeholder="Enter your username"
                       autoFocus
                       autoComplete="username"
-                      className="h-12 transition-all duration-200 focus:scale-[1.01] focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all duration-200 focus:scale-[1.01] focus:ring-1 focus:ring-primary/20"
                       {...field}
                     />
                   </FormControl>
@@ -201,7 +218,7 @@ export function LoginForm() {
                       type="password"
                       placeholder="Enter your password"
                       autoComplete="current-password"
-                      className="h-12 transition-all duration-200 focus:scale-[1.01] focus:ring-2 focus:ring-primary/20"
+                      className="h-10 transition-all duration-200 focus:scale-[1.01] focus:ring-1 focus:ring-primary/20"
                       {...field}
                     />
                   </FormControl>
@@ -210,10 +227,10 @@ export function LoginForm() {
               )}
             />
 
-            <div className="space-y-3 pt-4">
+            <div className="space-y-3 pt-2">
               <Button
                 type="submit"
-                className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
+                className="w-full h-10 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -230,7 +247,7 @@ export function LoginForm() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-12 text-base font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                  className="w-full h-10 text-base font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   onClick={loginAsGuest}
                 >
                   Browse as Guest
@@ -241,7 +258,7 @@ export function LoginForm() {
         </Form>
 
         {authSettings?.userRegistrationEnabled && (
-          <div className="relative mt-8 pt-6 border-t border-border/50">
+          <div className="relative mt-6 pt-4 border-t border-border/50">
             <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{' '}
               <Link

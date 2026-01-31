@@ -87,12 +87,19 @@ export class AuthService {
 
   /**
    * Register new user
+   *
+   * Dual Purpose:
+   * 1. Initial Setup: Creates first admin account when no users exist (bypasses all registration settings)
+   * 2. Regular Registration: Creates standard user account (requires user_registration_enabled = true)
+   *
+   * The method automatically detects which scenario applies based on whether users exist
    */
   async register(data: RegisterData): Promise<{ user: AuthUser; tokens: AuthTokens }> {
     // Check if this is initial setup (no users exist)
     const isInitialSetup = UserDatabaseService.needsInitialSetup();
 
-    // Allow registration during initial setup even if registration is disabled
+    // Validation: Regular registration requires registration to be enabled
+    // Initial setup bypasses this check (first user is always allowed)
     if (!isInitialSetup) {
       const settings = this.getAuthSettings();
       if (!settings.user_registration_enabled) {

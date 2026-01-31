@@ -23,7 +23,7 @@ export function ThemePicker() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="border-primary" title="Theme settings">
+        <Button variant="outline" size="icon" className="border-primary data-[state=open]:border-transparent" title="Theme settings">
           <Palette className="h-5 w-5" />
           <span className="sr-only">Theme settings</span>
         </Button>
@@ -81,7 +81,7 @@ export function ThemePicker() {
                 <button
                   key={color}
                   onClick={() => handleColorSelect(color)}
-                  className="relative h-9 w-9 rounded-md border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  className="relative h-9 w-9 rounded-md border-2 transition-all hover:scale-110 focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1"
                   style={{
                     backgroundColor: `hsl(${colorValue})`,
                     borderColor: isSelected ? 'hsl(var(--foreground))' : 'transparent',

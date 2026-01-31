@@ -225,6 +225,11 @@ export const authApi = {
   getMe: async (): Promise<User> => {
     const { data } = await api.get<User>('/auth/me');
     return data;
+  },
+
+  getSetupStatus: async (): Promise<{ needsSetup: boolean; message: string }> => {
+    const { data } = await api.get<{ needsSetup: boolean; message: string }>('/auth/setup-status');
+    return data;
   }
 };
 

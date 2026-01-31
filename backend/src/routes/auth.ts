@@ -160,6 +160,12 @@ router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
 /**
  * POST /api/auth/register
  * Register new user
+ *
+ * Dual Purpose:
+ * 1. Initial Setup: When no users exist, creates first admin account (bypasses registration settings)
+ * 2. Regular Registration: When users exist, creates regular user account (requires registration enabled)
+ *
+ * The AuthService.register() method automatically detects which scenario applies
  */
 router.post('/register', registerLimiter, asyncHandler(async (req, res) => {
   try {

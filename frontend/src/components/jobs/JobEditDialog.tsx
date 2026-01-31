@@ -125,7 +125,7 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
               id="cron-schedule"
               type="text"
               placeholder="0 * * * *"
-              className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-2 font-mono text-sm ${
+              className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-1 font-mono text-sm ${
                 validationError
                   ? "border-red-500 focus:ring-red-500"
                   : "border-border focus:ring-primary"

@@ -63,7 +63,6 @@ export function FilterDropdown({
         align="start"
         sideOffset={8}
         collisionPadding={10}
-        onOpenAutoFocus={(e: Event) => e.preventDefault()}
       >
         {/* Header with Clear button */}
         <div className="sticky top-0 bg-popover border-b p-2 z-10">
