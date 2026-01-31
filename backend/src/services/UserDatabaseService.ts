@@ -93,7 +93,10 @@ export class UserDatabaseService {
         "SELECT name FROM sqlite_master WHERE type='table'"
       ).all() as { name: string }[];
 
-      if (tables.length === 0) {
+      // Filter out the migrations table itself to check for other tables
+      const otherTables = tables.filter(t => t.name !== 'migrations');
+
+      if (otherTables.length === 0) {
         // New database, no detection needed
         logger.info('[UserDB] New database detected, no legacy migrations to detect');
         return;
@@ -109,15 +112,10 @@ export class UserDatabaseService {
         logger.info(`[UserDB] Marked migration as applied: ${name}`);
       };
 
-      // Detect 001_initialize_schema (check for users table)
-      if (tables.some(t => t.name === 'users')) {
-        markApplied('001_initialize_schema', 'Detected existing schema');
-      }
-
-      // Detect 002_seed_default_data (check for roles)
-      const hasRoles = this.db!.prepare('SELECT COUNT(*) as count FROM roles').get() as { count: number };
-      if (hasRoles && hasRoles.count > 0) {
-        markApplied('002_seed_default_data', 'Detected existing seed data');
+      // Detect 001_complete_schema (check for users table)
+      // This migration includes all schema, seed data, and indexes
+      if (otherTables.some(t => t.name === 'users')) {
+        markApplied('001_complete_schema', 'Detected existing schema and seed data');
       }
 
       logger.info('[UserDB] Legacy migration detection completed');
