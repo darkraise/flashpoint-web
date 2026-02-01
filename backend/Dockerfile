@@ -20,10 +20,9 @@ RUN npm ci --workspace=backend --include-workspace-root --prefer-offline --no-au
 # Copy backend source code
 COPY backend ./backend/
 
-# Build TypeScript (run from backend directory) and prune dev dependencies
+# Build TypeScript (run from backend directory)
 WORKDIR /app/backend
-RUN npm run build && \
-    npm prune --omit=dev --workspace=backend --include-workspace-root
+RUN npm run build
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime
@@ -47,8 +46,8 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 # Copy backend package files
 COPY --from=builder /app/backend/package.json ./backend/
 
-# Copy production node_modules from builder to leverage cached install
-COPY --from=builder /app/node_modules ./node_modules
+# Install production dependencies only for backend workspace
+RUN npm ci --workspace=backend --include-workspace-root --omit=dev --prefer-offline --no-audit
 
 # Copy built application
 COPY --from=builder /app/backend/dist ./backend/dist

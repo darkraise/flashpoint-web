@@ -23,10 +23,9 @@ RUN npm ci --workspace=game-service --include-workspace-root --prefer-offline --
 # Copy game-service source code
 COPY game-service ./game-service/
 
-# Build TypeScript (run from game-service directory) and prune dev dependencies
+# Build TypeScript (run from game-service directory)
 WORKDIR /app/game-service
-RUN npm run build && \
-    npm prune --omit=dev --workspace=game-service --include-workspace-root
+RUN npm run build
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime
@@ -50,8 +49,9 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 # Copy game-service package files
 COPY --from=builder /app/game-service/package.json ./game-service/
 
-# Copy production node_modules from builder to leverage cached install
-COPY --from=builder /app/node_modules ./node_modules
+
+# Install production dependencies only for game-service workspace
+RUN npm ci --workspace=game-service --include-workspace-root --omit=dev --prefer-offline --no-audit
 
 # Copy built application
 COPY --from=builder /app/game-service/dist ./game-service/dist
