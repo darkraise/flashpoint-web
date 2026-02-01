@@ -41,22 +41,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - backend-network
     # Security options
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
     # Logging configuration
     logging:
       driver: "json-file"
@@ -89,22 +78,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-    networks:
-      - backend-network
     # Security options
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.1'
-          memory: 128M
     # Logging configuration
     logging:
       driver: "json-file"
@@ -132,9 +110,6 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
-    networks:
-      - frontend-network
-      - backend-network
     # Security options
     security_opt:
       - no-new-privileges:true
@@ -146,91 +121,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-# Networks
-networks:
-  # Frontend network (isolated)
-  frontend-network:
-    driver: bridge
-  # Backend network (backend and game-service)
-  backend-network:
-    driver: bridge
-
-# Volumes
-volumes:
-  # Persistent volume for user database
-  backend-db:
-    driver: local
-  # Persistent volume for backend logs
-  backend-logs:
-    driver: local
-
-# =============================================================================
-# Flashpoint Web App - Production Docker Compose Configuration
-# =============================================================================
-#
-# This is the PRODUCTION configuration with security hardening:
-# - Multi-stage production builds
-# - Non-root users in all containers
-# - Resource limits (CPU/memory)
-# - Security options (no-new-privileges, dropped capabilities)
-# - Network segmentation (frontend/backend separation)
-# - Logging configuration (10MB log files, 3 file rotation)
-# - Health checks for all services
-# - Persistent volume for user database
-#
-# Usage:
-# ------
-# 1. Configure environment variables:
-#    cp .env.example .env
-#    # Edit .env and set FLASHPOINT_HOST_PATH and JWT_SECRET (REQUIRED)
-#    # Set DOMAIN to your production domain
-#    # Optionally customize other settings (see .env.example for all options)
-#
-# 2. Build all services:
-#    docker-compose -f docker-compose.prod.yml build
-#
-# 4. Start all services:
-#    docker-compose -f docker-compose.prod.yml up -d
-#
-# 5. View logs:
-#    docker-compose -f docker-compose.prod.yml logs -f
-#
-# 6. Stop all services:
-#    docker-compose -f docker-compose.prod.yml down
-#
-# 7. Rebuild and restart:
-#    docker-compose -f docker-compose.prod.yml up -d --build
-#
-# Access:
-# -------
-# - Frontend: http://localhost:${WEB_PORT} (default: http://localhost)
-# - Backend API: http://localhost:${API_PORT} (default: http://localhost:3100)
-# - Game Proxy: http://localhost:${PROXY_PORT} (default: http://localhost:22500)
-# - GameZip: http://localhost:${GAMEZIP_PORT} (default: http://localhost:22501)
-#
-# Environment Variables:
-# ----------------------
-# See .env.example for all configurable environment variables and their descriptions.
-#
-# Required variables:
-# - FLASHPOINT_HOST_PATH: Path to your Flashpoint installation
-# - JWT_SECRET: Secure random string for JWT authentication (use openssl rand -base64 32)
-#
-# Production-specific recommendations:
-# - Set DOMAIN to your actual domain (e.g., https://yourdomain.com)
-# - Use strong JWT_SECRET (32+ characters)
-# - Set NODE_ENV=production
-# - Configure TZ to your timezone
-#
-# Security Notes:
-# ---------------
-# - All containers run as non-root users
-# - Capabilities are dropped (ALL) for maximum security
-# - no-new-privileges prevents privilege escalation
-# - Networks are segmented (frontend can't directly access game-service)
-# - Flashpoint data mounted read-only
-# - User database in persistent volume
-# - Resource limits prevent resource exhaustion
-#
-# =============================================================================
