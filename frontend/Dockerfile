@@ -46,7 +46,11 @@ RUN apk add --no-cache curl tzdata
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
 # Copy nginx configuration
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
+
+# Default backend host/port (can be overridden at runtime)
+ENV BACKEND_HOST=backend \
+    BACKEND_PORT=3100
 
 # Create non-root user and set permissions
 RUN addgroup -g 1001 -S flashpoint && \

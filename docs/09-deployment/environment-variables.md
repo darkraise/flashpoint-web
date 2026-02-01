@@ -251,15 +251,46 @@ REDIS_PORT=6379
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `LOG_LEVEL` | string | `info` | Logging level: `error`, `warn`, `info`, `debug` |
+| `LOG_FILE` | string | - | Path to log file (optional). If not set, logs only to console. |
 
 **Examples:**
 
 ```bash
-# Development (verbose)
+# Development (verbose, console only)
 LOG_LEVEL=debug
 
-# Production (minimal)
+# Production (minimal, console only)
 LOG_LEVEL=warn
+
+# Production with file logging
+LOG_LEVEL=info
+LOG_FILE=/var/log/flashpoint-backend.log
+
+# Docker (using volume mount)
+LOG_LEVEL=info
+LOG_FILE=/app/logs/backend.log
+```
+
+**File Logging Features:**
+- Automatic log rotation (10MB max file size)
+- Keeps last 5 log files
+- JSON format for easy parsing
+- Logs to both console and file when enabled
+- Directory created automatically if it doesn't exist
+
+**Docker Volume Access:**
+
+When running in Docker with file logging enabled, logs are persisted in a named volume:
+
+```bash
+# View logs from container
+docker exec flashpoint-backend tail -f /app/logs/backend.log
+
+# Find volume location on host
+docker volume inspect flashpoint-web_backend-logs
+
+# Copy logs to host
+docker cp flashpoint-backend:/app/logs/backend.log ./backend.log
 ```
 
 ### OpenTelemetry (Optional - Observability & Monitoring)

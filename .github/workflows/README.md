@@ -82,15 +82,12 @@ This will create images tagged as:
 - `1`
 - `latest`
 
-#### Multi-Platform Support
+#### Platform Support
 
-Images are built for multiple architectures:
-- `linux/amd64` (x86_64)
-- `linux/arm64` (ARM 64-bit)
+Images are built for:
+- `linux/amd64` (x86_64) - Standard servers and desktops
 
-This allows the images to run on:
-- Standard x86_64 servers
-- ARM-based servers (AWS Graviton, Raspberry Pi 4, Apple Silicon via Docker Desktop)
+**Note:** ARM64 support has been disabled to significantly reduce build times. If you need ARM64 images, you can build them locally or enable multi-platform builds by adding `linux/arm64` to the platforms in the workflow file.
 
 #### Build Caching
 
@@ -181,10 +178,18 @@ docker login docker.io
 
 #### Performance
 
-Typical build times (with cache):
-- First build: 5-10 minutes per service
-- Subsequent builds (with cache): 2-4 minutes per service
+Typical build times (optimized for amd64 only):
+- First build: 3-5 minutes per service
+- Subsequent builds (with cache): 1-2 minutes per service
 - Parallel execution: All 3 services build simultaneously
+- Total workflow time: ~6-10 minutes (down from 12+ minutes)
+
+**Optimizations applied:**
+- Single platform (amd64) instead of multi-platform
+- npm ci with `--prefer-offline` and `--no-audit` flags
+- Disabled provenance and SBOM generation
+- Latest BuildKit image
+- GitHub Actions cache for Docker layers
 
 #### Security
 

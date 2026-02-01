@@ -16,6 +16,8 @@ services:
       - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH environment variable must be set}:/data/flashpoint:ro
       # User database (persistent)
       - backend-db:/app/data
+      # Application logs (persistent)
+      - backend-logs:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - TZ=${TZ:-UTC}
@@ -23,14 +25,16 @@ services:
       - HOST=0.0.0.0
       # Flashpoint base path (all other paths derived automatically by backend)
       - FLASHPOINT_PATH=/data/flashpoint
-      # Game service URLs (Docker network)
-      - GAME_SERVICE_PROXY_URL=http://game-service:22500
-      - GAME_SERVICE_GAMEZIP_URL=http://game-service:22501
+      # Game service connection (Docker network)
+      - GAME_SERVICE_HOST=game-service
+      - GAME_SERVICE_PROXY_PORT=22500
+      - GAME_SERVICE_GAMEZIP_PORT=22501
       # External services
       - EXTERNAL_IMAGE_URLS=${EXTERNAL_IMAGE_URLS:-https://infinity.flashpointarchive.org/Flashpoint/Data/Images,https://infinity.unstable.life/Flashpoint/Data/Images}
       - DOMAIN=${DOMAIN:-http://localhost:${WEB_PORT:-80}}
       # Application settings
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FILE=${LOG_FILE:-/app/logs/backend.log}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET environment variable must be set}
       - USER_DB_PATH=/app/data/user.db
     depends_on:
@@ -68,7 +72,7 @@ services:
       # Application settings
       - LOG_LEVEL=${LOG_LEVEL:-info}
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:22500/"]
+      test: ["CMD", "curl", "--fail", "http://localhost:22500/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -88,6 +92,8 @@ services:
     restart: unless-stopped
     environment:
       - TZ=${TZ:-UTC}
+      - BACKEND_HOST=${BACKEND_HOST:-backend}
+      - BACKEND_PORT=${BACKEND_PORT:-3100}
     ports:
       - "${WEB_PORT:-80}:8080"
     depends_on:
@@ -109,6 +115,9 @@ networks:
 volumes:
   # Persistent volume for user database
   backend-db:
+    driver: local
+  # Persistent volume for backend logs
+  backend-logs:
     driver: local
 
 # =============================================================================
@@ -137,9 +146,17 @@ volumes:
 #    docker-compose up -d backend game-service
 #
 # 5. View logs:
+#    # Console logs (docker-compose)
 #    docker-compose logs -f
 #    docker-compose logs -f backend
 #    docker-compose logs -f game-service
+#
+#    # File logs (persistent in volume)
+#    docker exec flashpoint-backend cat /app/logs/backend.log
+#    docker exec flashpoint-backend tail -f /app/logs/backend.log
+#
+#    # Access log volume location on host
+#    docker volume inspect flashpoint-web_backend-logs
 #
 # 6. Stop all services:
 #    docker-compose down

@@ -302,6 +302,27 @@ export const config = {
   LOG_LEVEL=error  # Quiet mode
   ```
 
+#### `LOG_FILE`
+- **Type**: string
+- **Default**: undefined (console only)
+- **Description**: Path to log file for persistent logging. When set, logs are written to both console and file.
+- **Features**:
+  - Automatic log rotation (10MB max file size)
+  - Keeps last 5 log files
+  - JSON format for easy parsing
+  - Directory created automatically
+- **Usage**:
+  ```bash
+  # File logging enabled
+  LOG_FILE=/var/log/flashpoint-backend.log
+
+  # Docker volume
+  LOG_FILE=/app/logs/backend.log
+
+  # Disabled (console only)
+  # LOG_FILE is not set
+  ```
+
 ## Configuration Examples
 
 ### Development (.env)
@@ -338,6 +359,7 @@ DOMAIN=http://localhost:5173
 
 # Logging
 LOG_LEVEL=debug
+# LOG_FILE not set - console only in development
 ```
 
 ### Production (.env)
@@ -383,6 +405,7 @@ RATE_LIMIT_MAX_REQUESTS=100
 
 # Logging
 LOG_LEVEL=info
+LOG_FILE=/var/log/flashpoint-backend.log
 ```
 
 ### Docker (.env)
@@ -423,6 +446,7 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 
 # Logging
+LOG_FILE=/app/logs/backend.log
 LOG_LEVEL=info
 ```
 

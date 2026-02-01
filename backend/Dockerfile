@@ -59,8 +59,8 @@ COPY --from=builder /app/backend/src/migrations ./backend/dist/migrations
 RUN addgroup -g 1001 -S flashpoint && \
     adduser -S flashpoint -u 1001
 
-# Create data directory for user.db
-RUN mkdir -p /app/data && \
+# Create data and logs directories
+RUN mkdir -p /app/data /app/logs && \
     chown -R flashpoint:flashpoint /app
 
 # Switch to non-root user

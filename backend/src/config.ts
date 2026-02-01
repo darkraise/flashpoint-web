@@ -54,9 +54,17 @@ export const config = {
   flashpointGamesPath: `${flashpointPath}/Data/Games`,
 
   // Game Service URLs (external service, not built-in)
-  gameServerUrl: process.env.GAME_SERVICE_PROXY_URL || process.env.GAME_SERVER_URL || 'http://localhost:22500',
-  gameServiceGameZipUrl: process.env.GAME_SERVICE_GAMEZIP_URL || 'http://localhost:22501',
-  gameServerHttpPort: parseInt(process.env.GAME_SERVICE_GAMEZIP_URL?.split(':')[2] || process.env.GAME_SERVER_HTTP_PORT || '22501', 10),
+  gameServerUrl: (() => {
+    const host = process.env.GAME_SERVICE_HOST || 'localhost';
+    const port = parseInt(process.env.GAME_SERVICE_PROXY_PORT || '22500', 10);
+    return `http://${host}:${port}`;
+  })(),
+  gameServiceGameZipUrl: (() => {
+    const host = process.env.GAME_SERVICE_HOST || 'localhost';
+    const port = parseInt(process.env.GAME_SERVICE_GAMEZIP_PORT || '22501', 10);
+    return `http://${host}:${port}`;
+  })(),
+  gameServerHttpPort: parseInt(process.env.GAME_SERVICE_GAMEZIP_PORT || '22501', 10),
 
   // Redis
   redisEnabled: process.env.REDIS_ENABLED === 'true',
@@ -72,6 +80,7 @@ export const config = {
 
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
+  logFile: process.env.LOG_FILE,
 
   // User Database
   userDbPath: process.env.USER_DB_PATH || './user.db',
