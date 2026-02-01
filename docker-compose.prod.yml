@@ -11,6 +11,9 @@ services:
       - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH environment variable must be set}:/data/flashpoint:ro
       # User database (persistent)
       - backend-db:/app/data
+      # Application logs (persistent)
+      # Set BACKEND_LOGS_PATH to bind-mount a host directory
+      - ${BACKEND_LOGS_PATH:-backend-logs}:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - TZ=${TZ:-UTC}
@@ -157,6 +160,9 @@ networks:
 volumes:
   # Persistent volume for user database
   backend-db:
+    driver: local
+  # Persistent volume for backend logs
+  backend-logs:
     driver: local
 
 # =============================================================================

@@ -1,14 +1,40 @@
 import { Router, Request, Response } from 'express';
 import { promises as fs } from 'fs';
+import fsSync from 'fs';
 import path from 'path';
+import winston from 'winston';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 const router = Router();
 
-const LOG_DIR = path.join(__dirname, '../../logs');
+const LOG_DIR = config.logFile ? path.dirname(config.logFile) : path.join(__dirname, '../../logs');
 const ERROR_LOG_FILE = path.join(LOG_DIR, 'client-errors.log');
+
+// Ensure logs directory exists for file transport at startup
+if (!fsSync.existsSync(LOG_DIR)) {
+  fsSync.mkdirSync(LOG_DIR, { recursive: true });
+}
+
+const clientErrorLogger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'flashpoint-web-client-errors' },
+  transports: [
+    new winston.transports.File({
+      filename: ERROR_LOG_FILE,
+      maxsize: 10485760, // 10MB
+      maxFiles: 5,
+      tailable: true
+    })
+  ]
+});
 
 interface ErrorReport {
   type: 'client_error' | 'network_error' | 'api_error' | 'route_error';
@@ -18,8 +44,10 @@ interface ErrorReport {
   timestamp: string;
   userAgent: string;
   userId?: number;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
+
+type AuthenticatedRequest = Request & { user?: { id: number } };
 
 /**
  * Ensure logs directory exists
@@ -37,10 +65,7 @@ async function ensureLogDir(): Promise<void> {
  */
 async function logError(report: ErrorReport): Promise<void> {
   try {
-    await ensureLogDir();
-
-    const logLine = JSON.stringify(report) + '\n';
-    await fs.appendFile(ERROR_LOG_FILE, logLine, 'utf8');
+    clientErrorLogger.info('client_error', report);
   } catch (error) {
     logger.error('Failed to log client error:', error);
   }
@@ -106,8 +131,9 @@ router.post('/report', async (req: Request, res: Response) => {
     }
 
     // Add user ID if authenticated
-    if ((req as any).user) {
-      report.userId = (req as any).user.id;
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user) {
+      report.userId = authReq.user.id;
     }
 
     // Add timestamp if not provided

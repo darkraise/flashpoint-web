@@ -17,7 +17,8 @@ services:
       # User database (persistent)
       - backend-db:/app/data
       # Application logs (persistent)
-      - backend-logs:/app/logs
+      # Set BACKEND_LOGS_PATH to bind-mount a host directory
+      - ${BACKEND_LOGS_PATH:-backend-logs}:/app/logs
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - TZ=${TZ:-UTC}

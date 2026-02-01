@@ -44,7 +44,10 @@
       "mcp__ide__getDiagnostics",
       "Bash(done)",
       "Bash(npm run lint:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(docker build:*)",
+      "Bash(find:*)"
     ]
   }
 }
