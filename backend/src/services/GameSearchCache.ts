@@ -233,6 +233,8 @@ export class GameSearchCache {
         sortBy: 'title',
         sortOrder: 'asc',
         fields: 'list',
+        showBroken: false,
+        showExtreme: false,
         ...partialQuery
       };
 
@@ -276,7 +278,9 @@ export class GameSearchCache {
       limit: 50,
       sortBy: 'title',
       sortOrder: 'asc',
-      fields: 'list'
+      fields: 'list',
+      showBroken: false,
+      showExtreme: false
     };
     return this.has(defaultQuery);
   }
