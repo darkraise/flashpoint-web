@@ -34,16 +34,25 @@ export class ProxyRequestHandler {
       let hostname: string;
       let urlPath: string;
 
+      // Normalize malformed URLs: /http:/domain → /http://domain
+      // This is a common pattern in legacy Flash games
+      let normalizedUrl = req.url;
+      if (normalizedUrl.match(/^\/https?:\/[^\/]/)) {
+        // Single slash after protocol - insert the missing slash
+        normalizedUrl = normalizedUrl.replace(/^(\/https?:)\//, '$1//');
+        logger.debug(`[ProxyHandler] Normalized malformed URL: ${req.url} → ${normalizedUrl}`);
+      }
+
       // Check if this is a proxy-style request (starts with http://)
-      if (req.url.startsWith('http://') || req.url.startsWith('https://')) {
+      if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
         // Proxy-style request: GET http://example.com/path HTTP/1.1
-        targetUrl = new URL(req.url);
+        targetUrl = new URL(normalizedUrl);
         hostname = targetUrl.hostname;
         urlPath = targetUrl.pathname + targetUrl.search;
-      } else if (req.url.startsWith('/http://') || req.url.startsWith('/https://')) {
+      } else if (normalizedUrl.startsWith('/http://') || normalizedUrl.startsWith('/https://')) {
         // Path-based proxy request: GET /http://example.com/path HTTP/1.1
         // Strip leading slash and parse as URL
-        const urlWithoutSlash = req.url.substring(1);
+        const urlWithoutSlash = normalizedUrl.substring(1);
         targetUrl = new URL(urlWithoutSlash);
         hostname = targetUrl.hostname;
         urlPath = targetUrl.pathname + targetUrl.search;

@@ -245,22 +245,31 @@ export class GameZipServer {
     let hostname: string;
     let urlPath: string;
 
+    // Normalize malformed URLs: /http:/domain → /http://domain
+    // This is a common pattern in legacy Flash games
+    let normalizedUrl = req.url;
+    if (normalizedUrl.match(/^\/https?:\/[^\/]/)) {
+      // Single slash after protocol - insert the missing slash
+      normalizedUrl = normalizedUrl.replace(/^(\/https?:)\//, '$1//');
+      logger.debug(`[GameZipServer] Normalized malformed URL: ${req.url} → ${normalizedUrl}`);
+    }
+
     // Parse URL (same logic as main proxy server)
-    if (req.url.startsWith('http://') || req.url.startsWith('https://')) {
+    if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
       // Proxy-style: GET http://domain.com/path HTTP/1.1
-      const targetUrl = new URL(req.url);
+      const targetUrl = new URL(normalizedUrl);
       hostname = targetUrl.hostname;
       urlPath = targetUrl.pathname + targetUrl.search;
-    } else if (req.url.startsWith('/http://') || req.url.startsWith('/https://')) {
+    } else if (normalizedUrl.startsWith('/http://') || normalizedUrl.startsWith('/https://')) {
       // Path-based: GET /http://domain.com/path HTTP/1.1
-      const urlWithoutSlash = req.url.substring(1);
+      const urlWithoutSlash = normalizedUrl.substring(1);
       const targetUrl = new URL(urlWithoutSlash);
       hostname = targetUrl.hostname;
       urlPath = targetUrl.pathname + targetUrl.search;
     } else {
       // Regular: GET /path HTTP/1.1
       hostname = req.headers.host || 'localhost';
-      urlPath = req.url;
+      urlPath = normalizedUrl;
     }
 
     // Validate hostname using Zod schema
