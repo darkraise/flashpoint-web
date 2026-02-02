@@ -50,8 +50,10 @@ RUN apk add --no-cache curl tzdata su-exec shadow gettext
 # Copy built files from builder
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
+# Copy nginx configuration from .nginx/ folder
+# Main config: logs to stdout/stderr, uses /tmp for temp files (no permission issues)
+COPY frontend/.nginx/nginx.conf /etc/nginx/nginx.conf
+COPY frontend/.nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 # Copy entrypoint script
 COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
@@ -60,25 +62,13 @@ COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
 ENV BACKEND_HOST=backend \
     BACKEND_PORT=3100
 
-# Create non-root user with default UID/GID 1000 (nginx:alpine doesn't have one)
+# Create non-root user with default UID/GID 1000
 # These can be overridden at runtime via PUID/PGID environment variables
 RUN addgroup -g 1000 -S appuser && \
     adduser -S appuser -u 1000 -G appuser && \
     chown -R appuser:appuser /usr/share/nginx/html && \
-    chown -R appuser:appuser /var/cache/nginx && \
-    chown -R appuser:appuser /var/log/nginx && \
     chown -R appuser:appuser /etc/nginx/conf.d && \
-    touch /var/run/nginx.pid && \
-    chown -R appuser:appuser /var/run/nginx.pid && \
     chmod +x /docker-entrypoint.sh
-
-# Create necessary directories
-RUN mkdir -p /var/cache/nginx/client_temp \
-    /var/cache/nginx/proxy_temp \
-    /var/cache/nginx/fastcgi_temp \
-    /var/cache/nginx/uwsgi_temp \
-    /var/cache/nginx/scgi_temp && \
-    chown -R appuser:appuser /var/cache/nginx
 
 # Expose port (8080 for non-root user)
 EXPOSE 8080

@@ -60,13 +60,10 @@ setup_user() {
         echo "✅ User UID/GID OK (UID=$PUID, GID=$PGID)"
     fi
 
-    # Always fix ownership of nginx directories (in case of mounted volumes)
-    echo "🔧 Ensuring correct ownership of nginx directories..."
+    # Fix ownership of directories that may be mounted as volumes
+    echo "🔧 Ensuring correct ownership of app directories..."
     chown -R $APP_USER:$APP_GROUP /usr/share/nginx/html 2>/dev/null || true
-    chown -R $APP_USER:$APP_GROUP /var/cache/nginx 2>/dev/null || true
-    chown -R $APP_USER:$APP_GROUP /var/log/nginx 2>/dev/null || true
     chown -R $APP_USER:$APP_GROUP /etc/nginx/conf.d 2>/dev/null || true
-    chown $APP_USER:$APP_GROUP /var/run/nginx.pid 2>/dev/null || true
 }
 
 # Only setup user if running as root
