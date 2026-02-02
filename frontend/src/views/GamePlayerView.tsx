@@ -6,6 +6,7 @@ import { GamePlayer } from '@/components/player';
 import { Badge } from '@/components/ui/badge';
 import { usePlaySession } from '@/hooks/usePlayTracking';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
+import { getGameLogoUrl } from '@/utils/gameUtils';
 
 export function GamePlayerView() {
   const { id } = useParams<{ id: string }>();
@@ -104,7 +105,7 @@ export function GamePlayerView() {
           <div className="px-6 py-4 border-b border-border">
             <div className="flex items-start gap-4">
               {/* Game Logo */}
-              {game.logoPath && !logoError && (
+              {getGameLogoUrl(game.id) && !logoError && (
                 <div className="flex-shrink-0 w-16 h-16 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-1.5 relative">
                   {logoLoading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
@@ -112,7 +113,7 @@ export function GamePlayerView() {
                     </div>
                   )}
                   <img
-                    src={`/proxy/images/${game.logoPath}`}
+                    src={getGameLogoUrl(game.id)}
                     alt={`${game.title} logo`}
                     className="w-full h-full object-contain relative z-10"
                     onLoad={() => setLogoLoading(false)}

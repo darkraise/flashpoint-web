@@ -57,8 +57,6 @@ export interface Game {
   playtime?: number;
   playCounter?: number;
   archiveState?: number;
-  logoPath?: string;
-  screenshotPath?: string;
 }
 
 export interface PaginatedResult<T> {
@@ -76,11 +74,11 @@ export class GameService {
    */
   private getColumnSelection(fields?: 'list' | 'detail'): string {
     if (fields === 'list') {
-      // Minimal columns for list views (14 essential fields)
+      // Minimal columns for list views (12 essential fields)
       return `
         g.id, g.title, g.developer, g.publisher, g.platformName,
         g.library, g.orderTitle, g.releaseDate, g.tagsStr,
-        g.logoPath, g.screenshotPath, g.broken, g.extreme, g.series
+        g.broken, g.extreme, g.series
       `;
     }
 
@@ -92,8 +90,7 @@ export class GameService {
       g.source, g.applicationPath, g.launchCommand, g.releaseDate,
       g.version, g.originalDescription, g.language,
       g.library, g.orderTitle, g.dateAdded, g.dateModified,
-      g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
-      g.logoPath, g.screenshotPath
+      g.lastPlayed, g.playtime, g.playCounter, g.archiveState
     `;
   }
 
@@ -303,7 +300,6 @@ export class GameService {
           g.version, g.originalDescription, g.language,
           g.library, g.orderTitle, g.dateAdded, g.dateModified,
           g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
-          g.logoPath, g.screenshotPath,
           MAX(gd.presentOnDisk) as presentOnDisk
         FROM game g
         LEFT JOIN game_data gd ON gd.gameId = g.id
@@ -339,7 +335,6 @@ export class GameService {
           g.version, g.originalDescription, g.language,
           g.library, g.orderTitle, g.dateAdded, g.dateModified,
           g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
-          g.logoPath, g.screenshotPath,
           MAX(gd.presentOnDisk) as presentOnDisk
         FROM game g
         LEFT JOIN game_data gd ON gd.gameId = g.id
@@ -433,7 +428,7 @@ export class GameService {
         SELECT
           g.id, g.title, g.alternateTitles, g.developer, g.publisher,
           g.platformName, g.platformsStr, g.library, g.tagsStr,
-          g.orderTitle, g.logoPath, g.screenshotPath
+          g.orderTitle
         FROM game g
         WHERE g.id != ?
           AND (
@@ -472,7 +467,7 @@ export class GameService {
         SELECT
           g.id, g.title, g.alternateTitles, g.developer, g.publisher,
           g.platformName, g.platformsStr, g.library, g.launchCommand,
-          g.tagsStr, g.orderTitle, g.logoPath, g.screenshotPath
+          g.tagsStr, g.orderTitle
         FROM game g
         WHERE (g.broken = 0 OR g.broken IS NULL)
       `;

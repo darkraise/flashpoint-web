@@ -12,6 +12,7 @@ import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 import { BreadcrumbContext } from './GameCard';
+import { getGameLogoUrl } from '@/utils/gameUtils';
 
 interface GameListItemProps {
   game: Game;
@@ -32,9 +33,8 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  // Prefer logo over screenshot for list view
-  const imagePath = game.logoPath || game.screenshotPath;
-  const imageUrl = imagePath ? `/proxy/images/${imagePath}` : null;
+  // Get logo URL from game ID
+  const imageUrl = getGameLogoUrl(game.id) || null;
 
   // Parse tags (limit to first 3 for list display)
   const tags = game.tagsStr

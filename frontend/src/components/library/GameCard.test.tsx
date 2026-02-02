@@ -41,32 +41,31 @@ describe('GameCard', () => {
   let queryClient: QueryClient;
 
   const mockFlashGame: Game = {
-    id: 'game-1',
+    id: 'abcd1234-5678-90ab-cdef-1234567890ab',
     title: 'Test Flash Game',
     developer: 'Test Developer',
     publisher: 'Test Publisher',
     platformName: 'Flash',
     library: 'arcade',
+    orderTitle: 'test flash game',
     releaseDate: '2020-01-01',
     tagsStr: 'action;adventure',
     presentOnDisk: 1,
-    logoPath: 'test-logo.png',
-    screenshotPath: 'test-screenshot.png',
-  } as Game;
+  };
 
   const mockHTML5Game: Game = {
     ...mockFlashGame,
-    id: 'game-2',
+    id: 'bcde2345-6789-01bc-def2-3456789012bc',
     title: 'Test HTML5 Game',
     platformName: 'HTML5',
-  } as Game;
+  };
 
   const mockNonPlayableGame: Game = {
     ...mockFlashGame,
-    id: 'game-3',
+    id: 'cdef3456-7890-12cd-ef34-5678901234cd',
     title: 'Test Java Game',
     platformName: 'Java',
-  } as Game;
+  };
 
   beforeEach(() => {
     queryClient = new QueryClient({
@@ -115,28 +114,17 @@ describe('GameCard', () => {
   });
 
   describe('Image Handling', () => {
-    it('should use logoPath as primary image source', () => {
+    it('should derive logo URL from game ID', () => {
       renderGameCard(mockFlashGame);
 
       const img = screen.getByAltText('Test Flash Game') as HTMLImageElement;
-      expect(img.src).toContain('test-logo.png');
+      // Logo path is derived from game ID: Logos/{id[0:2]}/{id[2:4]}/{id}.png
+      expect(img.src).toContain('Logos/ab/cd/abcd1234-5678-90ab-cdef-1234567890ab.png');
     });
 
-    it('should fallback to screenshotPath if logoPath not available', () => {
-      const gameWithoutLogo = { ...mockFlashGame, logoPath: undefined };
-      renderGameCard(gameWithoutLogo);
-
-      const img = screen.getByAltText('Test Flash Game') as HTMLImageElement;
-      expect(img.src).toContain('test-screenshot.png');
-    });
-
-    it('should show placeholder when no image available', () => {
-      const gameWithoutImage = {
-        ...mockFlashGame,
-        logoPath: undefined,
-        screenshotPath: undefined,
-      };
-      renderGameCard(gameWithoutImage);
+    it('should show placeholder when game ID is invalid', () => {
+      const gameWithInvalidId = { ...mockFlashGame, id: '' };
+      renderGameCard(gameWithInvalidId);
 
       // Should show ImageIcon and platform name - use getAllByText since "Flash" appears twice
       const platformText = screen.getAllByText('Flash');
@@ -160,16 +148,16 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(),
       });
 
-      expect(screen.getByTestId('favorite-button-game-1')).toBeInTheDocument();
+      expect(screen.getByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')).toBeInTheDocument();
     });
 
     it('should not show favorite button when game is favorited', () => {
       renderGameCard(mockFlashGame, {
         showFavoriteButton: true,
-        favoriteGameIds: new Set(['game-1']),
+        favoriteGameIds: new Set(['abcd1234-5678-90ab-cdef-1234567890ab']),
       });
 
-      expect(screen.queryByTestId('favorite-button-game-1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
     });
 
     it('should not show favorite button when showFavoriteButton is false', () => {
@@ -178,7 +166,7 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(),
       });
 
-      expect(screen.queryByTestId('favorite-button-game-1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
     });
   });
 
@@ -186,10 +174,10 @@ describe('GameCard', () => {
     it('should show remove button when showRemoveButton is true and game is favorited', () => {
       renderGameCard(mockFlashGame, {
         showRemoveButton: true,
-        favoriteGameIds: new Set(['game-1']),
+        favoriteGameIds: new Set(['abcd1234-5678-90ab-cdef-1234567890ab']),
       });
 
-      expect(screen.getByTestId('remove-button-game-1')).toBeInTheDocument();
+      expect(screen.getByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')).toBeInTheDocument();
     });
 
     it('should not show remove button when game is not favorited', () => {
@@ -198,16 +186,16 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(),
       });
 
-      expect(screen.queryByTestId('remove-button-game-1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
     });
 
     it('should not show remove button when showRemoveButton is false', () => {
       renderGameCard(mockFlashGame, {
         showRemoveButton: false,
-        favoriteGameIds: new Set(['game-1']),
+        favoriteGameIds: new Set(['abcd1234-5678-90ab-cdef-1234567890ab']),
       });
 
-      expect(screen.queryByTestId('remove-button-game-1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
     });
   });
 
@@ -215,7 +203,7 @@ describe('GameCard', () => {
     it('should show favorite indicator when showFavoriteIndicator is true and game is favorited', () => {
       renderGameCard(mockFlashGame, {
         showFavoriteIndicator: true,
-        favoriteGameIds: new Set(['game-1']),
+        favoriteGameIds: new Set(['abcd1234-5678-90ab-cdef-1234567890ab']),
         isFavoritePage: false,
       });
 
@@ -227,7 +215,7 @@ describe('GameCard', () => {
     it('should not show favorite indicator on favorites page', () => {
       renderGameCard(mockFlashGame, {
         showFavoriteIndicator: true,
-        favoriteGameIds: new Set(['game-1']),
+        favoriteGameIds: new Set(['abcd1234-5678-90ab-cdef-1234567890ab']),
         isFavoritePage: true,
       });
 
@@ -280,7 +268,7 @@ describe('GameCard', () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(screen.getByTestId('playlist-modal-game-1')).toBeInTheDocument();
+        expect(screen.getByTestId('playlist-modal-abcd1234-5678-90ab-cdef-1234567890ab')).toBeInTheDocument();
       });
     });
 
@@ -295,7 +283,7 @@ describe('GameCard', () => {
       await user.click(button);
 
       expect(toast.error).toHaveBeenCalledWith('Please log in to add games to playlists');
-      expect(screen.queryByTestId('playlist-modal-game-1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('playlist-modal-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
     });
   });
 
@@ -324,7 +312,7 @@ describe('GameCard', () => {
       renderGameCard(mockFlashGame);
 
       const playButton = screen.getByLabelText('Play Test Flash Game');
-      expect(playButton).toHaveAttribute('href', '/games/game-1/play');
+      expect(playButton).toHaveAttribute('href', '/games/abcd1234-5678-90ab-cdef-1234567890ab/play');
     });
 
     it('should include shareToken in play URL when provided', () => {
@@ -334,7 +322,7 @@ describe('GameCard', () => {
 
       const playButton = screen.getByLabelText('Play Test Flash Game');
       // When shareToken is provided, it uses play-shared route with shareToken query param
-      expect(playButton).toHaveAttribute('href', '/games/game-1/play-shared?shareToken=test-share-token');
+      expect(playButton).toHaveAttribute('href', '/games/abcd1234-5678-90ab-cdef-1234567890ab/play-shared?shareToken=test-share-token');
     });
   });
 

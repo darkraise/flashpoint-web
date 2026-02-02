@@ -61,8 +61,8 @@ Primary table containing all game metadata.
 | dateAdded | TEXT | Yes | Date added to Flashpoint (ISO 8601) |
 | dateModified | TEXT | Yes | Last modification date (ISO 8601) |
 | archiveState | INTEGER | Yes | Archive state indicator |
-| logoPath | TEXT | Yes | Relative path to logo image |
-| screenshotPath | TEXT | Yes | Relative path to screenshot image |
+
+**Note:** Logos and screenshots are NOT stored in the database. They are stored as files on disk in the Images directory (`FLASHPOINT_IMAGES_PATH`), with paths derived from the game ID (e.g., `Logos/{game-id-prefix}/{game-id}.png`).
 
 **Indexes:**
 - Primary key on `id`

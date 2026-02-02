@@ -15,6 +15,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 import { BreadcrumbContext } from '@/components/library/GameCard';
+import { getGameLogoUrl, getGameScreenshotUrl } from '@/utils/gameUtils';
 
 // Helper function to format duration in seconds
 function formatDuration(seconds: number): string {
@@ -160,8 +161,8 @@ export function GameDetailView() {
     );
   }
 
-  const screenshotUrl = game.screenshotPath ? `/proxy/images/${game.screenshotPath}` : null;
-  const logoUrl = game.logoPath ? `/proxy/images/${game.logoPath}` : null;
+  const screenshotUrl = getGameScreenshotUrl(game.id) || null;
+  const logoUrl = getGameLogoUrl(game.id) || null;
 
   // Check if game requires data download (use presentOnDisk like Flashpoint Launcher)
   // presentOnDisk: null = no data needed, 0 = needs download, 1 = downloaded

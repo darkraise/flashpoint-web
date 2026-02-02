@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, memo } from 'react';
 import { Game } from '@/types/game';
 import { ImageIcon, ListPlus, Play, Heart } from 'lucide-react';
+import { getGameLogoUrl } from '@/utils/gameUtils';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,9 +49,8 @@ const GameCardComponent = function GameCard({
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  // Prefer logo over screenshot for game list
-  const imagePath = game.logoPath || game.screenshotPath;
-  const imageUrl = imagePath ? `/proxy/images/${imagePath}` : null;
+  // Get logo URL from game ID
+  const imageUrl = getGameLogoUrl(game.id) || null;
 
   // Check if game is favorited and playable
   const isFavorited = favoriteGameIds?.has(game.id) ?? false;

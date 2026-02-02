@@ -31,8 +31,6 @@ export interface Game {
   playtime?: number;
   playCounter?: number;
   archiveState?: number;
-  logoPath?: string;
-  screenshotPath?: string;
 }
 
 export interface PaginatedResult<T> {
