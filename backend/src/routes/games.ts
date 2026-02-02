@@ -7,6 +7,7 @@ import { asyncHandler } from '../middleware/asyncHandler';
 import { sharedAccessAuth, validateSharedGameAccess } from '../middleware/auth';
 import { logActivity } from '../middleware/activityLogger';
 import { rateLimitStandard } from '../middleware/rateLimiter';
+import { config } from '../config';
 import { z } from 'zod';
 
 const router = Router();
@@ -198,9 +199,10 @@ router.get(
 
     let contentUrl = '';
     if (launchCommand) {
-      // Use HTTP proxy server (port 22500) directly for game files
-      const proxyPort = process.env.PROXY_PORT || '22500';
-      const proxyUrl = `http://localhost:${proxyPort}`;
+      // Use the configured external game service URL
+      // In Docker: This is /game-proxy (routed through nginx)
+      // In local dev: This is http://localhost:22500 (direct access)
+      const proxyUrl = config.gameServiceExternalUrl;
 
       // Check if launch command is an absolute URL
       if (launchCommand.startsWith('http://') || launchCommand.startsWith('https://')) {

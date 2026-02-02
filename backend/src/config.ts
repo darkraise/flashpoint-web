@@ -59,10 +59,18 @@ export const config = {
   flashpointGamesPath: `${flashpointPath}/Data/Games`,
 
   // Game Service URLs (external service, not built-in)
+  // Internal URLs: Used for backend-to-game-service communication within Docker
   // Ports hardcoded (22500/22501) - only host is configurable (localhost for dev, game-service for docker)
   gameServerUrl: `http://${process.env.GAME_SERVICE_HOST || 'localhost'}:22500`,
   gameServiceGameZipUrl: `http://${process.env.GAME_SERVICE_HOST || 'localhost'}:22501`,
   gameServerHttpPort: 22501,
+
+  // External Game Service URL: Used for URLs returned to the browser
+  // In Docker: Use relative paths through nginx proxy (/game-proxy)
+  // In local dev: Use direct localhost URLs (http://localhost:22500)
+  // Can be overridden with GAME_SERVICE_EXTERNAL_URL env var
+  gameServiceExternalUrl: process.env.GAME_SERVICE_EXTERNAL_URL ||
+    (process.env.NODE_ENV === 'production' ? '/game-proxy' : `http://localhost:22500`),
 
   // Redis
   redisEnabled: process.env.REDIS_ENABLED === 'true',

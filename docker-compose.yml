@@ -87,8 +87,12 @@ services:
       - PGID=${PGID:-1000}
       - TZ=${TZ:-UTC}
       - BACKEND_HOST=${BACKEND_HOST:-backend}
+      - BACKEND_PORT=${BACKEND_PORT:-3100}
+      - GAME_SERVICE_HOST=${GAME_SERVICE_HOST:-game-service}
     depends_on:
       backend:
+        condition: service_healthy
+      game-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/"]

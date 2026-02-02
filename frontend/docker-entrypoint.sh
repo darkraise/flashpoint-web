@@ -17,12 +17,13 @@ echo "Flashpoint Web Frontend - Starting..."
 # Process nginx config template with environment variables
 
 echo "Processing nginx configuration..."
-envsubst '${BACKEND_HOST} ${BACKEND_PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
+envsubst '${BACKEND_HOST} ${BACKEND_PORT} ${GAME_SERVICE_HOST}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
 
 # Display configuration summary
 echo ""
 echo "Configuration Summary:"
 echo "  Backend: ${BACKEND_HOST}:${BACKEND_PORT}"
+echo "  Game Service: ${GAME_SERVICE_HOST}"
 echo ""
 
 # Start nginx

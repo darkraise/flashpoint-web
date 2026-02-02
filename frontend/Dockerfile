@@ -54,9 +54,10 @@ COPY frontend/.nginx/default.conf.template /etc/nginx/templates/default.conf.tem
 # Copy entrypoint script
 COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
 
-# Default backend host/port (can be overridden at runtime)
+# Default backend and game service hosts (can be overridden at runtime)
 ENV BACKEND_HOST=backend \
-    BACKEND_PORT=3100
+    BACKEND_PORT=3100 \
+    GAME_SERVICE_HOST=game-service
 
 # Set up permissions for nginx user (already exists in nginx:alpine)
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
