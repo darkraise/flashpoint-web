@@ -40,8 +40,12 @@ LABEL org.opencontainers.image.source="https://github.com/darkraise/flashpoint-w
 
 WORKDIR /app
 
-# Install runtime dependencies (curl for health checks, tzdata for timezone)
-RUN apk add --no-cache curl tzdata
+# Install runtime dependencies
+# - curl: health checks
+# - tzdata: timezone support
+# - su-exec: lightweight tool to drop privileges (like gosu)
+# - shadow: provides usermod/groupmod for dynamic UID/GID
+RUN apk add --no-cache curl tzdata su-exec shadow
 
 # Copy workspace root package files
 COPY --from=builder /app/package.json /app/package-lock.json ./
@@ -49,21 +53,25 @@ COPY --from=builder /app/package.json /app/package-lock.json ./
 # Copy game-service package files
 COPY --from=builder /app/game-service/package.json ./game-service/
 
-
 # Install production dependencies only for game-service workspace
 RUN npm ci --workspace=game-service --include-workspace-root --omit=dev --prefer-offline --no-audit
 
 # Copy built application
 COPY --from=builder /app/game-service/dist ./game-service/dist
 
-# Create non-root user and logs directory
-RUN addgroup -g 1001 -S flashpoint && \
-    adduser -S flashpoint -u 1001 && \
-    mkdir -p /app/logs && \
-    chown -R flashpoint:flashpoint /app
+# Copy entrypoint script
+COPY --from=builder /app/game-service/docker-entrypoint.sh ./game-service/docker-entrypoint.sh
 
-# Switch to non-root user
-USER flashpoint
+# Create non-root user with default UID/GID 1000
+# These can be overridden at runtime via PUID/PGID environment variables
+RUN addgroup -g 1000 -S flashpoint && \
+    adduser -S flashpoint -u 1000 -G flashpoint
+
+# Create logs directory and make entrypoint executable
+# Note: Ownership will be fixed at runtime if PUID/PGID are set
+RUN mkdir -p /app/logs && \
+    chmod +x /app/game-service/docker-entrypoint.sh && \
+    chown -R flashpoint:flashpoint /app
 
 # Set working directory to game-service
 WORKDIR /app/game-service
@@ -75,5 +83,13 @@ EXPOSE 22500 22501
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl --fail http://localhost:22500/health || exit 1
 
-# Production command
-CMD ["node", "dist/index.js"]
+# Environment variables for dynamic UID/GID (optional)
+# Set these to match your host user's UID/GID
+ENV PUID=1000
+ENV PGID=1000
+
+# Start as root, entrypoint will drop privileges after setting up user
+USER root
+
+# Production command using entrypoint script
+ENTRYPOINT ["./docker-entrypoint.sh"]

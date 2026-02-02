@@ -39,8 +39,12 @@ LABEL org.opencontainers.image.description="React web UI for Flashpoint Archive"
 LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/darkraise/flashpoint-web"
 
-# Install runtime dependencies (curl for health checks, tzdata for timezone)
-RUN apk add --no-cache curl tzdata
+# Install runtime dependencies
+# - curl: health checks
+# - tzdata: timezone support
+# - su-exec: lightweight tool to drop privileges (like gosu)
+# - gettext: provides envsubst for nginx config templating
+RUN apk add --no-cache curl tzdata su-exec gettext
 
 # Copy built files from builder
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
@@ -48,19 +52,24 @@ COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY frontend/nginx.conf /etc/nginx/templates/default.conf.template
 
+# Copy entrypoint script
+COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
+
 # Default backend host/port (can be overridden at runtime)
 ENV BACKEND_HOST=backend \
     BACKEND_PORT=3100
 
-# Create non-root user and set permissions
-RUN addgroup -g 1001 -S flashpoint && \
-    adduser -S flashpoint -u 1001 && \
+# Create non-root user with default UID/GID 1000
+# These can be overridden at runtime via PUID/PGID environment variables
+RUN addgroup -g 1000 -S flashpoint && \
+    adduser -S flashpoint -u 1000 -G flashpoint && \
     chown -R flashpoint:flashpoint /usr/share/nginx/html && \
     chown -R flashpoint:flashpoint /var/cache/nginx && \
     chown -R flashpoint:flashpoint /var/log/nginx && \
     chown -R flashpoint:flashpoint /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
-    chown -R flashpoint:flashpoint /var/run/nginx.pid
+    chown -R flashpoint:flashpoint /var/run/nginx.pid && \
+    chmod +x /docker-entrypoint.sh
 
 # Create necessary directories
 RUN mkdir -p /var/cache/nginx/client_temp \
@@ -70,9 +79,6 @@ RUN mkdir -p /var/cache/nginx/client_temp \
     /var/cache/nginx/scgi_temp && \
     chown -R flashpoint:flashpoint /var/cache/nginx
 
-# Switch to non-root user
-USER flashpoint
-
 # Expose port (8080 for non-root user)
 EXPOSE 8080
 
@@ -80,5 +86,13 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl --fail http://localhost:8080/ || exit 1
 
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Environment variables for dynamic UID/GID (optional)
+# Set these to match your host user's UID/GID
+ENV PUID=1000
+ENV PGID=1000
+
+# Start as root, entrypoint will drop privileges after setting up user
+USER root
+
+# Production command using entrypoint script
+ENTRYPOINT ["/docker-entrypoint.sh"]

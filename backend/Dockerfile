@@ -37,8 +37,12 @@ LABEL org.opencontainers.image.source="https://github.com/darkraise/flashpoint-w
 
 WORKDIR /app
 
-# Install runtime dependencies (curl for health checks, tzdata for timezone)
-RUN apk add --no-cache curl tzdata
+# Install runtime dependencies
+# - curl: health checks
+# - tzdata: timezone support
+# - su-exec: lightweight tool to drop privileges (like gosu)
+# - shadow: provides usermod/groupmod for dynamic UID/GID
+RUN apk add --no-cache curl tzdata su-exec shadow
 
 # Copy workspace root package files
 COPY --from=builder /app/package.json /app/package-lock.json ./
@@ -58,18 +62,17 @@ COPY --from=builder /app/backend/src/migrations ./backend/dist/migrations
 # Copy entrypoint script
 COPY --from=builder /app/backend/docker-entrypoint.sh ./backend/docker-entrypoint.sh
 
-# Create non-root user
-RUN addgroup -g 1001 -S flashpoint && \
-    adduser -S flashpoint -u 1001
+# Create non-root user with default UID/GID 1000
+# These can be overridden at runtime via PUID/PGID environment variables
+RUN addgroup -g 1000 -S flashpoint && \
+    adduser -S flashpoint -u 1000 -G flashpoint
 
 # Create data and logs directories
 # Make entrypoint script executable
+# Note: Ownership will be fixed at runtime if PUID/PGID are set
 RUN mkdir -p /app/data /app/logs && \
     chmod +x /app/backend/docker-entrypoint.sh && \
     chown -R flashpoint:flashpoint /app
-
-# Switch to non-root user
-USER flashpoint
 
 # Set working directory to backend
 WORKDIR /app/backend
@@ -81,6 +84,17 @@ EXPOSE 3100
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl --fail http://localhost:3100/api/health || exit 1
 
+# Environment variables for dynamic UID/GID (optional)
+# Set these to match your host user's UID/GID
+ENV PUID=1000
+ENV PGID=1000
+
+# Start as root, entrypoint will drop privileges after setting up user
+USER root
+
 # Production command using entrypoint script
-# The entrypoint handles database copy (if enabled) and starts the server
+# The entrypoint handles:
+# 1. Dynamic UID/GID setup (if PUID/PGID differ from defaults)
+# 2. Database copy (if enabled)
+# 3. Privilege drop and application startup
 ENTRYPOINT ["./docker-entrypoint.sh"]
