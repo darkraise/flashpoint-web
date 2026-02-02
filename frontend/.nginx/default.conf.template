@@ -62,7 +62,7 @@ server {
     location ^~ /game-proxy/ {
         # Strip /game-proxy prefix and proxy to game-service
         rewrite ^/game-proxy/(.*)$ /$1 break;
-        proxy_pass http://${GAME_SERVICE_HOST:-game-service}:22500;
+        proxy_pass http://${GAME_SERVICE_HOST}:22500;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -80,7 +80,7 @@ server {
     # GameZip service proxy - for ZIP-based game content
     location ^~ /gamezip-proxy/ {
         rewrite ^/gamezip-proxy/(.*)$ /$1 break;
-        proxy_pass http://${GAME_SERVICE_HOST:-game-service}:22501;
+        proxy_pass http://${GAME_SERVICE_HOST}:22501;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
