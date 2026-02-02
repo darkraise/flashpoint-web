@@ -40,12 +40,8 @@ LABEL org.opencontainers.image.version="1.0.0"
 LABEL org.opencontainers.image.source="https://github.com/darkraise/flashpoint-web"
 
 # Install runtime dependencies
-# - curl: health checks
-# - tzdata: timezone support
-# - su-exec: lightweight tool to drop privileges (like gosu)
-# - shadow: provides usermod/groupmod for dynamic UID/GID
 # - gettext: provides envsubst for nginx config templating
-RUN apk add --no-cache curl tzdata su-exec shadow gettext
+RUN apk add --no-cache gettext
 
 # Copy built files from builder
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
@@ -62,28 +58,20 @@ COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
 ENV BACKEND_HOST=backend \
     BACKEND_PORT=3100
 
-# Create non-root user with default UID/GID 1000
-# These can be overridden at runtime via PUID/PGID environment variables
-RUN addgroup -g 1000 -S appuser && \
-    adduser -S appuser -u 1000 -G appuser && \
-    chown -R appuser:appuser /usr/share/nginx/html && \
-    chown -R appuser:appuser /etc/nginx/conf.d && \
+# Set up permissions for nginx user (already exists in nginx:alpine)
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
     chmod +x /docker-entrypoint.sh
 
 # Expose port (8080 for non-root user)
 EXPOSE 8080
 
-# Health check
+# Health check (using wget which is built into Alpine)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl --fail http://localhost:8080/ || exit 1
+  CMD wget --quiet --spider http://localhost:8080/ || exit 1
 
-# Environment variables for dynamic UID/GID (optional)
-# Set these to match your host user's UID/GID
-ENV PUID=1000
-ENV PGID=1000
-
-# Start as root, entrypoint will drop privileges after setting up user
-USER root
+# Run as non-root user (nginx user from base image)
+USER nginx
 
 # Production command using entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]
