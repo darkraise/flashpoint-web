@@ -43,8 +43,9 @@ LABEL org.opencontainers.image.source="https://github.com/darkraise/flashpoint-w
 # - curl: health checks
 # - tzdata: timezone support
 # - su-exec: lightweight tool to drop privileges (like gosu)
+# - shadow: provides usermod/groupmod for dynamic UID/GID
 # - gettext: provides envsubst for nginx config templating
-RUN apk add --no-cache curl tzdata su-exec gettext
+RUN apk add --no-cache curl tzdata su-exec shadow gettext
 
 # Copy built files from builder
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
@@ -59,16 +60,16 @@ COPY frontend/docker-entrypoint.sh /docker-entrypoint.sh
 ENV BACKEND_HOST=backend \
     BACKEND_PORT=3100
 
-# Create non-root user with default UID/GID 1000
+# Create non-root user with default UID/GID 1000 (nginx:alpine doesn't have one)
 # These can be overridden at runtime via PUID/PGID environment variables
-RUN addgroup -g 1000 -S flashpoint && \
-    adduser -S flashpoint -u 1000 -G flashpoint && \
-    chown -R flashpoint:flashpoint /usr/share/nginx/html && \
-    chown -R flashpoint:flashpoint /var/cache/nginx && \
-    chown -R flashpoint:flashpoint /var/log/nginx && \
-    chown -R flashpoint:flashpoint /etc/nginx/conf.d && \
+RUN addgroup -g 1000 -S appuser && \
+    adduser -S appuser -u 1000 -G appuser && \
+    chown -R appuser:appuser /usr/share/nginx/html && \
+    chown -R appuser:appuser /var/cache/nginx && \
+    chown -R appuser:appuser /var/log/nginx && \
+    chown -R appuser:appuser /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
-    chown -R flashpoint:flashpoint /var/run/nginx.pid && \
+    chown -R appuser:appuser /var/run/nginx.pid && \
     chmod +x /docker-entrypoint.sh
 
 # Create necessary directories
@@ -77,7 +78,7 @@ RUN mkdir -p /var/cache/nginx/client_temp \
     /var/cache/nginx/fastcgi_temp \
     /var/cache/nginx/uwsgi_temp \
     /var/cache/nginx/scgi_temp && \
-    chown -R flashpoint:flashpoint /var/cache/nginx
+    chown -R appuser:appuser /var/cache/nginx
 
 # Expose port (8080 for non-root user)
 EXPOSE 8080

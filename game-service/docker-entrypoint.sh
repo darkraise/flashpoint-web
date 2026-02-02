@@ -19,13 +19,15 @@ echo "🎮 Flashpoint Game Service - Starting..."
 
 PUID=${PUID:-1000}
 PGID=${PGID:-1000}
+APP_USER="node"
+APP_GROUP="node"
 
 setup_user() {
     local current_uid
     local current_gid
 
-    current_uid=$(id -u flashpoint 2>/dev/null || echo "")
-    current_gid=$(id -g flashpoint 2>/dev/null || echo "")
+    current_uid=$(id -u $APP_USER 2>/dev/null || echo "")
+    current_gid=$(id -g $APP_USER 2>/dev/null || echo "")
 
     # Check if we need to modify UID/GID
     if [ "$current_uid" != "$PUID" ] || [ "$current_gid" != "$PGID" ]; then
@@ -35,35 +37,27 @@ setup_user() {
 
         # Modify group GID if different
         if [ "$current_gid" != "$PGID" ]; then
-            # Check if target GID is already in use
-            if getent group "$PGID" >/dev/null 2>&1; then
-                # Remove the conflicting group
-                local conflicting_group
-                conflicting_group=$(getent group "$PGID" | cut -d: -f1)
-                if [ "$conflicting_group" != "flashpoint" ]; then
-                    groupdel "$conflicting_group" 2>/dev/null || true
-                fi
+            # Check if target GID is already in use by another group
+            existing_group=$(getent group "$PGID" 2>/dev/null | cut -d: -f1 || true)
+            if [ -n "$existing_group" ] && [ "$existing_group" != "$APP_GROUP" ]; then
+                groupdel "$existing_group" 2>/dev/null || true
             fi
-            groupmod -g "$PGID" flashpoint 2>/dev/null || true
+            groupmod -g "$PGID" $APP_GROUP 2>/dev/null || true
         fi
 
         # Modify user UID if different
         if [ "$current_uid" != "$PUID" ]; then
-            # Check if target UID is already in use
-            if getent passwd "$PUID" >/dev/null 2>&1; then
-                # Remove the conflicting user
-                local conflicting_user
-                conflicting_user=$(getent passwd "$PUID" | cut -d: -f1)
-                if [ "$conflicting_user" != "flashpoint" ]; then
-                    userdel "$conflicting_user" 2>/dev/null || true
-                fi
+            # Check if target UID is already in use by another user
+            existing_user=$(getent passwd "$PUID" 2>/dev/null | cut -d: -f1 || true)
+            if [ -n "$existing_user" ] && [ "$existing_user" != "$APP_USER" ]; then
+                userdel "$existing_user" 2>/dev/null || true
             fi
-            usermod -u "$PUID" flashpoint 2>/dev/null || true
+            usermod -u "$PUID" $APP_USER 2>/dev/null || true
         fi
 
         # Fix ownership of app directories
         echo "   Fixing ownership of /app directories..."
-        chown -R flashpoint:flashpoint /app/logs 2>/dev/null || true
+        chown -R $APP_USER:$APP_GROUP /app/logs 2>/dev/null || true
     else
         echo "✅ User permissions OK (UID=$PUID, GID=$PGID)"
     fi
@@ -89,7 +83,7 @@ echo "🚀 Starting Game Service..."
 
 # If running as root, drop privileges using su-exec
 if [ "$(id -u)" = "0" ]; then
-    exec su-exec flashpoint node dist/index.js
+    exec su-exec $APP_USER node dist/index.js
 else
     exec node dist/index.js
 fi

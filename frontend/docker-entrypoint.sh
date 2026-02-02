@@ -19,13 +19,15 @@ echo "🌐 Flashpoint Web Frontend - Starting..."
 
 PUID=${PUID:-1000}
 PGID=${PGID:-1000}
+APP_USER="appuser"
+APP_GROUP="appuser"
 
 setup_user() {
     local current_uid
     local current_gid
 
-    current_uid=$(id -u flashpoint 2>/dev/null || echo "")
-    current_gid=$(id -g flashpoint 2>/dev/null || echo "")
+    current_uid=$(id -u $APP_USER 2>/dev/null || echo "")
+    current_gid=$(id -g $APP_USER 2>/dev/null || echo "")
 
     # Check if we need to modify UID/GID
     if [ "$current_uid" != "$PUID" ] || [ "$current_gid" != "$PGID" ]; then
@@ -35,39 +37,33 @@ setup_user() {
 
         # Modify group GID if different
         if [ "$current_gid" != "$PGID" ]; then
-            # Check if target GID is already in use
-            if getent group "$PGID" >/dev/null 2>&1; then
-                local conflicting_group
-                conflicting_group=$(getent group "$PGID" | cut -d: -f1)
-                if [ "$conflicting_group" != "flashpoint" ]; then
-                    delgroup "$conflicting_group" 2>/dev/null || true
-                fi
+            # Check if target GID is already in use by another group
+            existing_group=$(getent group "$PGID" 2>/dev/null | cut -d: -f1 || true)
+            if [ -n "$existing_group" ] && [ "$existing_group" != "$APP_GROUP" ]; then
+                delgroup "$existing_group" 2>/dev/null || true
             fi
-            # Alpine uses different syntax for groupmod
-            sed -i "s/^flashpoint:x:[0-9]*:/flashpoint:x:${PGID}:/" /etc/group 2>/dev/null || true
+            # Alpine uses different syntax
+            sed -i "s/^${APP_GROUP}:x:[0-9]*:/${APP_GROUP}:x:${PGID}:/" /etc/group 2>/dev/null || true
         fi
 
         # Modify user UID if different
         if [ "$current_uid" != "$PUID" ]; then
-            # Check if target UID is already in use
-            if getent passwd "$PUID" >/dev/null 2>&1; then
-                local conflicting_user
-                conflicting_user=$(getent passwd "$PUID" | cut -d: -f1)
-                if [ "$conflicting_user" != "flashpoint" ]; then
-                    deluser "$conflicting_user" 2>/dev/null || true
-                fi
+            # Check if target UID is already in use by another user
+            existing_user=$(getent passwd "$PUID" 2>/dev/null | cut -d: -f1 || true)
+            if [ -n "$existing_user" ] && [ "$existing_user" != "$APP_USER" ]; then
+                deluser "$existing_user" 2>/dev/null || true
             fi
-            # Alpine uses different syntax for usermod
-            sed -i "s/^flashpoint:x:[0-9]*:[0-9]*:/flashpoint:x:${PUID}:${PGID}:/" /etc/passwd 2>/dev/null || true
+            # Alpine uses different syntax
+            sed -i "s/^${APP_USER}:x:[0-9]*:[0-9]*:/${APP_USER}:x:${PUID}:${PGID}:/" /etc/passwd 2>/dev/null || true
         fi
 
         # Fix ownership of nginx directories
         echo "   Fixing ownership of nginx directories..."
-        chown -R flashpoint:flashpoint /usr/share/nginx/html 2>/dev/null || true
-        chown -R flashpoint:flashpoint /var/cache/nginx 2>/dev/null || true
-        chown -R flashpoint:flashpoint /var/log/nginx 2>/dev/null || true
-        chown -R flashpoint:flashpoint /etc/nginx/conf.d 2>/dev/null || true
-        chown flashpoint:flashpoint /var/run/nginx.pid 2>/dev/null || true
+        chown -R $APP_USER:$APP_GROUP /usr/share/nginx/html 2>/dev/null || true
+        chown -R $APP_USER:$APP_GROUP /var/cache/nginx 2>/dev/null || true
+        chown -R $APP_USER:$APP_GROUP /var/log/nginx 2>/dev/null || true
+        chown -R $APP_USER:$APP_GROUP /etc/nginx/conf.d 2>/dev/null || true
+        chown $APP_USER:$APP_GROUP /var/run/nginx.pid 2>/dev/null || true
     else
         echo "✅ User permissions OK (UID=$PUID, GID=$PGID)"
     fi
@@ -98,7 +94,7 @@ echo "🚀 Starting Nginx..."
 
 # If running as root, drop privileges using su-exec
 if [ "$(id -u)" = "0" ]; then
-    exec su-exec flashpoint nginx -g "daemon off;"
+    exec su-exec $APP_USER nginx -g "daemon off;"
 else
     exec nginx -g "daemon off;"
 fi

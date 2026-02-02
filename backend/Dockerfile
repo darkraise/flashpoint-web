@@ -62,17 +62,12 @@ COPY --from=builder /app/backend/src/migrations ./backend/dist/migrations
 # Copy entrypoint script
 COPY --from=builder /app/backend/docker-entrypoint.sh ./backend/docker-entrypoint.sh
 
-# Create non-root user with default UID/GID 1000
-# These can be overridden at runtime via PUID/PGID environment variables
-RUN addgroup -g 1000 -S flashpoint && \
-    adduser -S flashpoint -u 1000 -G flashpoint
-
 # Create data and logs directories
 # Make entrypoint script executable
-# Note: Ownership will be fixed at runtime if PUID/PGID are set
+# Use existing 'node' user (UID 1000) from base image
 RUN mkdir -p /app/data /app/logs && \
     chmod +x /app/backend/docker-entrypoint.sh && \
-    chown -R flashpoint:flashpoint /app
+    chown -R node:node /app
 
 # Set working directory to backend
 WORKDIR /app/backend

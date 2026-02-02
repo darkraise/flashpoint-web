@@ -62,16 +62,11 @@ COPY --from=builder /app/game-service/dist ./game-service/dist
 # Copy entrypoint script
 COPY --from=builder /app/game-service/docker-entrypoint.sh ./game-service/docker-entrypoint.sh
 
-# Create non-root user with default UID/GID 1000
-# These can be overridden at runtime via PUID/PGID environment variables
-RUN addgroup -g 1000 -S flashpoint && \
-    adduser -S flashpoint -u 1000 -G flashpoint
-
 # Create logs directory and make entrypoint executable
-# Note: Ownership will be fixed at runtime if PUID/PGID are set
+# Use existing 'node' user (UID 1000) from base image
 RUN mkdir -p /app/logs && \
     chmod +x /app/game-service/docker-entrypoint.sh && \
-    chown -R flashpoint:flashpoint /app
+    chown -R node:node /app
 
 # Set working directory to game-service
 WORKDIR /app/game-service
