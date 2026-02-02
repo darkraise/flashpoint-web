@@ -10,6 +10,7 @@ import { config } from '../config';
 
 const router = Router();
 
+// Client error logs go to the same directory as backend logs
 const LOG_DIR = config.logFile ? path.dirname(config.logFile) : path.join(__dirname, '../../logs');
 const ERROR_LOG_FILE = path.join(LOG_DIR, 'client-errors.log');
 
@@ -18,14 +19,37 @@ if (!fsSync.existsSync(LOG_DIR)) {
   fsSync.mkdirSync(LOG_DIR, { recursive: true });
 }
 
+/**
+ * Map client error types to OTEL severity numbers
+ */
+function getSeverityNumber(type: string): number {
+  const severityMap: Record<string, number> = {
+    client_error: 17,   // ERROR
+    api_error: 17,      // ERROR
+    network_error: 13,  // WARN (may be transient)
+    route_error: 13,    // WARN
+  };
+  return severityMap[type] || 17;
+}
+
+/**
+ * Client error logger with OTEL-compatible format
+ */
 const clientErrorLogger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
-    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }), // ISO 8601
     winston.format.errors({ stack: true }),
+    winston.format((info) => {
+      // Add OTEL severity fields based on error type
+      const errorType = (info.errorType as string) || 'client_error';
+      info.severity = errorType === 'network_error' ? 'WARN' : 'ERROR';
+      info.severityNumber = getSeverityNumber(errorType);
+      return info;
+    })(),
     winston.format.json()
   ),
-  defaultMeta: { service: 'flashpoint-web-client-errors' },
+  defaultMeta: { service: 'flashpoint-web-client' },
   transports: [
     new winston.transports.File({
       filename: ERROR_LOG_FILE,
@@ -35,6 +59,8 @@ const clientErrorLogger = winston.createLogger({
     })
   ]
 });
+
+logger.info(`[ClientErrors] Log file: ${ERROR_LOG_FILE}`);
 
 interface ErrorReport {
   type: 'client_error' | 'network_error' | 'api_error' | 'route_error';
@@ -61,11 +87,19 @@ async function ensureLogDir(): Promise<void> {
 }
 
 /**
- * Log error report to file in JSONL format
+ * Log error report to file in OTEL-compatible JSON format
  */
 async function logError(report: ErrorReport): Promise<void> {
   try {
-    clientErrorLogger.info('client_error', report);
+    clientErrorLogger.info(report.message, {
+      errorType: report.type,
+      clientUrl: report.url,
+      clientTimestamp: report.timestamp,
+      userAgent: report.userAgent,
+      userId: report.userId,
+      stack: report.stack,
+      context: report.context
+    });
   } catch (error) {
     logger.error('Failed to log client error:', error);
   }
@@ -88,8 +122,18 @@ async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
         const line = lines[i].trim();
         if (line) {
           try {
-            const report = JSON.parse(line);
-            errors.push(report);
+            const logEntry = JSON.parse(line);
+            // Convert back to ErrorReport format for API response
+            errors.push({
+              type: logEntry.errorType || 'client_error',
+              message: logEntry.message,
+              stack: logEntry.stack,
+              url: logEntry.clientUrl,
+              timestamp: logEntry.clientTimestamp || logEntry.timestamp,
+              userAgent: logEntry.userAgent,
+              userId: logEntry.userId,
+              context: logEntry.context
+            });
           } catch (parseError) {
             logger.warn('Failed to parse error log line:', parseError);
           }
@@ -179,9 +223,12 @@ router.get(
       const errors = await getRecentErrors(limit);
 
       res.json({
-        errors,
-        count: errors.length,
-        limit
+        success: true,
+        data: {
+          errors,
+          count: errors.length,
+          limit
+        }
       });
     } catch (error) {
       logger.error('Error in /errors/recent:', error);
@@ -190,6 +237,71 @@ router.get(
         error: {
           code: 'INTERNAL_ERROR',
           message: 'Failed to retrieve error reports'
+        }
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/errors/stats
+ * Get error statistics for dashboard
+ * Requires: settings.update permission (admin only)
+ */
+router.get(
+  '/stats',
+  authenticate,
+  requirePermission('settings.update'),
+  async (req: Request, res: Response) => {
+    try {
+      const errors = await getRecentErrors(1000);
+
+      // Calculate stats
+      const now = new Date();
+      const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      const stats = {
+        total: errors.length,
+        last24h: errors.filter(e => new Date(e.timestamp) >= last24h).length,
+        last7d: errors.filter(e => new Date(e.timestamp) >= last7d).length,
+        byType: {} as Record<string, number>,
+        topUrls: {} as Record<string, number>,
+        topMessages: {} as Record<string, number>
+      };
+
+      // Group by type
+      for (const error of errors) {
+        stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
+        stats.topUrls[error.url] = (stats.topUrls[error.url] || 0) + 1;
+
+        // Truncate message for grouping
+        const shortMessage = error.message.substring(0, 100);
+        stats.topMessages[shortMessage] = (stats.topMessages[shortMessage] || 0) + 1;
+      }
+
+      // Sort and limit top items
+      const sortAndLimit = (obj: Record<string, number>, limit: number) => {
+        return Object.entries(obj)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, limit)
+          .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+      };
+
+      stats.topUrls = sortAndLimit(stats.topUrls, 10);
+      stats.topMessages = sortAndLimit(stats.topMessages, 10);
+
+      res.json({
+        success: true,
+        data: stats
+      });
+    } catch (error) {
+      logger.error('Error in /errors/stats:', error);
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to retrieve error statistics'
         }
       });
     }

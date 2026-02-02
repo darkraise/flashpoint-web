@@ -32,17 +32,22 @@ function getJwtSecret(): string {
 }
 
 // Get base Flashpoint path and derive all other paths from it
+// Docker (production): /data/flashpoint (volume mount point)
+// Local dev: D:/Flashpoint or FLASHPOINT_PATH env var
 const getFlashpointPath = (): string => {
-  return process.env.FLASHPOINT_PATH || 'D:/Flashpoint';
+  if (process.env.FLASHPOINT_PATH) {
+    return process.env.FLASHPOINT_PATH;
+  }
+  return process.env.NODE_ENV === 'production' ? '/data/flashpoint' : 'D:/Flashpoint';
 };
 
 const flashpointPath = getFlashpointPath();
 
 export const config = {
-  // Server
+  // Server (hardcoded - use docker-compose port mapping to expose on different ports)
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3100', 10),
-  host: process.env.HOST || '0.0.0.0',
+  port: 3100,
+  host: '0.0.0.0',
 
   // Flashpoint paths (all derived from FLASHPOINT_PATH)
   flashpointPath,
@@ -54,17 +59,10 @@ export const config = {
   flashpointGamesPath: `${flashpointPath}/Data/Games`,
 
   // Game Service URLs (external service, not built-in)
-  gameServerUrl: (() => {
-    const host = process.env.GAME_SERVICE_HOST || 'localhost';
-    const port = parseInt(process.env.GAME_SERVICE_PROXY_PORT || '22500', 10);
-    return `http://${host}:${port}`;
-  })(),
-  gameServiceGameZipUrl: (() => {
-    const host = process.env.GAME_SERVICE_HOST || 'localhost';
-    const port = parseInt(process.env.GAME_SERVICE_GAMEZIP_PORT || '22501', 10);
-    return `http://${host}:${port}`;
-  })(),
-  gameServerHttpPort: parseInt(process.env.GAME_SERVICE_GAMEZIP_PORT || '22501', 10),
+  // Ports hardcoded (22500/22501) - only host is configurable (localhost for dev, game-service for docker)
+  gameServerUrl: `http://${process.env.GAME_SERVICE_HOST || 'localhost'}:22500`,
+  gameServiceGameZipUrl: `http://${process.env.GAME_SERVICE_HOST || 'localhost'}:22501`,
+  gameServerHttpPort: 22501,
 
   // Redis
   redisEnabled: process.env.REDIS_ENABLED === 'true',
@@ -79,11 +77,15 @@ export const config = {
   rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
 
   // Logging
+  // In Docker (production): defaults to /app/logs/backend.log
+  // In local dev: no file logging unless LOG_FILE is explicitly set
   logLevel: process.env.LOG_LEVEL || 'info',
-  logFile: process.env.LOG_FILE,
+  logFile: process.env.LOG_FILE || (process.env.NODE_ENV === 'production' ? '/app/logs/backend.log' : undefined),
 
   // User Database
-  userDbPath: process.env.USER_DB_PATH || './user.db',
+  // In Docker (production): /app/data/user.db
+  // In local dev: ./user.db in the current directory
+  userDbPath: process.env.NODE_ENV === 'production' ? '/app/data/user.db' : './user.db',
 
   // JWT Configuration
   jwtSecret: getJwtSecret(),
@@ -93,17 +95,29 @@ export const config = {
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10),
 
   // Home Page Configuration
-  homeRecentHours: parseInt(process.env.HOME_RECENT_HOURS || '24', 10)
+  homeRecentHours: parseInt(process.env.HOME_RECENT_HOURS || '24', 10),
+
+  // Local Database Copy (for network storage optimization)
+  // When enabled, copies flashpoint.sqlite to local storage for faster access
+  // Stored in /app/data alongside user.db
+  enableLocalDbCopy: process.env.ENABLE_LOCAL_DB_COPY === 'true',
+  localDbPath: '/app/data/flashpoint.sqlite',  // Only used when enableLocalDbCopy is true
+
+  // SQLite Performance Tuning
+  sqliteCacheSize: parseInt(process.env.SQLITE_CACHE_SIZE || '-64000', 10), // Negative = KB, -64000 = 64MB
+  sqliteMmapSize: parseInt(process.env.SQLITE_MMAP_SIZE || '268435456', 10), // 256MB default
+
+  // Cache Pre-warming
+  enableCachePrewarm: process.env.ENABLE_CACHE_PREWARM !== 'false' // Enabled by default
 };
 
 /**
  * Get external image URLs for CDN fallback.
- * This is resolved dynamically from Flashpoint preferences or environment variable.
+ * This is resolved dynamically from Flashpoint preferences.
  *
  * Priority:
- * 1. EXTERNAL_IMAGE_URLS environment variable
- * 2. Flashpoint preferences (onDemandBaseUrl)
- * 3. Hardcoded defaults
+ * 1. Flashpoint preferences (onDemandBaseUrl)
+ * 2. Hardcoded defaults
  *
  * @returns Promise<string[]> Array of image CDN URLs
  */

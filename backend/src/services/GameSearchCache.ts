@@ -3,6 +3,7 @@ import { GameService, GameSearchQuery, PaginatedResult, Game } from './GameServi
 import { PerformanceMetrics } from './PerformanceMetrics';
 import { FallbackCache } from './FallbackCache';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 /**
  * LRU Cache for game search results
@@ -188,5 +189,95 @@ export class GameSearchCache {
   static has(query: GameSearchQuery): boolean {
     const cacheKey = this.generateCacheKey(query);
     return this.cache.has(cacheKey);
+  }
+
+  /**
+   * Pre-warm cache with common queries
+   * Call this after database initialization for instant first page load
+   *
+   * Pre-warms:
+   * - Default home page query (first page, default sort)
+   * - Games library (first page)
+   * - Animations library (first page)
+   */
+  static async prewarmCache(): Promise<void> {
+    if (!config.enableCachePrewarm) {
+      logger.info('[GameSearchCache] Cache pre-warming disabled');
+      return;
+    }
+
+    logger.info('[GameSearchCache] Starting cache pre-warming...');
+    const startTime = performance.now();
+    const queries: GameSearchQuery[] = [];
+
+    // Common queries to pre-warm
+    const commonQueries: Partial<GameSearchQuery>[] = [
+      // Default home page - games library
+      { library: 'arcade', page: 1, limit: 50, sortBy: 'title', sortOrder: 'asc', fields: 'list' },
+      // Default home page - animations library
+      { library: 'theatre', page: 1, limit: 50, sortBy: 'title', sortOrder: 'asc', fields: 'list' },
+      // Recently added games
+      { library: 'arcade', page: 1, limit: 50, sortBy: 'dateAdded', sortOrder: 'desc', fields: 'list' },
+      // Recently added animations
+      { library: 'theatre', page: 1, limit: 50, sortBy: 'dateAdded', sortOrder: 'desc', fields: 'list' },
+    ];
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const partialQuery of commonQueries) {
+      const query: GameSearchQuery = {
+        search: '',
+        page: 1,
+        limit: 50,
+        sortBy: 'title',
+        sortOrder: 'asc',
+        fields: 'list',
+        ...partialQuery
+      };
+
+      try {
+        const queryStart = performance.now();
+        await this.searchGames(query);
+        const queryDuration = Math.round(performance.now() - queryStart);
+
+        logger.debug(`[GameSearchCache] Pre-warmed query in ${queryDuration}ms`, {
+          library: query.library,
+          sortBy: query.sortBy
+        });
+
+        successCount++;
+      } catch (error) {
+        logger.warn('[GameSearchCache] Failed to pre-warm query', {
+          query: partialQuery,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        failCount++;
+      }
+    }
+
+    const totalDuration = Math.round(performance.now() - startTime);
+    logger.info(`[GameSearchCache] Cache pre-warming completed in ${totalDuration}ms`, {
+      success: successCount,
+      failed: failCount,
+      total: commonQueries.length
+    });
+  }
+
+  /**
+   * Get pre-warm status
+   */
+  static isPrewarmed(): boolean {
+    // Check if at least the default games query is cached
+    const defaultQuery: GameSearchQuery = {
+      search: '',
+      library: 'arcade',
+      page: 1,
+      limit: 50,
+      sortBy: 'title',
+      sortOrder: 'asc',
+      fields: 'list'
+    };
+    return this.has(defaultQuery);
   }
 }

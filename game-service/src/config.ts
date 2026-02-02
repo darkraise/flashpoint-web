@@ -48,9 +48,10 @@ export class ConfigManager {
       const proxySettings = JSON.parse(data);
 
       // Build settings from proxySettings.json and defaults
+      // Ports hardcoded - use docker-compose port mapping to expose on different ports
       this.settings = {
-        proxyPort: parseInt(process.env.PROXY_PORT || '22500'),
-        gameZipPort: parseInt(process.env.GAMEZIPSERVER_PORT || '22501'),
+        proxyPort: 22500,
+        gameZipPort: 22501,
 
         legacyHTDOCSPath: path.join(flashpointPath, 'Legacy', 'htdocs'),
         legacyCGIBINPath: path.join(flashpointPath, 'Legacy', 'cgi-bin'),

@@ -13,18 +13,17 @@ import { logger } from '../utils/logger';
  * Configurable via environment variables:
  * - OTEL_ENABLED: Enable/disable telemetry (true/false)
  * - OTEL_EXPORTER_OTLP_ENDPOINT: OTLP endpoint (e.g., http://localhost:4318)
+ * - OTEL_API_KEY: API key for authentication (sent as "Authorization: Api-Key <key>")
  * - OTEL_SERVICE_NAME: Service name (default: flashpoint-web-backend)
  * - OTEL_TRACES_ENABLED: Enable traces (default: true)
  * - OTEL_METRICS_ENABLED: Enable metrics (default: true)
  * - OTEL_METRICS_EXPORT_INTERVAL: Metrics export interval in ms (default: 60000)
- * - OTEL_LOG_LEVEL: Log level for OTel (default: info)
  *
  * Compatible with:
+ * - Grafana Cloud (use OTEL_API_KEY)
+ * - New Relic (use OTEL_API_KEY with license key)
  * - Jaeger (traces)
  * - Prometheus (metrics via OTLP)
- * - Grafana Cloud
- * - New Relic
- * - Datadog
  * - Any OTLP-compatible backend
  */
 
@@ -37,12 +36,25 @@ function getOtelConfig() {
   return {
     enabled: process.env.OTEL_ENABLED === 'true',
     endpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318',
+    apiKey: process.env.OTEL_API_KEY || '',
     serviceName: process.env.OTEL_SERVICE_NAME || 'flashpoint-web-backend',
     serviceVersion: process.env.npm_package_version || '1.0.0',
     tracesEnabled: process.env.OTEL_TRACES_ENABLED !== 'false',
     metricsEnabled: process.env.OTEL_METRICS_ENABLED !== 'false',
     metricsExportInterval: parseInt(process.env.OTEL_METRICS_EXPORT_INTERVAL || '60000', 10),
     logLevel: process.env.OTEL_LOG_LEVEL || 'info'
+  };
+}
+
+/**
+ * Build headers for OTLP exporters
+ */
+function getExporterHeaders(apiKey: string): Record<string, string> {
+  if (!apiKey) {
+    return {};
+  }
+  return {
+    'Authorization': `Api-Key ${apiKey}`
   };
 }
 
@@ -74,11 +86,14 @@ export function initializeTelemetry(): void {
       environment: process.env.NODE_ENV || 'development'
     });
 
+    // Build exporter headers
+    const headers = getExporterHeaders(config.apiKey);
+
     // Configure trace exporter
     const traceExporter = config.tracesEnabled
       ? new OTLPTraceExporter({
           url: `${config.endpoint}/v1/traces`,
-          headers: {},
+          headers,
         })
       : undefined;
 
@@ -87,7 +102,7 @@ export function initializeTelemetry(): void {
       ? new PeriodicExportingMetricReader({
           exporter: new OTLPMetricExporter({
             url: `${config.endpoint}/v1/metrics`,
-            headers: {},
+            headers,
           }),
           exportIntervalMillis: config.metricsExportInterval,
         })

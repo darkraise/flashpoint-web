@@ -133,8 +133,9 @@ All configuration is done via `.env` file. See [.env.docker.example](.env.docker
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `EXTERNAL_FALLBACK_URLS` | No | infinity.flashpointarchive.org | Comma-separated fallback URLs |
-| `EXTERNAL_IMAGE_URLS` | No | infinity.flashpointarchive.org | Comma-separated image CDN URLs |
+| `EXTERNAL_FALLBACK_URLS` | No | infinity.flashpointarchive.org | Comma-separated fallback URLs for game content |
+
+**Note:** Image CDN URLs are automatically read from Flashpoint preferences (`onDemandBaseUrl`). No configuration needed.
 
 ### Volume Mounts
 

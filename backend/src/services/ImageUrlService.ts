@@ -8,25 +8,16 @@ import { logger } from '../utils/logger';
 export class ImageUrlService {
   /**
    * Get external image URLs for fallback
-   * Priority: Environment variable > Flashpoint preferences > Hardcoded defaults
+   * Priority: Flashpoint preferences > Hardcoded defaults
    */
   static async getExternalImageUrls(): Promise<string[]> {
-    // Check environment variable first (backward compatibility)
-    if (process.env.EXTERNAL_IMAGE_URLS) {
-      const urls = process.env.EXTERNAL_IMAGE_URLS.split(',').map(url => url.trim());
-      logger.info('Using external image URLs from environment variable', { urls });
-      return urls;
-    }
-
     // Try to read from Flashpoint preferences
     try {
       const preferences = await PreferencesService.getPreferences();
       if (preferences.onDemandImages && preferences.onDemandBaseUrl) {
         const baseUrl = preferences.onDemandBaseUrl.replace(/\/$/, ''); // Remove trailing slash
 
-        // Construct full image URL
-        // Flashpoint URL format: https://infinity.flashpointarchive.org/images/
-        // Need to append path to match expected backend format
+        // Construct full image URL from Flashpoint CDN base URL
         const urls = [
           `${baseUrl}/Flashpoint/Data/Images`,
           'https://infinity.unstable.life/Flashpoint/Data/Images' // Secondary fallback
@@ -49,7 +40,7 @@ export class ImageUrlService {
       'https://infinity.unstable.life/Flashpoint/Data/Images'
     ];
 
-    logger.info('Using hardcoded default image URLs', { urls: defaultUrls });
+    logger.info('Using default image URLs', { urls: defaultUrls });
     return defaultUrls;
   }
 

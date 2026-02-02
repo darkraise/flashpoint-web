@@ -55,12 +55,17 @@ COPY --from=builder /app/backend/dist ./backend/dist
 # Copy migration files to dist directory (needed at runtime)
 COPY --from=builder /app/backend/src/migrations ./backend/dist/migrations
 
+# Copy entrypoint script
+COPY --from=builder /app/backend/docker-entrypoint.sh ./backend/docker-entrypoint.sh
+
 # Create non-root user
 RUN addgroup -g 1001 -S flashpoint && \
     adduser -S flashpoint -u 1001
 
 # Create data and logs directories
+# Make entrypoint script executable
 RUN mkdir -p /app/data /app/logs && \
+    chmod +x /app/backend/docker-entrypoint.sh && \
     chown -R flashpoint:flashpoint /app
 
 # Switch to non-root user
@@ -76,5 +81,6 @@ EXPOSE 3100
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl --fail http://localhost:3100/api/health || exit 1
 
-# Production command
-CMD ["node", "dist/server.js"]
+# Production command using entrypoint script
+# The entrypoint handles database copy (if enabled) and starts the server
+ENTRYPOINT ["./docker-entrypoint.sh"]

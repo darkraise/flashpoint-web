@@ -13,8 +13,10 @@ async function main() {
     logger.info('========================================');
 
     // Get configuration from environment
-    // All paths are derived from FLASHPOINT_PATH
-    const flashpointPath = process.env.FLASHPOINT_PATH || 'D:/Flashpoint';
+    // Docker (production): /data/flashpoint (volume mount point)
+    // Local dev: D:/Flashpoint or FLASHPOINT_PATH env var
+    const flashpointPath = process.env.FLASHPOINT_PATH ||
+      (process.env.NODE_ENV === 'production' ? '/data/flashpoint' : 'D:/Flashpoint');
     const flashpointHtdocsPath = path.join(flashpointPath, 'Legacy', 'htdocs');
     const flashpointGamesPath = path.join(flashpointPath, 'Data', 'Games');
     const proxyPort = parseInt(process.env.PROXY_PORT || '22500', 10);

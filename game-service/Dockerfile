@@ -56,12 +56,11 @@ RUN npm ci --workspace=game-service --include-workspace-root --omit=dev --prefer
 # Copy built application
 COPY --from=builder /app/game-service/dist ./game-service/dist
 
-# Create non-root user
+# Create non-root user and logs directory
 RUN addgroup -g 1001 -S flashpoint && \
-    adduser -S flashpoint -u 1001
-
-# Change ownership
-RUN chown -R flashpoint:flashpoint /app
+    adduser -S flashpoint -u 1001 && \
+    mkdir -p /app/logs && \
+    chown -R flashpoint:flashpoint /app
 
 # Switch to non-root user
 USER flashpoint

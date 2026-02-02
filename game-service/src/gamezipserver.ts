@@ -164,7 +164,8 @@ export class GameZipServer {
     // Validate ZIP path to prevent directory traversal
     // Ensure the ZIP file is within the allowed games directory
     try {
-      const flashpointPath = process.env.FLASHPOINT_PATH || 'D:/Flashpoint';
+      const flashpointPath = process.env.FLASHPOINT_PATH ||
+        (process.env.NODE_ENV === 'production' ? '/data/flashpoint' : 'D:/Flashpoint');
       const allowedGamesPath = process.env.FLASHPOINT_GAMES_PATH || path.join(flashpointPath, 'Data', 'Games');
 
       const normalizedZipPath = path.normalize(zipPath);

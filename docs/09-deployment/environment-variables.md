@@ -106,39 +106,17 @@ GAME_SERVICE_PROXY_URL=http://192.168.1.100:22500
 GAME_SERVICE_GAMEZIP_URL=http://192.168.1.100:22501
 ```
 
-### Image CDN URLs (Optional)
+### Image CDN URLs (Automatic)
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `EXTERNAL_IMAGE_URLS` | string | Read from Flashpoint preferences | Comma-separated CDN URLs for image fallback |
+Image CDN URLs are automatically read from Flashpoint's preferences file. No environment variable configuration required.
 
-**Default:** Read from Flashpoint preferences (`onDemandBaseUrl`)
+**Source:** Flashpoint preferences (`onDemandBaseUrl` from `preferences.json` or `.preferences.defaults.json`)
 
-**Description:** Comma-separated list of external CDN URLs to use as fallback when serving game images/logos/screenshots. If not set, the backend will automatically read the CDN URL from Flashpoint's preferences file.
+**Fallback:** If preferences are unavailable, defaults to:
+- `https://infinity.flashpointarchive.org/Flashpoint/Data/Images`
+- `https://infinity.unstable.life/Flashpoint/Data/Images`
 
-**Preference Source:** `.preferences.defaults.json` or `preferences.json` → `onDemandBaseUrl`
-
-**Priority:**
-1. Environment variable (if set)
-2. Flashpoint preferences `onDemandBaseUrl` (automatic)
-3. Hardcoded defaults:
-   - `https://infinity.flashpointarchive.org/Flashpoint/Data/Images`
-   - `https://infinity.unstable.life/Flashpoint/Data/Images`
-
-**When to set manually:**
-- Using custom CDN mirrors not in Flashpoint preferences
-- Testing with different image sources
-- Overriding Flashpoint's default CDN
-
-**Example:**
-
-```bash
-EXTERNAL_IMAGE_URLS=https://custom-cdn.example.com/images,https://backup-cdn.example.com/images
-```
-
-**Usage:**
-
-When images are not found locally, the backend will try fetching from these URLs in order.
+When images are not found locally, the backend will try fetching from these CDN URLs in order.
 
 ### Authentication and Security
 
@@ -667,9 +645,9 @@ DOMAIN=https://flashpoint.example.com
 # Logging
 LOG_LEVEL=warn
 
-# External URLs
-EXTERNAL_IMAGE_URLS=https://infinity.flashpointarchive.org/Flashpoint/Data/Images,https://infinity.unstable.life/Flashpoint/Data/Images
+# External URLs (game content fallback)
 EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
+# Note: Image CDN URLs are automatically read from Flashpoint preferences
 
 # API URL (for frontend build)
 VITE_API_URL=https://flashpoint.example.com

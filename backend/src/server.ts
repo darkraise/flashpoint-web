@@ -6,7 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import { config } from './config';
-import { logger } from './utils/logger';
+import { logger, getLoggingStatus, verifyFileLogging } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { softAuth } from './middleware/auth';
 import { maintenanceMode } from './middleware/maintenanceMode';
@@ -16,6 +16,7 @@ import { setupRoutes } from './routes';
 import { DatabaseService } from './services/DatabaseService';
 import { UserDatabaseService } from './services/UserDatabaseService';
 import { PlayTrackingService } from './services/PlayTrackingService';
+import { GameSearchCache } from './services/GameSearchCache';
 import { JobScheduler } from './services/JobScheduler';
 import { MetadataSyncJob } from './jobs/MetadataSyncJob';
 import { RuffleUpdateJob } from './jobs/RuffleUpdateJob';
@@ -87,6 +88,13 @@ async function startServer() {
     logger.error('Failed to connect to user database:', error);
     process.exit(1);
   }
+
+  // Pre-warm game search cache for instant first page load
+  // Run asynchronously to not block server startup
+  GameSearchCache.prewarmCache().catch(error => {
+    logger.warn('Failed to pre-warm game search cache:', error);
+    // Non-fatal: server continues without pre-warmed cache
+  });
 
   // Check if Ruffle is installed, download if not
   try {
@@ -164,6 +172,22 @@ async function startServer() {
   // Start permission cache cleanup
   PermissionCache.startCleanup();
   logger.info('✅ Permission cache initialized');
+
+  // Log logging system status
+  const loggingStatus = getLoggingStatus();
+  logger.info('Logging system status', loggingStatus);
+  if (loggingStatus.fileEnabled) {
+    // Verify file logging works after a short delay to allow winston to initialize
+    setTimeout(() => {
+      if (verifyFileLogging()) {
+        logger.info('File logging verified successfully');
+      } else {
+        logger.warn('File logging verification failed - check permissions');
+      }
+    }, 1000);
+  } else if (loggingStatus.fileError) {
+    logger.warn(`File logging unavailable: ${loggingStatus.fileError}`);
+  }
 
   // Start server
   const server = app.listen(config.port, config.host, () => {
