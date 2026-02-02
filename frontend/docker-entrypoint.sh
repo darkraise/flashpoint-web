@@ -31,7 +31,7 @@ setup_user() {
 
     # Check if we need to modify UID/GID
     if [ "$current_uid" != "$PUID" ] || [ "$current_gid" != "$PGID" ]; then
-        echo "🔧 Adjusting user permissions..."
+        echo "🔧 Adjusting user UID/GID..."
         echo "   PUID: $PUID (was: $current_uid)"
         echo "   PGID: $PGID (was: $current_gid)"
 
@@ -56,17 +56,17 @@ setup_user() {
             # Alpine uses different syntax
             sed -i "s/^${APP_USER}:x:[0-9]*:[0-9]*:/${APP_USER}:x:${PUID}:${PGID}:/" /etc/passwd 2>/dev/null || true
         fi
-
-        # Fix ownership of nginx directories
-        echo "   Fixing ownership of nginx directories..."
-        chown -R $APP_USER:$APP_GROUP /usr/share/nginx/html 2>/dev/null || true
-        chown -R $APP_USER:$APP_GROUP /var/cache/nginx 2>/dev/null || true
-        chown -R $APP_USER:$APP_GROUP /var/log/nginx 2>/dev/null || true
-        chown -R $APP_USER:$APP_GROUP /etc/nginx/conf.d 2>/dev/null || true
-        chown $APP_USER:$APP_GROUP /var/run/nginx.pid 2>/dev/null || true
     else
-        echo "✅ User permissions OK (UID=$PUID, GID=$PGID)"
+        echo "✅ User UID/GID OK (UID=$PUID, GID=$PGID)"
     fi
+
+    # Always fix ownership of nginx directories (in case of mounted volumes)
+    echo "🔧 Ensuring correct ownership of nginx directories..."
+    chown -R $APP_USER:$APP_GROUP /usr/share/nginx/html 2>/dev/null || true
+    chown -R $APP_USER:$APP_GROUP /var/cache/nginx 2>/dev/null || true
+    chown -R $APP_USER:$APP_GROUP /var/log/nginx 2>/dev/null || true
+    chown -R $APP_USER:$APP_GROUP /etc/nginx/conf.d 2>/dev/null || true
+    chown $APP_USER:$APP_GROUP /var/run/nginx.pid 2>/dev/null || true
 }
 
 # Only setup user if running as root

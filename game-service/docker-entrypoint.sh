@@ -31,7 +31,7 @@ setup_user() {
 
     # Check if we need to modify UID/GID
     if [ "$current_uid" != "$PUID" ] || [ "$current_gid" != "$PGID" ]; then
-        echo "🔧 Adjusting user permissions..."
+        echo "🔧 Adjusting user UID/GID..."
         echo "   PUID: $PUID (was: $current_uid)"
         echo "   PGID: $PGID (was: $current_gid)"
 
@@ -54,13 +54,13 @@ setup_user() {
             fi
             usermod -u "$PUID" $APP_USER 2>/dev/null || true
         fi
-
-        # Fix ownership of app directories
-        echo "   Fixing ownership of /app directories..."
-        chown -R $APP_USER:$APP_GROUP /app/logs 2>/dev/null || true
     else
-        echo "✅ User permissions OK (UID=$PUID, GID=$PGID)"
+        echo "✅ User UID/GID OK (UID=$PUID, GID=$PGID)"
     fi
+
+    # Always fix ownership of mounted directories (volumes override container permissions)
+    echo "🔧 Ensuring correct ownership of data directories..."
+    chown -R $APP_USER:$APP_GROUP /app/logs 2>/dev/null || true
 }
 
 # Only setup user if running as root
