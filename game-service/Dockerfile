@@ -7,9 +7,6 @@ FROM node:20.18.2-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++
-
 # Copy workspace root package files
 COPY package.json package-lock.json ./
 
@@ -18,7 +15,9 @@ COPY game-service/package.json ./game-service/
 
 # Install all dependencies for game-service workspace
 # Use npm ci with frozen lockfile for faster, reproducible builds
-RUN npm ci --workspace=game-service --include-workspace-root --prefer-offline --no-audit
+# No native modules in game-service, so no build tools needed
+RUN npm ci --workspace=game-service --include-workspace-root --prefer-offline --no-audit && \
+    npm cache clean --force
 
 # Copy game-service source code
 COPY game-service ./game-service/
@@ -26,6 +25,10 @@ COPY game-service ./game-service/
 # Build TypeScript (run from game-service directory)
 WORKDIR /app/game-service
 RUN npm run build
+
+# Prune devDependencies in-place so we can copy clean node_modules to production
+WORKDIR /app
+RUN npm prune --omit=dev --workspace=game-service --include-workspace-root
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime
@@ -47,14 +50,13 @@ WORKDIR /app
 # - shadow: provides usermod/groupmod for dynamic UID/GID
 RUN apk add --no-cache curl tzdata su-exec shadow
 
-# Copy workspace root package files
-COPY --from=builder /app/package.json /app/package-lock.json ./
+# Copy pruned production node_modules from builder (avoids a second npm ci)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/game-service/node_modules ./game-service/node_modules
 
-# Copy game-service package files
+# Copy package files (needed for Node.js module resolution)
+COPY --from=builder /app/package.json ./
 COPY --from=builder /app/game-service/package.json ./game-service/
-
-# Install production dependencies only for game-service workspace
-RUN npm ci --workspace=game-service --include-workspace-root --omit=dev --prefer-offline --no-audit
 
 # Copy built application
 COPY --from=builder /app/game-service/dist ./game-service/dist
@@ -78,8 +80,8 @@ EXPOSE 22500 22501
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD curl --fail http://localhost:22500/health || exit 1
 
-# Environment variables for dynamic UID/GID (optional)
-# Set these to match your host user's UID/GID
+# Environment variables
+ENV NODE_ENV=production
 ENV PUID=1000
 ENV PGID=1000
 

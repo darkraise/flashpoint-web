@@ -15,7 +15,8 @@ COPY backend/package.json ./backend/
 
 # Install all dependencies for the backend workspace
 # Use npm ci with frozen lockfile for faster, reproducible builds
-RUN npm ci --workspace=backend --include-workspace-root --prefer-offline --no-audit
+RUN npm ci --workspace=backend --include-workspace-root --prefer-offline --no-audit && \
+    npm cache clean --force
 
 # Copy backend source code
 COPY backend ./backend/
@@ -23,6 +24,10 @@ COPY backend ./backend/
 # Build TypeScript (run from backend directory)
 WORKDIR /app/backend
 RUN npm run build
+
+# Prune devDependencies in-place so we can copy clean node_modules to production
+WORKDIR /app
+RUN npm prune --omit=dev --workspace=backend --include-workspace-root
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime
@@ -44,14 +49,13 @@ WORKDIR /app
 # - shadow: provides usermod/groupmod for dynamic UID/GID
 RUN apk add --no-cache curl tzdata su-exec shadow
 
-# Copy workspace root package files
-COPY --from=builder /app/package.json /app/package-lock.json ./
+# Copy pruned production node_modules from builder (avoids a second npm ci)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/backend/node_modules ./backend/node_modules
 
-# Copy backend package files
+# Copy package files (needed for Node.js module resolution)
+COPY --from=builder /app/package.json ./
 COPY --from=builder /app/backend/package.json ./backend/
-
-# Install production dependencies only for backend workspace
-RUN npm ci --workspace=backend --include-workspace-root --omit=dev --prefer-offline --no-audit
 
 # Copy built application
 COPY --from=builder /app/backend/dist ./backend/dist
@@ -79,8 +83,8 @@ EXPOSE 3100
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD curl --fail http://localhost:3100/api/health || exit 1
 
-# Environment variables for dynamic UID/GID (optional)
-# Set these to match your host user's UID/GID
+# Environment variables
+ENV NODE_ENV=production
 ENV PUID=1000
 ENV PGID=1000
 
