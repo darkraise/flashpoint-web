@@ -15,8 +15,7 @@ COPY backend/package.json ./backend/
 
 # Install all dependencies for the backend workspace
 # Use npm ci with frozen lockfile for faster, reproducible builds
-RUN npm ci --workspace=backend --include-workspace-root --prefer-offline --no-audit && \
-    npm cache clean --force
+RUN npm ci --workspace=backend --include-workspace-root --prefer-offline --no-audit
 
 # Copy backend source code
 COPY backend ./backend/
@@ -24,10 +23,6 @@ COPY backend ./backend/
 # Build TypeScript (run from backend directory)
 WORKDIR /app/backend
 RUN npm run build
-
-# Prune devDependencies in-place so we can copy clean node_modules to production
-WORKDIR /app
-RUN npm prune --omit=dev --workspace=backend --include-workspace-root
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime
@@ -49,13 +44,15 @@ WORKDIR /app
 # - shadow: provides usermod/groupmod for dynamic UID/GID
 RUN apk add --no-cache curl tzdata su-exec shadow
 
-# Copy pruned production node_modules from builder (avoids a second npm ci)
-# npm workspaces hoist all deps to root; workspace node_modules is empty in single-workspace builds
-COPY --from=builder /app/node_modules ./node_modules
+# Copy workspace root package files
+COPY --from=builder /app/package.json /app/package-lock.json ./
 
-# Copy package files (needed for Node.js module resolution)
-COPY --from=builder /app/package.json ./
+# Copy backend package files
 COPY --from=builder /app/backend/package.json ./backend/
+
+# Install production dependencies only and clean npm cache to reduce image size
+RUN npm ci --workspace=backend --include-workspace-root --omit=dev --prefer-offline --no-audit && \
+    npm cache clean --force
 
 # Copy built application
 COPY --from=builder /app/backend/dist ./backend/dist

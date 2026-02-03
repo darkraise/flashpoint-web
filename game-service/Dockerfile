@@ -16,8 +16,7 @@ COPY game-service/package.json ./game-service/
 # Install all dependencies for game-service workspace
 # Use npm ci with frozen lockfile for faster, reproducible builds
 # No native modules in game-service, so no build tools needed
-RUN npm ci --workspace=game-service --include-workspace-root --prefer-offline --no-audit && \
-    npm cache clean --force
+RUN npm ci --workspace=game-service --include-workspace-root --prefer-offline --no-audit
 
 # Copy game-service source code
 COPY game-service ./game-service/
@@ -25,10 +24,6 @@ COPY game-service ./game-service/
 # Build TypeScript (run from game-service directory)
 WORKDIR /app/game-service
 RUN npm run build
-
-# Prune devDependencies in-place so we can copy clean node_modules to production
-WORKDIR /app
-RUN npm prune --omit=dev --workspace=game-service --include-workspace-root
 
 # =============================================================================
 # Stage 2: Production - Optimized runtime
@@ -50,13 +45,15 @@ WORKDIR /app
 # - shadow: provides usermod/groupmod for dynamic UID/GID
 RUN apk add --no-cache curl tzdata su-exec shadow
 
-# Copy pruned production node_modules from builder (avoids a second npm ci)
-# npm workspaces hoist all deps to root; workspace node_modules is empty in single-workspace builds
-COPY --from=builder /app/node_modules ./node_modules
+# Copy workspace root package files
+COPY --from=builder /app/package.json /app/package-lock.json ./
 
-# Copy package files (needed for Node.js module resolution)
-COPY --from=builder /app/package.json ./
+# Copy game-service package files
 COPY --from=builder /app/game-service/package.json ./game-service/
+
+# Install production dependencies only and clean npm cache to reduce image size
+RUN npm ci --workspace=game-service --include-workspace-root --omit=dev --prefer-offline --no-audit && \
+    npm cache clean --force
 
 # Copy built application
 COPY --from=builder /app/game-service/dist ./game-service/dist
