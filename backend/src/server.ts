@@ -90,7 +90,8 @@ async function startServer() {
   }
 
   // Sync Flashpoint edition from env var to system settings
-  // The env var provides the initial/default value; admin can override via UI
+  // The env var always takes precedence on startup to ensure Docker deployments
+  // with FLASHPOINT_EDITION=ultimate work even if the DB was seeded with 'infinity'
   try {
     const systemSettings = new CachedSystemSettingsService();
     const currentEdition = systemSettings.get('metadata.flashpoint_edition');
@@ -102,8 +103,12 @@ async function startServer() {
         [config.flashpointEdition]
       );
       logger.info(`[Edition] Initialized flashpoint_edition setting to: ${config.flashpointEdition}`);
+    } else if (currentEdition !== config.flashpointEdition) {
+      // Env var differs from DB value - update to match env var
+      systemSettings.set('metadata.flashpoint_edition', config.flashpointEdition);
+      logger.info(`[Edition] Updated flashpoint_edition from '${currentEdition}' to '${config.flashpointEdition}' (from env var)`);
     }
-    logger.info(`[Edition] Flashpoint edition: ${currentEdition || config.flashpointEdition}`);
+    logger.info(`[Edition] Flashpoint edition: ${config.flashpointEdition}`);
   } catch (error) {
     logger.warn('[Edition] Failed to sync edition setting:', error);
   }
