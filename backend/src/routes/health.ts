@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { DatabaseService } from '../services/DatabaseService';
 import { UserDatabaseService } from '../services/UserDatabaseService';
-import { PermissionCache } from '../services/PermissionCache';
 import { GameSearchCache } from '../services/GameSearchCache';
 import { config } from '../config';
 import { asyncHandler } from '../middleware/asyncHandler';

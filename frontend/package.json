@@ -16,8 +16,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,json}\"",
-    "check-bundle": "node scripts/check-bundle-size.js",
-    "copy-ruffle": "node scripts/copy-ruffle.js"
+    "check-bundle": "node scripts/check-bundle-size.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -46,11 +45,9 @@
     "axios": "^1.6.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
-    "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
     "framer-motion": "^12.27.0",
     "lucide-react": "^0.358.0",
-    "next-themes": "^0.4.6",
     "react": "^18.3.1",
     "react-day-picker": "^9.13.0",
     "react-dom": "^18.3.1",
@@ -78,7 +75,6 @@
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
     "autoprefixer": "^10.4.19",
-    "copy-webpack-plugin": "^13.0.1",
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",

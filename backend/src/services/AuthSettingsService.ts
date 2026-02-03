@@ -40,7 +40,7 @@ export class AuthSettingsService {
    */
   updateSettings(data: Partial<AuthSettings>, updatedBy: number): AuthSettings {
     // Filter out non-setting fields (updatedAt, updatedBy)
-    const { updatedAt, updatedBy: _, ...settingsToUpdate } = data;
+    const { updatedAt: _updatedAt, updatedBy: _, ...settingsToUpdate } = data;
 
     if (Object.keys(settingsToUpdate).length === 0) {
       return this.getSettings();
@@ -56,8 +56,6 @@ export class AuthSettingsService {
    * Get the latest update timestamp and user from auth settings
    */
   private getLatestUpdate(): { updatedAt: string; updatedBy: number | undefined } {
-    const row = this.systemSettings.get('auth.user_registration_enabled');
-
     // Get metadata for the most recently updated auth setting
     const query = `
       SELECT updated_at, updated_by

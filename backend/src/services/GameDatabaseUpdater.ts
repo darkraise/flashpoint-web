@@ -1,6 +1,5 @@
 import { DatabaseService } from './DatabaseService';
 import { logger } from '../utils/logger';
-import fs from 'fs';
 import path from 'path';
 import { config } from '../config';
 

@@ -183,7 +183,7 @@ router.patch(
   '/:id',
   authenticate,
   requirePermission('playlists.update'),
-  logActivity('playlists.update.metadata', 'user_playlists', (req, res) => ({
+  logActivity('playlists.update.metadata', 'user_playlists', (req, _res) => ({
     playlistId: req.params.id,
     fieldsUpdated: Object.keys(req.body)
   })),

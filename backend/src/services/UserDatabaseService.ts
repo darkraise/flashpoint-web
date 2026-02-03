@@ -4,7 +4,6 @@ import { logger } from '../utils/logger';
 import { measureQueryPerformance } from '../utils/queryPerformance';
 import fs from 'fs';
 import path from 'path';
-import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 
 /**

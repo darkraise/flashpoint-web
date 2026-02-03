@@ -196,7 +196,7 @@ export class PlayTrackingService {
    * Update aggregate play statistics in Flashpoint database
    * This maintains compatibility with Flashpoint Launcher
    */
-  private async updateFlashpointGameStats(gameId: string, sessionDuration: number): Promise<void> {
+  private async updateFlashpointGameStats(gameId: string, _sessionDuration: number): Promise<void> {
     try {
       // Get aggregate stats across ALL users for this game
       const aggregateStats = UserDatabaseService.get(

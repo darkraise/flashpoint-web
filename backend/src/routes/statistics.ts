@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { StatisticsService } from '../services/StatisticsService';
 import { requireFeature } from '../middleware/featureFlags';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { logger } from '../utils/logger';
 
 const router = Router();
 const statisticsService = new StatisticsService();

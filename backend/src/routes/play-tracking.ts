@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { PlayTrackingService } from '../services/PlayTrackingService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';

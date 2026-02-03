@@ -390,11 +390,9 @@ export class ActivityService {
     const totalActivities = totalResult?.total || 0;
 
     let sql: string;
-    let groupField: string;
 
     switch (groupBy) {
       case 'resource':
-        groupField = 'resource';
         sql = `SELECT
           resource as key,
           COUNT(*) as count,
@@ -414,7 +412,6 @@ export class ActivityService {
         break;
 
       case 'user':
-        groupField = 'user_id';
         sql = `SELECT
           username as key,
           user_id as userId,
@@ -436,7 +433,6 @@ export class ActivityService {
         break;
 
       case 'ip':
-        groupField = 'ip_address';
         sql = `SELECT
           ip_address as key,
           COUNT(*) as count,

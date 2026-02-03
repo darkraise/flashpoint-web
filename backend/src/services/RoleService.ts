@@ -2,7 +2,7 @@ import { UserDatabaseService } from './UserDatabaseService';
 import { PermissionCache } from './PermissionCache';
 import { AppError } from '../middleware/errorHandler';
 import { Role, Permission } from '../types/auth';
-import { SYSTEM_ROLES, isSystemRole } from '../constants/roles';
+import { isSystemRole } from '../constants/roles';
 import { logger } from '../utils/logger';
 
 export class RoleService {

@@ -195,20 +195,7 @@ export class UserService {
     );
   }
 
-  /**
-   * Update user theme color (DEPRECATED - columns removed)
-   * This method is kept for backward compatibility but does nothing
-   * Use updateThemeSettings() instead which stores in user_settings table
-   * @deprecated Use updateThemeSettings() instead
-   */
-  async updateUserTheme(id: number, themeColor: string, surfaceColor?: string): Promise<void> {
-    const user = await this.getUserById(id);
-    if (!user) {
-      throw new AppError(404, 'User not found');
-    }
-    // No-op: theme_color and surface_color columns no longer exist
-    // Theme settings are now stored in user_settings table
-  }
+
 
   /**
    * Get user setting by key

@@ -208,7 +208,6 @@ export class GameSearchCache {
 
     logger.info('[GameSearchCache] Starting cache pre-warming...');
     const startTime = performance.now();
-    const queries: GameSearchQuery[] = [];
 
     // Common queries to pre-warm
     const commonQueries: Partial<GameSearchQuery>[] = [

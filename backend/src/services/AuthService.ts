@@ -130,8 +130,6 @@ export class AuthService {
 
     // First user becomes admin (role_id = 1), subsequent users get 'user' role (role_id = 2)
     const roleId = isInitialSetup ? 1 : 2;
-    const roleName = isInitialSetup ? 'admin' : 'user';
-
     const result = UserDatabaseService.run(
       'INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)',
       [data.username, data.email, passwordHash, roleId]
