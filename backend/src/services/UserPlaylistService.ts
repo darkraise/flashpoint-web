@@ -1,7 +1,6 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { GameService, Game } from './GameService';
 import { logger } from '../utils/logger';
-import { config } from '../config';
 import crypto from 'crypto';
 
 export interface UserPlaylist {
@@ -47,7 +46,6 @@ export interface EnableSharingOptions {
 
 export interface ShareLinkData {
   shareToken: string;
-  shareUrl: string;
   expiresAt: string | null;
   showOwner: boolean;
 }
@@ -460,12 +458,8 @@ export class UserPlaylistService {
 
     logger.info(`Enabled sharing for playlist ${playlistId} (user ${userId})`);
 
-    // Get frontend URL (where frontend is hosted)
-    const frontendUrl = config.domain;
-
     return {
       shareToken,
-      shareUrl: `${frontendUrl}/playlists/shared/${shareToken}`,
       expiresAt: options.expiresAt || null,
       showOwner: options.showOwner || false
     };
@@ -526,12 +520,8 @@ export class UserPlaylistService {
 
     logger.info(`Regenerated share token for playlist ${playlistId} (user ${userId})`);
 
-    // Get frontend URL (where frontend is hosted)
-    const frontendUrl = config.domain;
-
     return {
       shareToken: newToken,
-      shareUrl: `${frontendUrl}/playlists/shared/${newToken}`,
       expiresAt: playlist.shareExpiresAt || null,
       showOwner: playlist.showOwner || false
     };
@@ -576,12 +566,8 @@ export class UserPlaylistService {
 
     logger.info(`Updated share settings for playlist ${playlistId} (user ${userId})`);
 
-    // Get frontend URL (where frontend is hosted)
-    const frontendUrl = config.domain;
-
     return {
       shareToken: playlist.shareToken,
-      shareUrl: `${frontendUrl}/playlists/shared/${playlist.shareToken}`,
       expiresAt: options.expiresAt !== undefined ? options.expiresAt : (playlist.shareExpiresAt || null),
       showOwner: options.showOwner !== undefined ? options.showOwner : (playlist.showOwner || false)
     };

@@ -79,7 +79,6 @@ export interface SharedPlaylist {
 
 export interface ShareLinkData {
   shareToken: string;
-  shareUrl: string;
   expiresAt: string | null;
   showOwner: boolean;
 }

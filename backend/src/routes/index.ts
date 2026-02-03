@@ -24,6 +24,7 @@ import sharedPlaylistsRouter from './shared-playlists';
 import favoritesRouter from './favorites';
 import ruffleRouter from './ruffle';
 import githubRouter from './github';
+import domainsRouter from './domains';
 import healthRouter from './health';
 import cacheRouter from './cache';
 import metricsRouter from './metrics';
@@ -53,6 +54,9 @@ export function setupRoutes(app: Express): void {
 
   // GitHub integration routes
   app.use('/api/github', githubRouter);
+
+  // Domain settings routes
+  app.use('/api/domains', domainsRouter);
 
   // Jobs routes
   app.use('/api/jobs', jobsRouter);

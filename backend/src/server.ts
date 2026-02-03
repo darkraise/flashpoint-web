@@ -15,6 +15,7 @@ import { performanceTracking } from './middleware/performanceTracking';
 import { setupRoutes } from './routes';
 import { DatabaseService } from './services/DatabaseService';
 import { UserDatabaseService } from './services/UserDatabaseService';
+import { DomainService } from './services/DomainService';
 import { PlayTrackingService } from './services/PlayTrackingService';
 import { GameSearchCache } from './services/GameSearchCache';
 import { JobScheduler } from './services/JobScheduler';
@@ -36,9 +37,26 @@ async function startServer() {
     }
   }));
 
-  // CORS
+  // CORS - dynamic origin to support configured domains
   app.use(cors({
-    origin: config.domain,
+    origin: (origin, callback) => {
+      // Allow same-origin and server-to-server requests
+      if (!origin) return callback(null, true);
+
+      // Always allow the configured domain from env
+      if (origin === config.domain) return callback(null, true);
+
+      // Check domains from the database
+      try {
+        const domainService = new DomainService();
+        const allowed = domainService.getAllowedOrigins();
+        if (allowed.has(origin)) return callback(null, true);
+      } catch {
+        // DB not ready during startup - fall through
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true
   }));
 

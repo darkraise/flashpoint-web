@@ -16,8 +16,10 @@ components/
 ├── library/           # Game browsing/display (9 components)
 ├── player/            # Game players (2 components)
 ├── playlist/          # Playlist management (3 components)
+│   └── SharePlaylistDialog includes domain selector for admins
 ├── roles/             # Role management (2 components)
 ├── search/            # Search and filtering (2 components)
+├── settings/          # Settings tabs including AppSettingsTab with Domain Settings
 ├── stats/             # Statistics/charts (4 components)
 ├── theme/             # Theme controls (2 components)
 ├── ui/                # Shadcn UI primitives (40+ components)
@@ -50,6 +52,20 @@ Located in `components/common/`
 - **NetworkStatusIndicator** - Shows online/offline network status
 - **RoleGuard** - Component wrapper for role-based access control
 - **ViewOptions** - Toggle between list and grid view modes
+
+### Playlist Components
+
+Located in `components/playlist/`
+
+- **SharePlaylistDialog** - Dialog for sharing playlists via URL. Admin users see a domain selector dropdown to choose which domain to use for the share link. Non-admin users use the default domain from public settings. Share URLs are constructed client-side via the `buildShareUrl()` utility.
+- Other playlist management components...
+
+### Settings Components
+
+Located in `components/settings/`
+
+- **AppSettingsTab** - Application settings including Site Name, Maintenance Mode, Theme, and **Domain Settings**. The Domain Settings card allows admins to add/delete domains and set a default via radio buttons, with hostname validation.
+- Other settings tabs...
 
 ### Layout Components
 

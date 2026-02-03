@@ -4,7 +4,8 @@
 
 **A modern web interface for the Flashpoint Archive**
 
-Browse and play 70,000+ preserved Flash games and animations directly in your browser.
+Browse and play 200,000+ preserved Flash games and animations directly in your
+browser.
 
 <!-- Tech Stack Badges -->
 <p>
@@ -25,7 +26,9 @@ Browse and play 70,000+ preserved Flash games and animations directly in your br
   <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
 </p>
 
-[Features](#key-features) | [Quick Start](#quick-start) | [Docker](#docker-deployment) | [Documentation](#documentation) | [Contributing](#contributing)
+[Features](#key-features) | [Quick Start](#quick-start) |
+[Docker](#docker-deployment) | [Documentation](#documentation) |
+[Contributing](#contributing)
 
 </div>
 
@@ -33,28 +36,38 @@ Browse and play 70,000+ preserved Flash games and animations directly in your br
 
 ## What is Flashpoint Web?
 
-Flashpoint Web is a self-hosted web application for accessing your local [Flashpoint Archive](https://flashpointarchive.org/) collection. It provides a modern, browser-based alternative to the Flashpoint Launcher with multi-user support, play tracking, and an intuitive interface.
+Flashpoint Web is a self-hosted web application for accessing your local
+[Flashpoint Archive](https://flashpointarchive.org/) collection. It provides a
+modern, browser-based alternative to the Flashpoint Launcher with multi-user
+support, play tracking, and an intuitive interface.
 
 ### Key Features
 
-- **Browse & Search** - Fast search across 70,000+ games with advanced filtering by platform, developer, tags, and more
-- **Play in Browser** - Flash games via [Ruffle](https://ruffle.rs/) emulator, HTML5 games natively
-- **Multi-User Support** - Individual accounts with role-based permissions (admin, moderator, user, guest)
-- **Play Tracking** - Track playtime, completion status, and view play statistics
-- **Playlists & Favorites** - Organize your game collection with custom playlists
-- **22 Theme Palettes** - Customizable dark/light modes with multiple color schemes
+- **Browse & Search** - Fast search across 200,000+ games with advanced
+  filtering by platform, developer, tags, and more
+- **Play in Browser** - Flash games via [Ruffle](https://ruffle.rs/) emulator,
+  HTML5 games natively
+- **Multi-User Support** - Individual accounts with role-based permissions
+  (admin, moderator, user, guest)
+- **Play Tracking** - Track playtime, completion status, and view play
+  statistics
+- **Playlists & Favorites** - Organize your game collection with custom
+  playlists
+- **22 Theme Palettes** - Customizable dark/light modes with multiple color
+  schemes
 - **Responsive Design** - Works on desktop and mobile devices
-- **Database Hot-Reload** - Automatically syncs when Flashpoint Launcher updates metadata
+- **Database Hot-Reload** - Automatically syncs when Flashpoint Launcher updates
+  metadata
 
 ## Architecture
 
 Flashpoint Web consists of three independent services:
 
-| Service | Port | Description |
-|---------|------|-------------|
-| **Backend** | 3100 | REST API for game metadata, users, and authentication |
-| **Frontend** | 5173 | React web application |
-| **Game Service** | 22500/22501 | File serving proxy and ZIP archive server |
+| Service          | Port        | Description                                           |
+| ---------------- | ----------- | ----------------------------------------------------- |
+| **Backend**      | 3100        | REST API for game metadata, users, and authentication |
+| **Frontend**     | 5173        | React web application                                 |
+| **Game Service** | 22500/22501 | File serving proxy and ZIP archive server             |
 
 ## Quick Start
 
@@ -94,7 +107,8 @@ DOMAIN=http://localhost:5173
 LOG_LEVEL=info
 ```
 
-> **Note:** All database and asset paths are automatically derived from `FLASHPOINT_PATH`.
+> **Note:** All database and asset paths are automatically derived from
+> `FLASHPOINT_PATH`.
 
 **2. Game Service** (`game-service/.env`)
 
@@ -111,7 +125,8 @@ LOG_LEVEL=info
 EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
 ```
 
-> **Note:** Frontend requires no `.env` file for local development - API calls are proxied through Vite.
+> **Note:** Frontend requires no `.env` file for local development - API calls
+> are proxied through Vite.
 
 ### Run Development Servers
 
@@ -150,25 +165,22 @@ docker compose -f docker-compose.dev.yml up -d --build
 docker compose logs -f
 ```
 
-**Default ports:**
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost (port 80) |
-| Backend API | http://localhost:3100 |
-| Game Proxy | http://localhost:22500 |
-| GameZip Server | http://localhost:22501 |
+**Default ports:** | Service | URL | |---------|-----| | Frontend |
+http://localhost (port 80) | | Backend API | http://localhost:3100 | | Game
+Proxy | http://localhost:22500 | | GameZip Server | http://localhost:22501 |
 
-See [Docker Deployment Guide](docs/09-deployment/docker-deployment.md) for advanced configuration.
+See [Docker Deployment Guide](docs/09-deployment/docker-deployment.md) for
+advanced configuration.
 
 ## Development Commands
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start all services in development mode |
-| `npm run build` | Build all services for production |
-| `npm run typecheck` | Run TypeScript type checking |
-| `npm run format` | Format code with Prettier |
-| `npm run clean` | Remove build artifacts and node_modules |
+| Command             | Description                             |
+| ------------------- | --------------------------------------- |
+| `npm run dev`       | Start all services in development mode  |
+| `npm run build`     | Build all services for production       |
+| `npm run typecheck` | Run TypeScript type checking            |
+| `npm run format`    | Format code with Prettier               |
+| `npm run clean`     | Remove build artifacts and node_modules |
 
 See [Commands Reference](docs/08-development/commands.md) for the complete list.
 
@@ -177,32 +189,42 @@ See [Commands Reference](docs/08-development/commands.md) for the complete list.
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
 ### Getting Started
-- [Project Overview](docs/01-overview/project-overview.md) - What is Flashpoint Web
+
+- [Project Overview](docs/01-overview/project-overview.md) - What is Flashpoint
+  Web
 - [Setup Guide](docs/08-development/setup-guide.md) - Complete development setup
 - [Commands Reference](docs/08-development/commands.md) - All available commands
 
 ### Architecture
-- [System Architecture](docs/02-architecture/system-architecture.md) - Service design overview
-- [Authentication Flow](docs/02-architecture/authentication-flow.md) - JWT-based auth system
-- [Game Launch Flow](docs/02-architecture/game-launch-flow.md) - How games are served
+
+- [System Architecture](docs/02-architecture/system-architecture.md) - Service
+  design overview
+- [Authentication Flow](docs/02-architecture/authentication-flow.md) - JWT-based
+  auth system
+- [Game Launch Flow](docs/02-architecture/game-launch-flow.md) - How games are
+  served
 
 ### Services
+
 - [Backend](docs/03-backend/README.md) - REST API documentation
 - [Frontend](docs/04-frontend/README.md) - React application guide
 - [Game Service](docs/05-game-service/README.md) - File serving architecture
 
 ### API Reference
+
 - [Authentication API](docs/06-api-reference/authentication-api.md)
 - [Games API](docs/06-api-reference/games-api.md)
 - [Playlists API](docs/06-api-reference/playlists-api.md)
 - [Full API Reference](docs/06-api-reference/README.md)
 
 ### Deployment
+
 - [Docker Deployment](docs/09-deployment/docker-deployment.md)
 - [Production Setup](docs/09-deployment/production-setup.md)
 - [Environment Variables](docs/08-development/setup-guide.md#environment-variables-reference)
 
 ### Features
+
 - [Authentication & Authorization](docs/10-features/01-authentication-authorization.md)
 - [Game Browsing & Filtering](docs/10-features/02-game-browsing-filtering.md)
 - [Play Session Tracking](docs/10-features/04-play-session-tracking.md)
@@ -215,6 +237,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 <td align="center" width="33%">
 
 ### Backend
+
 <p>
   <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white" alt="Express" />
@@ -231,6 +254,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 <td align="center" width="33%">
 
 ### Frontend
+
 <p>
   <img src="https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" />
   <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
@@ -247,6 +271,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 <td align="center" width="33%">
 
 ### Game Service
+
 <p>
   <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white" alt="Express" />
@@ -261,13 +286,15 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 </tr>
 </table>
 
-See [Technology Stack](docs/01-overview/technology-stack.md) for detailed explanations of each choice.
+See [Technology Stack](docs/01-overview/technology-stack.md) for detailed
+explanations of each choice.
 
 ## Troubleshooting
 
 ### Common Issues
 
 **Port already in use:**
+
 ```bash
 # Find and kill process on port
 lsof -i :3100  # Linux/Mac
@@ -275,20 +302,24 @@ netstat -ano | findstr :3100  # Windows
 ```
 
 **Database not found:**
+
 - Verify `FLASHPOINT_PATH` points to a valid Flashpoint installation
 - Check that `$FLASHPOINT_PATH/Data/flashpoint.sqlite` exists
 
 **Ruffle not loading:**
+
 ```bash
 cd frontend
 npm run copy-ruffle
 ```
 
 **Games not loading:**
+
 - Ensure game-service is running (ports 22500/22501)
 - Check game-service logs: `npm run dev:game-service`
 
-See [Common Pitfalls](docs/08-development/common-pitfalls.md) for more solutions.
+See [Common Pitfalls](docs/08-development/common-pitfalls.md) for more
+solutions.
 
 ## Contributing
 
@@ -297,21 +328,26 @@ We welcome contributions! Here's how to get started:
 1. **Fork** the repository
 2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
 3. **Make** your changes and ensure tests pass: `npm run typecheck`
-4. **Commit** your changes following our [commit guidelines](CONTRIBUTING.md#commit-guidelines)
+4. **Commit** your changes following our
+   [commit guidelines](CONTRIBUTING.md#commit-guidelines)
 5. **Push** to the branch: `git push origin feature/amazing-feature`
 6. **Open** a Pull Request
 
-Please read our [Contributing Guide](CONTRIBUTING.md) for detailed instructions, coding standards, and development setup.
+Please read our [Contributing Guide](CONTRIBUTING.md) for detailed instructions,
+coding standards, and development setup.
 
 ## Related Projects
 
-- [Flashpoint Archive](https://flashpointarchive.org/) - The game preservation project
-- [Flashpoint Launcher](https://github.com/FlashpointProject/launcher) - Official desktop launcher
+- [Flashpoint Archive](https://flashpointarchive.org/) - The game preservation
+  project
+- [Flashpoint Launcher](https://github.com/FlashpointProject/launcher) -
+  Official desktop launcher
 - [Ruffle](https://ruffle.rs/) - Flash Player emulator
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the
+[LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
@@ -323,6 +359,8 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 <div align="center">
 
-**[Documentation](docs/)** | **[Report Bug](https://github.com/darkraise/flashpoint-web/issues)** | **[Request Feature](https://github.com/darkraise/flashpoint-web/issues)**
+**[Documentation](docs/)** |
+**[Report Bug](https://github.com/darkraise/flashpoint-web/issues)** |
+**[Request Feature](https://github.com/darkraise/flashpoint-web/issues)**
 
 </div>

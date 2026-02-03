@@ -60,6 +60,20 @@ CREATE TABLE system_settings (
 - **Default Theme** - Set default theme (light, dark, system)
 - **Default Primary Color** - Set default color scheme
 
+#### Domain Settings (in App Tab)
+
+The App settings tab includes a **Domain Settings** card below the application settings card:
+
+- **Add Domain** - Text input with inline validation (no protocol, valid format, no duplicates)
+- **Domain List** - All configured domains with radio buttons to select the default
+- **Delete Domain** - Remove any domain with the trash icon
+- **Empty State** - "No domains configured. Share links will use the current browser URL."
+
+The default domain is used when non-admin users share playlists. Admin users see a domain selector dropdown in the Share Playlist dialog to choose which domain to use per share link. When no domains are configured, all share links fall back to `window.location.origin`.
+
+**Permissions:** Requires `settings.update` (admin only)
+**API:** See [Domains API](../06-api-reference/domains-api.md)
+
 #### Metadata Tab
 - **Auto Sync on Startup** - Automatically sync metadata when server starts
 - **Sync Interval** - How often to check for updates (in minutes)

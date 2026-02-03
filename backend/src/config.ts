@@ -109,11 +109,6 @@ export const config = {
   gameServiceExternalUrl: process.env.GAME_SERVICE_EXTERNAL_URL ||
     (process.env.NODE_ENV === 'production' ? '/game-proxy' : `http://localhost:22500`),
 
-  // Redis
-  redisEnabled: process.env.REDIS_ENABLED === 'true',
-  redisHost: process.env.REDIS_HOST || 'localhost',
-  redisPort: parseInt(process.env.REDIS_PORT || '6379', 10),
-
   // Frontend domain (used for CORS and share URL generation)
   domain: process.env.DOMAIN || 'http://localhost:5173',
 

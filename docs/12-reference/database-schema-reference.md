@@ -309,6 +309,23 @@ User-created playlists with sharing.
 **Indexes:** user_id, created_at, title, share_token
 **Triggers:** trg_playlist_games_insert, trg_playlist_games_delete (maintain game_count)
 
+### domains
+
+Configured domains for dynamic CORS and sharing.
+
+| Column | Type | Default | Description |
+|--------|------|---------|-------------|
+| id | INTEGER | AUTO | Primary key |
+| hostname | TEXT | - | Domain hostname (UNIQUE, case-insensitive) |
+| is_default | BOOLEAN | 0 | Default domain for sharing (at most one) |
+| created_at | TEXT | now() | ISO 8601 |
+| created_by | INTEGER | NULL | Foreign key to users.id |
+
+**Indexes:** idx_domains_hostname on hostname
+**Constraints:** Unique (hostname COLLATE NOCASE), at most one row with is_default=1
+**Migration:** 002_domains.sql
+**Note:** Service layer enforces at most one default domain. CORS origin generation creates both `http://` and `https://` variants per hostname.
+
 ### user_playlist_games
 
 Games within user playlists (many-to-many).

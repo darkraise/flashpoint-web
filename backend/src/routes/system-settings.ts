@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { CachedSystemSettingsService } from '../services/CachedSystemSettingsService';
+import { DomainService } from '../services/DomainService';
 import { PermissionCache } from '../services/PermissionCache';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
@@ -68,6 +69,17 @@ router.get('/public', async (req: Request, res: Response) => {
     }
     publicSettings.metadata.flashpointEdition = require('../config').config.flashpointEdition;
     publicSettings.metadata.flashpointVersion = require('../config').config.flashpointVersionString;
+
+    // Inject default domain from domains table
+    try {
+      const domainService = new DomainService();
+      (publicSettings as any).domains = {
+        defaultDomain: domainService.getDefaultDomain(),
+      };
+    } catch {
+      // DB table may not exist yet during first startup
+      (publicSettings as any).domains = { defaultDomain: null };
+    }
 
     res.json(publicSettings);
   } catch (error) {

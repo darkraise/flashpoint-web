@@ -110,6 +110,7 @@ Main route groups:
 - `/api/play` - Play session tracking
 - `/api/activities` - Activity logs
 - `/api/playlists` - User playlists
+- `/api/domains` - Domain management
 
 See the [API Reference](../06-api-reference/README.md) for complete API documentation.
 
@@ -121,6 +122,7 @@ See the [API Reference](../06-api-reference/README.md) for complete API document
 - UserService - User CRUD operations
 - GameService - Game metadata queries
 - PlayTrackingService - Play session tracking
+- DomainService - Domain CRUD with CORS cache
 
 ## Security Features
 
@@ -129,7 +131,7 @@ See the [API Reference](../06-api-reference/README.md) for complete API document
 - Login attempt tracking and account lockout
 - RBAC for fine-grained access control
 - Activity logging for audit trails
-- CORS protection
+- Dynamic CORS protection (env var + configured domains)
 - Helmet.js security headers
 - Input validation and sanitization
 

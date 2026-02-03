@@ -19,7 +19,7 @@ Reference for all npm packages used across the Flashpoint Web monorepo.
 | http-proxy-middleware | ^2.0.6 | MIT | Proxy game file requests to game-service |
 | jsonwebtoken | ^9.0.3 | MIT | JWT implementation (HS256, 1hr expiration) |
 | node-stream-zip | ^1.15.0 | MIT | Stream files from ZIPs without extraction |
-| redis | ^4.6.13 | MIT | Redis client for caching (optional) |
+
 | winston | ^3.11.0 | MIT | Logging with multiple transports |
 | zod | ^3.22.4 | MIT | TypeScript schema validation |
 

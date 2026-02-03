@@ -91,6 +91,28 @@ Body options:
 
 **Validation:** All updates validated against JSON schemas. Type, range, and enum validation enforced.
 
+## Public Settings: Domain Injection
+
+The `GET /api/settings/public` endpoint includes an additional `domains` object injected at runtime (not stored in the `system_settings` table):
+
+```json
+{
+  "app": { ... },
+  "auth": { ... },
+  "domains": {
+    "defaultDomain": "play.example.com"
+  }
+}
+```
+
+This is managed via the separate `/api/domains` endpoints (see [Domains API](./domains-api.md)).
+
+## Frontend Integration
+
+**Caching:** Settings cached 60 seconds (in-memory). Auto-invalidated on update.
+
+**Validation:** All updates validated against JSON schemas. Type, range, and enum validation enforced.
+
 **Frontend Integration:**
 
 ```typescript

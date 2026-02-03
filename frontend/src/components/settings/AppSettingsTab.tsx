@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Palette, Check } from "lucide-react";
+import { Palette, Check, Globe, Plus, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { systemSettingsApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useDialog } from "@/contexts/DialogContext";
 import { AppSettings } from "@/types/settings";
+import { useDomains, useAddDomain, useDeleteDomain, useSetDefaultDomain } from "@/hooks/useDomains";
 
 interface AppSettingsTabProps {
   tabContentVariants: Variants;
@@ -23,6 +24,14 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
 
   // Local state for site name input
   const [siteNameInput, setSiteNameInput] = useState("");
+
+  // Domain settings state
+  const [domainInput, setDomainInput] = useState("");
+  const [domainError, setDomainError] = useState<string | null>(null);
+  const { data: domains } = useDomains(!!isAdmin);
+  const addDomainMutation = useAddDomain();
+  const deleteDomainMutation = useDeleteDomain();
+  const setDefaultDomainMutation = useSetDefaultDomain();
 
   // Fetch app settings
   const { data: appSettings } = useQuery({
@@ -240,6 +249,124 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
           </div>
         </div>
       )}
+
+      {isAdmin && (
+        <div className="bg-card rounded-lg p-6 border border-border shadow-md">
+          <div className="flex items-center gap-2 mb-4">
+            <Globe size={24} className="text-primary" />
+            <h2 className="text-xl font-semibold">Domain Settings</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Configure custom domains for sharing playlists. The default domain
+            is used in share links for non-admin users.
+          </p>
+
+          {/* Add Domain */}
+          <div className="flex items-start gap-2 mb-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-1 focus:ring-primary ${
+                  domainError ? "border-destructive" : "border-border"
+                }`}
+                value={domainInput}
+                onChange={(e) => {
+                  setDomainInput(e.target.value);
+                  setDomainError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddDomain();
+                }}
+                placeholder="e.g., play.example.com"
+                disabled={addDomainMutation.isPending}
+              />
+              {domainError && (
+                <p className="text-xs text-destructive mt-1">{domainError}</p>
+              )}
+            </div>
+            <Button
+              onClick={handleAddDomain}
+              disabled={addDomainMutation.isPending || !domainInput.trim()}
+              size="icon"
+              title="Add domain"
+            >
+              <Plus size={18} />
+            </Button>
+          </div>
+
+          {/* Domain List */}
+          {domains && domains.length > 0 ? (
+            <div className="space-y-2">
+              {domains.map((domain) => (
+                <div
+                  key={domain.id}
+                  className="flex items-center justify-between px-3 py-2 bg-background border border-border rounded-md"
+                >
+                  <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                    <input
+                      type="radio"
+                      name="default-domain"
+                      checked={domain.isDefault}
+                      onChange={() => setDefaultDomainMutation.mutate(domain.id)}
+                      disabled={setDefaultDomainMutation.isPending}
+                      className="accent-primary"
+                    />
+                    <span className="text-sm font-mono truncate">
+                      {domain.hostname}
+                    </span>
+                    {domain.isDefault && (
+                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
+                        default
+                      </span>
+                    )}
+                  </label>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteDomainMutation.mutate(domain.id)}
+                    disabled={deleteDomainMutation.isPending}
+                    title="Delete domain"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              No domains configured. Share links will use the current browser
+              URL.
+            </p>
+          )}
+        </div>
+      )}
     </motion.div>
   );
+
+  function handleAddDomain() {
+    const value = domainInput.trim();
+    if (!value) return;
+
+    // Client-side validation
+    if (/^https?:\/\//i.test(value)) {
+      setDomainError("Don't include the protocol (http:// or https://)");
+      return;
+    }
+    if (/[/?#]/.test(value)) {
+      setDomainError("Don't include a path, query string, or fragment");
+      return;
+    }
+    if (domains?.some((d) => d.hostname.toLowerCase() === value.toLowerCase())) {
+      setDomainError("This domain already exists");
+      return;
+    }
+
+    addDomainMutation.mutate(value, {
+      onSuccess: () => {
+        setDomainInput("");
+        setDomainError(null);
+      },
+    });
+  }
 }

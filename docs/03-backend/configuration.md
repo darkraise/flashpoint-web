@@ -234,36 +234,6 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
   RATE_LIMIT_MAX_REQUESTS=1000  # More permissive
   ```
 
-### Redis Configuration
-
-#### `REDIS_ENABLED`
-- **Type**: boolean
-- **Default**: `false`
-- **Description**: Enable Redis for caching
-- **Usage**:
-  ```bash
-  REDIS_ENABLED=true
-  ```
-
-#### `REDIS_HOST`
-- **Type**: string
-- **Default**: `localhost`
-- **Description**: Redis server hostname
-- **Usage**:
-  ```bash
-  REDIS_HOST=localhost
-  REDIS_HOST=redis  # Docker
-  ```
-
-#### `REDIS_PORT`
-- **Type**: number
-- **Default**: `6379`
-- **Description**: Redis server port
-- **Usage**:
-  ```bash
-  REDIS_PORT=6379
-  ```
-
 ### Logging Configuration
 
 #### `LOG_LEVEL`
@@ -358,11 +328,6 @@ BCRYPT_SALT_ROUNDS=12
 # CORS
 DOMAIN=https://flashpoint.example.com
 
-# Redis (optional)
-REDIS_ENABLED=true
-REDIS_HOST=redis
-REDIS_PORT=6379
-
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
@@ -397,11 +362,6 @@ BCRYPT_SALT_ROUNDS=12
 
 # CORS
 DOMAIN=${DOMAIN}  # Pass from environment
-
-# Redis
-REDIS_ENABLED=true
-REDIS_HOST=redis
-REDIS_PORT=6379
 
 # Logging
 LOG_FILE=/app/logs/backend.log

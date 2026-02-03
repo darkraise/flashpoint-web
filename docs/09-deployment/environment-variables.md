@@ -54,14 +54,6 @@ openssl rand -hex 64
 | `LOG_LEVEL` | info | Level: error, warn, info, debug |
 | `LOG_FILE` | - | Optional log file path |
 
-**Redis (Optional):**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `REDIS_ENABLED` | false | Enable Redis caching |
-| `REDIS_HOST` | localhost | Redis hostname |
-| `REDIS_PORT` | 6379 | Redis port |
-
 ## Game Service Variables
 
 Location: `game-service/.env`
@@ -162,7 +154,6 @@ JWT_SECRET=development-secret-change-in-production
 DOMAIN=http://localhost:5173
 RATE_LIMIT_MAX_REQUESTS=1000
 LOG_LEVEL=debug
-REDIS_ENABLED=false
 ```
 
 **Production (.env.production):**
@@ -179,9 +170,6 @@ RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
 LOG_LEVEL=warn
 LOG_FILE=/var/log/flashpoint-backend.log
-REDIS_ENABLED=true
-REDIS_HOST=redis
-REDIS_PORT=6379
 ```
 
 ## Validation and Defaults

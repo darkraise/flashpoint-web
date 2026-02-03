@@ -143,6 +143,15 @@ playTrackingApi.getActivityOverTime(days?: number): Promise<PlayActivityData[]>
 playTrackingApi.getGamesDistribution(limit?: number): Promise<GameDistribution[]>
 ```
 
+### domainsApi
+
+```typescript
+domainsApi.getAll(): Promise<Domain[]>
+domainsApi.add(hostname: string): Promise<Domain>
+domainsApi.delete(id: number): Promise<void>
+domainsApi.setDefault(id: number): Promise<Domain>
+```
+
 ## Usage with Custom Hooks
 
 All API calls should use custom hooks wrapping TanStack Query:

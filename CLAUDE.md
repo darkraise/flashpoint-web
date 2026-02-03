@@ -361,7 +361,7 @@ LOG_LEVEL=info
 > stored in the `system_settings` table as `metadata.flashpoint_edition` and
 > `metadata.flashpoint_version`.
 
-See `backend/.env.example` for complete configuration options including Redis,
+See `backend/.env.example` for complete configuration options including
 rate limiting, SQLite optimization, and OpenTelemetry settings.
 
 ### Game Service (.env)
@@ -628,6 +628,68 @@ the base directory. Never trust user input, even after URL decoding.
 
 **Phase**: Phase 1 (Security) - Critical priority fix from comprehensive project
 review
+
+---
+
+### 2026-02-04: Domain Settings for Playlist Sharing & Dynamic CORS
+
+**Change:** Added admin-configurable domains for playlist sharing URLs and
+dynamic CORS. Admins can add multiple domains, set a default, and choose which
+domain to use when sharing playlists. Regular users automatically use the
+default domain. Falls back to `window.location.origin` when no domains are
+configured.
+
+**How it works:**
+
+- New `domains` table in user.db stores hostname, is_default, created_by
+- `DomainService` provides CRUD operations with 60s in-memory cache
+- Backend CORS is now dynamic: checks configured domains + env var fallback
+- Default domain injected into `/api/settings/public` response (same pattern as
+  `homeRecentHours` and `flashpointEdition`)
+- `shareUrl` removed from backend `ShareLinkData` — frontend constructs URLs
+  locally using `buildShareUrl()` from `useDomains` hook
+- Admin users see a domain selector dropdown in the Share Playlist dialog
+- Non-admin users use the default domain from `usePublicSettings()`
+
+**New files:**
+
+- `backend/src/migrations/002_domains.sql` — Domains table schema
+- `backend/src/services/DomainService.ts` — Domain CRUD + CORS cache
+- `backend/src/routes/domains.ts` — REST API for domains
+- `frontend/src/lib/api/domains.ts` — Frontend API client
+- `frontend/src/hooks/useDomains.ts` — React Query hooks + `buildShareUrl()`
+
+**Modified files:**
+
+- `backend/src/routes/index.ts` — Register domains router
+- `backend/src/server.ts` — Dynamic CORS origin function
+- `backend/src/services/UserPlaylistService.ts` — Removed `shareUrl` from
+  `ShareLinkData`, removed unused `config` import
+- `backend/src/routes/system-settings.ts` — Inject `defaultDomain` into
+  `/public` response
+- `frontend/src/types/settings.ts` — Added `Domain` interface, updated
+  `PublicSettings`
+- `frontend/src/types/playlist.ts` — Removed `shareUrl` from `ShareLinkData`
+- `frontend/src/lib/api/index.ts` — Exported `domainsApi`
+- `frontend/src/components/settings/AppSettingsTab.tsx` — Domain Settings card
+- `frontend/src/components/playlist/SharePlaylistDialog.tsx` — Domain selector +
+  local URL construction
+
+**Key Lesson:** Moving URL construction to the frontend (with `buildShareUrl()`)
+eliminates the need for the backend to know the frontend's domain for share
+links. The admin-configurable domains table plus the `usePublicSettings()` hook
+provide a clean way for both admin and regular users to get the right domain
+without extra API calls.
+
+**Documentation:**
+
+- API reference: `docs/06-api-reference/domains-api.md`
+- Feature guide: `docs/10-features/09-system-settings.md` (Domain Settings
+  section)
+- Database schema: `docs/12-reference/database-schema-reference.md` (domains
+  table)
+- CORS decision: `docs/12-reference/cors-security-decision.md` (dynamic CORS
+  section)
 
 ---
 

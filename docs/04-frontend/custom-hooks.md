@@ -72,6 +72,31 @@ const removeGamesMutation = useRemoveGamesFromPlaylist();
 const deleteMutation = useDeletePlaylist();
 ```
 
+### useDomains
+
+Domain management hooks for admin domain settings.
+
+**Location:** `frontend/src/hooks/useDomains.ts`
+
+```typescript
+// Fetch all domains (admin only)
+const { data: domains } = useDomains(enabled?: boolean);
+
+// Mutations
+const addDomain = useAddDomain();       // addDomain.mutate('play.example.com')
+const deleteDomain = useDeleteDomain(); // deleteDomain.mutate(domainId)
+const setDefault = useSetDefaultDomain(); // setDefault.mutate(domainId) - optimistic update
+
+// Utility: build share URL from hostname + token
+import { buildShareUrl } from '@/hooks/useDomains';
+const url = buildShareUrl('play.example.com', shareToken);
+// => "https://play.example.com/playlists/shared/{token}"
+const fallback = buildShareUrl(null, shareToken);
+// => "{window.location.origin}/playlists/shared/{token}"
+```
+
+All mutations automatically invalidate the `['system-settings', 'public']` cache so the default domain updates across the app.
+
 ## Authentication Hook
 
 ### useAuth

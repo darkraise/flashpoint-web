@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,10 +16,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   useEnableSharing,
   useDisableSharing,
   useRegenerateShareToken,
 } from '@/hooks/useUserPlaylists';
+import { useDomains, buildShareUrl } from '@/hooks/useDomains';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { useAuthStore } from '@/store/auth';
 import { UserPlaylist, ShareLinkData } from '@/types/playlist';
 import { Copy, RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -37,6 +47,9 @@ export function SharePlaylistDialog({
   onClose,
   playlist,
 }: SharePlaylistDialogProps) {
+  const { user } = useAuthStore();
+  const isAdmin = user?.permissions.includes('settings.update');
+
   const [isSharing, setIsSharing] = useState(playlist.isPublic);
   const [shareData, setShareData] = useState<ShareLinkData | null>(null);
   const [expiresAt, setExpiresAt] = useState<Date | undefined>(
@@ -44,17 +57,41 @@ export function SharePlaylistDialog({
   );
   const [showOwner, setShowOwner] = useState(playlist.showOwner || false);
   const [isLoadingShareData, setIsLoadingShareData] = useState(false);
+  // Sentinel value for "use current browser URL" option (Radix Select doesn't support empty string values)
+  const CURRENT_URL_VALUE = '__current__';
+  const [selectedDomain, setSelectedDomain] = useState<string>(CURRENT_URL_VALUE);
 
   const enableSharingMutation = useEnableSharing();
   const disableSharingMutation = useDisableSharing();
   const regenerateTokenMutation = useRegenerateShareToken();
+
+  // Domain data: admins get the full list, regular users get default from public settings
+  const { data: domains } = useDomains(!!isAdmin);
+  const { data: publicSettings } = usePublicSettings();
+  const defaultDomain = publicSettings?.domains?.defaultDomain ?? null;
+
+  // Initialize selected domain from the default
+  useEffect(() => {
+    if (isAdmin && domains) {
+      const def = domains.find((d) => d.isDefault);
+      setSelectedDomain(def?.hostname ?? CURRENT_URL_VALUE);
+    } else {
+      setSelectedDomain(defaultDomain ?? CURRENT_URL_VALUE);
+    }
+  }, [isAdmin, domains, defaultDomain]);
+
+  // Build the share URL locally
+  const shareUrl = useMemo(() => {
+    if (!shareData) return '';
+    const hostname = selectedDomain === CURRENT_URL_VALUE ? null : selectedDomain;
+    return buildShareUrl(hostname, shareData.shareToken);
+  }, [shareData, selectedDomain]);
 
   // Load initial share data if already shared
   useEffect(() => {
     if (isOpen && playlist.isPublic && playlist.shareToken) {
       setShareData({
         shareToken: playlist.shareToken,
-        shareUrl: `${window.location.origin}/playlists/shared/${playlist.shareToken}`,
         expiresAt: playlist.shareExpiresAt || null,
         showOwner: playlist.showOwner || false,
       });
@@ -124,10 +161,10 @@ export function SharePlaylistDialog({
   };
 
   const handleCopyUrl = async () => {
-    if (!shareData) return;
+    if (!shareUrl) return;
 
     try {
-      await navigator.clipboard.writeText(shareData.shareUrl);
+      await navigator.clipboard.writeText(shareUrl);
       toast.success('Link copied to clipboard');
     } catch (error) {
       toast.error('Failed to copy link');
@@ -195,6 +232,32 @@ export function SharePlaylistDialog({
                 </AlertDescription>
               </Alert>
 
+              {/* Domain Selector (admin only) */}
+              {isAdmin && domains && domains.length > 0 && shareData && (
+                <div className="space-y-2">
+                  <Label htmlFor="share-domain">Domain</Label>
+                  <Select
+                    value={selectedDomain}
+                    onValueChange={setSelectedDomain}
+                  >
+                    <SelectTrigger id="share-domain" className="w-full">
+                      <SelectValue placeholder="Current URL" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={CURRENT_URL_VALUE}>
+                        Current URL ({window.location.host})
+                      </SelectItem>
+                      {domains.map((d) => (
+                        <SelectItem key={d.id} value={d.hostname}>
+                          {d.hostname}
+                          {d.isDefault ? ' (default)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Share URL */}
               {shareData && (
                 <div className="space-y-2">
@@ -202,7 +265,7 @@ export function SharePlaylistDialog({
                   <div className="flex gap-2">
                     <Input
                       id="share-url"
-                      value={shareData.shareUrl}
+                      value={shareUrl}
                       readOnly
                       className="flex-1 font-mono text-sm"
                     />

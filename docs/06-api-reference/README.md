@@ -149,6 +149,12 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [PATCH /api/settings/auth](./admin-api.md#update-auth-settings)
 - [GET /game-files/*](./admin-api.md#get-game-file)
 
+### Domains
+- [GET /api/domains](./domains-api.md#list-domains)
+- [POST /api/domains](./domains-api.md#add-domain)
+- [DELETE /api/domains/:id](./domains-api.md#delete-domain)
+- [PATCH /api/domains/:id/default](./domains-api.md#set-default-domain)
+
 ### System Settings
 - [GET /api/settings](./settings-api.md#get-all-settings)
 - [GET /api/settings/:category](./settings-api.md#get-category-settings)
