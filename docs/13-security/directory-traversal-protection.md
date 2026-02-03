@@ -12,13 +12,8 @@ The game-service has been hardened against directory traversal attacks through c
 
 Previous implementation allowed potential directory traversal attacks in two areas:
 
-1. **Legacy Server** (`legacy-server.ts`):
-   - Used `path.join()` and `path.normalize()` but didn't validate resolved paths
-   - Attackers could potentially use `../../../etc/passwd` to escape allowed directories
-
-2. **GameZip Server** (`gamezipserver.ts`):
-   - Had partial validation for mount operations
-   - File serving logic lacked URL path sanitization
+1. **Legacy Server**: Used `path.join()` and `path.normalize()` but didn't validate resolved paths
+2. **GameZip Server**: Had partial validation but lacked URL path sanitization
 
 ## Solution
 
@@ -33,15 +28,15 @@ sanitizeAndValidatePath(basePath: string, requestPath: string): string
 - Normalizes paths using `path.normalize()` and `path.resolve()`
 - Ensures resolved path stays within the base directory
 - Platform-aware (case-insensitive on Windows, case-sensitive on Unix)
-- Throws error if directory traversal is detected
+- Throws error if directory traversal detected
 
 **Example:**
 ```typescript
-// ✓ SAFE - within base directory
+// ✓ SAFE
 sanitizeAndValidatePath('/var/www/htdocs', 'files/game.swf')
 // Returns: /var/www/htdocs/files/game.swf
 
-// ✗ BLOCKED - escapes base directory
+// ✗ BLOCKED
 sanitizeAndValidatePath('/var/www/htdocs', '../../../etc/passwd')
 // Throws: Error('Invalid path: Directory traversal detected')
 ```
@@ -52,9 +47,7 @@ sanitizeAndValidatePath('/var/www/htdocs', '../../../etc/passwd')
 validatePathInAllowedDirectories(allowedBases: string[], requestPath: string): string
 ```
 
-- Validates path against multiple allowed base directories
-- Useful for services with htdocs, cgi-bin, and other directories
-- Returns validated path if found in any allowed base
+Validates path against multiple allowed base directories.
 
 ### 3. URL Path Sanitization
 
@@ -62,7 +55,7 @@ validatePathInAllowedDirectories(allowedBases: string[], requestPath: string): s
 sanitizeUrlPath(urlPath: string): string
 ```
 
-- Checks for null bytes (`\0`) - used to bypass extension checks
+- Checks for null bytes (`\0`)
 - Blocks URL-encoded directory traversal (`..%2F`, `..%5C`)
 - Blocks backslash path traversal (`..\\`)
 - Runs before path resolution for early detection
@@ -71,84 +64,21 @@ sanitizeUrlPath(urlPath: string): string
 
 ### Legacy Server Changes
 
-**File:** `game-service/src/legacy-server.ts`
-
-1. **Added URL path sanitization** at request entry point:
-   ```typescript
-   async serveLegacy(hostname: string, urlPath: string) {
-     // Sanitize URL path to prevent null bytes and dangerous patterns
-     try {
-       urlPath = sanitizeUrlPath(urlPath);
-     } catch (error) {
-       logger.error(`[LegacyServer] Invalid URL path: ${urlPath}`);
-       throw new Error('Invalid URL path');
-     }
-     // ... rest of logic
-   }
-   ```
-
-2. **Added path validation** before file access:
-   ```typescript
-   for (const candidate of pathCandidates) {
-     try {
-       // Validate path is within allowed base directory before accessing
-       this.validateCandidatePath(candidate.path, candidate.type);
-
-       const stats = await fs.stat(candidate.path);
-       // ... serve file
-     } catch (error) {
-       continue; // Path validation failed or file not found
-     }
-   }
-   ```
-
-3. **Created validation method** for candidate types:
-   ```typescript
-   private validateCandidatePath(candidatePath: string, candidateType: string): void {
-     let allowedBase: string;
-
-     if (candidateType === 'cgi-bin' || candidateType === 'cgi-bin-no-query') {
-       allowedBase = this.settings.legacyCGIBINPath;
-     } else {
-       allowedBase = this.settings.legacyHTDOCSPath;
-     }
-
-     sanitizeAndValidatePath(allowedBase, candidatePath);
-   }
-   ```
+1. **Added URL path sanitization** at request entry point
+2. **Added path validation** before file access
+3. **Created validation method** for candidate types
 
 ### GameZip Server Changes
 
-**File:** `game-service/src/gamezipserver.ts`
-
-1. **Added URL path sanitization** in file request handler:
-   ```typescript
-   private async handleFileRequest(req, res) {
-     // ... parse URL to get urlPath
-
-     // Sanitize URL path to prevent null bytes and dangerous patterns
-     try {
-       urlPath = sanitizeUrlPath(urlPath);
-     } catch (error) {
-       logger.error(`[GameZipServer] Invalid URL path: ${urlPath}`);
-       this.sendError(res, 400, 'Invalid URL path');
-       return;
-     }
-
-     // ... build relPath and serve file
-   }
-   ```
-
-2. **Existing mount validation** (already present):
-   - Validates mount IDs to prevent path separators
-   - Validates ZIP paths are within allowed games directory
+1. **Added URL path sanitization** in file request handler
+2. **Existing mount validation** (already present)
 
 ## Test Coverage
 
 **File:** `game-service/src/utils/pathSecurity.test.ts`
 
 - 17 test cases covering all security scenarios
-- All tests passing (verified 2026-01-29)
+- All tests passing
 
 **Test Categories:**
 1. Valid paths within base directory ✓
@@ -168,8 +98,8 @@ After this implementation:
 1. **No Directory Traversal**: Impossible to escape allowed base directories
 2. **Null Byte Protection**: Cannot bypass file extension checks
 3. **URL Encoding Protection**: Detects encoded traversal attempts
-4. **Platform-Aware**: Works correctly on Windows and Unix systems
-5. **Comprehensive Logging**: All blocked attempts are logged with details
+4. **Platform-Aware**: Works correctly on Windows and Unix
+5. **Comprehensive Logging**: All blocked attempts logged with details
 
 ## Attack Vectors Blocked
 
@@ -191,7 +121,7 @@ After this implementation:
 
 ## Logging
 
-All blocked attempts are logged with:
+All blocked attempts logged with:
 - Original request path
 - Resolved absolute path
 - Base directory being protected
@@ -222,4 +152,4 @@ All blocked attempts are logged with:
 
 - **OWASP**: [Path Traversal](https://owasp.org/www-community/attacks/Path_Traversal)
 - **CWE-22**: Directory Traversal
-- **Review Plan**: Phase 1 - Security (Week 1)
+- **Phase**: Phase 1 - Security (Critical priority fix)

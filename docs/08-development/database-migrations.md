@@ -41,8 +41,7 @@ XXX_description.sql
 | File | Description |
 |------|-------------|
 | `bootstrap.sql` | Creates the migrations registry table |
-| `001_initialize_schema.sql` | Complete database schema with all tables |
-| `002_seed_default_data.sql` | Default roles, permissions, and system settings |
+| `001_complete_schema.sql` | Complete database schema with all tables and seed data |
 
 ### Archived Migrations
 
@@ -64,15 +63,9 @@ When the backend starts, `UserDatabaseService.initialize()` performs these steps
 The system automatically detects existing databases (from the old migration system) and marks the consolidated migrations as applied:
 
 ```typescript
-// Checks for existing tables
+// Checks for existing tables and seed data
 if (tables.some(t => t.name === 'users')) {
-  markApplied('001_initialize_schema', 'Detected existing schema');
-}
-
-// Checks for existing seed data
-const hasRoles = this.db.prepare('SELECT COUNT(*) as count FROM roles').get();
-if (hasRoles && hasRoles.count > 0) {
-  markApplied('002_seed_default_data', 'Detected existing seed data');
+  markApplied('001_complete_schema', 'Detected existing schema and seed data');
 }
 ```
 

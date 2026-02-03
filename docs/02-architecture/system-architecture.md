@@ -2,7 +2,7 @@
 
 ## Overview
 
-Flashpoint Web is built as a monorepo containing three independent microservices that work together to provide a complete web-based game browsing and playing experience. The architecture follows a clean separation of concerns pattern with distinct services for metadata management, game file serving, and user interface.
+Flashpoint Web is a monorepo containing three independent microservices: frontend (React UI), backend (Express API), and game-service (game file proxy). Services communicate via HTTP with clean separation of concerns.
 
 ## Architecture Diagram
 
@@ -86,96 +86,63 @@ graph TB
     style UserDB fill:#ff9999
 ```
 
-## Service Architecture
+## Services Overview
 
-### 1. Frontend Service (Port 5173)
+### Frontend Service (Port 5173)
 
-**Purpose**: Single-Page Application providing the user interface
+**Purpose**: React single-page application for user interface
 
-**Technology Stack**:
-- React 18 with TypeScript
-- Vite for build tooling and development server
-- React Router for client-side routing
-- TanStack Query for server state management
-- Zustand for client-side UI state
-- Tailwind CSS for styling
-- Ruffle WebAssembly for Flash emulation
-
-**Key Responsibilities**:
-- User interface rendering and interaction
-- Client-side routing and navigation
-- Server state caching and synchronization
-- Flash game embedding via Ruffle
-- Authentication state management
-- Theme and UI preferences
+**Technology**: React 18, TypeScript, Vite, React Router, TanStack Query, Zustand, Tailwind CSS, Ruffle
 
 **State Management**:
-- **Server State** (TanStack Query): Games, playlists, user data, play stats
-- **UI State** (Zustand): Sidebar visibility, view modes, auth state
-- **URL State** (React Router): Search params, filters, pagination
-- **Local Storage**: Auth tokens, theme preferences
+- **Server State** (TanStack Query): Games, playlists, user data
+- **UI State** (Zustand): Sidebar, view modes, auth state
+- **URL State** (React Router): Search params, filters
+- **Local Storage**: Auth tokens, preferences
 
-### 2. Backend Service (Port 3100)
+**Key Features**: Game browsing, search, filtering, play tracking, favorites, playlists
 
-**Purpose**: REST API server for metadata, authentication, and business logic
+### Backend Service (Port 3100)
 
-**Technology Stack**:
-- Express.js with TypeScript
-- BetterSqlite3 for database access
-- JWT for authentication
-- Bcrypt for password hashing
-- Zod for request validation
+**Purpose**: REST API for metadata, authentication, and business logic
+
+**Technology**: Express.js, TypeScript, BetterSqlite3, JWT, Bcrypt, Zod
 
 **Key Responsibilities**:
-- Game metadata queries from flashpoint.sqlite
+- Game metadata queries
 - User management and authentication
 - Role-based access control (RBAC)
 - Play session tracking
 - Playlist management
-- Activity logging
-- Database hot-reloading (watches for Flashpoint Launcher updates)
+- Database hot-reloading for Flashpoint Launcher updates
 
-**Database Access**:
-- **flashpoint.sqlite**: Read-only access with file watcher for external changes
-- **user.db**: Read-write access with schema migrations
+**Databases**:
+- **flashpoint.sqlite**: Read-only with file watcher
+- **user.db**: Read-write with schema migrations
 
-**Service Layer Pattern**:
-```
-routes/ → middleware/ → services/ → databases/
-```
+**Architecture Pattern**: Routes → Middleware → Services → Databases
 
-### 3. Game Service (Ports 22500, 22501)
+### Game Service (Ports 22500, 22501)
 
-**Purpose**: Game file serving, proxying, and ZIP mounting
-
-**Technology Stack**:
-- Express.js with TypeScript
-- node-stream-zip for ZIP file handling
-- Custom MIME type detection (199+ types)
-
-**Key Responsibilities**:
+**Purpose**: Game file serving and ZIP mounting
 
 **HTTP Proxy Server (22500)**:
 - Serves legacy web content with fallback chain:
   1. Local htdocs directory
   2. Game data directory
-  3. ZIP archives (via zip-manager)
+  3. ZIP archives
   4. External CDN fallback
-  5. Local cache for downloaded content
-- CORS headers for cross-domain content
-- URL decoding and path normalization
+  5. Local cache
 
 **GameZip Server (22501)**:
-- Mounts and serves files from ZIP archives
-- Streaming support for large files
-- Zero-extraction design (files served directly from ZIP)
-- **LRU cache** for ZIP mounts (max 100, 30-min TTL, auto-cleanup on eviction)
-- **Request body size limit** (1MB maximum) for DoS protection
-- Automatic cleanup of unused mounts
+- Mounts and streams ZIP archives
+- Zero-extraction design
+- LRU cache (max 100, 30-min TTL)
+- Auto-cleanup on eviction
 
-## Data Flow Architecture
+## Data Flow
 
-### Component Communication
+### Request Processing Pipeline
 
 ```mermaid
 graph LR
@@ -210,14 +177,12 @@ graph LR
     Hook -.render.-> Component
 ```
 
-### Request Processing Pipeline
-
 **Frontend → Backend**:
 1. User interaction triggers component action
-2. Custom hook calls API client function
+2. Custom hook calls API client
 3. API client adds JWT token via interceptor
-4. Axios sends HTTP request to backend
-5. Vite dev proxy forwards to Express (in development)
+4. Axios sends HTTP request
+5. Vite proxy forwards to Express (development)
 
 **Backend Processing**:
 1. Express route receives request
@@ -232,70 +197,50 @@ graph LR
 **Frontend State Update**:
 1. TanStack Query receives response
 2. Cache updated with new data
-3. Dependent components re-render
-4. Optimistic updates for better UX
+3. Components re-render
+4. Optimistic updates for UX
 
 ## Database Architecture
 
 ### Flashpoint Database (flashpoint.sqlite)
 
-**Ownership**: Flashpoint Launcher (external)
+**Ownership**: Flashpoint Launcher (external, read-only)
 
-**Access Pattern**: Read-only with hot-reload
+**Hot-Reload**: FileSystem watcher detects changes and reloads connection
 
 **Key Tables**:
 - `game`: Game metadata (100,000+ entries)
 - `game_data`: Game file paths and launch commands
 - `platform`: Gaming platforms (Flash, HTML5, etc.)
-- `tag`: Tags and categories
-- `game_tags_tag`: Many-to-many game-tag relationships
-- `playlist`: Community playlists
-- `playlist_game`: Playlist entries
-
-**Hot-Reload Mechanism**:
-```typescript
-fs.watch(dbPath, (eventType) => {
-  if (eventType === 'change') {
-    closeConnection();
-    openConnection();
-    logger.info('Database reloaded');
-  }
-});
-```
+- `tag`, `game_tags_tag`: Tags and relationships
+- `playlist`, `playlist_game`: Community playlists
 
 ### User Database (user.db)
 
-**Ownership**: Flashpoint Web (application-managed)
-
-**Access Pattern**: Read-write with migrations
-
-**Schema Versioning**: Managed via migration files in `backend/src/migrations/`
-
-**Key Tables**:
+**Ownership**: Application-managed with migrations
 
 **Authentication & Authorization**:
 - `users`: User accounts with hashed passwords (bcrypt)
 - `roles`: RBAC roles (admin, moderator, user, guest)
-- `role_permissions`: Permissions assigned to roles
-- `user_roles`: User role assignments
-- `system_settings`: Global system-wide configuration (auth, app, metadata, features, game, storage, rate limiting)
+- `role_permissions`: Role-permission mappings
+- `system_settings`: Global configuration
 
 **User Features**:
 - `user_playlists`: User-created playlists
-- `user_favorites`: Favorited games per user
-- `user_settings`: Key-value settings storage (theme, preferences)
+- `user_favorites`: Favorited games
+- `user_settings`: User preferences
 
 **Play Tracking**:
-- `user_game_plays`: Individual play sessions with duration
-- `user_game_stats`: Aggregated per-game statistics
-- `user_stats`: Overall user statistics
+- `user_game_plays`: Individual sessions
+- `user_game_stats`: Per-game aggregates
+- `user_stats`: Overall user stats
 
 **Activity Logging**:
-- `activity_logs`: Audit trail of user actions
+- `activity_logs`: Audit trail
 
 ## Security Architecture
 
-### Authentication Flow
+### Authentication
 
 ```mermaid
 sequenceDiagram
@@ -308,312 +253,146 @@ sequenceDiagram
     UserDB-->>Backend: User record
     Backend->>Backend: Bcrypt compare password
     Backend->>Backend: Generate JWT tokens
-    Backend->>UserDB: Update last_login_at
     Backend-->>Client: {accessToken, refreshToken, user}
-    Client->>Client: Store in localStorage
-    Client->>Client: Store in Zustand
+    Client->>Client: Store in localStorage + Zustand
 ```
 
-### Authorization Model
+**Access Token**: Short-lived (15 minutes), contains user ID, role, permissions
 
-**Role-Based Access Control (RBAC)**:
+**Refresh Token**: Long-lived (7 days), used to obtain new access token
 
+**Token Refresh**: Axios interceptor handles 401 automatically
+
+### Authorization
+
+**Role-Based Access Control**:
 ```
-User → assigned to → Role → has → Permissions
+User → Role → Permissions → Resources
 ```
 
 **Default Roles**:
 - `admin`: Full system access
-- `moderator`: Content management, user support
-- `user`: Standard user features
-- `guest`: Read-only access (if enabled)
+- `moderator`: Content management
+- `user`: Standard features
+- `guest`: Read-only (if enabled)
 
-**Permission Format**: `resource.action`
-
-Examples:
-- `games.read`: View games
-- `games.play`: Play games
-- `playlists.create`: Create playlists
-- `users.manage`: Manage users
-
-**Middleware Stack**:
-```typescript
-router.get('/games',
-  authenticate,              // Verify JWT
-  requirePermission('games.read'),  // Check permission
-  logActivity('games.list'), // Log action
-  async (req, res) => { ... }
-);
-```
-
-### Token Management
-
-**Access Token**:
-- Short-lived (15 minutes default)
-- Contains user ID, role, permissions
-- Signed with JWT_SECRET
-- Sent in Authorization header
-
-**Refresh Token**:
-- Long-lived (7 days default)
-- Stored securely in httpOnly cookie (production)
-- Used to obtain new access token
-- Invalidated on logout
-
-**Token Refresh Flow**:
-```typescript
-// Axios interceptor handles 401 automatically
-api.interceptors.response.use(null, async (error) => {
-  if (error.response?.status === 401 && !originalRequest._retry) {
-    const tokens = await authApi.refreshToken(refreshToken);
-    updateAccessToken(tokens.accessToken);
-    return api(originalRequest); // Retry with new token
-  }
-});
-```
+**Permission Format**: `resource.action` (e.g., `games.play`, `users.manage`)
 
 ## File System Architecture
-
-### Directory Structure
 
 ```
 D:/Flashpoint/
 ├── Data/
-│   ├── flashpoint.sqlite         # Game metadata database
-│   ├── Images/                   # Game screenshots
-│   │   └── {gameId}.png
+│   ├── flashpoint.sqlite         # Game metadata
+│   ├── Images/                   # Screenshots
 │   ├── Logos/                    # Game logos
-│   │   └── {gameId}.png
 │   ├── Games/                    # ZIP archives
-│   │   └── {first-letter}/
-│   │       └── {gameId}.zip
-│   └── Playlists/                # Playlist JSON files
-│       └── {playlistId}.json
+│   │   └── {first-letter}/{gameId}.zip
+│   └── Playlists/                # Playlist files
 ├── Legacy/
 │   └── htdocs/                   # Legacy web content
-│       └── {domain}/
-│           └── {path}
-└── Flashpoint.exe                # Flashpoint Launcher
+│       └── {domain}/{path}
+└── Flashpoint.exe
 ```
 
-### File Access Patterns
-
-**Images & Logos**:
-- Served directly by backend from file system
-- Endpoint: `/api/images/{type}/{gameId}`
-- Cached by browser with appropriate headers
-
-**Game Content**:
-- Never served by backend
-- Delegated to game-service proxy
-- Backend returns launch URLs pointing to game-service
-
-**ZIP Archives**:
-- Mounted by GameZip server on-demand
-- Files served without extraction
-- Automatic unmounting after inactivity
+**Access Patterns**:
+- **Images/Logos**: Served by backend from file system
+- **Game Content**: Delegated to game-service proxy
+- **ZIPs**: Mounted by GameZip server on-demand
 
 ## Scalability Considerations
 
-### Current Architecture (Single-Server)
+### Current: Single-Server Architecture
 
-All services run on localhost:
-- Frontend: :5173
-- Backend: :3100
-- Game Service: :22500/:22501
+All services run on localhost with SQLite databases.
 
-### Potential Scaling Strategies
+### Performance Optimizations
 
-**Horizontal Scaling**:
+- Frontend route-based lazy loading (38% bundle reduction)
+- React.memo for component optimization (98% fewer re-renders)
+- Game Service LRU cache for ZIP mounts (prevents memory leaks)
+- Game Service request size limits (1MB max, DoS protection)
+- Backend query result caching
+
+### Scaling Strategies (Future)
+
+**Horizontal**:
 - Frontend: Static hosting on CDN (Vercel, Netlify)
 - Backend: Multiple instances behind load balancer
 - Game Service: Region-specific replicas
 
-**Database Scaling**:
-- flashpoint.sqlite: Read replicas for queries
+**Vertical**:
+- flashpoint.sqlite read replicas
 - user.db: PostgreSQL/MySQL for better concurrency
-
-**Caching Layer**:
-- Redis for session storage
+- Redis for session storage and caching
 - CDN for static game assets
-- HTTP cache for metadata responses
-
-**Performance Optimizations**:
-- **Frontend**: Route-based lazy loading (38% bundle size reduction)
-- **Frontend**: React.memo with custom comparison (98% fewer re-renders)
-- **Game Service**: LRU cache for ZIP mounts (prevents memory leaks)
-- **Game Service**: Request body size limits (1MB max, DoS protection)
-- **Backend**: Query result caching (statistics, permissions)
-- Database connection pooling (future)
-- Virtual scrolling for large datasets (future)
 
 ## Development vs Production
 
-### Development Mode
+### Development
 
-**Frontend**:
-- Vite dev server with HMR
-- Proxy configuration for API and game files
-- Source maps enabled
-- React Developer Tools
+**Frontend**: Vite dev server with HMR, proxy configuration, source maps
 
-**Backend**:
-- tsx with watch mode
-- Detailed logging (DEBUG level)
-- CORS enabled for localhost:5173
-- SQLite in WAL mode
+**Backend**: tsx watch mode, DEBUG logging, CORS enabled, SQLite WAL mode
 
-**Game Service**:
-- Node with tsx watch
-- Verbose logging
-- Local file system paths
+**Game Service**: Node with tsx watch, verbose logging
 
-### Production Mode
+### Production
 
-**Frontend**:
-- Static build in `dist/`
-- Minified and tree-shaken
-- Served by backend or CDN
-- Source maps optional
+**Frontend**: Static build in `dist/`, minified, tree-shaken
 
-**Backend**:
-- Compiled to `dist/`
-- Production logging (INFO level)
-- Environment-specific JWT secret
-- Rate limiting enabled
+**Backend**: Compiled TypeScript, INFO logging, rate limiting, environment-specific JWT secret
 
-**Game Service**:
-- Compiled TypeScript
-- Structured logging
-- Optimized for concurrent requests
+**Game Service**: Compiled TypeScript, structured logging, optimized concurrency
 
-## Error Handling Strategy
+## Error Handling
 
-### Frontend Error Boundaries
-
+**Frontend Error Boundaries**:
 ```typescript
 <ErrorBoundary fallback={<ErrorPage />}>
   <GameList />
 </ErrorBoundary>
 ```
 
-### Backend Error Handler
-
+**Backend**:
 ```typescript
 class AppError extends Error {
   constructor(public statusCode: number, message: string) {}
 }
 
-// Global error middleware
 app.use((err, req, res, next) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({ error: err.message });
   }
-  // Log unexpected errors
   logger.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
 ```
 
-### Graceful Degradation
+**Graceful Degradation**: Guest mode, CDN fallback, cached data, error toasts
 
-- Guest mode when auth is disabled
-- Fallback to CDN when local files missing
-- Offline-friendly with cached data
-- Error toasts for user feedback
+## Monitoring & Logging
 
-## Monitoring and Logging
+**Activity Logging**: All significant user actions logged with userId, action, targetType, targetId, timestamp
 
-### Activity Logging
+**Performance Metrics**: Play session durations, API response times, database query performance
 
-All significant user actions are logged:
-```typescript
-{
-  userId: number,
-  action: 'games.play' | 'users.create' | ...,
-  targetType: 'games' | 'users' | ...,
-  targetId: string,
-  metadata: { ... },
-  ipAddress: string,
-  timestamp: ISO8601
-}
-```
-
-### Performance Metrics
-
-- Play session durations
-- API response times
-- Database query performance
-- Game launch success rate
-
-### Log Levels
-
-- `DEBUG`: Development debugging
+**Log Levels**:
+- `DEBUG`: Development
 - `INFO`: Normal operations
-- `WARN`: Recoverable issues (DB locked, file not found)
+- `WARN`: Recoverable issues
 - `ERROR`: Critical failures
 
-## Technology Choices Rationale
+## Technology Rationale
 
-### Why TypeScript?
+**TypeScript**: Type safety, IDE support, refactoring, shared types, reduced runtime errors
 
-- Type safety across frontend and backend
-- Better IDE support and refactoring
-- Shared types between services
-- Reduced runtime errors
+**BetterSqlite3**: Synchronous API, performance, perfect for read-heavy workloads, WAL mode
 
-### Why BetterSqlite3?
+**TanStack Query**: Automatic caching, invalidation, background refetching, optimistic updates
 
-- Synchronous API (simpler code)
-- Better performance than async wrappers
-- Perfect for read-heavy workloads
-- WAL mode for concurrent reads
-
-### Why TanStack Query?
-
-- Automatic caching and invalidation
-- Background refetching
-- Optimistic updates
-- Loading and error states
-
-### Why Monorepo?
-
-- Shared TypeScript types
-- Coordinated development
-- Single deployment
-- Consistent tooling
-
-## Future Architecture Considerations
-
-### Potential Enhancements
-
-1. **Microservices Evolution**:
-   - Separate playlist service
-   - Dedicated stats/analytics service
-   - Image processing service
-
-2. **Real-time Features**:
-   - WebSocket for live updates
-   - Real-time multiplayer coordination
-   - Live activity feeds
-
-3. **Advanced Caching**:
-   - Redis for session management
-   - Service Worker for offline support
-   - GraphQL for flexible queries
-
-4. **Enhanced Security**:
-   - OAuth2 integration
-   - Two-factor authentication
-   - API rate limiting per user
-   - Content Security Policy
-
-5. **Performance**:
-   - Database sharding
-   - Read replicas
-   - CDN integration
-   - Edge computing for game service
+**Monorepo**: Shared types, coordinated development, single deployment, consistent tooling
 
 ## Conclusion
 
-The Flashpoint Web architecture balances simplicity with scalability, maintaining clean separation of concerns while enabling efficient communication between services. The three-service design allows independent scaling and deployment while keeping the codebase maintainable and type-safe.
+Flashpoint Web balances simplicity with scalability, maintaining clean service separation while enabling efficient inter-service communication. The three-service design allows independent scaling and deployment while keeping the codebase maintainable and type-safe.

@@ -1,231 +1,140 @@
 # Theme System
 
-The Flashpoint Web theme system provides flexible, user-customizable theming with light/dark modes and 22 color palette options. The system uses CSS custom properties for dynamic theme switching and Zustand for state management.
+Dynamic theme system with light/dark modes and 22 customizable color palettes. Uses CSS variables for instant theme switching with Zustand state management.
 
-## Architecture Overview
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Theme System                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  User Preferences → Zustand Store → CSS Variables → UI      │
-│                          ↓                                   │
-│                    localStorage                              │
-│                          ↓                                   │
-│                    Backend Sync                              │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+User Preferences → Zustand Store → CSS Variables → UI
+       ↓
+   localStorage
+       ↓
+  Backend Sync
 ```
 
 ## Theme Modes
 
-The system supports three theme modes:
-
-### 1. Light Mode
-Clean, bright interface optimized for daylight viewing.
+### Light Mode
+Clean, bright interface for daylight viewing.
 
 ```tsx
 import { useThemeStore } from '@/store/theme';
 
-function Example() {
-  const { setMode } = useThemeStore();
-
-  return <button onClick={() => setMode('light')}>Light Mode</button>;
-}
+const { setMode } = useThemeStore();
+setMode('light');
 ```
 
-**Color Characteristics:**
-- High contrast backgrounds (98% lightness)
+**Characteristics:**
+- Light backgrounds (98% lightness)
 - Dark text on light backgrounds
-- Subtle shadows for depth
+- Subtle shadows
 - Vibrant primary colors
 
-### 2. Dark Mode
-Eye-friendly interface for low-light environments.
+### Dark Mode
+Eye-friendly interface for low-light viewing.
 
 ```tsx
-import { useThemeStore } from '@/store/theme';
-
-function Example() {
-  const { setMode } = useThemeStore();
-
-  return <button onClick={() => setMode('dark')}>Dark Mode</button>;
-}
+setMode('dark');
 ```
 
-**Color Characteristics:**
+**Characteristics:**
 - Deep backgrounds (4.9% lightness)
-- Light text on dark backgrounds
-- Reduced brightness for comfort
+- Light text on dark
+- Reduced brightness
 - Slightly muted primary colors
 
-### 3. System Mode (Auto)
-Automatically matches user's operating system preference.
+### System Mode (Auto)
+Automatically matches OS preference.
 
 ```tsx
-import { useThemeStore } from '@/store/theme';
-
-function Example() {
-  const { setMode } = useThemeStore();
-
-  return <button onClick={() => setMode('system')}>Auto Theme</button>;
-}
+setMode('system');
 ```
 
-**How It Works:**
-- Listens to `prefers-color-scheme` media query
-- Updates theme when system preference changes
-- No manual switching required
-- Respects user's OS-level dark mode schedule
+Listens to `prefers-color-scheme` media query and updates when system preference changes.
 
 ## Primary Color Customization
 
-Users can choose from 22 color palettes to personalize the interface.
-
-### Available Colors
-
-**Neutral Colors (5):**
-- Slate - Cool gray with blue undertones
-- Gray - True neutral gray
-- Zinc - Modern, slightly warm gray
-- Neutral - Pure grayscale
-- Stone - Warm beige-gray
-
-**Chromatic Colors (17):**
-- Red - Bold and energetic
-- Orange - Vibrant and warm
-- Amber - Golden and inviting
-- Yellow - Bright and cheerful
-- Lime - Fresh and lively
-- Green - Natural and balanced
-- Emerald - Rich and sophisticated
-- Teal - Calm and professional
-- Cyan - Cool and modern
-- Sky - Light and airy
-- Blue - Classic and trustworthy (default)
-- Indigo - Deep and elegant
-- Violet - Creative and unique
-- Purple - Royal and luxurious
-- Fuchsia - Bold and playful
-- Pink - Soft and friendly
-- Rose - Romantic and warm
-
-### Usage Example
+22 color palettes available:
 
 ```tsx
-import { useThemeStore, type PrimaryColor } from '@/store/theme';
+import { useThemeStore } from '@/store/theme';
 
-function ColorPicker() {
-  const { primaryColor, setPrimaryColor } = useThemeStore();
+const { primaryColor, setPrimaryColor } = useThemeStore();
 
-  const colors: PrimaryColor[] = ['blue', 'purple', 'green', 'red'];
-
-  return (
-    <div className="flex gap-2">
-      {colors.map(color => (
-        <button
-          key={color}
-          onClick={() => setPrimaryColor(color)}
-          className={primaryColor === color ? 'ring-2' : ''}
-        >
-          {color}
-        </button>
-      ))}
-    </div>
-  );
-}
+setPrimaryColor('purple');
+setPrimaryColor('green');
+setPrimaryColor('rose');
 ```
 
-## CSS Custom Properties
+**Available Colors:**
+Neutral: Slate, Gray, Zinc, Neutral, Stone
+Warm: Red, Orange, Amber, Yellow
+Cool: Lime, Green, Emerald, Teal, Cyan, Sky, Blue
+Purple: Indigo, Violet, Purple, Fuchsia
+Pink: Pink, Rose
 
-All theme values are stored as CSS custom properties (CSS variables) for dynamic updates.
+## CSS Variables
 
-### Root Variables (Light Mode)
+All theme values use CSS custom properties for dynamic updates.
+
+### Light Mode Root
 
 ```css
 :root {
-  --background: 0 0% 98%;              /* Page background */
-  --foreground: 222.2 84% 4.9%;        /* Main text */
-  --card: 0 0% 100%;                   /* Card backgrounds */
-  --card-foreground: 222.2 84% 4.9%;   /* Card text */
-  --popover: 0 0% 100%;                /* Popover backgrounds */
-  --popover-foreground: 222.2 84% 4.9%; /* Popover text */
-  --primary: 221.2 83.2% 53.3%;        /* Brand color (blue default) */
-  --primary-foreground: 210 40% 98%;   /* Text on primary */
-  --secondary: 210 40% 96.1%;          /* Secondary elements */
-  --secondary-foreground: 222.2 47.4% 11.2%; /* Text on secondary */
-  --muted: 210 40% 96.1%;              /* Muted backgrounds */
-  --muted-foreground: 215.4 16.3% 46.9%; /* Muted text */
-  --accent: 210 40% 96.1%;             /* Accent backgrounds */
-  --accent-foreground: 222.2 47.4% 11.2%; /* Text on accent */
-  --destructive: 0 84.2% 60.2%;        /* Error/danger color */
-  --destructive-foreground: 210 40% 98%; /* Text on destructive */
-  --border: 214.3 31.8% 91.4%;         /* Border color */
-  --input: 214.3 31.8% 91.4%;          /* Input border */
-  --ring: 221.2 83.2% 53.3%;           /* Focus ring color */
-  --radius: 0.5rem;                    /* Border radius */
+  --background: 0 0% 98%;
+  --foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;        /* Blue default */
+  --secondary: 210 40% 96.1%;
+  --destructive: 0 84.2% 60.2%;
+  --muted: 210 40% 96.1%;
+  --accent: 210 40% 96.1%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
 }
 ```
 
-### Dark Mode Variables
+### Dark Mode
 
 ```css
 .dark {
-  --background: 222.2 84% 4.9%;        /* Dark background */
-  --foreground: 210 40% 98%;           /* Light text */
-  --card: 222.2 47% 11%;               /* Card backgrounds */
-  --card-foreground: 210 40% 98%;      /* Card text */
-  --popover: 222.2 47% 11%;            /* Popover backgrounds */
-  --popover-foreground: 210 40% 98%;   /* Popover text */
-  --primary: 217.2 91.2% 59.8%;        /* Lighter brand color */
-  --primary-foreground: 222.2 47.4% 11.2%; /* Dark text on primary */
-  --secondary: 217.2 32.6% 17.5%;      /* Darker secondary */
-  --secondary-foreground: 210 40% 98%; /* Light text */
-  --muted: 217.2 32.6% 17.5%;          /* Muted backgrounds */
-  --muted-foreground: 215 20.2% 65.1%; /* Muted text */
-  --accent: 217.2 32.6% 17.5%;         /* Accent backgrounds */
-  --accent-foreground: 210 40% 98%;    /* Text on accent */
-  --destructive: 0 62.8% 30.6%;        /* Darker destructive */
-  --destructive-foreground: 210 40% 98%; /* Light text */
-  --border: 217.2 32.6% 17.5%;         /* Subtle borders */
-  --input: 217.2 32.6% 17.5%;          /* Input borders */
-  --ring: 224.3 76.3% 48%;             /* Focus ring */
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;        /* Lighter blue */
+  --secondary: 217.2 32.6% 17.5%;
+  --destructive: 0 62.8% 30.6%;
+  --border: 217.2 32.6% 17.5%;
 }
 ```
 
-### Using CSS Variables in Components
+### Usage
 
 ```tsx
-// Tailwind classes automatically use CSS variables
+// Tailwind automatically uses CSS variables
 <div className="bg-background text-foreground border-border" />
 
-// Compiles to:
-<div className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))] border-[hsl(var(--border))]" />
-
-// Direct CSS usage
-<div style={{ backgroundColor: 'hsl(var(--primary))' }} />
+// With opacity
+<div className="bg-primary/20" />
+<div className="text-foreground/70" />
 ```
 
-## State Management (Zustand)
+## State Management
 
-The theme system uses Zustand for state management with localStorage persistence.
-
-### Theme Store Structure
+Theme store using Zustand with localStorage persistence:
 
 ```tsx
 interface ThemeState {
-  mode: ThemeMode;                          // 'light' | 'dark' | 'system'
-  primaryColor: PrimaryColor;               // Selected color palette
-  isLoading: boolean;                       // Server sync loading state
-  setMode: (mode: ThemeMode) => void;       // Update theme mode
-  setPrimaryColor: (color: PrimaryColor) => void; // Update color
-  loadThemeFromServer: () => Promise<void>; // Load user preferences
-  syncThemeToServer: () => Promise<void>;   // Save to server
+  mode: 'light' | 'dark' | 'system';
+  primaryColor: PrimaryColor;
+  isLoading: boolean;
+  setMode: (mode: ThemeMode) => void;
+  setPrimaryColor: (color: PrimaryColor) => void;
+  loadThemeFromServer: () => Promise<void>;
+  syncThemeToServer: () => Promise<void>;
 }
 ```
 
-### Complete Usage Example
+### Complete Usage
 
 ```tsx
 import { useThemeStore } from '@/store/theme';
@@ -241,101 +150,29 @@ function ThemeSettings() {
 
   return (
     <div>
-      <h2>Theme Mode</h2>
       <select value={mode} onChange={(e) => setMode(e.target.value)}>
         <option value="light">Light</option>
         <option value="dark">Dark</option>
         <option value="system">System</option>
       </select>
 
-      <h2>Primary Color</h2>
-      <select
-        value={primaryColor}
-        onChange={(e) => setPrimaryColor(e.target.value)}
-      >
+      <select value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)}>
         <option value="blue">Blue</option>
         <option value="purple">Purple</option>
         <option value="green">Green</option>
-        {/* ... more colors */}
       </select>
 
-      {isLoading && <p>Syncing preferences...</p>}
+      {isLoading && <p>Syncing...</p>}
     </div>
   );
 }
 ```
 
-## Theme Persistence
-
-The theme system persists user preferences in three layers:
-
-### 1. LocalStorage (Client-Side)
-
-```typescript
-// Automatically persisted via Zustand middleware
-{
-  name: 'flashpoint-theme-settings',
-  partialize: (state) => ({
-    mode: state.mode,
-    primaryColor: state.primaryColor
-  })
-}
-```
-
-**Storage Key:** `flashpoint-theme-settings`
-
-**Storage Format:**
-```json
-{
-  "state": {
-    "mode": "dark",
-    "primaryColor": "purple"
-  },
-  "version": 0
-}
-```
-
-### 2. Server Sync (Backend)
-
-Authenticated users sync preferences to the backend database.
-
-```typescript
-// Automatic sync on changes
-await usersApi.updateThemeSettings(mode, primaryColor);
-
-// Load on app start
-const settings = await usersApi.getThemeSettings();
-```
-
-**Backend Endpoint:**
-- `GET /api/users/me/theme` - Fetch theme settings
-- `PUT /api/users/me/theme` - Update theme settings
-
-**Database Storage:**
-```sql
-CREATE TABLE user_settings (
-  user_id INTEGER PRIMARY KEY,
-  theme_mode TEXT DEFAULT 'dark',
-  theme_color TEXT DEFAULT 'blue',
-  -- other settings...
-);
-```
-
-### 3. Rehydration Flow
-
-```
-1. App loads → Read from localStorage
-2. Apply theme immediately (no flash)
-3. If authenticated → Fetch from server
-4. Merge server preferences → Apply updates
-5. User changes setting → Update all three layers
-```
-
 ## Theme Components
 
-### ThemePicker Component
+### ThemePicker
 
-Pre-built component for theme mode selection.
+Dropdown for theme mode selection:
 
 ```tsx
 import { ThemePicker } from '@/components/theme/ThemePicker';
@@ -344,7 +181,7 @@ function Header() {
   return (
     <header>
       <nav>
-        {/* ... other nav items */}
+        {/* ... nav items ... */}
         <ThemePicker />
       </nav>
     </header>
@@ -353,14 +190,14 @@ function Header() {
 ```
 
 **Features:**
-- Dropdown menu with three options
-- Icon changes based on current mode (Sun/Moon/Monitor)
+- 3 options (Light, Dark, System)
+- Icon changes based on current mode
 - Keyboard accessible
-- ARIA labels for screen readers
+- ARIA labels
 
-### PrimaryColorPicker Component
+### PrimaryColorPicker
 
-Pre-built component for color palette selection.
+Color palette selector:
 
 ```tsx
 import { PrimaryColorPicker } from '@/components/theme/PrimaryColorPicker';
@@ -376,20 +213,58 @@ function Settings() {
 ```
 
 **Features:**
-- Visual color swatches with labels
-- Grouped by category (Neutral/Colors)
-- Checkmark on selected color
-- Scrollable dropdown for all 22 options
-- Live preview of colors
+- Visual color swatches
+- Grouped by category
+- Live preview
+- Scrollable for all 22 colors
+
+## Theme Persistence
+
+Three-layer persistence system:
+
+### 1. LocalStorage (Client)
+
+Automatically persisted via Zustand:
+
+```json
+{
+  "state": {
+    "mode": "dark",
+    "primaryColor": "purple"
+  },
+  "version": 0
+}
+```
+
+Storage key: `flashpoint-theme-settings`
+
+### 2. Server Sync
+
+Authenticated users sync to backend:
+
+```typescript
+await usersApi.updateThemeSettings(mode, primaryColor);
+const settings = await usersApi.getThemeSettings();
+```
+
+Endpoints:
+- `GET /api/users/me/theme` - Fetch
+- `PUT /api/users/me/theme` - Update
+
+### 3. Rehydration Flow
+
+1. App loads → Read localStorage
+2. Apply theme immediately (no flash)
+3. If authenticated → Fetch from server
+4. Merge server preferences
+5. User changes → Update all layers
 
 ## Dynamic Theme Updates
 
-The system applies theme changes instantly without page reload.
-
-### Update Flow
+Theme changes apply instantly without page reload:
 
 ```typescript
-// 1. User selects new theme mode
+// 1. User selects new theme
 setMode('dark');
 
 // 2. Store updates
@@ -399,49 +274,45 @@ set({ mode: 'dark' });
 document.documentElement.classList.remove('light');
 document.documentElement.classList.add('dark');
 
-// 4. Reapply primary color for new mode
-applyPrimaryColor(get().primaryColor, 'dark');
-
-// 5. Sync to server (async, non-blocking)
+// 4. Sync to server (non-blocking)
 syncThemeToServer();
 ```
 
 ### Primary Color Application
 
 ```typescript
-// Update CSS custom property dynamically
-const colorValue = colorPalette[color][theme]; // e.g., '217.2 91.2% 59.8%'
+// Update CSS variable dynamically
+const colorValue = colorPalette[color][theme];
 document.documentElement.style.setProperty('--primary', colorValue);
 document.documentElement.style.setProperty('--ring', colorValue);
 ```
 
 ## System Theme Detection
 
-The system listens to OS-level theme changes when in "system" mode.
+Listens to OS-level theme changes in "system" mode:
 
 ```typescript
-// Media query listener
 window.matchMedia('(prefers-color-scheme: dark)')
   .addEventListener('change', (e) => {
     const state = useThemeStore.getState();
     if (state.mode === 'system') {
-      // Reapply theme based on new system preference
       applyTheme('system');
       applyPrimaryColor(state.primaryColor, 'system');
     }
   });
 ```
 
-**Supported Scenarios:**
+Supports:
 - Windows dark mode toggle
 - macOS dark mode schedule
-- Linux desktop environment themes
-- Browser dark mode preferences
+- Linux desktop themes
+- Browser preferences
 
-## Accessibility Considerations
+## Accessibility
 
 ### Focus Rings
-Focus rings use the primary color for brand consistency.
+
+Focus rings use primary color for consistency:
 
 ```css
 :focus-visible {
@@ -454,19 +325,20 @@ Focus rings use the primary color for brand consistency.
 ```
 
 ### Color Contrast
-All color palettes meet WCAG 2.1 AA standards:
-- Normal text: 4.5:1 contrast ratio
-- Large text: 3:1 contrast ratio
-- Interactive elements: 3:1 contrast ratio
+
+All palettes meet WCAG 2.1 AA:
+- Normal text: 4.5:1 ratio
+- Large text: 3:1 ratio
+- Interactive: 3:1 ratio
 
 ### Reduced Motion
-Respects `prefers-reduced-motion` for animations.
+
+Respects `prefers-reduced-motion`:
 
 ```css
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
@@ -474,25 +346,23 @@ Respects `prefers-reduced-motion` for animations.
 
 ## Best Practices
 
-### 1. Always Use Semantic Color Tokens
+### 1. Use Semantic Tokens
 
 ```tsx
-// Good: Semantic tokens adapt to theme
+// Good: Adapts to theme
 <div className="bg-background text-foreground" />
 
-// Bad: Hard-coded colors break theming
+// Bad: Breaks theming
 <div className="bg-white text-black" />
 ```
 
 ### 2. Test Both Themes
 
-Always preview components in both light and dark modes:
+Toggle themes frequently during development:
 
 ```tsx
-// During development
 const { setMode } = useThemeStore();
 
-// Toggle for testing
 <button onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}>
   Toggle Theme
 </button>
@@ -500,19 +370,19 @@ const { setMode } = useThemeStore();
 
 ### 3. Respect User Preferences
 
-Don't force a theme mode. Let users choose or use system preference.
+Never force a theme. Let users choose or use system preference.
 
 ```tsx
-// Good: Respects user choice
+// Good: Let user choose
 const { mode } = useThemeStore();
 
-// Bad: Forcing dark mode
+// Bad: Force theme
 document.documentElement.classList.add('dark');
 ```
 
 ### 4. Avoid Theme-Specific Logic
 
-Design components to work in any theme without conditional rendering.
+Design components to work in any theme:
 
 ```tsx
 // Good: Works in any theme
@@ -528,34 +398,25 @@ Design components to work in any theme without conditional rendering.
 
 ### Theme Not Applying
 
-**Symptoms:** Theme changes don't affect UI
-
-**Solutions:**
-1. Check that `dark` class is on `<html>` element
-2. Verify CSS variables are defined in `index.css`
-3. Ensure Tailwind's `darkMode: ["class"]` is configured
+1. Check `dark` class on `<html>` element
+2. Verify CSS variables in `index.css`
+3. Ensure Tailwind `darkMode: ["class"]`
 4. Clear localStorage and refresh
 
 ### Colors Look Wrong
 
-**Symptoms:** Colors don't match expectations
-
-**Solutions:**
 1. Verify HSL values in `colorPalette`
-2. Check that primary color is applied to `--primary` variable
+2. Check primary color applied to `--primary`
 3. Test in both light and dark modes
-4. Ensure no CSS conflicts overriding variables
+4. Check for CSS conflicts
 
 ### System Mode Not Working
 
-**Symptoms:** Auto theme doesn't follow OS preference
-
-**Solutions:**
 1. Check browser support for `prefers-color-scheme`
 2. Verify media query listener is attached
-3. Test by changing OS dark mode setting
-4. Check browser's own dark mode isn't overriding
+3. Test by changing OS setting
+4. Check browser's own dark mode setting
 
 ---
 
-Next: [Color Palette](./color-palette.md) - Detailed color definitions and usage
+Next: [Color Palette](./color-palette.md) - Detailed color definitions

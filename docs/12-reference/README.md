@@ -182,16 +182,17 @@ JWT_EXPIRES_IN=1h
 
 #### Frontend
 ```env
-VITE_API_URL=http://localhost:3100
+# No environment variables required for local development
+# API calls are proxied through Vite (dev) or Nginx (production)
+VITE_APP_VERSION=1.0.0  # Optional: displayed app version
 ```
 
 #### Game Service
 ```env
+FLASHPOINT_PATH=D:/Flashpoint
+# Note: HTDOCS and Games paths are derived automatically from FLASHPOINT_PATH
 PROXY_PORT=22500
 GAMEZIPSERVER_PORT=22501
-FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
 ```
 
 ---
@@ -282,7 +283,7 @@ When updating reference documentation:
 ### Backend
 - [Backend Architecture](../03-backend/architecture.md)
 - [Database Services](../03-backend/services/database-service.md)
-- [API Routes](../03-backend/api-routes.md)
+- [API Reference](../06-api-reference/README.md)
 
 ### Frontend
 - [Frontend Architecture](../04-frontend/architecture.md)

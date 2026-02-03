@@ -22,94 +22,31 @@ The backend is a REST API built with Express and TypeScript that serves as the c
 - Database hot-reload when Flashpoint Launcher updates
 - Game file proxying to separate game-service
 
-## Project Structure
-
-```
-backend/
-├── src/
-│   ├── config.ts                 # Environment configuration
-│   ├── server.ts                 # Express app initialization
-│   │
-│   ├── middleware/               # Express middleware
-│   │   ├── auth.ts              # JWT authentication
-│   │   ├── rbac.ts              # Permission checking
-│   │   ├── errorHandler.ts     # Global error handling
-│   │   └── activityLogger.ts   # Activity logging
-│   │
-│   ├── routes/                   # API route handlers
-│   │   ├── index.ts             # Route setup
-│   │   ├── auth.ts              # Authentication endpoints
-│   │   ├── users.ts             # User management
-│   │   ├── games.ts             # Game queries
-│   │   ├── play-tracking.ts    # Play session tracking
-│   │   └── ...
-│   │
-│   ├── services/                 # Business logic layer
-│   │   ├── DatabaseService.ts           # Flashpoint DB connection
-│   │   ├── UserDatabaseService.ts       # User DB connection
-│   │   ├── AuthService.ts               # Authentication logic
-│   │   ├── UserService.ts               # User CRUD
-│   │   ├── RoleService.ts               # Role & permission mgmt
-│   │   ├── GameService.ts               # Game queries
-│   │   ├── PlayTrackingService.ts       # Play tracking
-│   │   └── ActivityService.ts           # Activity logging
-│   │
-│   ├── types/                    # TypeScript type definitions
-│   │   └── auth.ts              # Auth-related types
-│   │
-│   ├── utils/                    # Utility functions
-│   │   ├── jwt.ts               # JWT token management
-│   │   ├── password.ts          # Password hashing
-│   │   ├── logger.ts            # Winston logger
-│   │   └── pagination.ts        # Pagination helpers
-│   │
-│   └── migrations/               # Database migrations
-│       ├── 001_user-schema.sql
-│       ├── 002_create-user-settings.sql
-│       └── README.md
-│
-├── user.db                       # User database (generated)
-├── package.json
-└── tsconfig.json
-```
-
 ## Quick Start
 
 ```bash
-# Navigate to backend directory
 cd backend
-
-# Install dependencies
 npm install
-
-# Set up environment variables
 cp .env.example .env
 # Edit .env with your Flashpoint installation path
 
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run production server
-npm start
+npm run dev     # Development server
+npm run build   # Build for production
+npm start       # Run production build
 ```
 
 ## Environment Variables
 
-See [configuration.md](./configuration.md) for complete environment variable documentation.
-
-Required variables:
-- `FLASHPOINT_PATH` - Path to Flashpoint installation (all other paths are derived automatically)
+**Required:**
+- `FLASHPOINT_PATH` - Path to Flashpoint installation (all other paths derived automatically)
 - `GAME_SERVICE_HOST` - Game service hostname/IP (default: localhost)
 - `DOMAIN` - Frontend URL (default: http://localhost:5173)
+
+See [configuration.md](./configuration.md) for complete environment variable documentation.
 
 ## Core Concepts
 
 ### Two-Database Architecture
-
-The backend operates with two separate SQLite databases:
 
 1. **Flashpoint Database** (flashpoint.sqlite)
    - Read-only access to official Flashpoint game metadata
@@ -125,14 +62,13 @@ The backend operates with two separate SQLite databases:
 
 ### Service Layer Pattern
 
-Business logic is separated into service classes:
 - **Routes** handle HTTP requests/responses
 - **Services** contain business logic and database queries
 - **Middleware** handles cross-cutting concerns (auth, logging, errors)
 
 ### JWT Authentication
 
-- Access tokens expire after 1 hour
+- Access tokens expire after 1 hour (configurable via JWT_EXPIRES_IN)
 - Refresh tokens valid for 30 days
 - Token payload includes: userId, username, role
 - Permissions loaded from database on each request
@@ -140,15 +76,31 @@ Business logic is separated into service classes:
 ### Role-Based Access Control (RBAC)
 
 Three default roles:
-- **Admin** (priority 100): Full access to all features
+- **Admin** (priority 100): Full access
 - **User** (priority 50): Can play games, manage playlists
-- **Guest** (priority 0): Read-only access to games
+- **Guest** (priority 0): Read-only access
 
 Permissions are assigned to roles, and users inherit permissions from their role.
 
-## API Routes
+## Project Structure
 
-See [api-routes.md](./api-routes.md) for complete API documentation.
+```
+backend/
+├── src/
+│   ├── config.ts                 # Environment configuration
+│   ├── server.ts                 # Express app initialization
+│   ├── middleware/               # Express middleware
+│   ├── routes/                   # API route handlers
+│   ├── services/                 # Business logic layer
+│   ├── types/                    # TypeScript definitions
+│   ├── utils/                    # Utility functions
+│   └── migrations/               # Database migrations
+├── user.db                       # User database (generated)
+├── package.json
+└── tsconfig.json
+```
+
+## API Routes
 
 Main route groups:
 - `/api/auth` - Login, register, token refresh
@@ -159,40 +111,16 @@ Main route groups:
 - `/api/activities` - Activity logs
 - `/api/playlists` - User playlists
 
-## Database Schema
-
-See [database/schema.md](./database/schema.md) for complete schema documentation.
-
-Key tables:
-- `users` - User accounts
-- `roles` - User roles
-- `permissions` - Available permissions
-- `role_permissions` - Role-permission mapping
-- `user_game_plays` - Individual play sessions
-- `user_game_stats` - Aggregated play statistics
-- `activity_logs` - User activity audit trail
+See the [API Reference](../06-api-reference/README.md) for complete API documentation.
 
 ## Services
 
-See [services/](./services/) directory for detailed service documentation:
-
 - [database-service.md](./services/database-service.md) - Flashpoint database connection with hot-reload
 - [user-database-service.md](./services/user-database-service.md) - User database with migrations
-- [auth-service.md](./services/auth-service.md) - Authentication and JWT management
-- [user-service.md](./services/user-service.md) - User CRUD operations
-- [role-service.md](./services/role-service.md) - Role and permission management
-- [game-service.md](./services/game-service.md) - Game metadata queries
-- [play-tracking-service.md](./services/play-tracking-service.md) - Play session tracking
-- [activity-service.md](./services/activity-service.md) - Activity logging
-
-## Middleware
-
-See [middleware/](./middleware/) directory for detailed middleware documentation:
-
-- [authentication.md](./middleware/authentication.md) - JWT verification
-- [rbac.md](./middleware/rbac.md) - Permission checking
-- [error-handling.md](./middleware/error-handling.md) - Global error handler
-- [activity-logger.md](./middleware/activity-logger.md) - Activity logging
+- AuthService - Authentication and JWT management
+- UserService - User CRUD operations
+- GameService - Game metadata queries
+- PlayTrackingService - Play session tracking
 
 ## Security Features
 
@@ -216,24 +144,22 @@ See [middleware/](./middleware/) directory for detailed middleware documentation
 
 ## Background Jobs
 
-The backend runs scheduled tasks:
-
-1. **Abandoned Session Cleanup**
-   - Runs every 6 hours
-   - Ends sessions older than 24 hours
-   - Updates play statistics
+**Abandoned Session Cleanup**
+- Runs every 6 hours
+- Ends sessions older than 24 hours
+- Updates play statistics
 
 ## Error Handling
 
-All errors are handled through centralized error middleware:
-- `AppError` class for operational errors (user-facing)
+Centralized error middleware:
+- `AppError` class for operational errors
 - Automatic HTTP status code mapping
 - Structured error responses
 - Error logging with Winston
 
 ## Logging
 
-Winston logger with multiple transports:
+Winston logger with:
 - Console output with colors (development)
 - File logging (production)
 - Log levels: error, warn, info, debug
@@ -242,14 +168,9 @@ Winston logger with multiple transports:
 ## Testing
 
 ```bash
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm test -- --watch
-
-# Generate coverage report
-npm test -- --coverage
+npm test                    # Run tests
+npm test -- --watch        # Watch mode
+npm test -- --coverage     # Coverage report
 ```
 
 ## Common Tasks
@@ -260,15 +181,11 @@ npm test -- --coverage
 2. Add business logic to appropriate service
 3. Register route in `src/routes/index.ts`
 4. Add middleware for authentication/authorization
-5. Document in api-routes.md
+5. Document in `docs/06-api-reference/`
 
 ### Adding a New Permission
 
-1. Insert permission in database:
-   ```sql
-   INSERT INTO permissions (name, description, resource, action)
-   VALUES ('resource.action', 'Description', 'resource', 'action');
-   ```
+1. Insert permission in database
 2. Assign to roles via `role_permissions` table
 3. Use `requirePermission()` middleware in routes
 
@@ -296,14 +213,6 @@ npm test -- --coverage
 - Check GAME_SERVICE_HOST in .env (default: localhost)
 - Ensure FLASHPOINT_PATH is correct
 
-## Related Documentation
-
-- [Architecture](./architecture.md) - Backend architecture patterns
-- [Configuration](./configuration.md) - Environment configuration
-- [API Routes](./api-routes.md) - Complete API documentation
-- [Database Schema](./database/schema.md) - Database schema reference
-- [Migration System](./database/migrations.md) - Database migrations
-
 ## Development Workflow
 
 1. Start backend: `npm run dev`
@@ -314,13 +223,17 @@ npm test -- --coverage
 
 ## Production Deployment
 
+```bash
+NODE_ENV=production npm start
+```
+
+Requirements:
 1. Set `NODE_ENV=production`
 2. Set secure `JWT_SECRET`
 3. Configure proper `DOMAIN`
 4. Build: `npm run build`
-5. Start: `npm start`
-6. Monitor logs and errors
-7. Set up process manager (PM2, systemd)
+5. Monitor logs and errors
+6. Set up process manager (PM2, systemd)
 
 ## Performance Metrics
 
@@ -331,6 +244,9 @@ Typical response times (p95):
 - Play session start: < 50ms
 - Activity log: < 30ms (non-blocking)
 
-## License
+## Related Documentation
 
-Part of Flashpoint Web project.
+- [Architecture](./architecture.md) - Backend architecture patterns
+- [Configuration](./configuration.md) - Environment configuration
+- [API Reference](../06-api-reference/README.md) - Complete API documentation
+- [Database Schema](./database/schema.md) - Database schema reference

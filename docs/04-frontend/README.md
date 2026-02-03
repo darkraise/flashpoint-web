@@ -1,63 +1,49 @@
 # Frontend Documentation
 
-This directory contains comprehensive documentation for the Flashpoint Web frontend application.
-
-## Overview
-
-The frontend is a modern React 18 single-page application (SPA) built with TypeScript, Vite, and a carefully selected stack of libraries optimized for performance and developer experience.
+Modern React 18 single-page application (SPA) built with TypeScript, Vite, and optimized libraries.
 
 ## Tech Stack
 
-- **Framework**: React 18.3.1 with TypeScript 5.6.2
-- **Build Tool**: Vite 5.4.11
-- **Routing**: React Router 6.28.0
+- **Framework**: React 18.3 with TypeScript 5.4
+- **Build Tool**: Vite 5.2
+- **Routing**: React Router 6.22
 - **State Management**:
-  - TanStack Query (React Query) v5.62.7 for server state
-  - Zustand 5.0.2 for UI state
-  - URL state via React Router search params
-- **Styling**: Tailwind CSS 3.4.15
+  - TanStack Query v5.28 for server state
+  - Zustand 4.5 for UI state
+- **Styling**: Tailwind CSS 3.4
 - **UI Components**: Shadcn UI (40+ components)
-- **Icons**: Lucide React 0.468.0
-- **Form Handling**: React Hook Form 7.54.0
+- **Icons**: Lucide React 0.358
+- **Form Handling**: React Hook Form 7.71
 - **Game Emulation**: Ruffle (Flash emulator)
 
 ## Documentation Structure
 
-### Architecture
+### Core Documentation
 
-- [architecture.md](./architecture.md) - Frontend architecture patterns, design decisions, and project structure
+- [architecture.md](./architecture.md) - Frontend architecture patterns
+- [views-routing.md](./views-routing.md) - All views, routes, and route protection
+- [api-client.md](./api-client.md) - Axios client and API endpoints
+- [custom-hooks.md](./custom-hooks.md) - 17+ custom hooks with examples
 
 ### Components
 
-- [components/component-overview.md](./components/component-overview.md) - Component organization and structure
-- [components/layout-components.md](./components/layout-components.md) - AppShell, Header, Sidebar, navigation components
-- [components/game-components.md](./components/game-components.md) - GameCard, GameGrid, GameBrowseLayout, list components
-- [components/player-components.md](./components/player-components.md) - GamePlayer, RufflePlayer with cleanup strategies
+- [components/component-overview.md](./components/component-overview.md) - Component organization
+- [components/layout-components.md](./components/layout-components.md) - AppShell, Header, Sidebar
+- [components/game-components.md](./components/game-components.md) - GameCard, GameGrid, list components
+- [components/player-components.md](./components/player-components.md) - GamePlayer, RufflePlayer
 - [components/auth-components.md](./components/auth-components.md) - LoginForm, RegisterForm, ProtectedRoute
-- [components/ui-components.md](./components/ui-components.md) - Shadcn UI component library reference
-
-### Views
-
-- [views-routing.md](./views-routing.md) - All views, routes, and route protection patterns
+- [components/ui-components.md](./components/ui-components.md) - Shadcn UI reference
 
 ### State Management
 
-- [state-management/zustand-stores.md](./state-management/zustand-stores.md) - useAuthStore, useThemeStore, useUIStore with persistence
-- [state-management/react-query.md](./state-management/react-query.md) - TanStack Query usage, caching strategies, stale times
-- [state-management/url-state.md](./state-management/url-state.md) - URL-based filter state with React Router
-
-### Hooks
-
-- [custom-hooks.md](./custom-hooks.md) - All 17+ custom hooks with usage examples and patterns
-
-### API Integration
-
-- [api-client.md](./api-client.md) - Axios client, interceptors, all API endpoints, error handling
+- [state-management/zustand-stores.md](./state-management/zustand-stores.md) - useAuthStore, useThemeStore, useUIStore
+- [state-management/react-query.md](./state-management/react-query.md) - TanStack Query usage and caching
+- [state-management/url-state.md](./state-management/url-state.md) - URL-based filter state
 
 ### Player Implementation
 
-- [player-implementation/ruffle-player.md](./player-implementation/ruffle-player.md) - Flash game player with cleanup, configuration, scale modes
-- [player-implementation/html5-player.md](./player-implementation/html5-player.md) - HTML5 game iframe player with sandboxing
+- [player-implementation/ruffle-player.md](./player-implementation/ruffle-player.md) - Flash game player
+- [player-implementation/html5-player.md](./player-implementation/html5-player.md) - HTML5 game iframe player
 
 ## Quick Start
 
@@ -68,7 +54,7 @@ cd frontend
 npm run dev
 ```
 
-The development server will start at `http://localhost:5173` with hot module replacement (HMR).
+Starts at `http://localhost:5173` with hot module replacement (HMR).
 
 ### Building for Production
 
@@ -94,8 +80,7 @@ npm run typecheck
 
 ### Server State Management
 
-All server data (games, playlists, user data) is managed through TanStack Query with intelligent caching:
-
+All server data (games, playlists, user data) managed through TanStack Query:
 - Automatic background refetching
 - Optimistic updates
 - Request deduplication
@@ -103,21 +88,19 @@ All server data (games, playlists, user data) is managed through TanStack Query 
 
 ### UI State Management
 
-Client-side UI state (sidebar visibility, theme, auth) uses Zustand stores with localStorage persistence:
-
-- Simple, minimal boilerplate
+Client-side UI state (sidebar, theme, auth) uses Zustand stores with localStorage persistence:
+- Minimal boilerplate
 - TypeScript-first
 - DevTools support
 - Middleware for persistence
 
 ### Type Safety
 
-The application is fully typed with TypeScript:
-
+Fully typed with TypeScript:
 - Strict mode enabled
 - No implicit any
-- Comprehensive type definitions for all API responses
-- Type-safe form handling with React Hook Form
+- Comprehensive type definitions for API responses
+- Type-safe form handling
 
 ### Performance Optimizations
 
@@ -136,13 +119,12 @@ The application is fully typed with TypeScript:
 
 ## Environment Variables
 
-Frontend environment variables are injected at build time via Vite:
+The frontend does not require environment variables for local development. API calls are automatically proxied through Vite to the backend.
 
+**Optional (production builds):**
 ```bash
-VITE_API_URL=http://localhost:3100
+VITE_APP_VERSION=1.0.0  # Displayed app version
 ```
-
-See `frontend/.env.example` for all available variables.
 
 ## Project Structure
 
@@ -151,33 +133,50 @@ frontend/
 ├── src/
 │   ├── components/        # Reusable UI components
 │   │   ├── auth/         # Authentication components
-│   │   ├── common/       # Common/shared components
-│   │   ├── game/         # Game-specific components
-│   │   ├── layout/       # Layout components (Header, Sidebar, AppShell)
-│   │   ├── library/      # Game library components
+│   │   ├── game/         # Game components
+│   │   ├── layout/       # Layout components
 │   │   ├── player/       # Game player components
-│   │   ├── playlist/     # Playlist components
-│   │   ├── search/       # Search and filter components
-│   │   ├── stats/        # Statistics and charts
-│   │   ├── theme/        # Theme picker components
-│   │   └── ui/           # Shadcn UI components (40+)
-│   ├── contexts/         # React contexts
+│   │   └── ui/           # Shadcn UI components
 │   ├── hooks/            # Custom React hooks
-│   ├── lib/              # Utilities and API client
+│   ├── lib/              # API client and utilities
 │   ├── store/            # Zustand stores
-│   ├── types/            # TypeScript type definitions
+│   ├── types/            # TypeScript types
 │   ├── views/            # Page components
 │   ├── App.tsx           # Root component with routing
 │   └── main.tsx          # Entry point
 ├── public/               # Static assets
-│   ├── images/          # Images (logo, icons)
 │   └── ruffle/          # Ruffle emulator files
 └── index.html           # HTML entry point
 ```
 
-## Further Reading
+## Vite Configuration
 
-- [CLAUDE.md](../../CLAUDE.md) - Project-wide development guide
+Dev server proxies `/api/*` to backend:
+```typescript
+server: {
+  proxy: {
+    '/api': 'http://localhost:3100',
+    '/proxy': 'http://localhost:22500'
+  }
+}
+```
+
+In production, Nginx proxies API requests to the backend container.
+
+## Common Commands
+
+```bash
+npm install              # Install dependencies
+npm run dev             # Development server with HMR
+npm run build           # Production build
+npm run preview         # Preview production build
+npm run typecheck       # TypeScript type checking
+npm run lint            # ESLint code linting
+```
+
+## Related Documentation
+
 - [Architecture Documentation](../02-architecture/README.md) - System architecture
 - [Backend Documentation](../03-backend/README.md) - Backend API reference
 - [API Reference](../06-api-reference/README.md) - Complete API documentation
+- [Development Workflow](../08-development/setup-guide.md) - Setup guide

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Flashpoint Web uses HTTP-based communication between its three services. The frontend communicates exclusively with the backend, which in turn proxies game file requests to the game service. This document details the communication patterns, protocols, and data flow between services.
+Flashpoint Web uses HTTP-based communication between three services. Frontend communicates with backend, which proxies game file requests to game-service.
 
 ## Communication Architecture
 
@@ -46,28 +46,16 @@ graph TB
 
 ## Frontend ↔ Backend Communication
 
-### Protocol
+**Protocol**: HTTP/1.1 with JSON, JWT Bearer authentication
 
-**Transport**: HTTP/1.1 over TCP
-
-**Format**: JSON for request/response bodies
-
-**Authentication**: JWT Bearer tokens in Authorization header
-
-### API Client Architecture
-
-**Base Configuration**:
+**API Client Configuration**:
 ```typescript
 const api = axios.create({
   baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  headers: { 'Content-Type': 'application/json' }
 });
-```
 
-**Request Interceptor** (adds JWT token):
-```typescript
+// Request interceptor adds JWT
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) {
@@ -75,10 +63,8 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-```
 
-**Response Interceptor** (handles token refresh):
-```typescript
+// Response interceptor handles 401 with token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -86,326 +72,81 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       const tokens = await authApi.refreshToken(refreshToken);
       updateAccessToken(tokens.accessToken);
-      return api(originalRequest); // Retry with new token
+      return api(originalRequest);
     }
     return Promise.reject(error);
   }
 );
 ```
 
-### API Endpoints by Domain
+## API Endpoints
 
-#### Games API
+### Games API
 
-**Search Games**:
 ```http
 GET /api/games?search=mario&platform=Flash&page=1&limit=50
-Authorization: Bearer {token}
-
-Response 200:
-{
-  "data": [{ game objects }],
-  "total": 1234,
-  "page": 1,
-  "limit": 50,
-  "totalPages": 25
-}
-```
-
-**Get Game Details**:
-```http
 GET /api/games/{gameId}
-Authorization: Bearer {token}
-
-Response 200:
-{
-  "id": "uuid",
-  "title": "Game Title",
-  "platform": "Flash",
-  "developer": "Developer Name",
-  ...
-}
-```
-
-**Get Launch Data**:
-```http
 GET /api/games/{gameId}/launch
-Authorization: Bearer {token}
-
-Response 200:
-{
-  "gameId": "uuid",
-  "title": "Game Title",
-  "platform": "Flash",
-  "launchCommand": "http://example.com/game.swf",
-  "contentUrl": "http://localhost:22500/http://example.com/game.swf",
-  "canPlayInBrowser": true
-}
 ```
 
-#### Authentication API
+### Authentication API
 
-**Login**:
 ```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "username": "user@example.com",
-  "password": "password123"
-}
-
-Response 200:
-{
-  "user": {
-    "id": 1,
-    "username": "user",
-    "email": "user@example.com",
-    "role": "user",
-    "permissions": ["games.read", "games.play", ...]
-  },
-  "accessToken": "eyJhbGc...",
-  "refreshToken": "eyJhbGc..."
-}
-```
-
-**Refresh Token**:
-```http
-POST /api/auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "eyJhbGc..."
-}
-
-Response 200:
-{
-  "accessToken": "eyJhbGc...",
-  "refreshToken": "eyJhbGc..."
-}
-```
-
-**Get Current User**:
-```http
+POST /api/auth/login {username, password}
+POST /api/auth/refresh {refreshToken}
 GET /api/auth/me
-Authorization: Bearer {token}
-
-Response 200:
-{
-  "id": 1,
-  "username": "user",
-  "email": "user@example.com",
-  "role": "user",
-  "permissions": ["games.read", "games.play", ...]
-}
 ```
 
-#### Play Tracking API
+### Play Tracking API
 
-**Start Session**:
 ```http
-POST /api/play/start
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "gameId": "uuid",
-  "gameTitle": "Game Title"
-}
-
-Response 200:
-{
-  "sessionId": "hex-session-id",
-  "startedAt": "2025-01-18T12:00:00.000Z"
-}
-```
-
-**End Session**:
-```http
-POST /api/play/end
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "sessionId": "hex-session-id"
-}
-
-Response 200:
-{
-  "success": true,
-  "durationSeconds": 1234
-}
-```
-
-**Get User Stats**:
-```http
+POST /api/play/start {gameId, gameTitle}
+POST /api/play/end {sessionId}
 GET /api/play/stats
-Authorization: Bearer {token}
-
-Response 200:
-{
-  "userId": 1,
-  "totalGamesPlayed": 50,
-  "totalPlaytimeSeconds": 123456,
-  "totalSessions": 150,
-  "firstPlayAt": "2025-01-01T00:00:00.000Z",
-  "lastPlayAt": "2025-01-18T12:00:00.000Z"
-}
+GET /api/play/top-games?limit=10
+GET /api/play/activity-over-time?days=30
 ```
 
-#### Users Management API
+### Users Management API
 
-**List Users** (admin only):
 ```http
 GET /api/users?page=1&limit=50
-Authorization: Bearer {admin-token}
-
-Response 200:
-{
-  "data": [{ user objects }],
-  "total": 10,
-  "page": 1,
-  "limit": 50,
-  "totalPages": 1
-}
+POST /api/users {username, email, password, roleId}
+PATCH /api/users/me/settings {theme_mode, primary_color}
 ```
 
-**Create User** (admin only):
-```http
-POST /api/users
-Authorization: Bearer {admin-token}
-Content-Type: application/json
-
-{
-  "username": "newuser",
-  "email": "newuser@example.com",
-  "password": "password123",
-  "roleId": 2
-}
-
-Response 201:
-{
-  "id": 5,
-  "username": "newuser",
-  "email": "newuser@example.com",
-  "roleId": 2,
-  "roleName": "user",
-  ...
-}
-```
-
-**Update User Settings**:
-```http
-PATCH /api/users/me/settings
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "theme_mode": "dark",
-  "primary_color": "blue"
-}
-
-Response 200:
-{
-  "theme_mode": "dark",
-  "primary_color": "blue"
-}
-```
-
-### Error Response Format
-
-All API errors follow a consistent format:
-
+**Error Response Format**:
 ```json
 {
   "error": "Error message description",
   "statusCode": 400,
-  "details": {
-    "field": "validation error details"
-  }
+  "details": { "field": "validation error details" }
 }
 ```
-
-**Common Status Codes**:
-- `200 OK`: Successful request
-- `201 Created`: Resource created successfully
-- `400 Bad Request`: Invalid request data
-- `401 Unauthorized`: Missing or invalid authentication
-- `403 Forbidden`: Insufficient permissions
-- `404 Not Found`: Resource not found
-- `409 Conflict`: Resource already exists
-- `500 Internal Server Error`: Server error
 
 ## Backend ↔ Game Service Communication
 
-### Communication Pattern
-
-The backend **does not** directly proxy game files. Instead, it:
+Backend does NOT directly proxy game files. Instead:
 1. Returns launch URLs pointing to game service
-2. Frontend loads game content directly from game service
-3. Backend mounts ZIPs when needed via internal API calls
-
-### Internal API: ZIP Mounting
+2. Frontend loads content directly from game service
+3. Backend mounts ZIPs when needed via internal API
 
 **Mount Game ZIP**:
-```typescript
-// Backend calls game service internally
-await gameDataService.mountGameZip(gameId);
-
-// Internal HTTP call to game service
+```http
 POST http://localhost:22501/mount
-Content-Type: application/json
-
-{
-  "gameId": "uuid",
-  "zipPath": "D:/Flashpoint/Data/Games/A/uuid.zip"
-}
-
-Response 200:
-{
-  "success": true,
-  "mountPoint": "/gamedata/uuid",
-  "message": "ZIP mounted successfully"
-}
+{ "gameId": "uuid", "zipPath": "D:/Flashpoint/Data/Games/A/uuid.zip" }
+Response: { "success": true, "mountPoint": "/gamedata/uuid" }
 ```
 
 **Unmount Game ZIP**:
-```typescript
+```http
 POST http://localhost:22501/unmount
-Content-Type: application/json
-
-{
-  "gameId": "uuid"
-}
-
-Response 200:
-{
-  "success": true,
-  "message": "ZIP unmounted successfully"
-}
+{ "gameId": "uuid" }
 ```
-
-### Game Content URLs
-
-Backend generates URLs that point directly to game service:
-
-```typescript
-// For Flash/HTML5 games
-const contentUrl = `http://localhost:22500/${fullGameUrl}`;
-
-// Example: http://localhost:22500/http://example.com/game.swf
-// Game service proxies this to the actual game file
-```
-
-**URL Format**:
-- Absolute URLs: `http://localhost:22500/http://domain.com/path/file.swf`
-- Relative paths: `http://localhost:22500/http://domain.com/path/file.html`
 
 ## Frontend ↔ Game Service Communication
 
-### Direct Communication Pattern
-
-The frontend loads game content **directly** from the game service, bypassing the backend entirely for game files.
+Frontend loads game content **directly** from game service:
 
 ```mermaid
 sequenceDiagram
@@ -418,56 +159,43 @@ sequenceDiagram
     Backend->>Backend: Mount ZIP if needed
     Backend-->>Frontend: {contentUrl: "http://localhost:22500/..."}
 
-    Note over Frontend: User clicks "Play"
-
     Frontend->>GameService: GET /http://domain.com/game.swf
     GameService->>FileSystem: Read from htdocs/ZIP
     FileSystem-->>GameService: File bytes
     GameService-->>Frontend: game.swf (binary)
-
-    Note over Frontend: Ruffle loads and plays game
 ```
 
 ### HTTP Proxy Server (:22500)
 
-**Request Format**:
-```http
-GET /http://example.com/path/game.swf HTTP/1.1
-Host: localhost:22500
-```
+**Request**: `GET /http://example.com/path/game.swf`
 
 **Fallback Chain**:
-1. Check local htdocs: `D:/Flashpoint/Legacy/htdocs/example.com/path/game.swf`
-2. Check game data directory
-3. Query ZIP manager for file in mounted ZIPs
-4. Fallback to external CDN: `http://infinity.flashpointarchive.org/...`
+1. Local htdocs: `D:/Flashpoint/Legacy/htdocs/example.com/path/game.swf`
+2. Game data directory
+3. Mounted ZIPs (via zip-manager)
+4. External CDN: `http://infinity.flashpointarchive.org/...`
 5. Cache downloaded content locally
 
 **Response Headers**:
-```http
-HTTP/1.1 200 OK
+```
 Content-Type: application/x-shockwave-flash
-Content-Length: 1234567
 Access-Control-Allow-Origin: *
 Cache-Control: public, max-age=31536000
 ```
 
 ### GameZip Server (:22501)
 
-**Request Format**:
-```http
-GET /gamedata/{gameId}/path/to/file.swf HTTP/1.1
-Host: localhost:22501
-```
+**Request**: `GET /gamedata/{gameId}/path/to/file.swf`
 
-**Response**:
-- Streams file directly from ZIP (no extraction)
+- Streams files directly from ZIP (no extraction)
 - Appropriate MIME type header
 - CORS headers for cross-origin access
+- LRU cache for ZIP mounts (max 100, 30-min TTL)
+- Auto-cleanup on eviction
 
 ## Development Environment: Vite Proxy
 
-In development, Vite proxies requests to avoid CORS issues:
+In development, Vite proxies requests to avoid CORS:
 
 ```typescript
 // vite.config.ts
@@ -487,48 +215,34 @@ export default defineConfig({
 });
 ```
 
-**Request Flow**:
-```
-Frontend :5173 → Vite Proxy → Backend :3100
-Frontend :5173 → Vite Proxy → Game Service :22500
-```
-
 ## State Synchronization
 
 ### TanStack Query Cache Invalidation
 
-**After Mutations**:
 ```typescript
-// After creating a playlist
+// After mutations
 await queryClient.invalidateQueries({ queryKey: ['playlists'] });
-
-// After updating user settings
 await queryClient.invalidateQueries({ queryKey: ['user', 'settings'] });
-
-// After ending play session
 await queryClient.invalidateQueries({ queryKey: ['playStats'] });
-```
 
-**Stale Time Strategy**:
-- User data: 5 minutes
-- Game metadata: 10 minutes
-- Play stats: 5 minutes
-- Filter options: Infinity (static data)
+// Stale time strategy
+useQuery({
+  queryKey: ['games'],
+  queryFn: fetchGames,
+  staleTime: 5 * 60 * 1000,      // 5 minutes
+  cacheTime: 10 * 60 * 1000      // 10 minutes
+});
+```
 
 ### Optimistic Updates
 
-**Example: Add to Playlist**:
 ```typescript
 const mutation = useMutation({
   mutationFn: (gameId) => playlistsApi.addGames(playlistId, [gameId]),
   onMutate: async (gameId) => {
-    // Cancel outgoing refetches
     await queryClient.cancelQueries(['playlist', playlistId]);
-
-    // Snapshot previous value
     const previous = queryClient.getQueryData(['playlist', playlistId]);
 
-    // Optimistically update
     queryClient.setQueryData(['playlist', playlistId], (old) => ({
       ...old,
       games: [...old.games, gameId]
@@ -537,165 +251,64 @@ const mutation = useMutation({
     return { previous };
   },
   onError: (err, gameId, context) => {
-    // Rollback on error
     queryClient.setQueryData(['playlist', playlistId], context.previous);
   },
   onSettled: () => {
-    // Refetch to ensure sync
     queryClient.invalidateQueries(['playlist', playlistId]);
   }
 });
 ```
 
-## WebSocket Communication (Future)
-
-Currently not implemented, but potential use cases:
-
-**Real-time Features**:
-- Live activity feed
-- Multiplayer game coordination
-- Admin notifications
-- Download progress updates
-
-**Proposed Architecture**:
-```typescript
-// Backend WebSocket server
-const wss = new WebSocketServer({ port: 3002 });
-
-wss.on('connection', (ws, req) => {
-  const userId = authenticateWebSocket(req);
-
-  ws.on('message', (message) => {
-    handleMessage(userId, message);
-  });
-});
-
-// Frontend WebSocket client
-const ws = new WebSocket('ws://localhost:3002');
-
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  updateRealtimeState(data);
-};
-```
-
 ## Rate Limiting
 
-### Backend Rate Limits
-
-**Express Rate Limit Middleware**:
+**Backend**:
 ```typescript
-import rateLimit from 'express-rate-limit';
-
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP'
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests'
 });
 
-app.use('/api/', limiter);
-```
-
-**Per-Endpoint Limits**:
-```typescript
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5, // 5 login attempts per 15 minutes
+  max: 5,
   skipSuccessfulRequests: true
 });
 
+app.use('/api/', limiter);
 app.post('/api/auth/login', authLimiter, loginHandler);
 ```
 
-### Frontend Rate Limiting
+**Frontend**: TanStack Query deduplication prevents duplicate concurrent requests.
 
-**TanStack Query Deduplication**:
-```typescript
-// Multiple components requesting same data
-// Only one request is made
-useQuery({ queryKey: ['games', filters], queryFn: fetchGames });
-```
+## Error Handling
 
-**Debounced Search**:
-```typescript
-const debouncedSearch = useMemo(
-  () => debounce((value: string) => {
-    setFilters({ ...filters, search: value });
-  }, 300),
-  [filters]
-);
-```
-
-## Error Handling and Retry Logic
-
-### Frontend Retry Strategy
-
-**TanStack Query Retry**:
+**Frontend**:
 ```typescript
 useQuery({
   queryKey: ['games'],
   queryFn: fetchGames,
   retry: 3,
-  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  staleTime: 5 * 60 * 1000
+  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
 });
 ```
 
-**Axios Retry**:
-```typescript
-api.interceptors.response.use(null, async (error) => {
-  const { config } = error;
-
-  // Retry on network errors
-  if (!error.response && config.retryCount < 3) {
-    config.retryCount = (config.retryCount || 0) + 1;
-    await new Promise(resolve => setTimeout(resolve, 1000 * config.retryCount));
-    return api(config);
-  }
-
-  return Promise.reject(error);
-});
-```
-
-### Backend Error Propagation
-
-**Service Layer**:
-```typescript
-class GameService {
-  async getGameById(id: string): Promise<Game | null> {
-    try {
-      const game = DatabaseService.get(sql, [id]);
-      return game;
-    } catch (error) {
-      logger.error('Error getting game by ID:', error);
-      throw error; // Propagate to route handler
-    }
-  }
-}
-```
-
-**Route Handler**:
+**Backend**:
 ```typescript
 router.get('/:id', async (req, res, next) => {
   try {
     const game = await gameService.getGameById(req.params.id);
-    if (!game) {
-      throw new AppError(404, 'Game not found');
-    }
+    if (!game) throw new AppError(404, 'Game not found');
     res.json(game);
   } catch (error) {
-    next(error); // Pass to error middleware
+    next(error);
   }
 });
-```
 
-**Global Error Middleware**:
-```typescript
 app.use((err, req, res, next) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({ error: err.message });
   }
-
   logger.error('Unhandled error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
@@ -703,79 +316,33 @@ app.use((err, req, res, next) => {
 
 ## Performance Optimization
 
-### Request Batching
-
-**Multiple Game Details**:
-```typescript
-// Instead of N requests
-const games = await Promise.all(
-  gameIds.map(id => gamesApi.getById(id))
-);
-
-// Better: Single batch request (if implemented)
-const games = await gamesApi.getBatch(gameIds);
-```
-
-### Response Compression
-
-**Backend**:
+**Response Compression**:
 ```typescript
 import compression from 'compression';
 app.use(compression());
 ```
 
-**Game Service**:
-```typescript
-// Compress large responses
-app.use(compression({
-  threshold: 1024, // Only compress responses > 1KB
-  filter: (req, res) => {
-    if (req.headers['x-no-compression']) {
-      return false;
-    }
-    return compression.filter(req, res);
-  }
-}));
-```
-
-### Connection Pooling
-
-**Database Connections**:
-```typescript
-// BetterSqlite3 uses single connection (fast for SQLite)
-// For PostgreSQL (future):
-const pool = new Pool({
-  max: 20,
-  min: 5,
-  idleTimeoutMillis: 30000
-});
-```
+**Connection Pooling**: BetterSqlite3 uses single connection (optimized for SQLite).
 
 ## Security Considerations
 
-### CORS Configuration
-
-**Backend**:
+**CORS Configuration**:
 ```typescript
+// Backend
 app.use(cors({
   origin: process.env.DOMAIN || 'http://localhost:5173',
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-```
 
-**Game Service**:
-```typescript
-// Wide CORS for game content (cross-domain assets)
+// Game Service (wide open for cross-domain content)
 app.use(cors({
   origin: '*',
   methods: ['GET', 'HEAD', 'OPTIONS']
 }));
 ```
 
-### Request Validation
-
-**Zod Schemas**:
+**Request Validation**:
 ```typescript
 const searchQuerySchema = z.object({
   search: z.string().optional(),
@@ -786,40 +353,27 @@ const searchQuerySchema = z.object({
 const query = searchQuerySchema.parse(req.query);
 ```
 
-### SQL Injection Prevention
+**SQL Injection Prevention**: Always use parameterized queries.
 
-**Parameterized Queries**:
 ```typescript
-// Safe: Uses parameterized query
-const game = DatabaseService.get(
-  'SELECT * FROM game WHERE id = ?',
-  [gameId]
-);
+// Safe
+const game = DatabaseService.get('SELECT * FROM game WHERE id = ?', [gameId]);
 
-// NEVER DO THIS:
-const game = DatabaseService.get(
-  `SELECT * FROM game WHERE id = '${gameId}'`
-);
+// NEVER
+const game = DatabaseService.get(`SELECT * FROM game WHERE id = '${gameId}'`);
 ```
 
-## Monitoring and Observability
+## Monitoring
 
-### Request Logging
-
-**Backend**:
+**Request Logging**:
 ```typescript
 import morgan from 'morgan';
-
 app.use(morgan('combined', {
-  stream: {
-    write: (message) => logger.info(message.trim())
-  }
+  stream: { write: (message) => logger.info(message.trim()) }
 }));
 ```
 
-### Activity Tracking
-
-**Middleware**:
+**Activity Tracking**:
 ```typescript
 export const logActivity = (action: string, targetType: string) => {
   return async (req, res, next) => {
@@ -834,7 +388,3 @@ export const logActivity = (action: string, targetType: string) => {
   };
 };
 ```
-
-## Conclusion
-
-The service communication architecture is designed for simplicity and performance, with clear boundaries between services. The frontend communicates exclusively with the backend for metadata and business logic, while game files are served directly from the game service to minimize latency and backend load. This separation allows independent scaling and optimization of each service while maintaining a clean, maintainable codebase.

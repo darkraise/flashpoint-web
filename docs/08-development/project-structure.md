@@ -1,42 +1,22 @@
 # Project Structure
 
-Comprehensive guide to the Flashpoint Web codebase organization.
-
-## Table of Contents
-
-- [Repository Overview](#repository-overview)
-- [Backend Structure](#backend-structure)
-- [Frontend Structure](#frontend-structure)
-- [Game Service Structure](#game-service-structure)
-- [Documentation Structure](#documentation-structure)
-- [Configuration Files](#configuration-files)
-- [Data Directories](#data-directories)
-
----
+Flashpoint Web codebase organization.
 
 ## Repository Overview
 
 ```
 flashpoint-web/
-├── backend/                 # REST API service
-├── frontend/                # React web application
-├── game-service/            # Game content proxy and ZIP server
-├── docs/                    # Documentation
-├── .claude/                 # Claude AI configurations
-├── .vscode/                 # VS Code workspace settings
-├── package.json             # Root package.json (monorepo scripts)
-├── package-lock.json        # Root lock file
+├── backend/                 # REST API service (Express/TypeScript, port 3100)
+├── frontend/                # React web application (Vite, port 5173)
+├── game-service/            # Game proxy & ZIP server (Express, ports 22500/22501)
+├── docs/                    # Documentation (100+ files)
+├── package.json             # Monorepo scripts & workspaces
 ├── docker-compose.yml       # Docker orchestration
-├── CLAUDE.md                # Project guidance for Claude AI
+├── CLAUDE.md                # AI assistant guidance
 └── README.md                # Project overview
 ```
 
-### Key Characteristics
-
-- **Monorepo**: All services in one repository
-- **Workspaces**: npm workspaces for dependency management
-- **Independent Services**: Each service can run standalone
-- **Shared Documentation**: Centralized docs/ directory
+**Key:** Monorepo with independent services and centralized documentation.
 
 ---
 
@@ -45,128 +25,58 @@ flashpoint-web/
 ```
 backend/
 ├── src/
-│   ├── config.ts                    # Environment configuration
-│   ├── server.ts                    # Express app entry point
+│   ├── config.ts                 # Environment configuration
+│   ├── server.ts                 # Express app entry point
 │   │
-│   ├── middleware/                  # Express middleware
-│   │   ├── auth.ts                 # JWT authentication
-│   │   ├── rbac.ts                 # Role-based access control
-│   │   ├── activityLogger.ts       # User activity logging
-│   │   └── errorHandler.ts         # Global error handler
+│   ├── middleware/               # Express middleware
+│   │   ├── auth.ts              # JWT authentication
+│   │   ├── rbac.ts              # Role-based access control
+│   │   └── errorHandler.ts      # Global error handling
 │   │
-│   ├── routes/                      # API endpoints
-│   │   ├── index.ts                # Route aggregator
-│   │   ├── auth.ts                 # /api/auth/* endpoints
-│   │   ├── games.ts                # /api/games/* endpoints
-│   │   ├── users.ts                # /api/users/* endpoints
-│   │   ├── playlists.ts            # /api/playlists/* endpoints
-│   │   ├── play-tracking.ts        # /api/play-tracking/* endpoints
-│   │   ├── platforms.ts            # /api/platforms/* endpoints
-│   │   ├── tags.ts                 # /api/tags/* endpoints
-│   │   ├── statistics.ts           # /api/statistics/* endpoints
-│   │   ├── roles.ts                # /api/roles/* endpoints
-│   │   ├── auth-settings.ts        # /api/auth-settings/* endpoints
-│   │   ├── activities.ts           # /api/activities/* endpoints
-│   │   ├── community-playlists.ts  # /api/community-playlists/* endpoints
-│   │   ├── game-files.ts           # /api/game-files/* endpoints
-│   │   ├── downloads.ts            # /api/downloads/* endpoints
-│   │   ├── updates.ts              # /api/updates/* endpoints
-│   │   ├── database.ts             # /api/database/* endpoints
-│   │   └── proxy.ts                # Proxy to game-service
+│   ├── routes/                   # API endpoints
+│   │   ├── auth.ts              # /api/auth/*
+│   │   ├── games.ts             # /api/games/*
+│   │   ├── users.ts             # /api/users/*
+│   │   ├── playlists.ts         # /api/playlists/*
+│   │   ├── play-tracking.ts     # /api/play-tracking/*
+│   │   └── ... (other routes)
 │   │
-│   ├── services/                    # Business logic layer
-│   │   ├── DatabaseService.ts      # Flashpoint DB connection
-│   │   ├── UserDatabaseService.ts  # User DB with migrations
-│   │   ├── GameService.ts          # Game metadata queries
-│   │   ├── UserService.ts          # User management
-│   │   ├── AuthService.ts          # Authentication logic
-│   │   ├── PlaylistService.ts      # Playlist CRUD
-│   │   ├── PlayTrackingService.ts  # Play session tracking
-│   │   ├── RoleService.ts          # RBAC role management
-│   │   ├── AuthSettingsService.ts  # Auth configuration
-│   │   ├── ActivityService.ts      # Activity logging
-│   │   ├── PreferencesService.ts   # User preferences
-│   │   ├── StatisticsService.ts    # Usage statistics
-│   │   ├── CommunityPlaylistService.ts
-│   │   ├── GameFileService.ts      # Game file operations
-│   │   ├── DownloadManager.ts      # Download management
-│   │   ├── UpdateService.ts        # Update checking
-│   │   ├── MetadataUpdateService.ts
-│   │   ├── MetadataSyncService.ts
-│   │   ├── SyncStatusService.ts
-│   │   ├── GameDatabaseUpdater.ts
-│   │   ├── GameDataService.ts
-│   │   ├── FileImporter.ts
-│   │   └── HashValidator.ts
+│   ├── services/                 # Business logic layer
+│   │   ├── DatabaseService.ts   # Flashpoint DB (read-only)
+│   │   ├── UserDatabaseService.ts # User DB with migrations
+│   │   ├── GameService.ts       # Game queries
+│   │   ├── AuthService.ts       # Authentication
+│   │   ├── PlaylistService.ts   # Playlists
+│   │   ├── PlayTrackingService.ts # Play sessions
+│   │   └── ... (other services)
 │   │
-│   ├── proxy/                       # Legacy proxy code (deprecated)
-│   │   ├── server.ts
-│   │   ├── http-proxy-server.ts
-│   │   ├── gamezipserver.ts
-│   │   ├── legacy-server.ts
-│   │   ├── proxy-request-handler.ts
-│   │   ├── zip-manager.ts
-│   │   ├── config.ts
-│   │   └── mimeTypes.ts
+│   ├── types/                    # TypeScript definitions
+│   │   └── auth.ts              # Auth types
 │   │
-│   ├── types/                       # TypeScript type definitions
-│   │   └── auth.ts                 # Auth-related types
+│   ├── utils/                    # Utility functions
+│   │   ├── logger.ts            # Winston logger
+│   │   ├── jwt.ts               # JWT utilities
+│   │   ├── password.ts          # Password hashing
+│   │   └── pagination.ts        # Pagination helpers
 │   │
-│   ├── utils/                       # Utility functions
-│   │   ├── logger.ts               # Winston logger setup
-│   │   ├── jwt.ts                  # JWT token utilities
-│   │   ├── password.ts             # Password hashing (bcrypt)
-│   │   └── pagination.ts           # Pagination helpers
-│   │
-│   └── migrations/                  # Database migrations
-│       ├── README.md               # Migration guide
-│       ├── 001_user-schema.sql     # Initial user schema
-│       └── 002_create-user-settings.sql
+│   └── migrations/               # Database migrations (SQL)
+│       ├── 001_initialize_schema.sql
+│       └── 002_seed_default_data.sql
 │
-├── dist/                            # Compiled output (git-ignored)
-├── node_modules/                    # Dependencies (git-ignored)
-├── user.db                          # User database (git-ignored)
-│
-├── package.json                     # Backend dependencies & scripts
-├── package-lock.json                # Backend lock file
-├── tsconfig.json                    # TypeScript configuration
-├── .eslintrc.json                   # ESLint configuration
-├── vitest.config.ts                 # Vitest test configuration
-├── .env                             # Environment variables (git-ignored)
-├── .env.example                     # Environment template
-└── README.md                        # Backend documentation
+├── dist/                         # Build output (git-ignored)
+├── user.db                       # User database (git-ignored)
+├── package.json
+├── tsconfig.json
+├── .eslintrc.json
+├── vitest.config.ts
+├── .env.example
+└── README.md
 ```
 
-### Backend Key Patterns
-
-**Service Layer Pattern:**
-- Routes handle HTTP concerns (request/response)
-- Services contain business logic
-- Services interact with databases
-- Clear separation of concerns
-
-**File Naming Conventions:**
+**Patterns:**
 - Services: `PascalCase.ts` (e.g., `GameService.ts`)
 - Routes: `kebab-case.ts` (e.g., `play-tracking.ts`)
-- Middleware: `camelCase.ts` (e.g., `errorHandler.ts`)
-- Utils: `camelCase.ts` (e.g., `logger.ts`)
-
-**Import Organization:**
-```typescript
-// 1. Node built-ins
-import { readFile } from 'fs/promises';
-
-// 2. External packages
-import express from 'express';
-import { z } from 'zod';
-
-// 3. Internal modules (absolute paths)
-import { DatabaseService } from '@/services/DatabaseService';
-import { logger } from '@/utils/logger';
-
-// 4. Types
-import type { User } from '@/types/auth';
-```
+- Middleware/Utils: `camelCase.ts`
 
 ---
 
@@ -175,194 +85,77 @@ import type { User } from '@/types/auth';
 ```
 frontend/
 ├── src/
-│   ├── main.tsx                     # React app entry point
-│   ├── App.tsx                      # Root component with routing
-│   ├── index.css                    # Global styles (Tailwind)
+│   ├── main.tsx                  # React entry point
+│   ├── App.tsx                   # Root component with routing
+│   ├── index.css                 # Global styles (Tailwind)
 │   │
-│   ├── components/                  # Reusable components
-│   │   ├── auth/                   # Authentication components
-│   │   │   ├── LoginForm.tsx
-│   │   │   ├── RegisterForm.tsx
-│   │   │   ├── ProtectedRoute.tsx
-│   │   │   └── UserMenu.tsx
-│   │   │
-│   │   ├── common/                 # Common UI components
-│   │   │   └── ViewOptions.tsx
-│   │   │
-│   │   ├── game/                   # Game-specific components
-│   │   │   ├── GameDetailsPanel.tsx
-│   │   │   ├── GameMetadata.tsx
-│   │   │   └── PlatformBadge.tsx
-│   │   │
-│   │   ├── layout/                 # Layout components
-│   │   │   ├── Header.tsx
-│   │   │   ├── Sidebar.tsx
-│   │   │   ├── Navigation.tsx
-│   │   │   └── Footer.tsx
-│   │   │
-│   │   ├── library/                # Game library components
-│   │   │   ├── GameCard.tsx
-│   │   │   ├── GameGrid.tsx
-│   │   │   ├── GameList.tsx
-│   │   │   ├── GameTable.tsx
-│   │   │   └── GameBrowseLayout.tsx
-│   │   │
-│   │   ├── player/                 # Game player components
-│   │   │   ├── GamePlayer.tsx
-│   │   │   ├── RufflePlayer.tsx
-│   │   │   ├── HTML5Player.tsx
-│   │   │   └── PlayerControls.tsx
-│   │   │
-│   │   ├── playlist/               # Playlist components
-│   │   │   ├── PlaylistCard.tsx
-│   │   │   ├── PlaylistEditor.tsx
-│   │   │   └── AddToPlaylist.tsx
-│   │   │
-│   │   ├── search/                 # Search & filter components
-│   │   │   ├── SearchBar.tsx
-│   │   │   ├── FilterPanel.tsx
-│   │   │   └── SortControls.tsx
-│   │   │
-│   │   ├── settings/               # Settings components
-│   │   │   ├── SettingsPanel.tsx
-│   │   │   └── PreferencesForm.tsx
-│   │   │
-│   │   ├── theme/                  # Theme components
-│   │   │   ├── ThemePicker.tsx
-│   │   │   ├── ThemeToggle.tsx
-│   │   │   └── PrimaryColorPicker.tsx
-│   │   │
-│   │   └── ui/                     # shadcn/ui components
-│   │       ├── button.tsx
-│   │       ├── card.tsx
-│   │       ├── dialog.tsx
-│   │       ├── dropdown-menu.tsx
-│   │       ├── input.tsx
-│   │       ├── label.tsx
-│   │       ├── select.tsx
-│   │       ├── separator.tsx
-│   │       ├── toast.tsx
-│   │       ├── tooltip.tsx
-│   │       ├── pagination.tsx
-│   │       ├── platform-icon.tsx
-│   │       └── ...
+│   ├── components/               # Reusable components
+│   │   ├── auth/                # Login, register, protected route
+│   │   ├── layout/              # Header, sidebar, navigation
+│   │   ├── library/             # Game cards, grids, lists
+│   │   ├── player/              # Game player components
+│   │   ├── playlist/            # Playlist management
+│   │   ├── search/              # Search & filters
+│   │   ├── settings/            # Settings panels
+│   │   ├── theme/               # Theme picker
+│   │   └── ui/                  # shadcn/ui components
 │   │
-│   ├── views/                       # Page-level components
+│   ├── views/                    # Page-level components
 │   │   ├── HomeView.tsx
 │   │   ├── BrowseView.tsx
 │   │   ├── GameDetailView.tsx
 │   │   ├── GamePlayerView.tsx
-│   │   ├── AnimationsView.tsx
-│   │   ├── FlashGamesView.tsx
-│   │   ├── HTML5GamesView.tsx
 │   │   ├── PlaylistsView.tsx
 │   │   ├── SettingsView.tsx
-│   │   ├── LoginView.tsx
-│   │   └── RegisterView.tsx
+│   │   └── ... (other views)
 │   │
-│   ├── hooks/                       # Custom React hooks
-│   │   ├── useAuth.ts              # Authentication hook
-│   │   ├── useGames.ts             # Game data fetching
-│   │   ├── usePlaylists.ts         # Playlist operations
-│   │   ├── usePlayTracking.ts      # Play session tracking
-│   │   ├── useFilterOptions.ts     # Filter state management
-│   │   └── useMountEffect.ts       # Mount lifecycle hook
+│   ├── hooks/                    # Custom React hooks
+│   │   ├── useAuth.ts           # Authentication
+│   │   ├── useGames.ts          # Game data fetching
+│   │   ├── usePlaylists.ts      # Playlist operations
+│   │   └── usePlayTracking.ts   # Play session tracking
 │   │
-│   ├── store/                       # Zustand stores
-│   │   ├── auth.ts                 # Auth state (user, tokens)
-│   │   ├── theme.ts                # Theme preferences
-│   │   ├── ui.ts                   # UI state (sidebar, modals)
-│   │   └── preferences.ts          # User preferences
+│   ├── store/                    # Zustand stores
+│   │   ├── auth.ts              # User & auth state
+│   │   ├── theme.ts             # Theme preferences
+│   │   ├── ui.ts                # UI state
+│   │   └── preferences.ts       # User preferences
 │   │
-│   ├── lib/                         # Library code
-│   │   ├── api.ts                  # API client (axios)
-│   │   ├── utils.ts                # Utility functions
-│   │   └── date-utils.ts           # Date formatting
+│   ├── lib/                      # Library code
+│   │   ├── api.ts               # Axios client (authenticated)
+│   │   ├── utils.ts             # Utilities
+│   │   └── date-utils.ts        # Date formatting
 │   │
-│   ├── types/                       # TypeScript types
-│   │   ├── game.ts                 # Game-related types
-│   │   ├── user.ts                 # User types
-│   │   ├── playlist.ts             # Playlist types
-│   │   └── api.ts                  # API response types
+│   ├── types/                    # TypeScript types
+│   │   ├── game.ts
+│   │   ├── user.ts
+│   │   ├── playlist.ts
+│   │   └── api.ts
 │   │
-│   └── assets/                      # Static assets
+│   └── assets/                   # Static assets
 │       ├── images/
 │       └── icons/
 │
-├── public/                          # Static files served as-is
-│   ├── ruffle/                     # Ruffle emulator files
-│   │   ├── ruffle.js
-│   │   └── ruffle.wasm
+├── public/                       # Static files
+│   ├── ruffle/                  # Ruffle emulator
 │   ├── favicon.ico
 │   └── ...
 │
-├── dist/                            # Production build output (git-ignored)
-├── node_modules/                    # Dependencies (git-ignored)
-│
-├── package.json                     # Frontend dependencies & scripts
-├── package-lock.json                # Frontend lock file
-├── tsconfig.json                    # TypeScript config (bundler mode)
-├── tsconfig.node.json               # TypeScript config for Vite
-├── vite.config.ts                   # Vite configuration
-├── tailwind.config.js               # Tailwind CSS config
-├── postcss.config.js                # PostCSS config
-├── .eslintrc.json                   # ESLint configuration
-├── .env                             # Environment variables (git-ignored)
-├── .env.example                     # Environment template
-└── README.md                        # Frontend documentation
+├── dist/                         # Build output (git-ignored)
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── tailwind.config.js
+├── .eslintrc.json
+├── .env.example
+└── README.md
 ```
 
-### Frontend Key Patterns
-
-**Component Organization:**
-- Domain-driven folders (auth, library, player, etc.)
-- One component per file
-- Co-locate related components
-- Shared UI components in `ui/`
-
-**File Naming Conventions:**
-- Components: `PascalCase.tsx` (e.g., `GameCard.tsx`)
-- Hooks: `camelCase.ts` with `use` prefix (e.g., `useAuth.ts`)
-- Stores: `camelCase.ts` (e.g., `auth.ts`)
-- Utils: `kebab-case.ts` (e.g., `date-utils.ts`)
-
-**Component Structure:**
-```tsx
-// 1. Imports
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
-
-// 2. Types
-interface GameCardProps {
-  game: Game;
-  onPlay: (gameId: string) => void;
-}
-
-// 3. Component
-export function GameCard({ game, onPlay }: GameCardProps) {
-  // Hooks
-  const { user } = useAuth();
-  const [isHovered, setIsHovered] = useState(false);
-
-  // Event handlers
-  const handleClick = () => {
-    onPlay(game.id);
-  };
-
-  // Render
-  return (
-    <div>...</div>
-  );
-}
-```
-
-**State Management Strategy:**
-- **Server State**: React Query (games, users, playlists)
-- **UI State**: Zustand stores (sidebar, theme, modals)
-- **URL State**: React Router search params (filters, pagination)
-- **Local State**: useState/useReducer (component-specific)
+**Patterns:**
+- Components: `PascalCase.tsx`
+- Hooks: `useXxxx.ts`
+- Stores: `camelCase.ts`
+- Utils: `kebab-case.ts`
 
 ---
 
@@ -371,50 +164,36 @@ export function GameCard({ game, onPlay }: GameCardProps) {
 ```
 game-service/
 ├── src/
-│   ├── index.ts                     # Entry point
-│   ├── config.ts                    # Environment configuration
+│   ├── index.ts                  # Entry point
+│   ├── config.ts                 # Configuration
 │   │
-│   ├── servers/                     # HTTP servers
-│   │   ├── proxy-server.ts         # Main proxy server (22500)
-│   │   └── gamezip-server.ts       # ZIP file server (22501)
+│   ├── servers/                  # HTTP servers
+│   │   ├── proxy-server.ts      # Proxy (22500)
+│   │   └── gamezip-server.ts    # GameZip (22501)
 │   │
-│   ├── handlers/                    # Request handlers
-│   │   ├── proxy-handler.ts        # Proxy request logic
-│   │   ├── file-handler.ts         # File serving logic
-│   │   └── zip-handler.ts          # ZIP extraction logic
+│   ├── handlers/                 # Request handlers
+│   │   ├── proxy-handler.ts
+│   │   ├── file-handler.ts
+│   │   └── zip-handler.ts
 │   │
-│   ├── services/                    # Business logic
-│   │   ├── zip-manager.ts          # ZIP file management
-│   │   ├── mime-types.ts           # MIME type detection
-│   │   └── cache-manager.ts        # CDN cache management
+│   ├── services/                 # Business logic
+│   │   ├── zip-manager.ts       # ZIP file operations
+│   │   ├── mime-types.ts        # MIME type detection
+│   │   └── cache-manager.ts     # CDN caching
 │   │
-│   └── utils/                       # Utilities
-│       ├── logger.ts               # Winston logger
-│       ├── path-utils.ts           # Path normalization
-│       └── url-utils.ts            # URL processing
+│   └── utils/                    # Utilities
+│       ├── logger.ts
+│       ├── path-utils.ts
+│       └── url-utils.ts
 │
-├── dist/                            # Compiled output (git-ignored)
-├── node_modules/                    # Dependencies (git-ignored)
-│
-├── package.json                     # Dependencies & scripts
-├── package-lock.json                # Lock file
-├── tsconfig.json                    # TypeScript configuration
-├── .env                             # Environment variables (git-ignored)
-├── .env.example                     # Environment template
-└── README.md                        # Game service documentation
+├── dist/                         # Build output (git-ignored)
+├── package.json
+├── tsconfig.json
+├── .env.example
+└── README.md
 ```
 
-### Game Service Key Patterns
-
-**Two-Server Architecture:**
-1. **Proxy Server (22500)**: Handles HTTP proxy requests with fallback chain
-2. **GameZip Server (22501)**: Serves files directly from ZIP archives
-
-**File Naming Conventions:**
-- Servers: `kebab-case.ts` (e.g., `proxy-server.ts`)
-- Handlers: `kebab-case.ts` (e.g., `file-handler.ts`)
-- Services: `kebab-case.ts` (e.g., `zip-manager.ts`)
-- Utils: `kebab-case.ts` (e.g., `path-utils.ts`)
+**Key:** Two servers handle proxy (22500) and GameZip (22501).
 
 ---
 
@@ -422,211 +201,91 @@ game-service/
 
 ```
 docs/
-├── README.md                        # Documentation overview
+├── 01-overview/                  # Project overview
+├── 02-architecture/              # System architecture & flows
+├── 03-backend/                   # Backend documentation
+├── 04-frontend/                  # Frontend documentation
+├── 05-game-service/              # Game service documentation
 │
-├── 01-overview/                     # Project overview
-│   ├── project-overview.md
-│   ├── technology-stack.md
-│   ├── architecture-overview.md
-│   └── getting-started.md
-│
-├── 02-architecture/                 # Architecture documentation
-│   ├── README.md
-│   ├── system-architecture.md
-│   ├── service-communication.md
-│   ├── data-flow-diagrams.md
-│   ├── authentication-flow.md
-│   ├── game-launch-flow.md
-│   └── play-tracking-flow.md
-│
-├── 03-backend/                      # Backend documentation
-│   ├── README.md
-│   ├── INDEX.md
-│   ├── architecture.md
-│   ├── configuration.md
-│   ├── api-routes.md
-│   ├── services/
-│   │   ├── database-service.md
-│   │   └── user-database-service.md
-│   └── database/
-│       └── schema.md
-│
-├── 04-frontend/                     # Frontend documentation
-│   ├── README.md
-│   ├── INDEX.md
-│   ├── architecture.md
-│   ├── views-routing.md
-│   ├── custom-hooks.md
-│   ├── api-client.md
-│   ├── components/
-│   │   ├── component-overview.md
-│   │   ├── layout-components.md
-│   │   ├── player-components.md
-│   │   ├── game-components.md
-│   │   ├── auth-components.md
-│   │   └── ui-components.md
-│   ├── state-management/
-│   │   ├── zustand-stores.md
-│   │   ├── react-query.md
-│   │   └── url-state.md
-│   └── player-implementation/
-│       ├── ruffle-player.md
-│       └── html5-player.md
-│
-├── 05-game-service/                 # Game service documentation
-│   ├── README.md
-│   ├── architecture.md
-│   ├── configuration.md
-│   ├── proxy-server.md
-│   ├── gamezip-server.md
-│   ├── zip-manager.md
-│   ├── mime-types.md
-│   ├── html-polyfills.md
-│   └── legacy-server.md
-│
-└── 08-development/                  # Developer documentation
-    ├── README.md                    # This directory overview
-    ├── setup-guide.md               # Development setup
-    ├── commands.md                  # Command reference
-    ├── project-structure.md         # This file
-    ├── coding-standards.md          # Code style guide
-    ├── testing-guide.md             # Testing practices
-    ├── debugging.md                 # Debugging guide
-    └── common-pitfalls.md           # Known issues & solutions
+└── 08-development/               # Developer documentation
+    ├── setup-guide.md            # Development setup
+    ├── commands.md               # Command reference
+    ├── project-structure.md      # This file
+    ├── coding-standards.md       # Code style guide
+    ├── testing-guide.md          # Testing practices
+    ├── debugging.md              # Debugging tips
+    └── common-pitfalls.md        # Known issues
 ```
-
-### Documentation Standards
-
-- Markdown format (.md files)
-- Clear hierarchy with numbered directories
-- README.md or INDEX.md in each section
-- Cross-references with relative links
-- Code examples with syntax highlighting
 
 ---
 
 ## Configuration Files
 
-### Root Level
+### Root
+- `package.json` - Monorepo scripts
+- `package-lock.json` - Dependency lock
+- `docker-compose.yml` - Docker services
+- `CLAUDE.md` - AI guidance
+- `README.md` - Project overview
 
-```
-.
-├── package.json                     # Monorepo scripts & workspaces
-├── package-lock.json                # Dependency lock file
-├── docker-compose.yml               # Docker orchestration
-├── .gitignore                       # Git ignore patterns
-├── .dockerignore                    # Docker ignore patterns
-├── CLAUDE.md                        # AI assistant guidance
-└── README.md                        # Project overview
-```
+### Backend
+- `tsconfig.json` - TypeScript config
+- `.eslintrc.json` - ESLint rules
+- `vitest.config.ts` - Test config
+- `.env.example` - Environment template
 
-### Backend Configuration
+### Frontend
+- `tsconfig.json` - TypeScript config (app)
+- `tsconfig.node.json` - TypeScript config (Vite)
+- `vite.config.ts` - Vite bundler
+- `tailwind.config.js` - Tailwind CSS
+- `postcss.config.js` - PostCSS
+- `.eslintrc.json` - ESLint rules
 
-```
-backend/
-├── tsconfig.json                    # TypeScript compiler config
-├── .eslintrc.json                   # ESLint rules
-├── vitest.config.ts                 # Test configuration
-├── .env                             # Environment variables (git-ignored)
-└── .env.example                     # Environment template
-```
-
-### Frontend Configuration
-
-```
-frontend/
-├── tsconfig.json                    # TypeScript config (app)
-├── tsconfig.node.json               # TypeScript config (Vite)
-├── vite.config.ts                   # Vite bundler config
-├── tailwind.config.js               # Tailwind CSS config
-├── postcss.config.js                # PostCSS config
-├── .eslintrc.json                   # ESLint rules
-├── .env                             # Environment variables (git-ignored)
-└── .env.example                     # Environment template
-```
-
-### Game Service Configuration
-
-```
-game-service/
-├── tsconfig.json                    # TypeScript compiler config
-├── .env                             # Environment variables (git-ignored)
-└── .env.example                     # Environment template
-```
+### Game Service
+- `tsconfig.json` - TypeScript config
+- `.env.example` - Environment template
 
 ---
 
 ## Data Directories
 
-### Flashpoint Installation Structure
-
+### Flashpoint Installation (FLASHPOINT_PATH)
 ```
-D:/Flashpoint/                       # FLASHPOINT_PATH
+D:/Flashpoint/
 ├── Data/
-│   ├── flashpoint.sqlite           # Game metadata database
-│   ├── Images/                     # Game screenshots
-│   ├── Logos/                      # Game logos/icons
-│   ├── Playlists/                  # Playlist files
-│   └── Games/                      # Game ZIP archives
-│       ├── game1.zip
-│       ├── game2.zip
-│       └── ...
+│   ├── flashpoint.sqlite        # Game metadata (read-only)
+│   ├── Images/                  # Game screenshots
+│   ├── Logos/                   # Game logos
+│   ├── Playlists/               # Playlist files
+│   └── Games/                   # Game ZIP archives
 │
 └── Legacy/
-    └── htdocs/                     # Legacy web content
-        ├── file1.swf
-        ├── file2.html
-        └── ...
+    └── htdocs/                  # Legacy web content (Flash files)
 ```
 
 ### Application Data
-
 ```
 backend/
-├── user.db                          # User database (SQLite)
-└── logs/                            # Application logs (optional)
-    ├── combined.log
-    └── error.log
+├── user.db                      # User database
+└── logs/                        # Application logs (optional)
 
 game-service/
-└── cache/                           # CDN cache directory (optional)
-    ├── file1.swf
-    └── file2.html
+└── cache/                       # CDN cache (optional)
 ```
 
 ---
 
 ## Import Path Aliases
 
-All services use TypeScript path aliases for cleaner imports.
-
-### Backend Alias
+All services use TypeScript `@` alias for cleaner imports:
 
 ```typescript
-// tsconfig.json
-{
-  "paths": {
-    "@/*": ["src/*"]
-  }
-}
-
-// Usage
+// Backend
 import { GameService } from '@/services/GameService';
 import { logger } from '@/utils/logger';
-import { authMiddleware } from '@/middleware/auth';
-```
 
-### Frontend Alias
-
-```typescript
-// tsconfig.json
-{
-  "paths": {
-    "@/*": ["src/*"]
-  }
-}
-
-// Usage
+// Frontend
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
@@ -634,54 +293,27 @@ import { api } from '@/lib/api';
 
 ---
 
-## Build Output Structure
+## Build Output
 
-### Backend Build (dist/)
+### Backend (dist/)
+- server.js - Entry point
+- Compiled JavaScript files
+- Type declarations (.d.ts)
+- Source maps (.js.map)
 
-```
-backend/dist/
-├── server.js                        # Entry point
-├── server.js.map                    # Source map
-├── server.d.ts                      # Type declarations
-├── config.js
-├── middleware/
-├── routes/
-├── services/
-├── types/
-└── utils/
-```
+### Frontend (dist/)
+- index.html - Entry point
+- assets/ - Minified JS, CSS, hashed bundles
+- ruffle/ - Ruffle emulator files
 
-### Frontend Build (dist/)
-
-```
-frontend/dist/
-├── index.html                       # Entry HTML
-├── assets/
-│   ├── index-[hash].js             # Main bundle
-│   ├── index-[hash].css            # Styles
-│   ├── vendor-[hash].js            # Vendor bundle
-│   └── ...                         # Other chunks
-└── ruffle/                         # Ruffle emulator files
-```
-
-### Game Service Build (dist/)
-
-```
-game-service/dist/
-├── index.js                         # Entry point
-├── config.js
-├── servers/
-├── handlers/
-├── services/
-└── utils/
-```
+### Game Service (dist/)
+- index.js - Entry point
+- Compiled JavaScript files
 
 ---
 
 ## Additional Resources
 
-- [Commands Reference](./commands.md) - All npm commands
-- [Coding Standards](./coding-standards.md) - Code style guidelines
-- [Backend Architecture](../03-backend/architecture.md) - Backend deep dive
-- [Frontend Architecture](../04-frontend/architecture.md) - Frontend deep dive
-- [Game Service Architecture](../05-game-service/architecture.md) - Game service details
+- [Commands Reference](./commands.md)
+- [Coding Standards](./coding-standards.md)
+- [Setup Guide](./setup-guide.md)

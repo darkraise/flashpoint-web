@@ -1,676 +1,220 @@
 # Environment Variables
 
-Complete reference for all environment variables used across all Flashpoint Web services.
+Configuration reference for all Flashpoint Web services.
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Backend Environment Variables](#backend-environment-variables)
-- [Game Service Environment Variables](#game-service-environment-variables)
-- [Frontend Environment Variables](#frontend-environment-variables)
-- [Docker Environment Variables](#docker-environment-variables)
-- [Environment Templates](#environment-templates)
-- [Validation and Defaults](#validation-and-defaults)
-
-## Overview
-
-Flashpoint Web uses environment variables for configuration across three services:
-
-- **Backend**: API server configuration, database paths, authentication
-- **Game Service**: Proxy settings, ZIP server, game file serving
-- **Frontend**: Build-time API URL configuration
-
-Environment variables are loaded from `.env` files in each service directory or passed directly via Docker Compose.
-
-## Backend Environment Variables
+## Backend Variables
 
 Location: `backend/.env`
 
-### Server Configuration
+**Server:**
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `NODE_ENV` | string | `development` | Environment mode: `development`, `production`, `test` |
-| `PORT` | number | `3100` | HTTP server port |
-| `HOST` | string | `0.0.0.0` | Server bind address. Use `127.0.0.1` for localhost only |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NODE_ENV` | development | Environment: development, production, test |
+| `PORT` | 3100 | HTTP server port |
+| `HOST` | 0.0.0.0 | Bind address (use 127.0.0.1 for localhost only) |
 
-**Examples:**
+**Paths (only set FLASHPOINT_PATH):**
 
+| Variable | Description |
+|----------|-------------|
+| `FLASHPOINT_PATH` | Root Flashpoint directory. All other paths auto-derived. |
+
+**Game Service Host:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GAME_SERVICE_HOST` | localhost | Hostname for game-service URLs |
+
+**Authentication & Security:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JWT_SECRET` | INSECURE-... | Secret for JWT signing (CHANGE IN PRODUCTION!) |
+| `JWT_EXPIRES_IN` | 1h | Access token expiration (15m, 1h, 7d, etc.) |
+| `BCRYPT_SALT_ROUNDS` | 10 | Password hash cost (higher = more secure but slower) |
+| `DOMAIN` | http://localhost:5173 | CORS origin (use specific domain in production) |
+
+Generate secure JWT secret:
 ```bash
-# Development (all interfaces)
-NODE_ENV=development
-PORT=3100
-HOST=0.0.0.0
-
-# Production (behind reverse proxy)
-NODE_ENV=production
-PORT=3100
-HOST=127.0.0.1
-```
-
-### Flashpoint Paths
-
-| Variable | Type | Required | Description |
-|----------|------|----------|-------------|
-| `FLASHPOINT_PATH` | string | Yes | Root directory of Flashpoint installation. All other paths are automatically derived from this. |
-
-**Automatically derived paths (no environment variable needed):**
-- Database: `${FLASHPOINT_PATH}/Data/flashpoint.sqlite`
-- HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
-- Images: `${FLASHPOINT_PATH}/Data/Images`
-- Logos: `${FLASHPOINT_PATH}/Data/Logos`
-- Playlists: `${FLASHPOINT_PATH}/Data/Playlists`
-- Games: `${FLASHPOINT_PATH}/Data/Games`
-
-All paths are derived automatically from `FLASHPOINT_PATH`. You only need to set `FLASHPOINT_PATH` - no need to set individual path variables.
-
-**Example (Windows):**
-
-```bash
-FLASHPOINT_PATH=D:/Flashpoint
-```
-
-**Example (Linux):**
-
-```bash
-FLASHPOINT_PATH=/data/flashpoint
-```
-
-**Example (Docker):**
-
-```bash
-# Inside container (mounted from host)
-FLASHPOINT_PATH=/data/flashpoint
-```
-
-### Game Service Host
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `GAME_SERVICE_HOST` | string | `localhost` | Hostname/IP of game-service for constructing URLs to proxy and GameZip servers |
-
-The proxy and GameZip URLs are automatically constructed as:
-- Proxy URL: `http://${GAME_SERVICE_HOST}:22500`
-- GameZip URL: `http://${GAME_SERVICE_HOST}:22501`
-
-**Examples:**
-
-```bash
-# Local development (default)
-GAME_SERVICE_HOST=localhost
-# Results in: http://localhost:22500 and http://localhost:22501
-
-# Docker (internal network)
-GAME_SERVICE_HOST=game-service
-# Results in: http://game-service:22500 and http://game-service:22501
-
-# Remote game service
-GAME_SERVICE_HOST=192.168.1.100
-# Results in: http://192.168.1.100:22500 and http://192.168.1.100:22501
-```
-
-### Image CDN URLs (Automatic)
-
-Image CDN URLs are automatically read from Flashpoint's preferences file. No environment variable configuration required.
-
-**Source:** Flashpoint preferences (`onDemandBaseUrl` from `preferences.json` or `.preferences.defaults.json`)
-
-**Fallback:** If preferences are unavailable, defaults to:
-- `https://infinity.flashpointarchive.org/Flashpoint/Data/Images`
-- `https://infinity.unstable.life/Flashpoint/Data/Images`
-
-When images are not found locally, the backend will try fetching from these CDN URLs in order.
-
-### Authentication and Security
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `JWT_SECRET` | string | `INSECURE-CHANGE-THIS-IN-PRODUCTION` | Secret key for JWT signing (CRITICAL: must change in production!) |
-| `JWT_EXPIRES_IN` | string | `1h` | Access token expiration time (examples: 15m, 1h, 7d) |
-| `BCRYPT_SALT_ROUNDS` | number | `10` | Bcrypt salt rounds for password hashing (higher = more secure but slower) |
-| `USER_DB_PATH` | string | `./user.db` | Path to user database SQLite file |
-
-**CRITICAL: Change JWT_SECRET in production!**
-
-Generate a secure secret (64+ characters recommended):
-
-```bash
-# Linux/Mac
 openssl rand -hex 64
-
-# Node.js
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-
-# PowerShell
--join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | % {[char]$_})
 ```
 
-**Example:**
+**Rate Limiting:**
 
-```bash
-JWT_SECRET=a1b2c3d4e5f6789012345678901234567890abcdefghijklmnopqrstuvwxyz0123
-JWT_EXPIRES_IN=1h
-BCRYPT_SALT_ROUNDS=12
-USER_DB_PATH=./data/user.db
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RATE_LIMIT_WINDOW_MS` | 60000 | Time window (ms) |
+| `RATE_LIMIT_MAX_REQUESTS` | 100 | Max requests per window |
 
-### CORS Configuration
+**Logging:**
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `DOMAIN` | string | `http://localhost:5173` | Allowed CORS origin (frontend URL) |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_LEVEL` | info | Level: error, warn, info, debug |
+| `LOG_FILE` | - | Optional log file path |
 
-**Examples:**
+**Redis (Optional):**
 
-```bash
-# Development
-DOMAIN=http://localhost:5173
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDIS_ENABLED` | false | Enable Redis caching |
+| `REDIS_HOST` | localhost | Redis hostname |
+| `REDIS_PORT` | 6379 | Redis port |
 
-# Production (single domain)
-DOMAIN=https://flashpoint.example.com
-
-# Production (multiple domains - comma-separated)
-DOMAIN=https://flashpoint.example.com,https://www.flashpoint.example.com
-
-# Allow all origins (NOT RECOMMENDED)
-DOMAIN=*
-```
-
-### Rate Limiting
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `RATE_LIMIT_WINDOW_MS` | number | `60000` | Time window in milliseconds (default: 1 minute) |
-| `RATE_LIMIT_MAX_REQUESTS` | number | `100` | Maximum requests per window |
-
-**Examples:**
-
-```bash
-# Strict (1 request per second)
-RATE_LIMIT_WINDOW_MS=1000
-RATE_LIMIT_MAX_REQUESTS=1
-
-# Default (100 requests per minute)
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX_REQUESTS=100
-
-# Lenient (1000 requests per 5 minutes)
-RATE_LIMIT_WINDOW_MS=300000
-RATE_LIMIT_MAX_REQUESTS=1000
-
-# Disable rate limiting
-RATE_LIMIT_MAX_REQUESTS=0
-```
-
-### Redis Cache (Optional)
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `REDIS_ENABLED` | boolean | `false` | Enable Redis caching |
-| `REDIS_HOST` | string | `localhost` | Redis server hostname |
-| `REDIS_PORT` | number | `6379` | Redis server port |
-
-**Examples:**
-
-```bash
-# Disabled (default)
-REDIS_ENABLED=false
-
-# Local Redis
-REDIS_ENABLED=true
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Remote Redis
-REDIS_ENABLED=true
-REDIS_HOST=redis.example.com
-REDIS_PORT=6379
-```
-
-### Logging
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `LOG_LEVEL` | string | `info` | Logging level: `error`, `warn`, `info`, `debug` |
-| `LOG_FILE` | string | - | Path to log file (optional). If not set, logs only to console. |
-
-**Examples:**
-
-```bash
-# Development (verbose, console only)
-LOG_LEVEL=debug
-
-# Production (minimal, console only)
-LOG_LEVEL=warn
-
-# Production with file logging
-LOG_LEVEL=info
-LOG_FILE=/var/log/flashpoint-backend.log
-
-# Docker (using volume mount)
-LOG_LEVEL=info
-LOG_FILE=/app/logs/backend.log
-```
-
-**File Logging Features:**
-- Automatic log rotation (10MB max file size)
-- Keeps last 5 log files
-- JSON format for easy parsing
-- Logs to both console and file when enabled
-- Directory created automatically if it doesn't exist
-
-**Docker Volume Access:**
-
-When running in Docker with file logging enabled, logs are persisted in a named volume:
-
-```bash
-# View logs from container
-docker exec flashpoint-backend tail -f /app/logs/backend.log
-
-# Find volume location on host
-docker volume inspect flashpoint-web_backend-logs
-
-# Copy logs to host
-docker cp flashpoint-backend:/app/logs/backend.log ./backend.log
-```
-
-### OpenTelemetry (Optional - Observability & Monitoring)
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `OTEL_ENABLED` | boolean | `false` | Enable/disable OpenTelemetry telemetry collection |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | string | `http://localhost:4318` | OTLP endpoint URL (HTTP protocol) |
-| `OTEL_SERVICE_NAME` | string | `flashpoint-web-backend` | Service name for identifying this service in traces/metrics |
-| `OTEL_TRACES_ENABLED` | boolean | `true` | Enable/disable distributed tracing |
-| `OTEL_METRICS_ENABLED` | boolean | `true` | Enable/disable metrics collection |
-| `OTEL_METRICS_EXPORT_INTERVAL` | number | `60000` | Metrics export interval in milliseconds (default: 60000 = 1 minute) |
-| `OTEL_LOG_LEVEL` | string | `info` | OpenTelemetry log level (error, warn, info, debug) |
-
-**Compatible Backends:**
-- Jaeger (distributed tracing)
-- Prometheus (metrics via OTLP)
-- Grafana Cloud
-- New Relic
-- Datadog
-- Any OTLP-compatible backend
-
-**Examples:**
-
-```bash
-# Disabled (default)
-OTEL_ENABLED=false
-
-# Local Jaeger instance
-OTEL_ENABLED=true
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-OTEL_SERVICE_NAME=flashpoint-web-backend
-OTEL_TRACES_ENABLED=true
-OTEL_METRICS_ENABLED=true
-
-# Grafana Cloud
-OTEL_ENABLED=true
-OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-us-central-0.grafana.net/otlp
-OTEL_SERVICE_NAME=flashpoint-web-production
-OTEL_TRACES_ENABLED=true
-OTEL_METRICS_ENABLED=true
-OTEL_METRICS_EXPORT_INTERVAL=30000
-OTEL_LOG_LEVEL=warn
-```
-
-## Game Service Environment Variables
+## Game Service Variables
 
 Location: `game-service/.env`
 
-### Server Ports
+**Ports:**
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `PROXY_PORT` | number | `22500` | HTTP proxy server port |
-| `GAMEZIPSERVER_PORT` | number | `22501` | GameZip server port |
-| `NODE_ENV` | string | `development` | Environment mode |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PROXY_PORT` | 22500 | HTTP proxy server port |
+| `GAMEZIPSERVER_PORT` | 22501 | GameZip server port |
 
-**Examples:**
+**Paths:**
 
-```bash
-# Default ports
-PROXY_PORT=22500
-GAMEZIPSERVER_PORT=22501
+| Variable | Description |
+|----------|-------------|
+| `FLASHPOINT_PATH` | Root Flashpoint directory (auto-derives htdocs and games paths) |
 
-# Custom ports
-PROXY_PORT=8500
-GAMEZIPSERVER_PORT=8501
+**Proxy:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PROXY_CHUNK_SIZE` | 8192 | File streaming chunk size (bytes) |
+| `EXTERNAL_FALLBACK_URLS` | See below | Comma-separated CDN fallback URLs |
+
+Default fallback URLs:
+```
+http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
 ```
 
-### Flashpoint Paths
+## Frontend Variables
 
-| Variable | Type | Required | Description |
-|----------|------|----------|-------------|
-| `FLASHPOINT_PATH` | string | Yes | Root Flashpoint directory. All other paths are automatically derived from this. |
+The frontend has no environment variables in development or production. API calls are proxied through the backend.
 
-**Automatically derived paths:**
-- HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
-- Games: `${FLASHPOINT_PATH}/Data/Games`
-
-**Examples:**
-
-```bash
-# Windows
-FLASHPOINT_PATH=D:/Flashpoint
-
-# Linux
-FLASHPOINT_PATH=/data/flashpoint
-```
-
-### Proxy Configuration
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `PROXY_CHUNK_SIZE` | number | `8192` | Chunk size for streaming files (bytes) |
-| `EXTERNAL_FALLBACK_URLS` | string | See below | Comma-separated CDN URLs for external fallback |
-
-**Default Fallback URLs:**
-
-```bash
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
-```
-
-**Examples:**
-
-```bash
-# Default settings
-PROXY_CHUNK_SIZE=8192
-
-# Large files optimization (64KB chunks)
-PROXY_CHUNK_SIZE=65536
-
-# Single fallback URL
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
-
-# Custom fallback URLs
-EXTERNAL_FALLBACK_URLS=https://cdn1.example.com,https://cdn2.example.com
-```
-
-### Advanced Features
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `ENABLE_CGI` | boolean | `false` | Enable CGI script execution (experimental) |
-| `ENABLE_HTACCESS` | boolean | `false` | Enable .htaccess processing (experimental) |
-
-**Examples:**
-
-```bash
-# Enable advanced features (use with caution)
-ENABLE_CGI=true
-ENABLE_HTACCESS=true
-```
-
-### Logging
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `LOG_LEVEL` | string | `info` | Logging level |
-| `LOG_REQUESTS` | boolean | `true` | Log HTTP requests |
-| `LOG_ERRORS` | boolean | `true` | Log errors |
-
-**Examples:**
-
-```bash
-# Verbose logging
-LOG_LEVEL=debug
-LOG_REQUESTS=true
-LOG_ERRORS=true
-
-# Minimal logging
-LOG_LEVEL=warn
-LOG_REQUESTS=false
-LOG_ERRORS=true
-```
-
-## Frontend Environment Variables
-
-**The frontend does not require any environment variables in development or production.**
-
-The API requests are proxied through the backend, either:
-- **Development**: Via Vite proxy configuration in `vite.config.ts` to `http://localhost:3100`
-- **Production**: Via Nginx reverse proxy or the same domain
-
-No `VITE_API_URL` configuration is needed. The frontend automatically uses the relative API paths `/api/*`.
+- **Development**: Via Vite proxy to `http://localhost:3100`
+- **Production**: Via Nginx or reverse proxy
 
 ## Docker Environment Variables
 
-Location: Docker Compose `.env` or `docker-compose.yml`
+Location: `.env` in project root
 
-### Docker Compose Variables
+**Core Configuration:**
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `FLASHPOINT_HOST_PATH` | string | `D:/Flashpoint` | Host path to Flashpoint installation |
-| `NODE_ENV` | string | `production` | Environment for all services |
-| `WEB_PORT` | number | `80` | Frontend exposed port |
-| `API_PORT` | number | `3100` | Backend exposed port |
-| `PROXY_PORT` | number | `22500` | Game proxy exposed port |
-| `GAMEZIP_PORT` | number | `22501` | GameZip exposed port |
-| `LOG_LEVEL` | string | `info` | Logging level for all services |
-| `DOMAIN` | string | `http://localhost` | CORS origin |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FLASHPOINT_HOST_PATH` | D:/Flashpoint | Host path to Flashpoint installation |
+| `NODE_ENV` | production | Environment for all services |
+| `JWT_SECRET` | - | Secret for JWT signing (required) |
 
-**Docker Compose .env file:**
+**Port Mapping:**
 
-```bash
-# .env in project root
-FLASHPOINT_HOST_PATH=D:/Flashpoint
-NODE_ENV=production
-WEB_PORT=80
-API_PORT=3100
-PROXY_PORT=22500
-GAMEZIP_PORT=22501
-LOG_LEVEL=info
-DOMAIN=http://localhost
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEB_PORT` | 80 | Frontend exposed port |
+| `API_PORT` | 3100 | Backend exposed port |
+| `PROXY_PORT` | 22500 | Game proxy exposed port |
+| `GAMEZIP_PORT` | 22501 | GameZip exposed port |
 
-### Using Docker Environment Files
+**Other:**
 
-**Option 1: .env file (recommended)**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DOMAIN` | http://localhost | CORS origin |
+| `LOG_LEVEL` | info | Logging level |
+
+## Docker Compose Setup
+
+**Create .env file:**
 
 ```bash
-# Create .env in project root
 cat > .env << EOF
-FLASHPOINT_HOST_PATH=/data/flashpoint
+FLASHPOINT_HOST_PATH=/path/to/flashpoint
+NODE_ENV=production
 JWT_SECRET=$(openssl rand -hex 64)
 DOMAIN=https://flashpoint.example.com
+WEB_PORT=80
+API_PORT=3100
+LOG_LEVEL=warn
 EOF
-
-# Start with .env
-docker-compose up -d
 ```
 
-**Option 2: Custom env file**
+**Start services:**
 
 ```bash
-# Create custom file
-cat > production.env << EOF
-FLASHPOINT_HOST_PATH=/data/flashpoint
-NODE_ENV=production
-EOF
-
-# Use with docker-compose
-docker-compose --env-file production.env up -d
-```
-
-**Option 3: Inline variables**
-
-```bash
-FLASHPOINT_HOST_PATH=/data/flashpoint \
-JWT_SECRET=my-secret \
-docker-compose up -d
+docker-compose --env-file .env up -d
 ```
 
 ## Environment Templates
 
-### Development Template
-
-Create `backend/.env.development`:
+**Development (.env.development):**
 
 ```bash
-# Server
 NODE_ENV=development
 PORT=3100
 HOST=0.0.0.0
-
-# Flashpoint paths (only FLASHPOINT_PATH is needed - others are derived automatically)
 FLASHPOINT_PATH=D:/Flashpoint
-
-# Game service (derive URLs from host)
 GAME_SERVICE_HOST=localhost
-
-# Security (weak for dev only)
 JWT_SECRET=development-secret-change-in-production
 DOMAIN=http://localhost:5173
-
-# Rate limiting (lenient)
-RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=1000
-
-# Logging (verbose)
 LOG_LEVEL=debug
-
-# Redis (disabled)
 REDIS_ENABLED=false
 ```
 
-### Production Template
-
-Create `backend/.env.production`:
+**Production (.env.production):**
 
 ```bash
-# Server
 NODE_ENV=production
 PORT=3100
 HOST=127.0.0.1
-
-# Flashpoint paths (only FLASHPOINT_PATH is needed - others are derived automatically)
 FLASHPOINT_PATH=/data/flashpoint
-
-# Game service (derive URLs from host)
 GAME_SERVICE_HOST=game-service
-
-# Security (CHANGE THESE!)
 JWT_SECRET=CHANGE-THIS-TO-A-RANDOM-64-CHARACTER-STRING
 DOMAIN=https://flashpoint.example.com
-
-# Rate limiting
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
-
-# Logging
 LOG_LEVEL=warn
 LOG_FILE=/var/log/flashpoint-backend.log
-
-# Redis (enabled)
 REDIS_ENABLED=true
 REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_TTL=3600
-
-# Database
-USER_DB_PATH=/opt/flashpoint-web/backend/data/user.db
-DB_POOL_SIZE=20
-```
-
-### Docker Production Template
-
-Create `.env` in project root:
-
-```bash
-# Host configuration
-FLASHPOINT_HOST_PATH=/data/flashpoint
-
-# Environment
-NODE_ENV=production
-
-# Ports
-WEB_PORT=80
-API_PORT=3100
-PROXY_PORT=22500
-GAMEZIP_PORT=22501
-
-# Security
-JWT_SECRET=CHANGE-THIS-TO-A-RANDOM-64-CHARACTER-STRING
-DOMAIN=https://flashpoint.example.com
-
-# Logging
-LOG_LEVEL=warn
-
-# External URLs (game content fallback)
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
-# Note: Image CDN URLs are automatically read from Flashpoint preferences
 ```
 
 ## Validation and Defaults
 
-### Environment Validation
-
-The backend validates environment variables on startup:
-
-```typescript
-// backend/src/config.ts
-import { z } from 'zod';
-
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().min(1).max(65535).default(3100),
-  HOST: z.string().default('0.0.0.0'),
-  FLASHPOINT_PATH: z.string().min(1),
-  JWT_SECRET: z.string().min(32),
-  // ... more validations
-});
-
-export const config = envSchema.parse(process.env);
-```
-
-### Required Variables
-
-These variables MUST be set or the application will fail to start:
+**Required Variables:**
 
 **Backend:**
-- `FLASHPOINT_PATH` (all other paths are derived automatically)
+- `FLASHPOINT_PATH` (only this is required; others auto-derive)
 
-**Game Service:**
-- `FLASHPOINT_PATH` (FLASHPOINT_HTDOCS_PATH and FLASHPOINT_GAMES_PATH are derived automatically)
-
-**Production (Backend):**
+**Docker Production:**
 - `JWT_SECRET` (must be changed from default)
 - `DOMAIN` (must match frontend URL)
 
-### Checking Configuration
-
-Test configuration without starting services:
+**Verify configuration:**
 
 ```bash
-# Backend
 cd backend
-node -e "require('dotenv').config(); console.log(process.env)"
-
-# Validate Flashpoint path exists
-node -e "require('dotenv').config(); const fs=require('fs'); console.log(fs.existsSync(process.env.FLASHPOINT_PATH) ? 'OK' : 'NOT FOUND')"
+node -e "require('dotenv').config(); console.log(process.env.FLASHPOINT_PATH)"
 ```
 
 ## Security Best Practices
 
-1. **Never commit .env files** to version control
-2. **Use strong JWT secrets** in production (64+ characters)
-3. **Restrict CORS origins** to your domain only
-4. **Use HTTPS** in production (update DOMAIN)
-5. **Limit exposed ports** in Docker (don't expose all services)
-6. **Rotate secrets** periodically
-7. **Use environment-specific files** (.env.production, .env.development)
-8. **Validate all inputs** before use
-9. **Keep secrets in secure storage** (AWS Secrets Manager, HashiCorp Vault)
-10. **Use read-only mounts** for Flashpoint data in Docker
+1. Never commit .env files to version control
+2. Use strong JWT secrets (64+ characters) in production
+3. Restrict CORS origins to your domain only (no wildcards)
+4. Use HTTPS in production (update DOMAIN to https://)
+5. Limit exposed ports (don't expose all services)
+6. Rotate secrets periodically
+7. Use environment-specific files (.env.production, .env.development)
+8. Store secrets in secure management system (AWS Secrets Manager, HashiCorp Vault)
+9. Use read-only mounts for Flashpoint data in Docker
 
 ## Next Steps
 
-- [Docker Deployment](./docker-deployment.md) - Container configuration
-- [Production Setup](./production-setup.md) - Production environment setup
-- [Security Considerations](./security-considerations.md) - Security hardening guide
+- [Docker Deployment](./docker-deployment.md)
+- [Security Considerations](./security-considerations.md)

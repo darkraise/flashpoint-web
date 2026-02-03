@@ -135,7 +135,7 @@ Flashpoint Web is open-source software. (Note: Add appropriate license informati
 
 Ready to dive in?
 
-1. [Architecture Overview](architecture-overview.md) - Understand the system design
+1. [System Architecture](../02-architecture/system-architecture.md) - Understand the system design
 2. [Technology Stack](technology-stack.md) - Learn about the technologies used
 3. [Setup Guide](../08-development/setup-guide.md) - Set up your development environment
 

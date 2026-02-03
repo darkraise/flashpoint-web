@@ -2,9 +2,9 @@
 
 ## Overview
 
-The game launch flow handles the complete journey from a user clicking "Play" on a game to the game loading and running in their browser. This involves coordinating between the frontend, backend, and game service to mount ZIPs, resolve file paths, and load content into the appropriate player (Ruffle for Flash, iframe for HTML5).
+Game launch orchestrates multiple services: frontend requests launch data, backend mounts ZIPs, and frontend loads content directly from game-service into Ruffle or iframe.
 
-## Game Launch Architecture
+## Architecture
 
 ```mermaid
 graph TB
@@ -55,8 +55,6 @@ graph TB
 
 ## 1. Game Launch Request Flow
 
-### Sequence Diagram
-
 ```mermaid
 sequenceDiagram
     participant User
@@ -66,9 +64,7 @@ sequenceDiagram
     participant Backend
     participant GameService
     participant GameDataService
-    participant ZipServer
     participant FlashpointDB
-    participant FileSystem
 
     User->>GameCard: Click "Play Game"
     GameCard->>GamePlayerView: Navigate to /play/:id
@@ -80,39 +76,24 @@ sequenceDiagram
     GameService->>FlashpointDB: SELECT * FROM game WHERE id = ?
     FlashpointDB-->>GameService: Game metadata
 
-    Backend->>Backend: Check presentOnDisk field
-
-    alt Game has data (presentOnDisk not null)
+    alt Game has data (presentOnDisk)
         Backend->>GameDataService: mountGameZip(gameId)
         GameDataService->>FlashpointDB: SELECT path from game_data
-        FlashpointDB-->>GameDataService: ZIP file path
-
-        GameDataService->>ZipServer: POST /mount {gameId, zipPath}
-        ZipServer->>FileSystem: Check if ZIP exists
-        FileSystem-->>ZipServer: ZIP file found
-
-        ZipServer->>ZipServer: Mount ZIP to /gamedata/{gameId}
-        ZipServer-->>GameDataService: {success: true, mountPoint}
-        GameDataService-->>Backend: ZIP mounted
+        GameDataService->>Backend: ZIP mounted
 
         Backend->>GameService: getGameDataPath(gameId)
-        GameService->>FlashpointDB: SELECT launchCommand from game_data
-        FlashpointDB-->>GameService: Launch command path
-    else No game data needed
+        GameService->>FlashpointDB: SELECT launchCommand
+    else No game data
         Backend->>Backend: Use game.launchCommand
     end
 
     Backend->>Backend: Construct contentUrl
-    Note over Backend: http://localhost:22500/{fullUrl}
-
     Backend-->>API: Launch data response
-    API-->>GamePlayerView: {gameId, title, platform, contentUrl, canPlayInBrowser}
+    API-->>GamePlayerView: {gameId, title, contentUrl}
 
     GamePlayerView->>GamePlayerView: Determine player type
-
     alt Flash game
         GamePlayerView->>GamePlayerView: Initialize Ruffle
-        GamePlayerView->>GamePlayerView: Create iframe for player
     else HTML5 game
         GamePlayerView->>GamePlayerView: Create iframe
     end
@@ -120,37 +101,29 @@ sequenceDiagram
     GamePlayerView->>User: Show game player
 ```
 
-### Launch Data Response Structure
-
+**Launch Data Response**:
 ```typescript
 interface GameLaunchData {
   gameId: string;
   title: string;
   platform: string;
-  launchCommand: string;        // Original launch command
-  contentUrl: string;            // Full URL to game content
-  applicationPath?: string;
-  playMode?: string;
-  canPlayInBrowser: boolean;    // true for Flash/HTML5
+  launchCommand: string;
+  contentUrl: string;
+  canPlayInBrowser: boolean;
 }
-```
 
-**Example Response**:
-```json
+// Example
 {
   "gameId": "abc-123-def-456",
   "title": "Super Mario Flash",
   "platform": "Flash",
   "launchCommand": "http://example.com/games/mario.swf",
   "contentUrl": "http://localhost:22500/http://example.com/games/mario.swf",
-  "playMode": "Single Player",
   "canPlayInBrowser": true
 }
 ```
 
 ## 2. ZIP Mounting Flow
-
-### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -161,80 +134,57 @@ sequenceDiagram
     participant FileSystem
 
     Backend->>GameDataService: mountGameZip(gameId)
-    GameDataService->>GameDataService: Query game_data for ZIP path
 
     alt ZIP already mounted
         GameDataService->>ZipServer: Check if mounted
         ZipServer-->>GameDataService: Already mounted
-        GameDataService-->>Backend: Return existing mount
     else ZIP not mounted
         GameDataService->>FileSystem: Resolve ZIP path
-        Note over FileSystem: D:/Flashpoint/Data/Games/A/abc-123.zip
-
-        FileSystem-->>GameDataService: Absolute path
-
-        GameDataService->>ZipServer: POST /mount
-        Note over GameDataService,ZipServer: {<br/>  gameId: "abc-123",<br/>  zipPath: "D:/Flashpoint/Data/Games/A/abc-123.zip"<br/>}
+        GameDataService->>ZipServer: POST /mount {gameId, zipPath}
 
         ZipServer->>FileSystem: Check file exists
-        FileSystem-->>ZipServer: File found
-
-        ZipServer->>ZipManager: Load ZIP
-        ZipManager->>ZipManager: Create StreamZip instance
-        ZipManager->>ZipManager: Read ZIP directory
-
-        ZipManager-->>ZipServer: ZIP loaded
+        ZipServer->>ZipManager: Load ZIP (StreamZip)
+        ZipManager->>ZipManager: Create instance and verify
         ZipServer->>ZipServer: Store in mounts map
-        Note over ZipServer: mounts.set('abc-123', zipInstance)
 
-        ZipServer-->>GameDataService: {success: true, mountPoint: "/gamedata/abc-123"}
-        GameDataService-->>Backend: Mount successful
+        ZipServer-->>GameDataService: {success: true, mountPoint}
     end
 ```
 
-### ZIP Manager Implementation
-
+**ZIP Manager Implementation**:
 ```typescript
 class ZipManager {
   private mounts: Map<string, StreamZip.StreamZipAsync> = new Map();
   private lastAccess: Map<string, number> = new Map();
 
   async mount(gameId: string, zipPath: string): Promise<string> {
-    // Check if already mounted
     if (this.mounts.has(gameId)) {
       this.lastAccess.set(gameId, Date.now());
       return `/gamedata/${gameId}`;
     }
 
-    // Verify file exists
     if (!fs.existsSync(zipPath)) {
       throw new Error(`ZIP file not found: ${zipPath}`);
     }
 
-    // Load ZIP
     const zip = new StreamZip.async({ file: zipPath });
-    await zip.entries(); // Verify ZIP is valid
+    await zip.entries();
 
-    // Store mount
     this.mounts.set(gameId, zip);
     this.lastAccess.set(gameId, Date.now());
 
-    logger.info(`Mounted ZIP: ${gameId} -> ${zipPath}`);
-
+    logger.info(`Mounted ZIP: ${gameId}`);
     return `/gamedata/${gameId}`;
   }
 
   async getFile(gameId: string, filePath: string): Promise<Buffer | null> {
     const zip = this.mounts.get(gameId);
-    if (!zip) {
-      return null;
-    }
+    if (!zip) return null;
 
     this.lastAccess.set(gameId, Date.now());
 
     try {
-      const data = await zip.entryData(filePath);
-      return data;
+      return await zip.entryData(filePath);
     } catch (error) {
       logger.warn(`File not found in ZIP: ${filePath}`);
       return null;
@@ -246,12 +196,10 @@ class ZipManager {
     if (zip) {
       await zip.close();
       this.mounts.delete(gameId);
-      this.lastAccess.delete(gameId);
       logger.info(`Unmounted ZIP: ${gameId}`);
     }
   }
 
-  // Cleanup unused mounts (older than 1 hour)
   async cleanupStale(): Promise<void> {
     const now = Date.now();
     const maxAge = 60 * 60 * 1000; // 1 hour
@@ -265,7 +213,7 @@ class ZipManager {
 }
 ```
 
-## 3. Game Content Loading Flow
+## 3. Game Content Loading
 
 ### Flash Game (Ruffle)
 
@@ -276,7 +224,6 @@ sequenceDiagram
     participant ProxyServer
     participant FileSystem
 
-    GamePlayer->>GamePlayer: Create player container
     GamePlayer->>Ruffle: window.RufflePlayer.newest()
     Ruffle-->>GamePlayer: Player instance
 
@@ -284,37 +231,16 @@ sequenceDiagram
     Note over GamePlayer,Ruffle: contentUrl: http://localhost:22500/http://example.com/game.swf
 
     Ruffle->>ProxyServer: GET /http://example.com/game.swf
-    ProxyServer->>ProxyServer: Parse URL: http://example.com/game.swf
+    ProxyServer->>FileSystem: Check htdocs → game data → ZIPs
+    FileSystem-->>ProxyServer: SWF file bytes
 
-    ProxyServer->>FileSystem: Check local htdocs
-    Note over FileSystem: D:/Flashpoint/Legacy/htdocs/example.com/game.swf
-
-    alt File in htdocs
-        FileSystem-->>ProxyServer: SWF file bytes
-    else File not in htdocs
-        ProxyServer->>ProxyServer: Check game data directory
-        alt File in game data
-            FileSystem-->>ProxyServer: SWF file bytes
-        else Not in game data
-            ProxyServer->>ProxyServer: Check mounted ZIPs
-            Note over ProxyServer: Query ZipServer for file
-        end
-    end
-
-    ProxyServer->>ProxyServer: Detect MIME type
-    Note over ProxyServer: Content-Type: application/x-shockwave-flash
-
-    ProxyServer-->>Ruffle: SWF bytes with headers
+    ProxyServer-->>Ruffle: SWF with MIME type
     Ruffle->>Ruffle: Parse and execute SWF
     Ruffle->>GamePlayer: Render game
 
-    Note over Ruffle: Game may request additional assets
-
     loop Asset Loading
         Ruffle->>ProxyServer: GET /http://example.com/assets/sprite.png
-        ProxyServer->>FileSystem: Resolve file path
-        FileSystem-->>ProxyServer: Asset bytes
-        ProxyServer-->>Ruffle: Asset with MIME type
+        ProxyServer-->>Ruffle: Asset bytes
     end
 ```
 
@@ -327,7 +253,7 @@ sequenceDiagram
     participant ProxyServer
     participant FileSystem
 
-    GamePlayer->>IFrame: Create iframe element
+    GamePlayer->>IFrame: Create iframe
     GamePlayer->>IFrame: Set src to contentUrl
     Note over GamePlayer,IFrame: src: http://localhost:22500/http://example.com/game/index.html
 
@@ -335,37 +261,20 @@ sequenceDiagram
     ProxyServer->>FileSystem: Resolve HTML file
     FileSystem-->>ProxyServer: HTML content
 
-    ProxyServer->>ProxyServer: Set MIME type
-    Note over ProxyServer: Content-Type: text/html
-
-    ProxyServer-->>IFrame: HTML with headers
+    ProxyServer-->>IFrame: HTML with MIME type
     IFrame->>IFrame: Parse HTML
-
-    Note over IFrame: HTML references assets
 
     loop Asset Loading
         IFrame->>ProxyServer: GET /http://example.com/game/style.css
-        ProxyServer->>FileSystem: Resolve CSS
-        FileSystem-->>ProxyServer: CSS content
-        ProxyServer-->>IFrame: text/css
-
+        ProxyServer-->>IFrame: CSS content
         IFrame->>ProxyServer: GET /http://example.com/game/script.js
-        ProxyServer->>FileSystem: Resolve JS
-        FileSystem-->>ProxyServer: JS content
-        ProxyServer-->>IFrame: application/javascript
-
-        IFrame->>ProxyServer: GET /http://example.com/game/assets/sprite.png
-        ProxyServer->>FileSystem: Resolve image
-        FileSystem-->>ProxyServer: Image bytes
-        ProxyServer-->>IFrame: image/png
+        ProxyServer-->>IFrame: JS content
     end
 
     IFrame->>GamePlayer: Game fully loaded
 ```
 
 ## 4. HTTP Proxy Server Request Handling
-
-### Request Processing Flow
 
 ```mermaid
 graph TB
@@ -397,51 +306,28 @@ graph TB
     style Return404 fill:#ffcccb
 ```
 
-### Implementation
-
+**Implementation**:
 ```typescript
-// HTTP Proxy Server
 app.get('*', async (req, res) => {
   try {
-    // Extract URL from request path
-    // Request: GET /http://example.com/game.swf
-    const requestedUrl = req.url.substring(1); // Remove leading /
-
-    // Parse URL
+    const requestedUrl = req.url.substring(1);
     const parsedUrl = new URL(requestedUrl);
     const domain = parsedUrl.hostname;
     const path = parsedUrl.pathname;
 
     // 1. Check local htdocs
-    const htdocsPath = join(
-      process.env.FLASHPOINT_HTDOCS_PATH,
-      domain,
-      path
-    );
-
+    const htdocsPath = join(config.htdocsPath, domain, path);
     if (fs.existsSync(htdocsPath)) {
       return res.sendFile(htdocsPath, {
-        headers: {
-          'Content-Type': getMimeType(htdocsPath),
-          'Access-Control-Allow-Origin': '*'
-        }
+        headers: { 'Content-Type': getMimeType(htdocsPath), 'Access-Control-Allow-Origin': '*' }
       });
     }
 
     // 2. Check game data directory
-    const gameDataPath = join(
-      process.env.FLASHPOINT_PATH,
-      'Data',
-      domain,
-      path
-    );
-
+    const gameDataPath = join(process.env.FLASHPOINT_PATH, 'Data', domain, path);
     if (fs.existsSync(gameDataPath)) {
       return res.sendFile(gameDataPath, {
-        headers: {
-          'Content-Type': getMimeType(gameDataPath),
-          'Access-Control-Allow-Origin': '*'
-        }
+        headers: { 'Content-Type': getMimeType(gameDataPath), 'Access-Control-Allow-Origin': '*' }
       });
     }
 
@@ -455,31 +341,21 @@ app.get('*', async (req, res) => {
     }
 
     // 4. Fallback to CDN
-    const cdnUrls = process.env.EXTERNAL_FALLBACK_URLS.split(',');
-
-    for (const cdnBase of cdnUrls) {
+    for (const cdnBase of process.env.EXTERNAL_FALLBACK_URLS.split(',')) {
       try {
         const cdnUrl = `${cdnBase}/${domain}${path}`;
-        const response = await axios.get(cdnUrl, {
-          responseType: 'arraybuffer'
-        });
-
-        // Cache the file locally
+        const response = await axios.get(cdnUrl, { responseType: 'arraybuffer' });
         await cacheFile(htdocsPath, response.data);
-
         return res.send(response.data).set({
           'Content-Type': response.headers['content-type'],
           'Access-Control-Allow-Origin': '*'
         });
       } catch (cdnError) {
-        // Try next CDN
         continue;
       }
     }
 
-    // 5. Not found anywhere
     res.status(404).send('File not found');
-
   } catch (error) {
     logger.error('Proxy error:', error);
     res.status(500).send('Proxy error');
@@ -489,55 +365,23 @@ app.get('*', async (req, res) => {
 
 ## 5. MIME Type Detection
 
-### Implementation
-
 ```typescript
 function getMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
 
   const mimeTypes: Record<string, string> = {
-    // Flash
     '.swf': 'application/x-shockwave-flash',
-    '.spl': 'application/futuresplash',
-
-    // HTML/CSS/JS
     '.html': 'text/html',
-    '.htm': 'text/html',
     '.css': 'text/css',
     '.js': 'application/javascript',
-    '.json': 'application/json',
-
-    // Images
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
-    '.webp': 'image/webp',
-    '.ico': 'image/x-icon',
-
-    // Audio
     '.mp3': 'audio/mpeg',
-    '.wav': 'audio/wav',
-    '.ogg': 'audio/ogg',
-
-    // Video
     '.mp4': 'video/mp4',
-    '.webm': 'video/webm',
-
-    // Fonts
-    '.woff': 'font/woff',
-    '.woff2': 'font/woff2',
-    '.ttf': 'font/ttf',
-    '.otf': 'font/otf',
-
-    // Archives
-    '.zip': 'application/zip',
-
-    // Documents
     '.pdf': 'application/pdf',
-    '.xml': 'application/xml',
-    '.txt': 'text/plain'
+    '.zip': 'application/zip'
   };
 
   return mimeTypes[ext] || 'application/octet-stream';
@@ -546,73 +390,42 @@ function getMimeType(filePath: string): string {
 
 ## 6. Ruffle Player Integration
 
-### Implementation
-
 ```typescript
-import { useEffect, useRef } from 'react';
-
-interface RufflePlayerProps {
-  gameUrl: string;
-  gameTitle: string;
-}
-
-export const RufflePlayer: React.FC<RufflePlayerProps> = ({ gameUrl, gameTitle }) => {
+export const RufflePlayer: React.FC<{ gameUrl: string; gameTitle: string }> = ({
+  gameUrl,
+  gameTitle
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !window.RufflePlayer) return;
 
-    const loadRuffle = async () => {
-      // Ensure Ruffle is loaded
-      if (!window.RufflePlayer) {
-        console.error('Ruffle not loaded');
-        return;
-      }
+    const ruffle = window.RufflePlayer.newest();
+    const player = ruffle.createPlayer();
 
-      // Create player instance
-      const ruffle = window.RufflePlayer.newest();
-      const player = ruffle.createPlayer();
-
-      // Configure player
-      player.config = {
-        allowScriptAccess: true,
-        autoplay: 'auto',
-        backgroundColor: '#000000',
-        letterbox: 'on',
-        unmuteOverlay: 'visible',
-        logLevel: 'warn',
-        showSwfDownload: false,
-        contextMenu: 'on',
-        preloader: true,
-        splashScreen: true,
-        maxExecutionDuration: { secs: 15, nanos: 0 },
-        base: gameUrl,
-        quality: 'high',
-        scale: 'showall', // exactfit, noborder, showall, noscale
-        wmode: 'window'
-      };
-
-      // Add to container
-      containerRef.current.appendChild(player);
-      playerRef.current = player;
-
-      // Load game
-      try {
-        await player.load(gameUrl);
-        console.log(`Loaded game: ${gameTitle}`);
-      } catch (error) {
-        console.error('Failed to load game:', error);
-      }
+    player.config = {
+      autoplay: 'auto',
+      backgroundColor: '#000000',
+      letterbox: 'on',
+      logLevel: 'warn',
+      base: gameUrl,
+      quality: 'high',
+      scale: 'showall'
     };
 
-    loadRuffle();
+    containerRef.current.appendChild(player);
+    playerRef.current = player;
 
-    // Cleanup
+    try {
+      player.load(gameUrl);
+    } catch (error) {
+      logger.error('Failed to load game:', error);
+    }
+
     return () => {
       if (playerRef.current) {
         playerRef.current.remove();
-        playerRef.current = null;
       }
     };
   }, [gameUrl, gameTitle]);
@@ -621,182 +434,39 @@ export const RufflePlayer: React.FC<RufflePlayerProps> = ({ gameUrl, gameTitle }
     <div
       ref={containerRef}
       className="ruffle-container"
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center'
-      }}
+      style={{ width: '100%', height: '100%', display: 'flex' }}
     />
   );
 };
 ```
 
-## 7. Full Game Launch Example
+## 7. Full Example: Playing "Super Mario Flash"
 
-### Example: Playing "Super Mario Flash"
-
-**Step-by-step**:
-
-1. **User clicks "Play Game"** on game card
-   - gameId: `abc-123-def-456`
-
-2. **Frontend requests launch data**:
-   ```http
-   GET /api/games/abc-123-def-456/launch
-   Authorization: Bearer {token}
-   ```
-
-3. **Backend queries database**:
-   ```sql
-   SELECT * FROM game WHERE id = 'abc-123-def-456';
-   ```
-   Returns:
-   ```json
-   {
-     "id": "abc-123-def-456",
-     "title": "Super Mario Flash",
-     "platform": "Flash",
-     "launchCommand": "http://example.com/games/mario.swf",
-     "presentOnDisk": 1
-   }
-   ```
-
-4. **Backend checks if ZIP needed**:
-   - `presentOnDisk = 1` → Has game data
-   - Calls `mountGameZip('abc-123-def-456')`
-
-5. **Game service mounts ZIP**:
-   ```http
-   POST http://localhost:22501/mount
-   {
-     "gameId": "abc-123-def-456",
-     "zipPath": "D:/Flashpoint/Data/Games/A/abc-123-def-456.zip"
-   }
-   ```
-
-6. **Backend constructs content URL**:
-   ```typescript
-   const contentUrl = `http://localhost:22500/http://example.com/games/mario.swf`;
-   ```
-
-7. **Backend returns launch data**:
-   ```json
-   {
-     "gameId": "abc-123-def-456",
-     "title": "Super Mario Flash",
-     "platform": "Flash",
-     "launchCommand": "http://example.com/games/mario.swf",
-     "contentUrl": "http://localhost:22500/http://example.com/games/mario.swf",
-     "canPlayInBrowser": true
-   }
-   ```
-
-8. **Frontend creates Ruffle player**:
-   ```typescript
-   <RufflePlayer
-     gameUrl="http://localhost:22500/http://example.com/games/mario.swf"
-     gameTitle="Super Mario Flash"
-   />
-   ```
-
-9. **Ruffle loads SWF**:
-   ```http
-   GET http://localhost:22500/http://example.com/games/mario.swf
-   ```
-
-10. **Proxy server resolves file**:
-    - Checks htdocs: Not found
-    - Checks game data: Not found
-    - Checks mounted ZIP: **Found!**
-    - Returns `mario.swf` from ZIP
-
-11. **Ruffle executes game**:
-    - Parses SWF
-    - Renders game
-    - Game playable in browser
+1. User clicks "Play Game" on game card
+2. Frontend: `GET /api/games/abc-123-def-456/launch`
+3. Backend queries database, finds `presentOnDisk = 1`
+4. Backend: `POST http://localhost:22501/mount` → Mounts ZIP
+5. Backend returns: `contentUrl: http://localhost:22500/http://example.com/games/mario.swf`
+6. Frontend creates Ruffle player with this URL
+7. Ruffle: `GET http://localhost:22500/http://example.com/games/mario.swf`
+8. Proxy server checks htdocs → game data → mounted ZIPs → **Found in ZIP!**
+9. Returns `mario.swf` from ZIP with proper MIME type
+10. Ruffle executes game, user plays
 
 ## Error Handling
 
-### Common Issues and Solutions
+**ZIP Not Found**: `throw new AppError(404, 'Game data not found')`
 
-**1. ZIP Not Found**:
-```typescript
-if (!fs.existsSync(zipPath)) {
-  throw new AppError(404, 'Game data not found. Please download the game first.');
-}
-```
+**Invalid SWF**: Catch error in Ruffle.load(), show error toast
 
-**2. Invalid SWF File**:
-```typescript
-try {
-  await player.load(gameUrl);
-} catch (error) {
-  showErrorToast('Failed to load game. The file may be corrupted.');
-  logger.error('Ruffle load error:', error);
-}
-```
+**Network Timeout**: `axios.get(cdnUrl, { timeout: 30000 })`
 
-**3. Network Timeout**:
-```typescript
-const response = await axios.get(cdnUrl, {
-  responseType: 'arraybuffer',
-  timeout: 30000 // 30 seconds
-});
-```
-
-**4. CORS Issues**:
-```typescript
-// Game service sets CORS headers
-res.set('Access-Control-Allow-Origin', '*');
-res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-```
+**CORS Issues**: Game service sets `Access-Control-Allow-Origin: *`
 
 ## Performance Optimization
 
-### 1. Lazy Loading
+**Lazy Loading**: Load Ruffle only when needed
 
-```typescript
-// Only load Ruffle when needed
-const RufflePlayer = lazy(() => import('./RufflePlayer'));
+**ZIP Caching**: Keep frequently accessed ZIPs mounted (1 hour TTL)
 
-// Preload on game detail page
-<link rel="preload" href="/ruffle/ruffle.js" as="script" />
-```
-
-### 2. ZIP Caching
-
-```typescript
-// Keep frequently accessed ZIPs mounted
-const cacheStrategy = {
-  maxMounts: 50,
-  maxAge: 3600000, // 1 hour
-  cleanupInterval: 600000 // 10 minutes
-};
-```
-
-### 3. File Streaming
-
-```typescript
-// Stream large files instead of loading into memory
-res.sendFile(filePath, {
-  headers: {
-    'Content-Type': mimeType,
-    'Cache-Control': 'public, max-age=31536000'
-  }
-});
-```
-
-## Conclusion
-
-The game launch flow in Flashpoint Web orchestrates multiple services to:
-
-1. Retrieve game metadata from the database
-2. Mount ZIP archives containing game files
-3. Proxy game content through the HTTP server
-4. Load games into appropriate players (Ruffle for Flash, iframe for HTML5)
-5. Handle asset loading with proper MIME types
-6. Provide fallback to CDN when files are unavailable
-
-This architecture enables browser-based gameplay while maintaining compatibility with the existing Flashpoint file structure and database schema.
+**File Streaming**: Stream large files instead of loading into memory

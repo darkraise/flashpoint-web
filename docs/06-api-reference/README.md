@@ -5,69 +5,50 @@ Complete REST API reference for Flashpoint Web backend service.
 ## Base URL
 
 Development: `http://localhost:3100/api`
-
 Production: Configure via `DOMAIN` environment variable
 
 ## Authentication
 
-Most endpoints require JWT authentication. Include the access token in the Authorization header:
-
+Most endpoints require JWT token in Authorization header:
 ```
 Authorization: Bearer <access_token>
 ```
 
-Tokens are obtained via the `/api/auth/login` or `/api/auth/register` endpoints.
+Obtain tokens via `/api/auth/login` or `/api/auth/register`.
 
 ## Response Format
 
-All responses are in JSON format with consistent structure:
-
 ### Success Response
-
 ```json
 {
   "data": { ... },
-  "pagination": {
-    "page": 1,
-    "limit": 50,
-    "total": 1234,
-    "totalPages": 25
-  }
+  "pagination": { "page": 1, "limit": 50, "total": 1234, "totalPages": 25 }
 }
 ```
 
 ### Error Response
-
 ```json
 {
-  "error": {
-    "code": 400,
-    "message": "Validation error: username must be at least 3 characters"
-  }
+  "error": { "code": 400, "message": "Validation error: ..." }
 }
 ```
 
 ## HTTP Status Codes
 
-- `200 OK` - Request successful
-- `201 Created` - Resource created successfully
-- `400 Bad Request` - Invalid request parameters
-- `401 Unauthorized` - Missing or invalid authentication token
+- `200 OK` - Successful
+- `201 Created` - Resource created
+- `400 Bad Request` - Invalid parameters
+- `401 Unauthorized` - Missing/invalid token
 - `403 Forbidden` - Insufficient permissions
 - `404 Not Found` - Resource not found
-- `409 Conflict` - Resource already exists
+- `409 Conflict` - Resource exists
 - `500 Internal Server Error` - Server error
 
 ## Rate Limiting
 
-Configurable via `RATE_LIMIT_*` environment variables. Default: 100 requests per 15 minutes.
+Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
 
-Rate limit headers included in responses:
-- `X-RateLimit-Limit`: Maximum requests per window
-- `X-RateLimit-Remaining`: Remaining requests in current window
-- `X-RateLimit-Reset`: Time when rate limit resets (Unix timestamp)
-
-## API Endpoints by Category
+## API Endpoints
 
 ### Authentication
 - [POST /api/auth/login](./authentication-api.md#login)
@@ -111,6 +92,18 @@ Rate limit headers included in responses:
 - [DELETE /api/playlists/:id/games](./playlists-api.md#remove-games)
 - [DELETE /api/playlists/:id](./playlists-api.md#delete-playlist)
 
+### Favorites
+- [GET /api/favorites](./favorites-api.md#get-all-favorites)
+- [GET /api/favorites/game-ids](./favorites-api.md#get-favorite-game-ids)
+- [GET /api/favorites/games](./favorites-api.md#get-favorites-with-full-game-data)
+- [GET /api/favorites/stats](./favorites-api.md#get-favorites-statistics)
+- [POST /api/favorites/toggle](./favorites-api.md#toggle-favorite-status)
+- [POST /api/favorites](./favorites-api.md#add-game-to-favorites)
+- [DELETE /api/favorites/:gameId](./favorites-api.md#remove-game-from-favorites)
+- [POST /api/favorites/batch](./favorites-api.md#batch-add-favorites)
+- [DELETE /api/favorites/batch](./favorites-api.md#batch-remove-favorites)
+- [DELETE /api/favorites](./favorites-api.md#clear-all-favorites)
+
 ### Play Tracking
 - [POST /api/play/start](./play-tracking-api.md#start-session)
 - [POST /api/play/end](./play-tracking-api.md#end-session)
@@ -121,36 +114,48 @@ Rate limit headers included in responses:
 - [GET /api/play/activity-over-time](./play-tracking-api.md#get-activity-over-time)
 - [GET /api/play/games-distribution](./play-tracking-api.md#get-games-distribution)
 
+### Shared & Community Playlists
+- [GET /api/playlists/shared/:shareToken](./shared-playlists-api.md#get-shared-playlist-metadata)
+- [GET /api/playlists/shared/:shareToken/games](./shared-playlists-api.md#get-games-in-shared-playlist)
+- [POST /api/playlists/shared/:shareToken/clone](./shared-playlists-api.md#clone-shared-playlist-to-user-account)
+- [GET /api/community-playlists](./shared-playlists-api.md#list-community-playlists)
+- [POST /api/community-playlists/download](./shared-playlists-api.md#download-community-playlist)
+- [POST /api/games/:id/download](./shared-playlists-api.md#start-game-download)
+- [GET /api/games/:id/download/progress](./shared-playlists-api.md#monitor-download-progress-sse)
+
 ### Platforms & Tags
 - [GET /api/platforms](./platforms-tags-api.md#list-platforms)
 - [GET /api/tags](./platforms-tags-api.md#list-tags)
 
-## Complete Examples
+### Activities & Audit Logs
+- [GET /api/activities](./activities-api.md#list-activity-logs)
+- [GET /api/activities/stats](./activities-api.md#get-activity-statistics)
+- [GET /api/activities/trend](./activities-api.md#get-activity-trend)
+- [GET /api/activities/top-actions](./activities-api.md#get-top-actions)
+- [GET /api/activities/breakdown](./activities-api.md#get-activity-breakdown)
 
-See [Request & Response Examples](./request-response-examples.md) for complete workflow examples including:
-- User registration and login flow
-- Game search with filters
-- Game launch workflow
-- Play session tracking
-- Playlist management
-- Role-based access control examples
+### Admin & Operations
+- [GET /api/health](./admin-api.md#basic-health-check)
+- [GET /api/health/detailed](./admin-api.md#detailed-health-check)
+- [GET /api/cache/stats](./admin-api.md#get-cache-statistics)
+- [POST /api/cache/clear](./admin-api.md#clear-caches)
+- [GET /api/database/status](./admin-api.md#get-database-status)
+- [POST /api/database/reload](./admin-api.md#manually-reload-database)
+- [GET /api/metrics/summary](./admin-api.md#get-metrics-summary)
+- [GET /api/metrics/endpoints](./admin-api.md#get-endpoint-metrics)
+- [GET /api/jobs](./admin-api.md#list-all-jobs)
+- [GET /api/github/stars](./admin-api.md#get-github-star-count)
+- [GET /api/settings/auth](./admin-api.md#get-auth-settings)
+- [PATCH /api/settings/auth](./admin-api.md#update-auth-settings)
+- [GET /game-files/*](./admin-api.md#get-game-file)
 
-## SDK Examples
-
-See individual endpoint documentation for code examples in:
-- curl (command line)
-- JavaScript/TypeScript (axios)
-- Python (requests)
-- Go (net/http)
-
-## Versioning
-
-API version is included in response headers: `X-API-Version: 1.0.0`
-
-Breaking changes will increment major version number.
+### System Settings
+- [GET /api/settings](./settings-api.md#get-all-settings)
+- [GET /api/settings/:category](./settings-api.md#get-category-settings)
+- [PATCH /api/settings/:category](./settings-api.md#update-category-settings)
+- [PATCH /api/settings/:category/:key](./settings-api.md#update-single-setting)
 
 ## Support
 
-For issues or questions:
-- GitHub Issues: [flashpoint-web/issues](https://github.com/yourusername/flashpoint-web/issues)
-- Documentation: [docs/README.md](../README.md)
+For issues: [GitHub Issues](https://github.com/darkraise/flashpoint-web/issues)
+Documentation: [docs/README.md](../README.md)

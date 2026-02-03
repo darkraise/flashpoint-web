@@ -1,26 +1,14 @@
 # Authentication API
 
-Endpoints for user authentication, registration, and token management.
+User authentication, registration, and token management.
 
 ## Login
 
-Authenticate user with username and password.
+`POST /api/auth/login` - No auth required
 
-**Endpoint:** `POST /api/auth/login`
+Body: `{ "username": "string (3-50)", "password": "string (min 6)" }`
 
-**Authentication:** Not required
-
-**Request Body:**
-
-```json
-{
-  "username": "string (min: 3, max: 50)",
-  "password": "string (min: 6)"
-}
-```
-
-**Response:** `200 OK`
-
+Returns `200 OK` with user object and tokens:
 ```json
 {
   "user": {
@@ -28,374 +16,111 @@ Authenticate user with username and password.
     "username": "john_doe",
     "email": "john@example.com",
     "role": "user",
-    "permissions": [
-      "games.play",
-      "games.read",
-      "playlists.create",
-      "playlists.update",
-      "playlists.delete"
-    ],
-    "themeColor": "blue-500",
-    "surfaceColor": "slate-700"
+    "permissions": ["games.play", "games.read", ...]
   },
   "tokens": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "accessToken": "jwt...",
+    "refreshToken": "jwt...",
     "expiresIn": 3600
   }
 }
 ```
 
-**Error Responses:**
-
-- `400 Bad Request` - Validation error
-- `401 Unauthorized` - Invalid credentials
-- `429 Too Many Requests` - Account temporarily locked due to failed login attempts
-
-**Examples:**
-
-```bash
-# curl
-curl -X POST http://localhost:3100/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "john_doe",
-    "password": "securepassword123"
-  }'
-```
-
-```javascript
-// axios
-const response = await axios.post('http://localhost:3100/api/auth/login', {
-  username: 'john_doe',
-  password: 'securepassword123'
-});
-
-const { user, tokens } = response.data;
-localStorage.setItem('accessToken', tokens.accessToken);
-localStorage.setItem('refreshToken', tokens.refreshToken);
-```
-
-```python
-# Python requests
-import requests
-
-response = requests.post('http://localhost:3100/api/auth/login', json={
-    'username': 'john_doe',
-    'password': 'securepassword123'
-})
-
-data = response.json()
-access_token = data['tokens']['accessToken']
-```
-
----
+Error: `401 Unauthorized` (invalid credentials) or `429 Too Many Requests` (account locked after failed attempts)
 
 ## Register
 
-Create a new user account.
+`POST /api/auth/register` - No auth required
 
-**Endpoint:** `POST /api/auth/register`
+Body: `{ "username": "string (3-50)", "email": "valid-email", "password": "string (min 6)" }`
 
-**Authentication:** Not required
+Returns `201 Created` with user and tokens (same format as login).
 
-**Note:** Registration may be disabled by system administrators. Check `GET /api/auth-settings` endpoint.
-
-**Request Body:**
-
-```json
-{
-  "username": "string (min: 3, max: 50)",
-  "email": "string (valid email)",
-  "password": "string (min: 6)"
-}
-```
-
-**Response:** `201 Created`
-
-```json
-{
-  "user": {
-    "id": 2,
-    "username": "jane_smith",
-    "email": "jane@example.com",
-    "role": "user",
-    "permissions": [
-      "games.play",
-      "games.read",
-      "playlists.create",
-      "playlists.update",
-      "playlists.delete"
-    ],
-    "themeColor": "blue-500",
-    "surfaceColor": "slate-700"
-  },
-  "tokens": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expiresIn": 3600
-  }
-}
-```
-
-**Error Responses:**
-
-- `400 Bad Request` - Validation error
-- `403 Forbidden` - User registration disabled
-- `409 Conflict` - Username or email already exists
-
-**Examples:**
-
-```bash
-# curl
-curl -X POST http://localhost:3100/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "jane_smith",
-    "email": "jane@example.com",
-    "password": "securepassword123"
-  }'
-```
-
-```javascript
-// axios
-const response = await axios.post('http://localhost:3100/api/auth/register', {
-  username: 'jane_smith',
-  email: 'jane@example.com',
-  password: 'securepassword123'
-});
-
-const { user, tokens } = response.data;
-```
-
----
+Error: `403 Forbidden` (registration disabled) or `409 Conflict` (username/email exists)
 
 ## Refresh Token
 
-Get a new access token using a refresh token.
+`POST /api/auth/refresh` - No auth required
 
-**Endpoint:** `POST /api/auth/refresh`
+Body: `{ "refreshToken": "jwt..." }`
 
-**Authentication:** Not required (uses refresh token)
+Returns new accessToken, refreshToken (rotated), expiresIn.
 
-**Security Note:** When a refresh token is used to generate new tokens, the old refresh token is automatically revoked for security. This prevents token reuse attacks and ensures that only the most recent refresh token is valid.
+Old refresh token automatically revoked for security (prevents token reuse).
 
-**Request Body:**
-
-```json
-{
-  "refreshToken": "string"
-}
-```
-
-**Response:** `200 OK`
-
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": 3600
-}
-```
-
-**Error Responses:**
-
-- `400 Bad Request` - Validation error
-- `401 Unauthorized` - Invalid or expired refresh token
-
-**Examples:**
-
-```bash
-# curl
-curl -X POST http://localhost:3100/api/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }'
-```
-
-```javascript
-// axios - Automatic token refresh
-axios.interceptors.response.use(
-  response => response,
-  async error => {
-    const originalRequest = error.config;
-
-    if (error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      const refreshToken = localStorage.getItem('refreshToken');
-      const { data } = await axios.post('/api/auth/refresh', { refreshToken });
-
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-
-      originalRequest.headers['Authorization'] = `Bearer ${data.accessToken}`;
-      return axios(originalRequest);
-    }
-
-    return Promise.reject(error);
-  }
-);
-```
-
----
+Error: `401 Unauthorized` (invalid or expired refresh token)
 
 ## Logout
 
-Revoke a refresh token and end the session.
+`POST /api/auth/logout` - Optional auth
 
-**Endpoint:** `POST /api/auth/logout`
+Body: `{ "refreshToken": "jwt..." }`
 
-**Authentication:** Not required (but should include refresh token)
+Revokes the refresh token.
 
-**Request Body:**
+Returns `{ "success": true }`
 
-```json
-{
-  "refreshToken": "string"
-}
-```
+## Get Current User
 
-**Response:** `200 OK`
+`GET /api/auth/me` - Requires authentication
 
-```json
-{
-  "success": true,
-  "message": "Logged out successfully"
-}
-```
+Returns current user object with permissions array.
 
-**Error Responses:**
+Error: `401 Unauthorized`
 
-- `400 Bad Request` - Validation error
-
-**Examples:**
-
-```bash
-# curl
-curl -X POST http://localhost:3100/api/auth/logout \
-  -H "Content-Type: application/json" \
-  -d '{
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }'
-```
+## Usage Pattern
 
 ```javascript
-// axios
-const refreshToken = localStorage.getItem('refreshToken');
-
-await axios.post('http://localhost:3100/api/auth/logout', {
-  refreshToken
+// Login
+const { data } = await api.post('/auth/login', {
+  username: 'john_doe',
+  password: 'password123'
 });
 
-// Clear local storage
+localStorage.setItem('accessToken', data.tokens.accessToken);
+localStorage.setItem('refreshToken', data.tokens.refreshToken);
+
+// Subsequent requests
+const response = await api.get('/api/games');
+
+// On 401 - refresh token
+const refreshed = await api.post('/auth/refresh', {
+  refreshToken: localStorage.getItem('refreshToken')
+});
+
+localStorage.setItem('accessToken', refreshed.data.accessToken);
+localStorage.setItem('refreshToken', refreshed.data.refreshToken);
+
+// Logout
+await api.post('/auth/logout', {
+  refreshToken: localStorage.getItem('refreshToken')
+});
+
 localStorage.removeItem('accessToken');
 localStorage.removeItem('refreshToken');
 ```
 
----
-
-## Get Current User
-
-Get the currently authenticated user's information.
-
-**Endpoint:** `GET /api/auth/me`
-
-**Authentication:** Required (JWT Bearer token)
-
-**Response:** `200 OK`
-
-```json
-{
-  "id": 1,
-  "username": "john_doe",
-  "email": "john@example.com",
-  "role": "user",
-  "permissions": [
-    "games.play",
-    "games.read",
-    "playlists.create",
-    "playlists.update",
-    "playlists.delete"
-  ],
-  "themeColor": "blue-500",
-  "surfaceColor": "slate-700"
-}
-```
-
-**Error Responses:**
-
-- `401 Unauthorized` - Missing or invalid token
-
-**Examples:**
-
-```bash
-# curl
-curl -X GET http://localhost:3100/api/auth/me \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-```
-
-```javascript
-// axios with interceptor
-axios.interceptors.request.use(config => {
-  const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-const { data: user } = await axios.get('http://localhost:3100/api/auth/me');
-```
-
----
-
-## Authentication Flow
-
-### Initial Login Flow
-
-1. User submits credentials to `POST /api/auth/login`
-2. Server validates credentials and generates tokens
-3. Client stores both access and refresh tokens
-4. Client includes access token in all subsequent requests
-
-### Token Refresh Flow
-
-1. Client receives 401 error from API
-2. Client sends refresh token to `POST /api/auth/refresh`
-3. Server validates refresh token and issues new tokens
-4. Client updates stored tokens
-5. Client retries original request with new access token
-
-### Logout Flow
-
-1. Client sends refresh token to `POST /api/auth/logout`
-2. Server revokes the refresh token
-3. Client clears all stored tokens
-4. Client redirects to login page
-
 ## Security Best Practices
 
-1. **HTTPS Only**: Always use HTTPS in production
-2. **Secure Storage**: Store tokens in httpOnly cookies or secure storage (not localStorage in production)
-3. **Token Expiry**: Access tokens expire in 1 hour by default
-4. **Refresh Rotation**: Refresh tokens are rotated on each use
-5. **Automatic Token Revocation**: Old refresh tokens are automatically revoked when new tokens are issued
-6. **Login Throttling**: Failed login attempts trigger temporary lockout
-7. **Password Requirements**: Minimum 6 characters (configure stronger requirements in production)
-8. **Permission Caching**: Permissions are cached for up to 5 minutes for performance; critical changes should clear cache manually
+- Use HTTPS in production
+- Store tokens securely (httpOnly cookies recommended over localStorage)
+- Access tokens expire in 1 hour (configurable)
+- Refresh tokens rotate on each use
+- Failed login attempts trigger rate limiting and account lockout
+- Enforce strong passwords in production (minimum 6 shown, recommend 12+)
+- Implement automatic token refresh on 401 responses
 
 ## Permission System
 
-Permissions are returned in the authentication response. Common permissions include:
+Common permissions returned in login/me:
 
-- `games.play` - Play games in browser
+- `games.play` - Play games
 - `games.read` - View game details
+- `games.download` - Download games
 - `playlists.create` - Create playlists
-- `playlists.update` - Modify own playlists
-- `playlists.delete` - Delete own playlists
-- `users.read` - View user list (admin)
+- `playlists.update` - Modify playlists
+- `playlists.delete` - Delete playlists
+- `users.read` - View users (admin)
 - `users.create` - Create users (admin)
 - `users.update` - Modify users (admin)
 - `users.delete` - Delete users (admin)
@@ -403,5 +128,27 @@ Permissions are returned in the authentication response. Common permissions incl
 - `roles.create` - Create roles (admin)
 - `roles.update` - Modify roles (admin)
 - `roles.delete` - Delete roles (admin)
+- `settings.read` - View settings (admin)
+- `settings.update` - Modify settings (admin)
 
-Check user permissions before allowing actions in your application.
+## Interceptor Pattern
+
+```javascript
+// Axios interceptor for automatic token refresh
+api.interceptors.response.use(
+  response => response,
+  async error => {
+    if (error.response?.status === 401) {
+      const refreshToken = localStorage.getItem('refreshToken');
+      const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+
+      error.config.headers['Authorization'] = `Bearer ${data.accessToken}`;
+      return axios(error.config);
+    }
+    return Promise.reject(error);
+  }
+);
+```

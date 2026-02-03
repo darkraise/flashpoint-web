@@ -1,15 +1,13 @@
 # Game Service
 
-The Game Service is an independent Node.js service that replaces the original Go-based Flashpoint Game Server. It provides game content delivery, HTTP proxying, and ZIP archive serving without extraction.
+The Game Service is an independent Node.js service that provides game content delivery with intelligent fallback mechanisms for legacy web content and ZIP archive serving.
 
 ## Overview
 
-The game-service runs two concurrent HTTP servers:
+The game-service runs two HTTP servers:
 
 1. **HTTP Proxy Server** (Port 22500) - Legacy web content serving with fallback chain
-2. **GameZip Server** (Port 22501) - ZIP archive mounting and streaming
-
-This separation of concerns allows the backend to focus on game metadata while the game-service handles all file serving operations.
+2. **GameZip Server** (Port 22501) - ZIP archive streaming
 
 ## Architecture
 
@@ -23,60 +21,32 @@ This separation of concerns allows the backend to focus on game metadata while t
 │ - Legacy htdocs      │ - ZIP mounting (no extraction)   │
 │ - Game data files    │ - Streaming file access          │
 │ - External CDN       │ - Multi-ZIP search               │
-│ - Local cache        │ - node-stream-zip                │
-│ - CORS headers       │ - CORS headers                   │
+│ - Local cache        │ - CORS headers                   │
 └──────────────────────┴──────────────────────────────────┘
 ```
 
 ## Key Features
 
-### Content Serving
-- **Multi-source fallback chain**: Local htdocs → Game data → ZIP archives → External CDN
-- **Zero-extraction ZIP serving**: Files served directly from ZIP archives using streaming
-- **MIME type detection**: 199+ file types including legacy formats (Flash, Director, Unity)
-- **HTML polyfill injection**: Automatic compatibility fixes for Unity WebGL and other game engines
-
-### Performance
-- **Streaming**: Large files streamed in 64KB chunks
-- **Keep-alive connections**: Connection pooling for improved performance
-- **Local caching**: External files cached locally after first download
-- **Concurrent downloads**: Up to 10 simultaneous external requests
-
-### Compatibility
+- **Multi-source fallback**: Local htdocs → Game data → ZIP archives → External CDN
+- **Zero-extraction ZIP serving**: Files streamed directly from archives
+- **MIME type detection**: 199+ file types including legacy formats
+- **HTML polyfill injection**: Automatic compatibility fixes
 - **CORS enabled**: Cross-domain requests for game content
-- **Proxy-style requests**: Supports `GET http://domain.com/path` format
-- **Path-based requests**: Supports `/http://domain.com/path` format
-- **Standard requests**: Regular path requests with Host header
-
-## Technology Stack
-
-- **Runtime**: Node.js 20+
-- **Framework**: Express 4.18+
-- **ZIP handling**: node-stream-zip 1.15+
-- **HTTP client**: Axios 1.6+
-- **Logging**: Winston 3.11+
-- **Language**: TypeScript 5.3+
+- **Streaming**: Large files chunked (64KB default)
 
 ## Quick Start
 
-### Installation
+### Installation & Configuration
 
 ```bash
 cd game-service
 npm install
-```
-
-### Configuration
-
-Copy `.env.example` to `.env` and configure:
-
-```bash
+cp .env.example .env
+# Edit .env with your Flashpoint path
 FLASHPOINT_PATH=D:/Flashpoint
 PROXY_PORT=22500
 GAMEZIPSERVER_PORT=22501
 ```
-
-See [configuration.md](./configuration.md) for all options.
 
 ### Development
 
@@ -86,11 +56,11 @@ npm run build   # Build TypeScript
 npm start       # Run production build
 ```
 
-### Testing
+## Testing
 
 ```bash
 # Test HTTP proxy
-curl http://localhost:22500/test.html
+curl http://localhost:22500/http://www.example.com/test.html
 
 # Test GameZip server
 curl http://localhost:22501/mounts
@@ -99,258 +69,103 @@ curl http://localhost:22501/mounts
 curl -X POST http://localhost:22501/mount/game-123 \
   -H "Content-Type: application/json" \
   -d '{"zipPath": "D:/Flashpoint/Data/Games/game.zip"}'
-
-# Access file from mounted ZIP
-curl http://localhost:22501/http://domain.com/file.swf
-```
-
-## Documentation
-
-- [architecture.md](./architecture.md) - Detailed architecture and design patterns
-- [proxy-server.md](./proxy-server.md) - HTTP Proxy Server (port 22500)
-- [gamezip-server.md](./gamezip-server.md) - GameZip Server (port 22501)
-- [legacy-server.md](./legacy-server.md) - Legacy content serving and fallback chain
-- [zip-manager.md](./zip-manager.md) - ZIP mounting and file access
-- [mime-types.md](./mime-types.md) - MIME type handling for 199 file types
-- [html-polyfills.md](./html-polyfills.md) - Unity and game compatibility polyfills
-- [configuration.md](./configuration.md) - Environment variables and settings
-
-## Integration with Backend
-
-The game-service operates independently but integrates with the backend:
-
-1. **Backend delegates file serving**: Backend returns launch URLs pointing to game-service
-2. **No direct database access**: Game-service only serves files, no metadata queries
-3. **Frontend requests**: Frontend player loads game content from game-service URLs
-4. **Separate lifecycle**: Can be restarted independently without affecting backend
-
-```
-Frontend → Backend (metadata) → Database
-   ↓
-Game Service (files) → Flashpoint files / ZIPs
 ```
 
 ## Service Ports
 
-| Port  | Service           | Purpose                          |
-|-------|-------------------|----------------------------------|
-| 22500 | HTTP Proxy        | Legacy web content and fallbacks |
-| 22501 | GameZip Server    | ZIP archive file serving         |
+| Port  | Service        | Purpose                          |
+|-------|----------------|----------------------------------|
+| 22500 | HTTP Proxy     | Legacy web content and fallbacks |
+| 22501 | GameZip Server | ZIP archive file serving         |
 
 ## Environment Variables
 
-| Variable                  | Default                        | Description                   |
-|---------------------------|--------------------------------|-------------------------------|
-| PROXY_PORT                | 22500                          | HTTP proxy server port        |
-| GAMEZIPSERVER_PORT        | 22501                          | GameZip server port           |
-| FLASHPOINT_PATH           | D:/Flashpoint                  | Flashpoint installation root  |
-| FLASHPOINT_HTDOCS_PATH    | D:/Flashpoint/Legacy/htdocs    | Legacy web content directory  |
-| FLASHPOINT_GAMES_PATH     | D:/Flashpoint/Data/Games       | ZIP archives directory        |
-| EXTERNAL_FALLBACK_URLS    | infinity.flashpointarchive.org | Comma-separated CDN URLs      |
-| PROXY_CHUNK_SIZE          | 8192                           | Streaming chunk size (bytes)  |
-| LOG_LEVEL                 | info                           | Logging verbosity             |
+| Variable                | Default                     | Description              |
+|-------------------------|------------------------------|--------------------------|
+| PROXY_PORT              | 22500                        | HTTP proxy server port   |
+| GAMEZIPSERVER_PORT      | 22501                        | GameZip server port      |
+| FLASHPOINT_PATH         | D:/Flashpoint                | Flashpoint installation  |
+| EXTERNAL_FALLBACK_URLS  | infinity.flashpointarchive   | CDN URLs (comma-separated)|
+| LOG_LEVEL               | info                         | Logging verbosity        |
 
 ## Request Flow
 
 ### HTTP Proxy (Port 22500)
-
-```
-1. Request: GET http://domain.com/path/file.swf
-2. Try GameZip server (if ZIP mounted for this domain)
-3. Try local htdocs: D:/Flashpoint/Legacy/htdocs/domain.com/path/file.swf
-4. Try external CDN: https://infinity.flashpointarchive.org/.../domain.com/path/file.swf
-5. Cache external file locally for future requests
-6. Return file with appropriate MIME type and CORS headers
-```
+1. Try GameZip server (if ZIP mounted)
+2. Try local htdocs
+3. Try external CDN fallback
+4. Return 404 if not found
 
 ### GameZip Server (Port 22501)
+1. Mount ZIP via POST /mount/game-id
+2. Request file: GET /http://domain.com/path/file.swf
+3. Search mounted ZIPs for content
+4. Stream file directly (no extraction)
 
-```
-1. Mount ZIP: POST /mount/game-123 {"zipPath": "..."}
-2. Request: GET http://domain.com/path/file.swf
-3. Search mounted ZIPs for: content/domain.com/path/file.swf
-4. Stream file directly from ZIP (no extraction)
-5. Return file with MIME type and CORS headers
-```
+## Documentation
 
-## Common Issues
+- [architecture.md](./architecture.md) - Architecture and design patterns
+- [proxy-server.md](./proxy-server.md) - HTTP Proxy Server (port 22500)
+- [gamezip-server.md](./gamezip-server.md) - GameZip Server (port 22501)
+- [legacy-server.md](./legacy-server.md) - Legacy content serving
+- [configuration.md](./configuration.md) - Configuration reference
+
+## Integration with Backend
+
+The backend delegates file serving to game-service:
+- Backend returns launch URLs pointing to proxy server
+- Frontend loads game content from game-service URLs
+- Game-service operates independently without backend communication
+
+## Security
+
+- Path traversal prevention through validated path normalization
+- CORS configurable (enabled by default for local networks)
+- HTTPS enforced for external CDN requests
+- Only mounted ZIPs accessible; no arbitrary file access
+
+## Troubleshooting
 
 ### Port Already in Use
-
-```
-Error: Port 22500 is already in use
-```
-
-**Solution**: Check for other instances or change ports in `.env`
-
 ```bash
-# Find process using port
-netstat -ano | findstr :22500  # Windows
-lsof -i :22500                 # macOS/Linux
+# Find process using port (Windows)
+netstat -ano | findstr :22500
 
 # Kill process or change port in .env
 PROXY_PORT=22510
-GAMEZIPSERVER_PORT=22511
 ```
 
 ### File Not Found
-
-```
-404: File not found in any source
-```
-
-**Solutions**:
 1. Verify Flashpoint path is correct
 2. Check if file exists in htdocs directory
 3. Verify external fallback URLs are accessible
-4. For ZIP files, ensure ZIP is mounted via GameZip API
+4. Ensure ZIP is mounted via GameZip API
 
 ### CORS Errors
+- Verify `ALLOW_CROSS_DOMAIN=true` in `.env`
+- Check response headers: `curl -I <url>`
+- Ensure error responses include CORS headers
 
-```
-Access to fetch at 'http://localhost:22500/...' has been blocked by CORS policy
-```
-
-**Solution**: CORS is enabled by default. Verify `ALLOW_CROSS_DOMAIN=true` in `.env`
-
-### ZIP Mount Failures
-
-```
-500: ZIP file not found
-```
-
-**Solutions**:
-1. Verify ZIP path is absolute and correct
-2. Check file permissions
-3. Ensure ZIP file is not corrupted
-4. Check available disk space for ZIP index
-
-## Performance Optimization
-
-### Streaming Configuration
-
-Adjust chunk size for optimal performance:
+## Docker
 
 ```bash
-# Smaller chunks = lower memory, higher CPU
-PROXY_CHUNK_SIZE=4096
+# Build
+docker-compose build game-service
 
-# Larger chunks = higher memory, lower CPU
-PROXY_CHUNK_SIZE=65536
+# Run
+docker-compose up -d game-service
+
+# Logs
+docker-compose logs -f game-service
 ```
 
-### Connection Pooling
-
-Configure server timeouts:
-
-```javascript
-server.timeout = 120000;        // 2 minutes
-server.keepAliveTimeout = 65000; // 65 seconds
-```
-
-### External Download Limits
-
-Configure concurrent downloads in `config.ts`:
-
-```javascript
-maxConcurrentDownloads: 10
-```
-
-## Security Considerations
-
-1. **Path Traversal Prevention**: All file paths are normalized and validated
-2. **CORS Restrictions**: Can be disabled for internal networks
-3. **External CDN**: HTTPS enforced for all external sources
-4. **ZIP Access**: Only mounted ZIPs are accessible, no arbitrary file access
-5. **No Script Execution**: CGI disabled by default (configurable)
-
-## Logging
-
-Logs are written to console using Winston:
-
-```
-[HTTPProxyServer] GET http://domain.com/file.swf
-[LegacyServer] Trying: D:/Flashpoint/Legacy/htdocs/domain.com/file.swf
-[LegacyServer] ✓ Found file: local-htdocs
-[ProxyHandler] ✓ Served from local-htdocs
-```
-
-Configure log level:
-
-```bash
-LOG_LEVEL=debug  # Verbose logging
-LOG_LEVEL=info   # Standard logging (default)
-LOG_LEVEL=warn   # Warnings and errors only
-LOG_LEVEL=error  # Errors only
-```
+Set `FLASHPOINT_HOST_PATH` environment variable to point to your Flashpoint installation.
 
 ## Production Deployment
 
-### Build
-
 ```bash
 npm run build
-```
-
-### Start
-
-```bash
 NODE_ENV=production npm start
 ```
 
-### Docker
-
-See root `docker-compose.yml`:
-
-```yaml
-game-service:
-  build: ./game-service
-  ports:
-    - "22500:22500"
-    - "22501:22501"
-  environment:
-    - FLASHPOINT_PATH=/flashpoint
-  volumes:
-    - ${FLASHPOINT_HOST_PATH}:/flashpoint:ro
-```
-
-## Development
-
-### Project Structure
-
-```
-game-service/
-├── src/
-│   ├── index.ts                 # Entry point
-│   ├── config.ts                # Configuration manager
-│   ├── http-proxy-server.ts     # HTTP proxy server setup
-│   ├── gamezipserver.ts         # GameZip server implementation
-│   ├── proxy-request-handler.ts # Proxy request routing
-│   ├── legacy-server.ts         # Legacy content fallback chain
-│   ├── zip-manager.ts           # ZIP mounting and access
-│   ├── mimeTypes.ts             # MIME type mappings
-│   └── utils/
-│       ├── logger.ts            # Winston logger
-│       └── htmlInjector.ts      # HTML polyfill injection
-├── dist/                        # Compiled JavaScript
-├── package.json
-├── tsconfig.json
-└── .env.example
-```
-
-### Adding New Features
-
-1. **New MIME type**: Add to `src/mimeTypes.ts`
-2. **New polyfill**: Add to `src/utils/htmlInjector.ts`
-3. **New fallback source**: Add to `EXTERNAL_FALLBACK_URLS` in `.env`
-4. **New server**: Follow pattern in `http-proxy-server.ts`
-
-## References
-
-- Original Go implementation: `D:\Repositories\Community\FlashpointGameServer`
-- Flashpoint Launcher: `D:\Repositories\Community\launcher`
-- node-stream-zip: https://github.com/antelle/node-stream-zip
-
-## License
-
-MIT
+Monitor logs and set up process manager (PM2, systemd).

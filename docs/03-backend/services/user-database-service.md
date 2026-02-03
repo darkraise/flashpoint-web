@@ -620,6 +620,4 @@ UserDatabaseService.run(
 ## Related Documentation
 
 - [DatabaseService](./database-service.md) - Flashpoint database
-- [AuthService](./auth-service.md) - Authentication service
 - [Database Schema](../database/schema.md) - Complete schema
-- [Migrations](../database/migrations.md) - Migration system

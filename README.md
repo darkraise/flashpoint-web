@@ -67,7 +67,7 @@ Flashpoint Web consists of three independent services:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/flashpoint-web.git
+git clone https://github.com/darkraise/flashpoint-web.git
 cd flashpoint-web
 
 # Install dependencies for all services
@@ -323,6 +323,6 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 <div align="center">
 
-**[Documentation](docs/)** | **[Report Bug](https://github.com/your-username/flashpoint-web/issues)** | **[Request Feature](https://github.com/your-username/flashpoint-web/issues)**
+**[Documentation](docs/)** | **[Report Bug](https://github.com/darkraise/flashpoint-web/issues)** | **[Request Feature](https://github.com/darkraise/flashpoint-web/issues)**
 
 </div>
