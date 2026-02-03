@@ -46,21 +46,21 @@ export function RolesView() {
 
       <RoleTable onEdit={handleEdit} onManagePermissions={handleManagePermissions} />
 
-      {showRoleForm && (
+      {showRoleForm ? (
         <RoleForm
           role={editingRole}
           onClose={handleCloseForm}
           onSuccess={handleSuccess}
         />
-      )}
+      ) : null}
 
-      {managingPermissionsRole && (
+      {managingPermissionsRole ? (
         <PermissionSelector
           role={managingPermissionsRole}
           onClose={() => setManagingPermissionsRole(null)}
           onSuccess={handleSuccess}
         />
-      )}
+      ) : null}
     </div>
   );
 }

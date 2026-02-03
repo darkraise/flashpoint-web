@@ -103,23 +103,23 @@ export function JobsView() {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
+      {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2].map((i) => (
             <Skeleton key={i} className="h-64 w-full" />
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Error State */}
-      {error && (
+      {error ? (
         <div className="bg-red-950/20 border border-red-500 rounded-lg p-4">
           <p className="text-red-400">Failed to load jobs. Please try again.</p>
         </div>
-      )}
+      ) : null}
 
       {/* Jobs Grid */}
-      {!isLoading && !error && (
+      {!isLoading && !error ? (
         <>
           {jobs.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -143,7 +143,7 @@ export function JobsView() {
             </div>
           )}
         </>
-      )}
+      ) : null}
 
       {/* Logs Dialog */}
       <Dialog open={showLogsDialog} onOpenChange={setShowLogsDialog}>

@@ -124,7 +124,7 @@ export function GeneralSettingsTab({
       </div>
 
       {/* Date & Time Format Settings - Available to all authenticated users */}
-      {userSettings && (
+      {userSettings ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <Calendar size={24} className="text-primary" />
@@ -187,17 +187,17 @@ export function GeneralSettingsTab({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Authentication Settings (Admin Only) */}
-      {isAdmin && (
+      {isAdmin ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <Shield size={24} className="text-primary" />
             <h2 className="text-xl font-semibold">Authentication Settings</h2>
           </div>
 
-          {authSettings && (
+          {authSettings ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -244,9 +244,9 @@ export function GeneralSettingsTab({
                 />
               </div>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </motion.div>
   );
 }

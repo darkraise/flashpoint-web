@@ -61,7 +61,7 @@ export function FeaturesSettingsTab({
       exit="exit"
       className="space-y-6"
     >
-      {isAdmin && featureSettings && (
+      {isAdmin && featureSettings ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <ToggleLeft size={24} className="text-primary" />
@@ -146,7 +146,7 @@ export function FeaturesSettingsTab({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </motion.div>
   );
 }

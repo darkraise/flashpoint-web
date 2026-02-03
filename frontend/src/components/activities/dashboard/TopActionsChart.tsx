@@ -25,12 +25,12 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
             <span className="text-muted-foreground text-sm">Category:</span>
             <span className="font-semibold text-sm capitalize">{action.category}</span>
           </div>
-          {action.topResource && (
+          {action.topResource ? (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">Top Resource:</span>
               <span className="font-semibold text-sm">{action.topResource}</span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     );

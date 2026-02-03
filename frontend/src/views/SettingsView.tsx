@@ -81,21 +81,21 @@ export function SettingsView() {
 
             <div className="mt-6">
               <AnimatePresence mode="wait">
-                {activeTab === "general" && (
+                {activeTab === "general" ? (
                   <GeneralSettingsTab tabContentVariants={tabContentVariants} />
-                )}
+                ) : null}
 
-                {activeTab === "app" && (
+                {activeTab === "app" ? (
                   <AppSettingsTab tabContentVariants={tabContentVariants} />
-                )}
+                ) : null}
 
-                {activeTab === "update" && (
+                {activeTab === "update" ? (
                   <UpdateSettingsTab tabContentVariants={tabContentVariants} />
-                )}
+                ) : null}
 
-                {activeTab === "features" && (
+                {activeTab === "features" ? (
                   <FeaturesSettingsTab tabContentVariants={tabContentVariants} />
-                )}
+                ) : null}
               </AnimatePresence>
             </div>
           </Tabs>

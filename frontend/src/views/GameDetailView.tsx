@@ -210,13 +210,13 @@ export function GameDetailView() {
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 flex-1">
             {/* Game Logo */}
-            {logoUrl && !logoError && (
+            {logoUrl && !logoError ? (
               <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-2 relative">
-                {logoLoading && (
+                {logoLoading ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
                     <Loader2 size={20} className="text-muted-foreground animate-spin" />
                   </div>
-                )}
+                ) : null}
                 <img
                   src={logoUrl}
                   alt={`${game.title} logo`}
@@ -230,31 +230,31 @@ export function GameDetailView() {
                   }}
                 />
               </div>
-            )}
+            ) : null}
 
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 break-words">{game.title}</h1>
-              {game.alternateTitles && (
+              {game.alternateTitles ? (
                 <p className="text-muted-foreground text-sm break-words">Also known as: {game.alternateTitles}</p>
-              )}
+              ) : null}
 
               {/* Play Statistics - Under title */}
-              {(currentGameStats?.lastPlayedAt || currentGameStats?.totalPlaytimeSeconds) && (
+              {(currentGameStats?.lastPlayedAt || currentGameStats?.totalPlaytimeSeconds) ? (
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                  {currentGameStats?.lastPlayedAt && (
+                  {currentGameStats?.lastPlayedAt ? (
                     <div className="flex items-center gap-1.5">
                       <Clock size={14} />
                       <span>Last played {formatRelativeTime(currentGameStats.lastPlayedAt)}</span>
                     </div>
-                  )}
-                  {currentGameStats?.totalPlaytimeSeconds && (
+                  ) : null}
+                  {currentGameStats?.totalPlaytimeSeconds ? (
                     <div className="flex items-center gap-1.5">
                       <span>•</span>
                       <span>{formatDuration(currentGameStats.totalPlaytimeSeconds)} played</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -289,9 +289,9 @@ export function GameDetailView() {
                 )}
 
                 {/* Error Display */}
-                {downloadError && (
+                {downloadError ? (
                   <p className="text-sm text-red-500 font-medium">{downloadError}</p>
-                )}
+                ) : null}
               </>
             ) : (
               <Badge variant="secondary" className="px-4 py-2 text-sm sm:text-base font-medium flex items-center gap-2">
@@ -303,16 +303,16 @@ export function GameDetailView() {
         </div>
 
         {/* Game Screenshot */}
-        {screenshotUrl && (
+        {screenshotUrl ? (
           <div className="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center relative">
-            {imageLoading && !imageError && (
+            {imageLoading && !imageError ? (
               <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 size={48} className="text-muted-foreground animate-spin" />
                   <span className="text-sm text-muted-foreground">Loading screenshot...</span>
                 </div>
               </div>
-            )}
+            ) : null}
             {!imageError ? (
               <img
                 src={screenshotUrl}
@@ -333,18 +333,18 @@ export function GameDetailView() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         <GameInfoGrid game={game} />
 
-        {game.originalDescription && (
+        {game.originalDescription ? (
           <div>
             <h2 className="text-lg font-semibold mb-2">Description</h2>
             <p className="leading-relaxed">{game.originalDescription}</p>
           </div>
-        )}
+        ) : null}
 
-        {game.tagsStr && (
+        {game.tagsStr ? (
           <div>
             <h2 className="text-lg font-semibold mb-2">Tags</h2>
             <div className="flex flex-wrap gap-2">
@@ -353,14 +353,14 @@ export function GameDetailView() {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
-        {game.notes && (
+        {game.notes ? (
           <div className="bg-muted/50 rounded p-4">
             <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
             <p className="text-sm">{game.notes}</p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
     </ErrorBoundary>

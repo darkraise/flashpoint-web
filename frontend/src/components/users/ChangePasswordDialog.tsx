@@ -80,13 +80,13 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
         </DialogHeader>
 
         <DialogBody>
-          {changePasswordMutation.isError && (
+          {changePasswordMutation.isError ? (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 {getErrorMessage(changePasswordMutation.error) || 'Failed to change password'}
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

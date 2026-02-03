@@ -197,7 +197,7 @@ export function RegisterForm() {
         </div>
 
         {/* Maintenance Mode Notice */}
-        {publicSettings?.app?.maintenanceMode && (
+        {publicSettings?.app?.maintenanceMode ? (
           <Alert
             className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100"
             role="alert"
@@ -210,15 +210,15 @@ export function RegisterForm() {
                 'The system is currently under maintenance. Some features may be unavailable.'}
             </AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
-        {registerMutation.isError && (
+        {registerMutation.isError ? (
           <Alert variant="destructive" className="mb-6">
             <AlertDescription>
               {getErrorMessage(registerMutation.error) || 'Registration failed. Please try again.'}
             </AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="relative space-y-4">

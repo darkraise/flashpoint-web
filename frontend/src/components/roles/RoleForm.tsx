@@ -108,13 +108,13 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
         </DialogHeader>
 
         <DialogBody>
-          {mutation.isError && (
+          {mutation.isError ? (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 {getErrorMessage(mutation.error) || 'Operation failed'}
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -177,7 +177,7 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                 )}
               />
 
-              {!isEditMode && permissions && permissions.length > 0 && (
+              {!isEditMode && permissions && permissions.length > 0 ? (
                 <FormField
                   control={form.control}
                   name="permissionIds"
@@ -219,11 +219,11 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                                     <FormLabel className="text-sm font-normal cursor-pointer">
                                       {permission.name}
                                     </FormLabel>
-                                    {permission.description && (
+                                    {permission.description ? (
                                       <FormDescription className="text-xs">
                                         {permission.description}
                                       </FormDescription>
-                                    )}
+                                    ) : null}
                                   </div>
                                 </FormItem>
                               )
@@ -235,15 +235,15 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                     </FormItem>
                   )}
                 />
-              )}
+              ) : null}
 
-              {isEditMode && (
+              {isEditMode ? (
                 <Alert className="border-blue-500 bg-blue-500/10 text-blue-400">
                   <AlertDescription>
                     Permissions can be managed separately from role details. Use the permissions management page to update role permissions.
                   </AlertDescription>
                 </Alert>
-              )}
+              ) : null}
 
               <DialogFooter>
                 <Button

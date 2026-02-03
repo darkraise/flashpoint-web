@@ -88,20 +88,20 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Error details (only in development) */}
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {process.env.NODE_ENV === 'development' && this.state.error ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h2 className="text-sm font-semibold text-red-400 mb-2">Error Details:</h2>
                 <pre className="text-xs text-gray-300 overflow-auto max-h-64">
                   {this.state.error.toString()}
-                  {this.state.errorInfo && (
+                  {this.state.errorInfo ? (
                     <>
                       {'\n\nComponent Stack:'}
                       {this.state.errorInfo.componentStack}
                     </>
-                  )}
+                  ) : null}
                 </pre>
               </div>
-            )}
+            ) : null}
 
             {/* Action buttons */}
             <div className="flex gap-3">

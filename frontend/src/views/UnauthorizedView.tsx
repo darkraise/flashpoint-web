@@ -76,7 +76,7 @@ export function UnauthorizedView() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {isAuthenticated && user && (
+          {isAuthenticated && user ? (
             <Alert>
               <AlertDescription>
                 <div className="space-y-1">
@@ -88,37 +88,37 @@ export function UnauthorizedView() {
                 </div>
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
-          {(requiredPermission || requiredFeature) && (
+          {(requiredPermission || requiredFeature) ? (
             <Alert>
               <AlertDescription>
                 <div className="space-y-1">
-                  {requiredPermission && (
+                  {requiredPermission ? (
                     <p className="text-sm">
                       <span className="font-semibold">Required permission:</span>{' '}
                       <code className="bg-muted px-1 py-0.5 rounded text-xs">
                         {requiredPermission}
                       </code>
                     </p>
-                  )}
-                  {requiredFeature && (
+                  ) : null}
+                  {requiredFeature ? (
                     <p className="text-sm">
                       <span className="font-semibold">Required feature:</span>{' '}
                       <code className="bg-muted px-1 py-0.5 rounded text-xs">
                         {requiredFeature}
                       </code>
                     </p>
-                  )}
-                  {fromPath && (
+                  ) : null}
+                  {fromPath ? (
                     <p className="text-sm text-muted-foreground">
                       Attempted to access: {fromPath}
                     </p>
-                  )}
+                  ) : null}
                 </div>
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
           <div className="space-y-2">
             <h3 className="font-semibold text-sm">What you can do:</h3>
@@ -145,11 +145,11 @@ export function UnauthorizedView() {
               <Button onClick={handleGoHome} variant="default">
                 Go to Home
               </Button>
-              {isAuthenticated && (
+              {isAuthenticated ? (
                 <Button onClick={() => navigate('/settings')} variant="secondary">
                   View Settings
                 </Button>
-              )}
+              ) : null}
             </>
           )}
         </CardFooter>

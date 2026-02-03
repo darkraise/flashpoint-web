@@ -126,26 +126,26 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Error details */}
-            {this.state.error && !this.state.isRetrying && (
+            {this.state.error && !this.state.isRetrying ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h3 className="text-sm font-semibold text-destructive mb-2">Error Details:</h3>
                 <p className="text-sm text-muted-foreground font-mono">
                   {this.state.error.message}
                 </p>
               </div>
-            )}
+            ) : null}
 
             {/* Retry information */}
-            {this.state.retryCount > 0 && !this.state.isRetrying && (
+            {this.state.retryCount > 0 && !this.state.isRetrying ? (
               <div className="mb-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <p className="text-sm text-blue-400">
                   Attempted {this.state.retryCount} automatic {this.state.retryCount === 1 ? 'retry' : 'retries'}
                 </p>
               </div>
-            )}
+            ) : null}
 
             {/* Action buttons */}
-            {!this.state.isRetrying && (
+            {!this.state.isRetrying ? (
               <div className="flex gap-3">
                 <Button
                   variant="default"
@@ -156,15 +156,15 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
                   Try Again
                 </Button>
               </div>
-            )}
+            ) : null}
 
             {/* Retry progress */}
-            {this.state.isRetrying && (
+            {this.state.isRetrying ? (
               <div className="flex items-center gap-3 text-muted-foreground">
                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
                 <span className="text-sm">Retrying...</span>
               </div>
-            )}
+            ) : null}
 
             {/* Help text */}
             <div className="mt-6 pt-6 border-t border-border">

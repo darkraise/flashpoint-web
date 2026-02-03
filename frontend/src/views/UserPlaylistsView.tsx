@@ -148,13 +148,13 @@ export function UserPlaylistsView() {
       />
 
       {/* Share Dialog */}
-      {sharingPlaylist && (
+      {sharingPlaylist ? (
         <SharePlaylistDialog
           isOpen={!!sharingPlaylist}
           onClose={() => setSharingPlaylist(null)}
           playlist={sharingPlaylist}
         />
-      )}
+      ) : null}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog

@@ -132,7 +132,7 @@ export function GamePlayer({
   return (
     <div className={`${containerClasses} ${isAspectVideo ? 'flex flex-col' : ''}`}>
       {/* Player Controls */}
-      {showControls && (
+      {showControls ? (
         <div className="flex items-center justify-between bg-card/90 backdrop-blur-sm px-4 py-3 flex-shrink-0 border-b border-border">
           <div className="flex items-center gap-3">
             <Play size={18} className="text-primary" />
@@ -145,7 +145,7 @@ export function GamePlayer({
               </span>
             </div>
           </div>
-          {allowFullscreen && (
+          {allowFullscreen ? (
             <button
               onClick={toggleFullscreen}
               className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg transition-colors"
@@ -163,9 +163,9 @@ export function GamePlayer({
                 </>
               )}
             </button>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       {/* Game Player Container */}
       <div
@@ -208,7 +208,7 @@ export function GamePlayer({
                 setIframeError('Failed to load HTML5 game');
               }}
             />
-            {iframeError && (
+            {iframeError ? (
               <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-10">
                 <div className="text-center max-w-md p-6">
                   <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
@@ -224,7 +224,7 @@ export function GamePlayer({
                   </p>
                 </div>
               </div>
-            )}
+            ) : null}
           </>
         ) : (
           <div className="flex items-center justify-center h-full">

@@ -191,7 +191,7 @@ export function DataTable<TData, TValue>({
           </Table>
         </div>
 
-        {pagination && pagination.totalPages > 1 && (
+        {pagination && pagination.totalPages > 1 ? (
           <div className="flex flex-col sm:flex-row gap-4 sm:justify-between sm:items-center p-4 border-t bg-muted/30">
             <div className="text-sm text-muted-foreground">
               Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
@@ -237,7 +237,7 @@ export function DataTable<TData, TValue>({
               </Button>
             </div>
           </div>
-        )}
+        ) : null}
       </Card>
     </div>
   )

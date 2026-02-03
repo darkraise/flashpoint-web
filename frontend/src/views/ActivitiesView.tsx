@@ -29,11 +29,11 @@ export function ActivitiesView() {
         <ActivityHeader />
 
         {/* Dashboard - only render if statistics feature is enabled */}
-        {enableStatistics && (
+        {enableStatistics ? (
           <div className="mb-6">
             <ActivityDashboard />
           </div>
-        )}
+        ) : null}
 
         {/* Activity Table */}
         <ActivityTable />

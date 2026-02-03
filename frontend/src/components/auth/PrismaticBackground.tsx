@@ -144,7 +144,7 @@ export function PrismaticBackground() {
       />
 
       {/* Light Layer 3: Cool analogous - Desktop only, vertical wave */}
-      {!isMobile && (
+      {!isMobile ? (
         <div
           className="prismatic-light-3"
           style={{
@@ -156,7 +156,7 @@ export function PrismaticBackground() {
           }}
           aria-hidden="true"
         />
-      )}
+      ) : null}
     </>
   );
 }

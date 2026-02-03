@@ -30,7 +30,7 @@ export function Breadcrumbs({
   return (
     <nav aria-label="Breadcrumb" className={cn("flex items-center gap-2 text-sm", className)}>
       <ol className="flex items-center gap-2 flex-wrap">
-        {showHome && (
+        {showHome ? (
           <>
             <li>
               <Link
@@ -42,13 +42,13 @@ export function Breadcrumbs({
                 <span className="hidden sm:inline">{homeLabel}</span>
               </Link>
             </li>
-            {items.length > 0 && (
+            {items.length > 0 ? (
               <li aria-hidden="true">
                 <ChevronRight size={16} className="text-muted-foreground" />
               </li>
-            )}
+            ) : null}
           </>
-        )}
+        ) : null}
 
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
@@ -79,9 +79,9 @@ export function Breadcrumbs({
                 </span>
               )}
 
-              {!isLast && (
+              {!isLast ? (
                 <ChevronRight size={16} className="text-muted-foreground" aria-hidden="true" />
-              )}
+              ) : null}
             </li>
           );
         })}

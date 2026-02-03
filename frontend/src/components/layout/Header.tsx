@@ -104,7 +104,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
               </div>
             </Link>
 
-            {!hideSidebarToggle && (
+            {!hideSidebarToggle ? (
               <Button
                 variant="ghost"
                 size="icon"
@@ -118,15 +118,15 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
               >
                 <Menu size={20} />
               </Button>
-            )}
+            ) : null}
           </div>
 
           {/* Center: Search Bar (Desktop only) */}
-          {!hideSearch && (
+          {!hideSearch ? (
             <div className="flex-1 max-w-2xl mx-auto hidden md:block">
               <SearchBar />
             </div>
-          )}
+          ) : null}
 
           {/* Right: GitHub, Theme Settings & User Menu */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -154,8 +154,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
                       <Link to="/login">Login</Link>
                     </Button>
                   </div>
-                ) : (
-                  /* Authenticated User - Full menu with logout */
+                ) : /* Authenticated User - Full menu with logout */ (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -211,11 +210,11 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
       </div>
 
       {/* Mobile Search Bar (below main header) */}
-      {!hideSearch && (
+      {!hideSearch ? (
         <div className="md:hidden px-4 pb-3">
           <SearchBar />
         </div>
-      )}
+      ) : null}
     </header>
   );
 }

@@ -79,11 +79,11 @@ export function FavoriteButton({
         className={toggleFavorite.isPending ? "animate-pulse" : ""}
         aria-hidden="true"
       />
-      {showLabel && (
+      {showLabel ? (
         <span className="ml-2">
           {isFavorited ? "Favorited" : "Favorite"}
         </span>
-      )}
+      ) : null}
     </Button>
   );
 }

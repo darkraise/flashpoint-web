@@ -304,14 +304,14 @@ export function UpdateSettingsTab({
       className="space-y-6"
     >
       {/* Game Metadata Updates Section */}
-      {isAdmin && (
+      {isAdmin ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Database size={24} className="text-primary" />
               <h2 className="text-xl font-semibold">Game Metadata</h2>
             </div>
-            {metadataInfo?.edition !== "ultimate" && (
+            {metadataInfo?.edition !== "ultimate" ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -334,11 +334,11 @@ export function UpdateSettingsTab({
                   </p>
                 </TooltipContent>
               </Tooltip>
-            )}
+            ) : null}
           </div>
 
           {/* Ultimate Edition: No metadata sync available */}
-          {metadataInfo?.edition === "ultimate" && (
+          {metadataInfo?.edition === "ultimate" ? (
             <div className="bg-muted border border-border rounded-lg p-4 flex items-center gap-3">
               <Info size={20} className="text-muted-foreground flex-shrink-0" />
               <div>
@@ -351,20 +351,20 @@ export function UpdateSettingsTab({
                 </p>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Infinity Edition: Metadata sync UI */}
-          {metadataInfo?.edition !== "ultimate" && (
+          {metadataInfo?.edition !== "ultimate" ? (
             <>
           {/* Error Message */}
-          {error && (
+          {error ? (
             <div className="bg-red-500/10 border border-red-500 rounded-lg p-3 mb-4 flex items-start gap-2">
               <p className="text-foreground text-sm font-medium">{error}</p>
             </div>
-          )}
+          ) : null}
 
           {/* Skeleton Loading State */}
-          {!metadataInfo && (
+          {!metadataInfo ? (
             <div className="bg-muted border border-border rounded-lg p-4 animate-pulse">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1">
@@ -378,10 +378,10 @@ export function UpdateSettingsTab({
                 <div className="w-24 h-10 bg-accent rounded-lg flex-shrink-0"></div>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Metadata Update Info */}
-          {metadataInfo && (
+          {metadataInfo ? (
             <div>
               {metadataInfo.gamesUpdateAvailable ? (
                 <div className="bg-primary/10 border border-primary rounded-lg p-4">
@@ -416,15 +416,15 @@ export function UpdateSettingsTab({
                             <>Game metadata updates are available</>
                           )}
                         </p>
-                        {metadataInfo.lastCheckedTime && (
+                        {metadataInfo.lastCheckedTime ? (
                           <p className="text-muted-foreground text-xs mt-2">
                             Last synced:{" "}
                             <FormattedDate date={metadataInfo.lastCheckedTime} type="datetime" />
                           </p>
-                        )}
+                        ) : null}
 
                         {/* Progress Bar */}
-                        {isSyncingMetadata && (
+                        {isSyncingMetadata ? (
                           <div className="mt-3 space-y-2">
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-primary">
@@ -443,7 +443,7 @@ export function UpdateSettingsTab({
                               />
                             </div>
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                     <Tooltip>
@@ -474,24 +474,24 @@ export function UpdateSettingsTab({
                     <p className="text-foreground font-medium">
                       Game metadata is up to date
                     </p>
-                    {metadataInfo.lastCheckedTime && (
+                    {metadataInfo.lastCheckedTime ? (
                       <p className="text-muted-foreground text-xs mt-1">
                         Last synced:{" "}
                         <FormattedDate date={metadataInfo.lastCheckedTime} type="datetime" />
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
             </div>
-          )}
+          ) : null}
             </>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       {/* Ruffle Emulator Management (Admin Only) */}
-      {isAdmin && ruffleVersion && (
+      {isAdmin && ruffleVersion ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <Download size={24} className="text-primary" />
@@ -537,7 +537,7 @@ export function UpdateSettingsTab({
               </Button>
             </div>
 
-            {updateCheckResult && (
+            {updateCheckResult ? (
               <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -551,7 +551,7 @@ export function UpdateSettingsTab({
                         ? "A new version of Ruffle is available for download."
                         : "You have the latest version of Ruffle installed."}
                     </p>
-                    {updateCheckResult.publishedAt && (
+                    {updateCheckResult.publishedAt ? (
                       <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         <span>
@@ -562,9 +562,9 @@ export function UpdateSettingsTab({
                           />
                         </span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
-                  {updateCheckResult.updateAvailable && (
+                  {updateCheckResult.updateAvailable ? (
                     <Button
                       onClick={() => updateRuffle.mutate()}
                       disabled={updateRuffle.isPending}
@@ -581,12 +581,12 @@ export function UpdateSettingsTab({
                         </>
                       )}
                     </Button>
-                  )}
+                  ) : null}
                 </div>
 
                 {/* Changelog Section - Only show if update is available */}
                 {updateCheckResult.updateAvailable &&
-                  updateCheckResult.changelog && (
+                  updateCheckResult.changelog ? (
                     <div className="border-t pt-3">
                       <button
                         onClick={() => setShowChangelog(!showChangelog)}
@@ -599,7 +599,7 @@ export function UpdateSettingsTab({
                         )}
                         <span>{showChangelog ? "Hide" : "View"} Changelog</span>
                       </button>
-                      {showChangelog && (
+                      {showChangelog ? (
                         <div className="mt-3 p-3 bg-background border rounded-lg">
                           <div className="text-xs text-muted-foreground mb-2 font-medium">
                             Release Notes:
@@ -610,11 +610,11 @@ export function UpdateSettingsTab({
                             </ReactMarkdown>
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
-                  )}
+                  ) : null}
               </div>
-            )}
+            ) : null}
 
             <div className="text-sm text-muted-foreground pt-2 space-y-1">
               <p>
@@ -629,7 +629,7 @@ export function UpdateSettingsTab({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </motion.div>
   );
 }

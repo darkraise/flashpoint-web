@@ -117,16 +117,16 @@ export function PlaylistsView() {
                 </Link>
                 <Link to={`/flashpoint-playlists/${playlist.id}`} className="flex-1 min-w-0">
                   <h3 className="font-semibold mb-1">{playlist.title}</h3>
-                  {playlist.description && (
+                  {playlist.description ? (
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {playlist.description}
                     </p>
-                  )}
-                  {playlist.gameIds && (
+                  ) : null}
+                  {playlist.gameIds ? (
                     <p className="text-xs text-muted-foreground mt-2">
                       {playlist.gameIds.length} games
                     </p>
-                  )}
+                  ) : null}
                 </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

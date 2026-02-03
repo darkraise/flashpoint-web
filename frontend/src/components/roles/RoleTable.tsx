@@ -145,9 +145,9 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
                 </RoleGuard>
               </DropdownMenuContent>
             </DropdownMenu>
-            {isSystemRole && (
+            {isSystemRole ? (
               <span className="text-xs text-muted-foreground">(System)</span>
-            )}
+            ) : null}
           </div>
         );
       },

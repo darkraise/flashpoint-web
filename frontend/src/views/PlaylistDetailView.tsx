@@ -54,12 +54,12 @@ export function PlaylistDetailView() {
           <h1 className="text-3xl font-bold">{playlist.title}</h1>
           <Badge variant="secondary">Flashpoint</Badge>
         </div>
-        {playlist.description && (
+        {playlist.description ? (
           <p className="text-muted-foreground">{playlist.description}</p>
-        )}
-        {playlist.author && (
+        ) : null}
+        {playlist.author ? (
           <p className="text-sm text-muted-foreground mt-1">By {playlist.author}</p>
-        )}
+        ) : null}
       </div>
 
       {playlist.games && playlist.games.length > 0 ? (

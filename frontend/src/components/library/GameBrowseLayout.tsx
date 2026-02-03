@@ -300,13 +300,11 @@ export function GameBrowseLayout({
           <h1 className="text-3xl font-bold">{pageTitle}</h1>
           {isLoading ? (
             <div className="h-5 bg-muted rounded w-32 mt-1 animate-pulse"></div>
-          ) : (
-            data && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Found {data.total.toLocaleString()} games
-              </p>
-            )
-          )}
+          ) : data ? (
+            <p className="text-sm text-muted-foreground mt-1">
+              Found {data.total.toLocaleString()} games
+            </p>
+          ) : null}
           {headerContent}
         </div>
 
@@ -327,19 +325,19 @@ export function GameBrowseLayout({
       </div>
 
       {/* Active Filter Chips */}
-      {filterChips.length > 0 && (
+      {filterChips.length > 0 ? (
         <FilterChips
           chips={filterChips}
           onRemove={handleRemoveChip}
           onClearAll={handleClearAllFilters}
         />
-      )}
+      ) : null}
 
-      {error && (
+      {error ? (
         <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300">
           Error loading games: {error.message}
         </div>
-      )}
+      ) : null}
 
       {isLoading ? (
         viewMode === 'grid' ? (
@@ -363,7 +361,7 @@ export function GameBrowseLayout({
             />
           )}
 
-          {data.totalPages > 1 && (
+          {data.totalPages > 1 ? (
             <PaginationWithInfo
               currentPage={data.page}
               totalPages={data.totalPages}
@@ -375,7 +373,7 @@ export function GameBrowseLayout({
               showInfo={true}
               className="mt-8 pb-2"
             />
-          )}
+          ) : null}
         </>
       ) : null}
     </div>

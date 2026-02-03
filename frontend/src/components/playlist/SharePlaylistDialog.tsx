@@ -42,11 +42,7 @@ interface SharePlaylistDialogProps {
   playlist: UserPlaylist;
 }
 
-export function SharePlaylistDialog({
-  isOpen,
-  onClose,
-  playlist,
-}: SharePlaylistDialogProps) {
+export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylistDialogProps) {
   const { user } = useAuthStore();
   const isAdmin = user?.permissions.includes('settings.update');
 
@@ -102,9 +98,7 @@ export function SharePlaylistDialog({
   useEffect(() => {
     if (!isOpen) {
       setIsSharing(playlist.isPublic);
-      setExpiresAt(
-        playlist.shareExpiresAt ? new Date(playlist.shareExpiresAt) : undefined
-      );
+      setExpiresAt(playlist.shareExpiresAt ? new Date(playlist.shareExpiresAt) : undefined);
       setShowOwner(playlist.showOwner || false);
       setShareData(null);
     }
@@ -214,32 +208,26 @@ export function SharePlaylistDialog({
               id="enable-sharing"
               checked={isSharing}
               onCheckedChange={handleToggleSharing}
-              disabled={
-                enableSharingMutation.isPending ||
-                disableSharingMutation.isPending
-              }
+              disabled={enableSharingMutation.isPending || disableSharingMutation.isPending}
             />
           </div>
 
-          {isSharing && (
+          {isSharing ? (
             <>
               {/* Warning Alert */}
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  Anyone with the link can view this playlist and its games,
-                  regardless of guest access settings.
+                  Anyone with the link can view this playlist and its games, regardless of guest
+                  access settings.
                 </AlertDescription>
               </Alert>
 
               {/* Domain Selector (admin only) */}
-              {isAdmin && domains && domains.length > 0 && shareData && (
+              {isAdmin && domains && domains.length > 0 && shareData ? (
                 <div className="space-y-2">
                   <Label htmlFor="share-domain">Domain</Label>
-                  <Select
-                    value={selectedDomain}
-                    onValueChange={setSelectedDomain}
-                  >
+                  <Select value={selectedDomain} onValueChange={setSelectedDomain}>
                     <SelectTrigger id="share-domain" className="w-full">
                       <SelectValue placeholder="Current URL" />
                     </SelectTrigger>
@@ -256,10 +244,10 @@ export function SharePlaylistDialog({
                     </SelectContent>
                   </Select>
                 </div>
-              )}
+              ) : null}
 
               {/* Share URL */}
-              {shareData && (
+              {shareData ? (
                 <div className="space-y-2">
                   <Label htmlFor="share-url">Share URL</Label>
                   <div className="flex gap-2">
@@ -280,7 +268,7 @@ export function SharePlaylistDialog({
                     </Button>
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {/* Expiry Date */}
               <div className="space-y-2">
@@ -303,9 +291,7 @@ export function SharePlaylistDialog({
                 <Checkbox
                   id="show-owner"
                   checked={showOwner}
-                  onCheckedChange={(checked) =>
-                    setShowOwner(checked as boolean)
-                  }
+                  onCheckedChange={(checked) => setShowOwner(checked as boolean)}
                 />
                 <div className="grid gap-1.5 leading-none">
                   <Label
@@ -321,7 +307,7 @@ export function SharePlaylistDialog({
               </div>
 
               {/* Update Settings Button */}
-              {shareData && hasSettingsChanged() && (
+              {shareData && hasSettingsChanged() ? (
                 <Button
                   type="button"
                   variant="secondary"
@@ -329,14 +315,12 @@ export function SharePlaylistDialog({
                   disabled={isLoadingShareData}
                   className="w-full"
                 >
-                  {isLoadingShareData
-                    ? 'Updating...'
-                    : 'Update Share Settings'}
+                  {isLoadingShareData ? 'Updating...' : 'Update Share Settings'}
                 </Button>
-              )}
+              ) : null}
 
               {/* Regenerate Link */}
-              {shareData && (
+              {shareData ? (
                 <div className="space-y-2 pt-2 border-t">
                   <Label>Regenerate Link</Label>
                   <p className="text-sm text-muted-foreground mb-2">
@@ -354,14 +338,12 @@ export function SharePlaylistDialog({
                         regenerateTokenMutation.isPending ? 'animate-spin' : ''
                       }`}
                     />
-                    {regenerateTokenMutation.isPending
-                      ? 'Regenerating...'
-                      : 'Regenerate Link'}
+                    {regenerateTokenMutation.isPending ? 'Regenerating...' : 'Regenerate Link'}
                   </Button>
                 </div>
-              )}
+              ) : null}
             </>
-          )}
+          ) : null}
         </DialogBody>
 
         <DialogFooter>

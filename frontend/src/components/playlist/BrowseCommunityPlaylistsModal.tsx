@@ -165,15 +165,15 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
           {/* Content */}
           <div className="flex-1 overflow-y-auto space-y-3">
           {/* Loading State */}
-          {isLoading && (
+          {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mb-4"></div>
               <p className="text-gray-400">Loading community playlists...</p>
             </div>
-          )}
+          ) : null}
 
           {/* Error State */}
-          {error && (
+          {error ? (
             <div className="text-center py-12">
               <p className="text-red-400 mb-4">Failed to load community playlists</p>
               <Button
@@ -183,19 +183,19 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
                 Try Again
               </Button>
             </div>
-          )}
+          ) : null}
 
           {/* Empty State */}
-          {!isLoading && !error && filteredPlaylists.length === 0 && (
+          {!isLoading && !error && filteredPlaylists.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               {searchQuery || selectedCategory !== 'all'
                 ? 'No playlists match your search'
                 : 'No community playlists available'}
             </div>
-          )}
+          ) : null}
 
           {/* Playlist Cards */}
-          {!isLoading && !error && filteredPlaylists.map((playlist, index) => (
+          {!isLoading && !error ? filteredPlaylists.map((playlist, index) => (
             <div
               key={`${playlist.downloadUrl}-${index}`}
               className="bg-gray-700 rounded-lg p-4 hover:bg-gray-650 transition-colors"
@@ -206,11 +206,11 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
                   <p className="text-sm text-gray-400 mb-2">
                     by {playlist.author} • {playlist.category}
                   </p>
-                  {playlist.description && (
+                  {playlist.description ? (
                     <p className="text-sm text-gray-300 line-clamp-2">
                       {playlist.description}
                     </p>
-                  )}
+                  ) : null}
                 </div>
                 <Button
                   onClick={() => handleDownload(playlist)}
@@ -226,18 +226,18 @@ export function BrowseCommunityPlaylistsModal({ isOpen, onClose }: BrowseCommuni
                 </Button>
               </div>
             </div>
-          ))}
+          )) : null}
           </div>
 
           {/* Footer Info */}
-          {!isLoading && !error && filteredPlaylists.length > 0 && (
+          {!isLoading && !error && filteredPlaylists.length > 0 ? (
             <div className="mt-4 pt-4 border-t border-gray-700">
               <p className="text-sm text-gray-400 text-center">
                 Showing {filteredPlaylists.length} playlist{filteredPlaylists.length !== 1 ? 's' : ''}
                 {selectedCategory !== 'all' && ` in ${selectedCategory}`}
               </p>
             </div>
-          )}
+          ) : null}
         </DialogBody>
       </DialogContent>
     </Dialog>

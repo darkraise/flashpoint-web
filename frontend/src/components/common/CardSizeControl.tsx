@@ -36,7 +36,7 @@ export function CardSizeControl() {
       </div>
 
       {/* Grid Size Controls */}
-      {viewMode === 'grid' && (
+      {viewMode === 'grid' ? (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Size:</span>
           <ToggleGroup type="single" value={cardSize} onValueChange={(value: string) => value && setCardSize(value as CardSize)}>
@@ -48,10 +48,10 @@ export function CardSizeControl() {
             ))}
           </ToggleGroup>
         </div>
-      )}
+      ) : null}
 
       {/* List Column Controls */}
-      {viewMode === 'list' && (
+      {viewMode === 'list' ? (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Columns:</span>
           <ToggleGroup type="single" value={listColumns.toString()} onValueChange={(value: string) => value && setListColumns(parseInt(value) as ListColumns)}>
@@ -63,7 +63,7 @@ export function CardSizeControl() {
             ))}
           </ToggleGroup>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -116,11 +116,11 @@ export function ActivityStats({ stats, timeRange = '24h' }: ActivityStatsProps) 
                   {stat.value}
                 </p>
                 <p className="text-muted-foreground text-xs mt-1 truncate">{stat.sublabel}</p>
-                {stat.trend !== undefined && (
+                {stat.trend !== undefined ? (
                   <div className={`text-xs mt-1 font-medium ${getTrendColor(stat.trend)}`}>
                     {getTrendIcon(stat.trend)} {Math.abs(stat.trend)}%
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

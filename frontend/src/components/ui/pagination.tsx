@@ -85,7 +85,7 @@ export function Pagination({
       className={cn('flex items-center justify-center gap-1', className)}
     >
       {/* First page button */}
-      {showFirstLast && (
+      {showFirstLast ? (
         <Button
           variant="outline"
           size="icon"
@@ -96,7 +96,7 @@ export function Pagination({
         >
           <ChevronsLeft size={16} />
         </Button>
-      )}
+      ) : null}
 
       {/* Previous page button */}
       <Button
@@ -160,7 +160,7 @@ export function Pagination({
       </Button>
 
       {/* Last page button */}
-      {showFirstLast && (
+      {showFirstLast ? (
         <Button
           variant="outline"
           size="icon"
@@ -171,7 +171,7 @@ export function Pagination({
         >
           <ChevronsRight size={16} />
         </Button>
-      )}
+      ) : null}
     </nav>
   );
 }
@@ -234,13 +234,13 @@ export function PaginationWithInfo({
 }: PaginationWithInfoProps) {
   return (
     <div className={cn('flex flex-col items-center gap-4', className)}>
-      {showInfo && (
+      {showInfo ? (
         <PaginationInfo
           currentPage={currentPage}
           pageSize={pageSize}
           totalItems={totalItems}
         />
-      )}
+      ) : null}
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}

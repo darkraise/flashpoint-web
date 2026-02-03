@@ -140,7 +140,7 @@ export function LoginForm() {
         </div>
 
         {/* Setup Complete Notice */}
-        {setupComplete && !error && (
+        {setupComplete && !error ? (
           <Alert
             className="mb-6 border-green-500/50 bg-green-500/10 text-green-900 dark:text-green-100 animate-slide-in-down"
             role="alert"
@@ -152,10 +152,10 @@ export function LoginForm() {
               Your administrator account has been created successfully. Please sign in to continue.
             </AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
         {/* Maintenance Mode Notice */}
-        {publicSettings?.app?.maintenanceMode && (
+        {publicSettings?.app?.maintenanceMode ? (
           <Alert
             className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100 animate-slide-in-down"
             role="alert"
@@ -168,9 +168,9 @@ export function LoginForm() {
                 'The system is currently under maintenance. Some features may be unavailable.'}
             </AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
-        {error && (
+        {error ? (
           <Alert
             variant="destructive"
             className="mb-6 animate-slide-in-down"
@@ -179,7 +179,7 @@ export function LoginForm() {
           >
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-        )}
+        ) : null}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="relative space-y-4">
@@ -243,7 +243,7 @@ export function LoginForm() {
                 )}
               </Button>
 
-              {authSettings?.guestAccessEnabled && (
+              {authSettings?.guestAccessEnabled ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -252,12 +252,12 @@ export function LoginForm() {
                 >
                   Browse as Guest
                 </Button>
-              )}
+              ) : null}
             </div>
           </form>
         </Form>
 
-        {authSettings?.userRegistrationEnabled && (
+        {authSettings?.userRegistrationEnabled ? (
           <div className="relative mt-6 pt-4 border-t border-border/50">
             <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{' '}
@@ -269,7 +269,7 @@ export function LoginForm() {
               </Link>
             </p>
           </div>
-        )}
+        ) : null}
         </div>
       </div>
     </div>

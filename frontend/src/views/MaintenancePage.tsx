@@ -78,11 +78,11 @@ export function MaintenancePage() {
         </div>
 
         {/* User info */}
-        {user && (
+        {user ? (
           <div className="text-sm text-muted-foreground">
             Logged in as: <span className="font-medium">{user.username}</span>
           </div>
-        )}
+        ) : null}
 
         {/* Actions */}
         <div className="space-y-3">
@@ -94,16 +94,16 @@ export function MaintenancePage() {
             Refresh Page
           </Button>
 
-          {!user && (
+          {!user ? (
             <Button
               className="w-full"
               onClick={() => navigate('/login')}
             >
               Login
             </Button>
-          )}
+          ) : null}
 
-          {user && (
+          {user ? (
             <Button
               variant="ghost"
               className="w-full"
@@ -111,7 +111,7 @@ export function MaintenancePage() {
             >
               Logout
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

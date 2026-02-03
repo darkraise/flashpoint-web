@@ -302,7 +302,7 @@ export function RufflePlayer({
         className="ruffle-player-wrapper"
       />
 
-      {isLoading && (
+      {isLoading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
@@ -310,9 +310,9 @@ export function RufflePlayer({
             <p className="text-xs text-gray-400 mt-2">Powered by Ruffle</p>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {error && (
+      {error ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-10">
           <div className="text-center max-w-md p-6">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
@@ -331,7 +331,7 @@ export function RufflePlayer({
             </p>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

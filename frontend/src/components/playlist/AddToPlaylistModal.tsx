@@ -154,11 +154,11 @@ export function AddToPlaylistModal({
                           <p className="font-medium text-sm truncate">
                             {playlist.title}
                           </p>
-                          {playlist.description && (
+                          {playlist.description ? (
                             <p className="text-xs text-muted-foreground line-clamp-1">
                               {playlist.description}
                             </p>
-                          )}
+                          ) : null}
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
                           </p>

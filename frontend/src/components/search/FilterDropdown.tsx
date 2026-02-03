@@ -68,7 +68,7 @@ export function FilterDropdown({
         <div className="sticky top-0 bg-popover border-b p-2 z-10">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">{label}</span>
-            {selectedCount > 0 && (
+            {selectedCount > 0 ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -78,7 +78,7 @@ export function FilterDropdown({
               >
                 Clear All
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
 

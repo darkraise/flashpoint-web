@@ -86,7 +86,7 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Error details */}
-            {this.state.error && (
+            {this.state.error ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h3 className="text-sm font-semibold text-destructive mb-2">Error Details:</h3>
                 <p className="text-sm text-muted-foreground font-mono">
@@ -94,31 +94,31 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
                 </p>
 
                 {/* Common playlist errors */}
-                {this.state.error.message.includes('404') && (
+                {this.state.error.message.includes('404') ? (
                   <p className="text-sm text-muted-foreground mt-2">
                     This playlist may have been deleted or you don't have permission to access it.
                   </p>
-                )}
-                {this.state.error.message.includes('403') && (
+                ) : null}
+                {this.state.error.message.includes('403') ? (
                   <p className="text-sm text-muted-foreground mt-2">
                     You don't have permission to access this playlist.
                   </p>
-                )}
+                ) : null}
               </div>
-            )}
+            ) : null}
 
             {/* Retry count */}
-            {this.state.retryCount > 0 && (
+            {this.state.retryCount > 0 ? (
               <div className="mb-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <p className="text-sm text-blue-400">
                   Attempted {this.state.retryCount} {this.state.retryCount === 1 ? 'retry' : 'retries'}
                 </p>
               </div>
-            )}
+            ) : null}
 
             {/* Action buttons */}
             <div className="flex gap-3">
-              {canRetry && (
+              {canRetry ? (
                 <Button
                   variant="default"
                   onClick={this.handleRetry}
@@ -126,7 +126,7 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
                   <RefreshCw size={18} className="mr-2" />
                   Try Again
                 </Button>
-              )}
+              ) : null}
               <Button
                 variant="secondary"
                 onClick={this.handleBack}

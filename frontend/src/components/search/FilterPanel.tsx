@@ -150,7 +150,7 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
       {/* All Filters */}
       <div className="space-y-3">
         {/* With Platform Filter */}
-        {showPlatformFilter && (
+        {showPlatformFilter ? (
           <>
             {/* Desktop Layout: Single Row */}
             <div className="hidden md:flex items-center gap-3 flex-wrap">
@@ -164,10 +164,10 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
               {renderFilters(true)}
             </div>
           </>
-        )}
+        ) : null}
 
         {/* Filter Popover - Desktop and Mobile (No platform filter) */}
-        {!showPlatformFilter && (
+        {!showPlatformFilter ? (
           <>
             {/* Desktop Layout: Single Row */}
             <div className="hidden md:flex items-center gap-3 flex-wrap">
@@ -181,7 +181,7 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
               {renderFilters(true)}
             </div>
           </>
-        )}
+        ) : null}
 
         {/* Filter Badges - Data-driven rendering */}
         <div className="space-y-2">

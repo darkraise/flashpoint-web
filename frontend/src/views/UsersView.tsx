@@ -46,22 +46,22 @@ export function UsersView() {
 
       <UserTable onEdit={handleEdit} onChangePassword={handleChangePassword} />
 
-      {showUserForm && (
+      {showUserForm ? (
         <UserForm
           user={editingUser}
           onClose={handleCloseForm}
           onSuccess={handleSuccess}
         />
-      )}
+      ) : null}
 
-      {changingPasswordUser && (
+      {changingPasswordUser ? (
         <ChangePasswordDialog
           isOpen={!!changingPasswordUser}
           user={changingPasswordUser}
           onClose={() => setChangingPasswordUser(null)}
           onSuccess={handleSuccess}
         />
-      )}
+      ) : null}
     </div>
   );
 }

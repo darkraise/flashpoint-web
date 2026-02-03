@@ -25,12 +25,12 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
             <span className="text-muted-foreground text-sm">Percentage:</span>
             <span className="font-semibold text-sm">{percentage.toFixed(1)}%</span>
           </div>
-          {resourceData.topAction && (
+          {resourceData.topAction ? (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">Top Action:</span>
               <span className="font-semibold text-sm">{resourceData.topAction}</span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     );
@@ -69,7 +69,7 @@ export function ResourceDistributionChart({ autoRefresh = false }: ResourceDistr
     const { payload } = props;
     return (
       <div className="flex flex-wrap gap-2 justify-center mt-4 max-h-24 overflow-y-auto">
-        {payload?.map((entry, index: number) => (
+        {payload?.map((entry, index: number) =>
           entry.value ? (
             <div key={`legend-${index}`} className="flex items-center gap-2 text-xs">
               <div
@@ -79,7 +79,7 @@ export function ResourceDistributionChart({ autoRefresh = false }: ResourceDistr
               <span className="text-muted-foreground">{entry.value}</span>
             </div>
           ) : null
-        ))}
+        )}
       </div>
     );
   };

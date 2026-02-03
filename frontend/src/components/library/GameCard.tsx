@@ -76,9 +76,9 @@ const GameCardComponent = function GameCard({
         {imageUrl && !imageError ? (
           <>
             {/* Blur placeholder while loading */}
-            {!imageLoaded && (
+            {!imageLoaded ? (
               <div className="absolute inset-0 bg-gradient-to-br from-muted to-accent animate-pulse z-0" />
-            )}
+            ) : null}
 
             {/* Game Image with hover scale effect */}
             <img
@@ -105,7 +105,7 @@ const GameCardComponent = function GameCard({
         {/* Glassmorphism Action Bar - slides up on hover (desktop), always visible on mobile */}
         <div className="absolute bottom-0 left-0 right-0 z-20 backdrop-blur-lg bg-black/30 border-t border-white/10 flex items-center justify-start gap-1.5 px-3 py-2 translate-y-0 md:translate-y-full md:group-hover:translate-y-0 motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out">
           {/* Favorite Button - Show when not favorited */}
-          {showFavoriteButton && !isFavorited && (
+          {showFavoriteButton && !isFavorited ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
@@ -125,10 +125,10 @@ const GameCardComponent = function GameCard({
               </TooltipTrigger>
               <TooltipContent>Add to Favorites</TooltipContent>
             </Tooltip>
-          )}
+          ) : null}
 
           {/* Remove from Favorites Button - Show when favorited */}
-          {showRemoveButton && isFavorited && (
+          {showRemoveButton && isFavorited ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
@@ -146,10 +146,10 @@ const GameCardComponent = function GameCard({
               </TooltipTrigger>
               <TooltipContent>Remove from Favorites</TooltipContent>
             </Tooltip>
-          )}
+          ) : null}
 
           {/* Add to Playlist Button */}
-          {showAddToPlaylistButton && (
+          {showAddToPlaylistButton ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -172,10 +172,10 @@ const GameCardComponent = function GameCard({
               </TooltipTrigger>
               <TooltipContent>Add to Playlist</TooltipContent>
             </Tooltip>
-          )}
+          ) : null}
 
           {/* Play Button */}
-          {isPlayable && (
+          {isPlayable ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -195,7 +195,7 @@ const GameCardComponent = function GameCard({
               </TooltipTrigger>
               <TooltipContent>Play Game</TooltipContent>
             </Tooltip>
-          )}
+          ) : null}
         </div>
       </CardContent>
 
@@ -206,7 +206,7 @@ const GameCardComponent = function GameCard({
         {/* Platform Badge and Favorite Indicator Row - Fixed height */}
         <div className="flex items-center justify-between w-full h-6 min-h-[24px]">
           {/* Platform Badge */}
-          {game.platformName && (
+          {game.platformName ? (
             <Badge
               className="backdrop-blur-md bg-primary/10 border border-primary/20 h-6 px-2 text-xs font-normal text-primary"
               variant="outline"
@@ -221,10 +221,10 @@ const GameCardComponent = function GameCard({
               />
               <span className="truncate">{game.platformName}</span>
             </Badge>
-          )}
+          ) : null}
 
           {/* Favorite Indicator (non-interactive) */}
-          {showFavoriteIndicator && isFavorited && !isFavoritePage && (
+          {showFavoriteIndicator && isFavorited && !isFavoritePage ? (
             <div
               className="flex items-center gap-1 text-red-500"
               onClick={(e) => e.stopPropagation()}
@@ -232,7 +232,7 @@ const GameCardComponent = function GameCard({
               <Heart size={16} fill="currentColor" aria-hidden="true" />
               {/* <span className="text-xs font-medium">Favorited</span> */}
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Title - Fixed 2-line height */}
@@ -245,11 +245,11 @@ const GameCardComponent = function GameCard({
 
         {/* Developer name - Fixed height container */}
         <div className="h-5 min-h-[20px] w-full">
-          {game.developer && (
+          {game.developer ? (
             <p className="text-sm text-muted-foreground truncate w-full" title={game.developer}>
               by {game.developer}
             </p>
-          )}
+          ) : null}
         </div>
       </CardFooter>
 

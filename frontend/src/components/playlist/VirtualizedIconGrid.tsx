@@ -179,11 +179,11 @@ const IconButton = memo(function IconButton({
         )}
       />
 
-      {isSelected && (
+      {isSelected ? (
         <div className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center animate-in zoom-in-50 duration-200">
           <Check size={CHECK_SIZE} className="text-primary-foreground" />
         </div>
-      )}
+      ) : null}
     </button>
   );
 });

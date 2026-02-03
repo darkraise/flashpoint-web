@@ -28,12 +28,12 @@ export function PlatformIcon({ platformName, size = 20, className = '' }: Platfo
         className="relative inline-flex items-center justify-center flex-shrink-0"
         style={{ width: size, height: size }}
       >
-        {imageLoading && (
+        {imageLoading ? (
           <div
             className="absolute inset-0 bg-muted rounded animate-pulse"
             style={{ width: size, height: size }}
           />
-        )}
+        ) : null}
         <img
           src={logoUrl}
           alt={`${platformName} logo`}

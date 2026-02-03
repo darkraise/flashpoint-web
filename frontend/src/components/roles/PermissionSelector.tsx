@@ -113,21 +113,21 @@ export function PermissionSelector({
         </DialogHeader>
 
         <DialogBody>
-          {!permissions && (
+          {!permissions ? (
             <div className="text-center py-8 text-muted-foreground">
               Loading permissions...
             </div>
-          )}
+          ) : null}
 
-          {updatePermissionsMutation.isError && (
+          {updatePermissionsMutation.isError ? (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 {getErrorMessage(updatePermissionsMutation.error) || "Failed to update permissions"}
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
-          {permissions && (
+          {permissions ? (
             <>
               <div className="space-y-6">
                 {Object.entries(groupedPermissions).map(([resource, perms]) => (
@@ -166,7 +166,7 @@ export function PermissionSelector({
                 ))}
               </div>
             </>
-          )}
+          ) : null}
         </DialogBody>
 
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-4 sm:gap-0 items-center">

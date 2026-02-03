@@ -73,7 +73,7 @@ export function FavoritesView() {
         {/* Controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Sort Dropdown */}
-          {games.length > 0 && (
+          {games.length > 0 ? (
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Label htmlFor="sort-select" className="text-sm whitespace-nowrap hidden sm:inline">
                 Sort by:
@@ -110,7 +110,7 @@ export function FavoritesView() {
                 </SelectContent>
               </Select>
             </div>
-          )}
+          ) : null}
 
           {/* View Mode Controls */}
           <CardSizeControl />

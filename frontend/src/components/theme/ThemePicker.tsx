@@ -89,9 +89,9 @@ export function ThemePicker() {
                   title={colorPalette[color].label}
                   aria-label={`Select ${colorPalette[color].label} theme`}
                 >
-                  {isSelected && (
+                  {isSelected ? (
                     <Check className="absolute inset-0 m-auto h-5 w-5 text-white drop-shadow-lg" />
-                  )}
+                  ) : null}
                 </button>
               );
             })}

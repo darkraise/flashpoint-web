@@ -98,34 +98,34 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
             </div>
 
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              {game.developer && (
+              {game.developer ? (
                 <span className="truncate" title={game.developer}>
                   {game.developer}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex-shrink-0 flex items-center gap-2">
             {/* Favorite Indicator (non-clickable, always visible if favorited) */}
-            {showFavoriteIndicator && isFavorited && !isFavoritePage && (
+            {showFavoriteIndicator && isFavorited && !isFavoritePage ? (
               <div className="h-9 w-9 flex items-center justify-center">
                 <Heart size={18} fill="currentColor" className="text-primary" />
               </div>
-            )}
+            ) : null}
 
             {/* Remove from Favorites Button (Favorites page only) */}
-            {showRemoveButton && isFavoritePage && (
+            {showRemoveButton && isFavoritePage ? (
               <RemoveFavoriteButton
                 gameId={game.id}
                 size="sm"
                 className="h-9 w-9 p-0"
               />
-            )}
+            ) : null}
 
             {/* Add to Favorites Button (other pages, when not favorited) */}
-            {showFavoriteButton && !isFavoritePage && !isFavorited && (
+            {showFavoriteButton && !isFavoritePage && !isFavorited ? (
               <FavoriteButton
                 gameId={game.id}
                 isFavorited={false}
@@ -134,9 +134,9 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
                 className="h-9 w-9 p-0"
                 showOnHoverOnly={false}
               />
-            )}
+            ) : null}
 
-            {showAddToPlaylistButton && (
+            {showAddToPlaylistButton ? (
               <Button
                 size="sm"
                 variant="ghost"
@@ -155,9 +155,9 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
               >
                 <ListPlus size={18} />
               </Button>
-            )}
+            ) : null}
 
-            {isPlayable && (
+            {isPlayable ? (
               <Button
                 size="sm"
                 asChild
@@ -170,7 +170,7 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
                   <Play size={18} />
                 </Link>
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </CardContent>

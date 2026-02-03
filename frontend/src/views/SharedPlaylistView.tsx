@@ -153,7 +153,7 @@ export function SharedPlaylistView() {
       </Alert>
 
       {/* Back Button (if authenticated) */}
-      {isAuthenticated && (
+      {isAuthenticated ? (
         <Link
           to="/playlists"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -161,13 +161,13 @@ export function SharedPlaylistView() {
           <ArrowLeft size={20} />
           Back to my playlists
         </Link>
-      )}
+      ) : null}
 
       {/* Playlist Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex gap-4">
           {/* Playlist Icon */}
-          {playlist.icon && (
+          {playlist.icon ? (
             <div className="flex-shrink-0">
               <div className="p-4 bg-primary/20 rounded-xl border-2 border-primary/30">
                 <PlaylistIcon
@@ -178,7 +178,7 @@ export function SharedPlaylistView() {
                 />
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Playlist Info */}
           <div className="flex-1">
@@ -186,18 +186,18 @@ export function SharedPlaylistView() {
               <h1 className="text-3xl font-bold">{playlist.title}</h1>
               <Badge variant="secondary">Shared</Badge>
             </div>
-            {playlist.description && (
+            {playlist.description ? (
               <p className="text-muted-foreground">{playlist.description}</p>
-            )}
+            ) : null}
             <div className="flex items-center gap-4 mt-2">
               <p className="text-sm text-muted-foreground">
                 {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
               </p>
-              {playlist.ownerUsername && (
+              {playlist.ownerUsername ? (
                 <p className="text-sm text-muted-foreground">
                   Created by <span className="font-medium">{playlist.ownerUsername}</span>
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -205,14 +205,14 @@ export function SharedPlaylistView() {
         {/* Actions */}
         <div className="flex items-center gap-2">
           <ViewOptions />
-          {isAuthenticated && (
+          {isAuthenticated ? (
             <Button
               onClick={handleClone}
               disabled={isCloning || clonePlaylist.isPending}
             >
               {isCloning || clonePlaylist.isPending ? 'Cloning...' : 'Clone to My Playlists'}
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 

@@ -120,17 +120,17 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
         </DialogHeader>
 
         <DialogBody>
-          {mutation.isError && (
+          {mutation.isError ? (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 {getErrorMessage(mutation.error) || 'Operation failed'}
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {!isEditMode && (
+              {!isEditMode ? (
                 <FormField
                   control={form.control}
                   name="username"
@@ -147,9 +147,9 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                     </FormItem>
                   )}
                 />
-              )}
+              ) : null}
 
-              {isEditMode && user && (
+              {isEditMode && user ? (
                 <div className="space-y-2">
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Username
@@ -161,7 +161,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                   />
                   <p className="text-xs text-muted-foreground mt-1">Username cannot be changed</p>
                 </div>
-              )}
+              ) : null}
 
               <FormField
                 control={form.control}
@@ -181,7 +181,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                 )}
               />
 
-              {!isEditMode && (
+              {!isEditMode ? (
                 <FormField
                   control={form.control}
                   name="password"
@@ -199,7 +199,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                     </FormItem>
                   )}
                 />
-              )}
+              ) : null}
 
               <FormField
                 control={form.control}

@@ -49,7 +49,7 @@ export function FilterChips({ chips, onRemove, onClearAll, className }: FilterCh
         </Badge>
       ))}
 
-      {chips.length > 1 && onClearAll && (
+      {chips.length > 1 && onClearAll ? (
         <Button
           variant="ghost"
           size="sm"
@@ -58,7 +58,7 @@ export function FilterChips({ chips, onRemove, onClearAll, className }: FilterCh
         >
           Clear All
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -136,20 +136,20 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
             />
 
             {/* Validation Error */}
-            {validationError && (
+            {validationError ? (
               <div className="flex items-center gap-2 text-sm text-red-500">
                 <AlertCircle size={16} />
                 <span>{validationError}</span>
               </div>
-            )}
+            ) : null}
 
             {/* Human-readable description */}
-            {!validationError && cronSchedule && (
+            {!validationError && cronSchedule ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Info size={16} />
                 <span>Will run: {cronToReadable(cronSchedule)}</span>
               </div>
-            )}
+            ) : null}
 
             {/* Quick preset buttons */}
             <div className="flex flex-wrap gap-2 mt-2">

@@ -74,9 +74,9 @@ export function DatePicker({
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {displayDate || placeholder}
-            {required && !date && (
+            {required && !date ? (
               <span className="ml-1 text-destructive">*</span>
-            )}
+            ) : null}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -90,7 +90,7 @@ export function DatePicker({
         </PopoverContent>
       </Popover>
 
-      {clearable && (
+      {clearable ? (
         <Button
           variant="outline"
           size="icon"
@@ -101,7 +101,7 @@ export function DatePicker({
         >
           <X className="h-4 w-4" />
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -98,7 +98,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
       exit="exit"
       className="space-y-6"
     >
-      {isAdmin && appSettings && (
+      {isAdmin && appSettings ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <Palette size={24} className="text-primary" />
@@ -248,9 +248,9 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {isAdmin && (
+      {isAdmin ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <Globe size={24} className="text-primary" />
@@ -280,9 +280,9 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                 placeholder="e.g., play.example.com"
                 disabled={addDomainMutation.isPending}
               />
-              {domainError && (
+              {domainError ? (
                 <p className="text-xs text-destructive mt-1">{domainError}</p>
-              )}
+              ) : null}
             </div>
             <Button
               onClick={handleAddDomain}
@@ -314,11 +314,11 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                     <span className="text-sm font-mono truncate">
                       {domain.hostname}
                     </span>
-                    {domain.isDefault && (
+                    {domain.isDefault ? (
                       <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
                         default
                       </span>
-                    )}
+                    ) : null}
                   </label>
                   <Button
                     variant="ghost"
@@ -340,7 +340,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
             </p>
           )}
         </div>
-      )}
+      ) : null}
     </motion.div>
   );
 

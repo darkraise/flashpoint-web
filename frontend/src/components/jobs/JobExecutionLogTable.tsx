@@ -64,14 +64,14 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
             <>
               <tr key={log.id} className="border-t hover:bg-accent/50">
                 <td className="p-3">
-                  {log.errorDetails && (
+                  {log.errorDetails ? (
                     <button
                       onClick={() => toggleRow(log.id)}
                       className="hover:bg-accent p-1 rounded"
                     >
                       {expandedRows.has(log.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </button>
-                  )}
+                  ) : null}
                 </td>
                 <td className="p-3">{getStatusBadge(log.status)}</td>
                 <td className="p-3 text-sm">
@@ -81,7 +81,7 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
                 <td className="p-3 text-sm">{log.triggeredBy}</td>
                 <td className="p-3 text-sm text-muted-foreground">{log.message || '-'}</td>
               </tr>
-              {expandedRows.has(log.id) && log.errorDetails && (
+              {expandedRows.has(log.id) && log.errorDetails ? (
                 <tr className="border-t bg-red-950/20">
                   <td colSpan={6} className="p-3">
                     <div className="text-xs font-mono bg-red-950/50 p-3 rounded">
@@ -90,7 +90,7 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
                     </div>
                   </td>
                 </tr>
-              )}
+              ) : null}
             </>
           ))}
         </tbody>

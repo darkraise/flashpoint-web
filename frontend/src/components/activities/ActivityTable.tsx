@@ -93,9 +93,9 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
       return (
         <div className="text-muted-foreground">
           {resource || '-'}
-          {resourceId && (
+          {resourceId ? (
             <span className="text-muted-foreground/60"> #{resourceId}</span>
-          )}
+          ) : null}
         </div>
       );
     },
@@ -232,14 +232,14 @@ function ActivityTableComponent() {
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
               {showFilters ? 'Hide' : 'Show'} Filters
-              {!showFilters && activeFilterCount > 0 && (
+              {!showFilters && activeFilterCount > 0 ? (
                 <Badge
                   variant="default"
                   className="h-5 min-w-[20px] px-1.5 text-xs font-semibold"
                 >
                   {activeFilterCount}
                 </Badge>
-              )}
+              ) : null}
               <ChevronDown
                 className={`h-4 w-4 transition-transform ${
                   showFilters ? 'rotate-180' : ''
@@ -247,11 +247,11 @@ function ActivityTableComponent() {
               />
             </Button>
           </CollapsibleTrigger>
-          {hasActiveFilters && (
+          {hasActiveFilters ? (
             <Button variant="ghost" size="sm" onClick={handleClearFilters}>
               Clear Filters
             </Button>
-          )}
+          ) : null}
         </div>
         <CollapsibleContent className="mt-4">
           <div className="rounded-lg border bg-card p-4 space-y-4">
@@ -317,12 +317,12 @@ function ActivityTableComponent() {
                 </div>
               </div>
 
-              {filterState.dateRangeError && (
+              {filterState.dateRangeError ? (
                 <div className="text-sm text-destructive flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   {filterState.dateRangeError}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </CollapsibleContent>

@@ -189,14 +189,14 @@ function App() {
             <Route path="/error/500" element={<ServerErrorView />} />
             <Route path="/error/network" element={<NetworkErrorView />} />
             <Route path="*" element={<NotFoundView />} />
-            {import.meta.env.DEV && (
+            {import.meta.env.DEV ? (
               <>
                 <Route path="/_dev/404" element={<NotFoundView />} />
                 <Route path="/_dev/500" element={<ServerErrorView />} />
                 <Route path="/_dev/network" element={<NetworkErrorView />} />
                 <Route path="/_dev/403" element={<UnauthorizedView />} />
               </>
-            )}
+            ) : null}
           </Route>
 
           {/* ==================== STANDALONE ==================== */}
