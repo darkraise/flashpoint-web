@@ -1,6 +1,5 @@
 import { DatabaseService } from './DatabaseService';
 import { logger } from '../utils/logger';
-import { CachedSystemSettingsService } from './CachedSystemSettingsService';
 import { config } from '../config';
 
 export interface GameSearchQuery {
@@ -72,18 +71,11 @@ export interface PaginatedResult<T> {
 }
 
 export class GameService {
-  private systemSettings: CachedSystemSettingsService;
-
-  constructor() {
-    this.systemSettings = new CachedSystemSettingsService();
-  }
-
   /**
    * Check if running Infinity edition (has logoPath/screenshotPath columns)
    */
   private isInfinityEdition(): boolean {
-    const edition = this.systemSettings.get('metadata.flashpoint_edition');
-    return (typeof edition === 'string' ? edition : config.flashpointEdition) !== 'ultimate';
+    return config.flashpointEdition !== 'ultimate';
   }
 
   /**

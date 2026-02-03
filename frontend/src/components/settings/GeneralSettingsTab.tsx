@@ -1,11 +1,12 @@
-import { Shield, Calendar, HardDrive } from "lucide-react";
+import { Shield, Calendar } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { motion, Variants } from "framer-motion";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { authSettingsApi, ruffleApi, usersApi, systemSettingsApi } from "@/lib/api";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { authSettingsApi, ruffleApi, usersApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useDialog } from "@/contexts/DialogContext";
+import { usePublicSettings } from "@/hooks/usePublicSettings";
 import {
   Select,
   SelectContent,
@@ -23,31 +24,10 @@ export function GeneralSettingsTab({
 }: GeneralSettingsTabProps) {
   const { user } = useAuthStore();
   const { showToast } = useDialog();
-  const queryClient = useQueryClient();
   const isAdmin = user?.permissions.includes("settings.update");
 
-  // Fetch metadata settings (for edition)
-  const { data: metadataSettings } = useQuery({
-    queryKey: ["systemSettings", "metadata"],
-    queryFn: () => systemSettingsApi.getCategory("metadata"),
-    staleTime: 5 * 60 * 1000,
-    enabled: isAdmin,
-  });
-
-  // Update edition setting mutation
-  const updateEdition = useMutation({
-    mutationFn: (edition: string) =>
-      systemSettingsApi.updateSetting("metadata", "flashpoint_edition", edition),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["systemSettings", "metadata"] });
-      showToast("Flashpoint edition updated", "success");
-    },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.error?.message || "Failed to update edition";
-      showToast(message, "error");
-    },
-  });
+  // Public settings (cached, no extra request) for edition/version
+  const { data: publicSettings } = usePublicSettings();
 
   // Fetch auth settings
   const { data: authSettings, refetch: refetchAuthSettings } = useQuery({
@@ -115,8 +95,16 @@ export function GeneralSettingsTab({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Flashpoint Version:</span>
             <span className="font-medium">
-              {metadataSettings?.flashpointVersion
-                ? String(metadataSettings.flashpointVersion)
+              {publicSettings?.metadata?.flashpointVersion
+                ? String(publicSettings.metadata.flashpointVersion)
+                : "Unknown"}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Flashpoint Edition:</span>
+            <span className="font-medium capitalize">
+              {publicSettings?.metadata?.flashpointEdition
+                ? String(publicSettings.metadata.flashpointEdition)
                 : "Unknown"}
             </span>
           </div>
@@ -134,51 +122,6 @@ export function GeneralSettingsTab({
           </div>
         </div>
       </div>
-
-      {/* Flashpoint Edition (Admin Only) */}
-      {isAdmin && metadataSettings && (
-        <div className="bg-card rounded-lg p-6 border border-border shadow-md">
-          <div className="flex items-center gap-2 mb-4">
-            <HardDrive size={24} className="text-primary" />
-            <h2 className="text-xl font-semibold">Flashpoint Edition</h2>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="flashpoint-edition" className="text-base">
-              Edition
-            </Label>
-            <p className="text-sm text-muted-foreground mb-2">
-              Select the Flashpoint edition you are running. This affects
-              metadata sync availability and game data schema.
-            </p>
-            <Select
-              value={
-                (metadataSettings.flashpointEdition as string) || "infinity"
-              }
-              onValueChange={(value: string) => {
-                updateEdition.mutate(value);
-              }}
-              disabled={updateEdition.isPending}
-            >
-              <SelectTrigger id="flashpoint-edition" className="w-full">
-                <SelectValue placeholder="Select edition" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="infinity">
-                  Infinity
-                </SelectItem>
-                <SelectItem value="ultimate">
-                  Ultimate
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground mt-2">
-              {(metadataSettings.flashpointEdition as string) === "ultimate"
-                ? "Ultimate edition: Metadata sync is not available. Game images are served from local files only."
-                : "Infinity edition: Metadata sync is available. Game table includes logo and screenshot paths."}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Date & Time Format Settings - Available to all authenticated users */}
       {userSettings && (

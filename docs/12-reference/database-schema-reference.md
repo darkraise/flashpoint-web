@@ -215,6 +215,14 @@ Global key-value settings.
 
 **Categories:** auth, app, metadata, features, storage, rate_limit, jobs
 
+**Metadata keys:**
+- `metadata.auto_sync_enabled` — Enable automatic metadata sync on startup
+- `metadata.sync_interval_minutes` — Metadata sync interval
+- `metadata.sync_tags` — Include tags in sync
+- `metadata.sync_platforms` — Include platforms in sync
+
+**Note:** Flashpoint edition and version are **not** stored in `system_settings`. They are auto-detected from `version.txt` at startup and held in the backend `config` object. The frontend receives them via the `/api/settings/public` endpoint.
+
 ### login_attempts
 
 Login attempt tracking for security.

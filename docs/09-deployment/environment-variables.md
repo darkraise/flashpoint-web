@@ -18,7 +18,7 @@ Location: `backend/.env`
 
 | Variable | Description |
 |----------|-------------|
-| `FLASHPOINT_PATH` | Root Flashpoint directory. All other paths auto-derived. |
+| `FLASHPOINT_PATH` | Root Flashpoint directory. All other paths auto-derived. Edition (Infinity/Ultimate) auto-detected from `version.txt`. |
 
 **Game Service Host:**
 

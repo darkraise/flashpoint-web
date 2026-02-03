@@ -62,6 +62,13 @@ router.get('/public', async (req: Request, res: Response) => {
     }
     publicSettings.app.homeRecentHours = require('../config').config.homeRecentHours;
 
+    // Inject edition/version from config (auto-detected from version.txt, not stored in DB)
+    if (!publicSettings.metadata) {
+      publicSettings.metadata = {};
+    }
+    publicSettings.metadata.flashpointEdition = require('../config').config.flashpointEdition;
+    publicSettings.metadata.flashpointVersion = require('../config').config.flashpointVersionString;
+
     res.json(publicSettings);
   } catch (error) {
     logger.error('Failed to get public settings:', error);

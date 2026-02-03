@@ -44,7 +44,6 @@ export interface GameSettings {
  * Metadata and content sync settings
  */
 export interface MetadataSettings {
-  flashpointEdition: 'infinity' | 'ultimate';
   enableExtendedMetadata: boolean;
   cacheImages: boolean;
   imageCacheExpiryDays: number;
@@ -88,6 +87,7 @@ export interface PublicSettings {
   app: Pick<AppSettings, 'siteName' | 'maintenanceMode' | 'maintenanceMessage' | 'homeRecentHours'>;
   auth: Pick<AuthSettings, 'guestAccessEnabled' | 'userRegistrationEnabled'>;
   features?: Partial<FeatureSettings>;
+  metadata?: { flashpointEdition?: string; flashpointVersion?: string };
 }
 
 /**

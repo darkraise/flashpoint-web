@@ -3,7 +3,7 @@ import path from 'path';
 import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
-import { CachedSystemSettingsService } from './CachedSystemSettingsService';
+
 
 export interface GameMetadataSource {
   name: string;
@@ -38,20 +38,17 @@ export interface MetadataUpdateInfo {
 
 export class MetadataUpdateService {
   private preferencesPath: string;
-  private systemSettings: CachedSystemSettingsService;
 
   constructor() {
     // Preferences file is in the Flashpoint root directory
     this.preferencesPath = path.join(config.flashpointPath, 'preferences.json');
-    this.systemSettings = new CachedSystemSettingsService();
   }
 
   /**
-   * Get the current Flashpoint edition from system settings
+   * Get the current Flashpoint edition from config (auto-detected from version.txt)
    */
   getEdition(): string {
-    const edition = this.systemSettings.get('metadata.flashpoint_edition');
-    return (typeof edition === 'string' ? edition : config.flashpointEdition) || 'infinity';
+    return config.flashpointEdition;
   }
 
   /**

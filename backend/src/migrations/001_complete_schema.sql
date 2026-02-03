@@ -422,7 +422,6 @@ VALUES
 -- Metadata Settings
 INSERT OR IGNORE INTO system_settings (key, value, data_type, category, description, is_public, default_value, validation_schema)
 VALUES
-  ('metadata.flashpoint_edition', 'infinity', 'string', 'metadata', 'Flashpoint edition (infinity or ultimate). Infinity supports metadata sync and has logoPath/screenshotPath. Ultimate does not.', 1, 'infinity', '{"type":"string","enum":["infinity","ultimate"]}'),
   ('metadata.auto_sync_enabled', '0', 'boolean', 'metadata', 'Automatically sync metadata on startup', 0, '0', '{"type":"boolean"}'),
   ('metadata.sync_interval_minutes', '60', 'integer', 'metadata', 'Metadata sync interval in minutes', 0, '60', '{"type":"integer","minimum":1,"maximum":1440}'),
   ('metadata.sync_tags', '1', 'boolean', 'metadata', 'Include tags in metadata sync', 0, '1', '{"type":"boolean"}'),

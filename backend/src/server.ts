@@ -89,28 +89,11 @@ async function startServer() {
     process.exit(1);
   }
 
-  // Sync Flashpoint edition from env var to system settings
-  // The env var always takes precedence on startup to ensure Docker deployments
-  // with FLASHPOINT_EDITION=ultimate work even if the DB was seeded with 'infinity'
-  try {
-    const systemSettings = new CachedSystemSettingsService();
-    const currentEdition = systemSettings.get('metadata.flashpoint_edition');
-    if (currentEdition === null) {
-      // Setting doesn't exist yet (existing DB before this feature) - insert it
-      UserDatabaseService.run(
-        `INSERT OR IGNORE INTO system_settings (key, value, data_type, category, description, is_public, default_value, validation_schema)
-         VALUES ('metadata.flashpoint_edition', ?, 'string', 'metadata', 'Flashpoint edition (infinity or ultimate)', 1, 'infinity', '{"type":"string","enum":["infinity","ultimate"]}')`,
-        [config.flashpointEdition]
-      );
-      logger.info(`[Edition] Initialized flashpoint_edition setting to: ${config.flashpointEdition}`);
-    } else if (currentEdition !== config.flashpointEdition) {
-      // Env var differs from DB value - update to match env var
-      systemSettings.set('metadata.flashpoint_edition', config.flashpointEdition);
-      logger.info(`[Edition] Updated flashpoint_edition from '${currentEdition}' to '${config.flashpointEdition}' (from env var)`);
-    }
-    logger.info(`[Edition] Flashpoint edition: ${config.flashpointEdition}`);
-  } catch (error) {
-    logger.warn('[Edition] Failed to sync edition setting:', error);
+  // Log auto-detected Flashpoint edition and version
+  // Edition is detected from {FLASHPOINT_PATH}/version.txt on startup (see config.ts)
+  logger.info(`[Edition] Flashpoint edition: ${config.flashpointEdition} (auto-detected)`);
+  if (config.flashpointVersionString) {
+    logger.info(`[Edition] Flashpoint version: ${config.flashpointVersionString}`);
   }
 
   // Pre-warm game search cache for instant first page load

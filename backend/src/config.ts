@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 
@@ -42,6 +44,41 @@ const getFlashpointPath = (): string => {
 };
 
 const flashpointPath = getFlashpointPath();
+
+/**
+ * Parse version.txt from Flashpoint installation directory.
+ * Examples:
+ *   "Flashpoint 14.0.3 Infinity - Kingfisher"
+ *   "Flashpoint 14 Ultimate - Kingfisher"
+ *
+ * Returns { edition, versionString } or defaults if file is missing/unparseable.
+ */
+function parseVersionFile(): { edition: 'infinity' | 'ultimate'; versionString: string } {
+  const defaults = { edition: 'infinity' as const, versionString: '' };
+
+  try {
+    const versionFilePath = path.join(flashpointPath, 'version.txt');
+    const content = fs.readFileSync(versionFilePath, 'utf-8').trim();
+
+    if (!content) return defaults;
+
+    const lower = content.toLowerCase();
+    let edition: 'infinity' | 'ultimate' = 'infinity';
+
+    if (lower.includes('ultimate')) {
+      edition = 'ultimate';
+    } else if (lower.includes('infinity')) {
+      edition = 'infinity';
+    }
+
+    return { edition, versionString: content };
+  } catch {
+    // File doesn't exist or can't be read - use defaults
+    return defaults;
+  }
+}
+
+const flashpointVersion = parseVersionFile();
 
 export const config = {
   // Server (hardcoded - use docker-compose port mapping to expose on different ports)
@@ -118,10 +155,13 @@ export const config = {
   // Cache Pre-warming
   enableCachePrewarm: process.env.ENABLE_CACHE_PREWARM !== 'false', // Enabled by default
 
-  // Flashpoint Edition: 'infinity' or 'ultimate'
+  // Flashpoint Edition (auto-detected from version.txt)
   // Infinity: has metadata source for sync, game table includes logoPath/screenshotPath
   // Ultimate: no metadata source, game table lacks logoPath/screenshotPath
-  flashpointEdition: (process.env.FLASHPOINT_EDITION || 'infinity').toLowerCase() as 'infinity' | 'ultimate'
+  flashpointEdition: flashpointVersion.edition,
+
+  // Full version string from version.txt (e.g., "Flashpoint 14.0.3 Infinity - Kingfisher")
+  flashpointVersionString: flashpointVersion.versionString
 };
 
 /**

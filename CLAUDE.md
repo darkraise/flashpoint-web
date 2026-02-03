@@ -1,16 +1,23 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with
+code in this repository.
 
 ## Documentation-First Approach
 
-**IMPORTANT:** This project has comprehensive documentation in the `docs/` directory (100+ files). When handling requests:
+**IMPORTANT:** This project has comprehensive documentation in the `docs/`
+directory (100+ files). When handling requests:
 
-1. **Use Documentation Instead of Context**: Always reference the relevant documentation files instead of repeating information in responses. This prevents filling up context windows with redundant information.
+1. **Use Documentation Instead of Context**: Always reference the relevant
+   documentation files instead of repeating information in responses. This
+   prevents filling up context windows with redundant information.
 
-2. **Point to Documentation**: When answering questions, provide the path to the relevant documentation file (e.g., "See `docs/04-frontend/architecture.md` for details on frontend architecture").
+2. **Point to Documentation**: When answering questions, provide the path to the
+   relevant documentation file (e.g., "See `docs/04-frontend/architecture.md`
+   for details on frontend architecture").
 
-3. **Read Documentation When Needed**: Use the Read tool to check documentation files when you need specific information about:
+3. **Read Documentation When Needed**: Use the Read tool to check documentation
+   files when you need specific information about:
    - Architecture: `docs/02-architecture/`
    - Backend: `docs/03-backend/`
    - Frontend: `docs/04-frontend/`
@@ -23,40 +30,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
    - Diagrams: `docs/11-diagrams/`
    - Reference: `docs/12-reference/`
 
-4. **Update Documentation After Changes**: After completing any feature, enhancement, bug fix, or significant code change, **ALWAYS ask the user**:
-   > "I've completed the changes. Should I update the relevant documentation in the `docs/` folder to reflect these changes?"
+4. **Update Documentation After Changes**: After completing any feature,
+   enhancement, bug fix, or significant code change, **ALWAYS ask the user**:
 
-   Then update the appropriate documentation files to keep them in sync with the codebase.
+   > "I've completed the changes. Should I update the relevant documentation in
+   > the `docs/` folder to reflect these changes?"
+
+   Then update the appropriate documentation files to keep them in sync with the
+   codebase.
 
 ### Quick Documentation Reference
 
 **For Common Questions, Point Users/Read From:**
 
-| Question | Documentation File |
-|----------|-------------------|
-| How do I set up the project? | `docs/08-development/setup-guide.md` |
-| What commands are available? | `docs/08-development/commands.md` |
-| How does authentication work? | `docs/10-features/authentication-authorization.md` |
-| What are all the API endpoints? | `docs/06-api-reference/README.md` |
-| What's the database schema? | `docs/12-reference/database-schema-reference.md` |
-| How do components work? | `docs/04-frontend/components/component-overview.md` |
-| How do I deploy? | `docs/09-deployment/README.md` |
-| What's the architecture? | `docs/02-architecture/system-architecture.md` |
-| Design system/theming? | `docs/07-design-system/theme-system.md` |
-| Common errors/pitfalls? | `docs/08-development/common-pitfalls.md` and "Common Pitfalls" section in CLAUDE.md |
-| TypeScript types? | `docs/12-reference/type-definitions.md` |
-| Environment variables? | `docs/09-deployment/environment-variables.md` |
-| How to add new API endpoints? | "Frontend API Guidelines" section in CLAUDE.md |
+| Question                        | Documentation File                                                                  |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| How do I set up the project?    | `docs/08-development/setup-guide.md`                                                |
+| What commands are available?    | `docs/08-development/commands.md`                                                   |
+| How does authentication work?   | `docs/10-features/authentication-authorization.md`                                  |
+| What are all the API endpoints? | `docs/06-api-reference/README.md`                                                   |
+| What's the database schema?     | `docs/12-reference/database-schema-reference.md`                                    |
+| How do components work?         | `docs/04-frontend/components/component-overview.md`                                 |
+| How do I deploy?                | `docs/09-deployment/README.md`                                                      |
+| What's the architecture?        | `docs/02-architecture/system-architecture.md`                                       |
+| Design system/theming?          | `docs/07-design-system/theme-system.md`                                             |
+| Common errors/pitfalls?         | `docs/08-development/common-pitfalls.md` and "Common Pitfalls" section in CLAUDE.md |
+| TypeScript types?               | `docs/12-reference/type-definitions.md`                                             |
+| Environment variables?          | `docs/09-deployment/environment-variables.md`                                       |
+| How to add new API endpoints?   | "Frontend API Guidelines" section in CLAUDE.md                                      |
 
 ## Project Overview
 
-Flashpoint Web is a self-hosted web application for browsing and playing games from the Flashpoint Archive. The project is a monorepo containing three independent services:
+Flashpoint Web is a self-hosted web application for browsing and playing games
+from the Flashpoint Archive. The project is a monorepo containing three
+independent services:
 
 - **backend**: REST API server (Express/TypeScript, port 3100)
 - **frontend**: React web UI (Vite/React/TypeScript, port 5173)
-- **game-service**: Game content proxy and ZIP server (Express/TypeScript, ports 22500/22501)
+- **game-service**: Game content proxy and ZIP server (Express/TypeScript, ports
+  22500/22501)
 
-The architecture separates concerns: the backend handles game metadata and user management via SQLite databases, the game-service serves actual game files and handles proxying, and the frontend provides the user interface.
+The architecture separates concerns: the backend handles game metadata and user
+management via SQLite databases, the game-service serves actual game files and
+handles proxying, and the frontend provides the user interface.
 
 ## Development Commands
 
@@ -172,32 +188,43 @@ docker-compose down
 docker-compose up -d --build
 ```
 
-Set `FLASHPOINT_HOST_PATH` environment variable to point to your Flashpoint installation before running Docker commands.
+Set `FLASHPOINT_HOST_PATH` environment variable to point to your Flashpoint
+installation before running Docker commands.
 
 ## Architecture
 
 ### Backend Service (Port 3100)
 
-The backend is a REST API built with Express and TypeScript. It manages two separate SQLite databases:
+The backend is a REST API built with Express and TypeScript. It manages two
+separate SQLite databases:
 
-1. **Flashpoint Database** (`flashpoint.sqlite`): Read-only access to the official Flashpoint game metadata database. The DatabaseService watches this file for changes and hot-reloads when the Flashpoint Launcher updates it.
+1. **Flashpoint Database** (`flashpoint.sqlite`): Read-only access to the
+   official Flashpoint game metadata database. The DatabaseService watches this
+   file for changes and hot-reloads when the Flashpoint Launcher updates it.
 
-2. **User Database** (`user.db`): Application-specific database for user accounts, roles, permissions, playlists, favorites, play tracking, and authentication.
+2. **User Database** (`user.db`): Application-specific database for user
+   accounts, roles, permissions, playlists, favorites, play tracking, and
+   authentication.
 
 **Key architectural patterns:**
 
-- Service layer pattern: Business logic in `src/services/`, routes in `src/routes/`
+- Service layer pattern: Business logic in `src/services/`, routes in
+  `src/routes/`
 - JWT-based authentication with role-based access control (RBAC)
-- File watching: Automatically detects changes to flashpoint.sqlite from the Flashpoint Launcher
-- Proxy delegation: Backend proxies game file requests to game-service instead of serving them directly
+- File watching: Automatically detects changes to flashpoint.sqlite from the
+  Flashpoint Launcher
+- Proxy delegation: Backend proxies game file requests to game-service instead
+  of serving them directly
 
 **Important services:**
 
-- `DatabaseService`: Manages connection to flashpoint.sqlite with hot-reload support
+- `DatabaseService`: Manages connection to flashpoint.sqlite with hot-reload
+  support
 - `UserDatabaseService`: Manages user.db with schema migrations
 - `GameService`: Game metadata queries from flashpoint.sqlite
 - `AuthService`: User authentication and JWT token management
-- `PlayTrackingService`: Tracks user play sessions with cleanup of abandoned sessions
+- `PlayTrackingService`: Tracks user play sessions with cleanup of abandoned
+  sessions
 
 ### Frontend Service (Port 5173)
 
@@ -221,7 +248,8 @@ React 18 single-page application using modern patterns:
 
 **Component organization:**
 
-- `components/`: Reusable components organized by domain (auth, library, player, playlist, etc.)
+- `components/`: Reusable components organized by domain (auth, library, player,
+  playlist, etc.)
 - `views/`: Top-level page components
 - `lib/api.ts`: Centralized API client with typed endpoints
 
@@ -235,19 +263,26 @@ React 18 single-page application using modern patterns:
 
 **CRITICAL:** Always use the authenticated axios instance for backend API calls.
 
-- **Centralized API client**: All backend API calls MUST go through `frontend/src/lib/api.ts`
+- **Centralized API client**: All backend API calls MUST go through
+  `frontend/src/lib/api.ts`
 - **Never use raw `fetch()`** for backend endpoints - it bypasses authentication
-- **Axios interceptors**: The `api` instance automatically adds `Authorization: Bearer <token>` headers
-- **Pattern to follow**: Create typed API methods in appropriate objects (e.g., `gamesApi`, `authApi`, `githubApi`)
+- **Axios interceptors**: The `api` instance automatically adds
+  `Authorization: Bearer <token>` headers
+- **Pattern to follow**: Create typed API methods in appropriate objects (e.g.,
+  `gamesApi`, `authApi`, `githubApi`)
 
 **Example (CORRECT):**
+
 ```typescript
 // In frontend/src/lib/api.ts
 export const githubApi = {
   getStarCount: async (): Promise<{ stars: number }> => {
-    const { data } = await api.get<{ success: boolean; data: { stars: number } }>('/github/stars');
+    const { data } = await api.get<{
+      success: boolean;
+      data: { stars: number };
+    }>('/github/stars');
     return data.data;
-  }
+  },
 };
 
 // In component
@@ -256,18 +291,21 @@ const result = await githubApi.getStarCount(); // ✅ Authenticated
 ```
 
 **Example (WRONG):**
+
 ```typescript
 // In component - DO NOT DO THIS
 const response = await fetch('/api/github/stars'); // ❌ No authentication!
 ```
 
 **Why this matters:**
+
 - Maintenance mode blocks unauthenticated requests with 503
 - Protected endpoints require JWT tokens
 - Axios interceptors handle token refresh automatically
 - Consistent error handling across all API calls
 
 **When adding new backend endpoints:**
+
 1. Create the backend route in `backend/src/routes/`
 2. Add the typed API method to `frontend/src/lib/api.ts`
 3. Use the API method in components (never raw `fetch()`)
@@ -275,17 +313,18 @@ const response = await fetch('/api/github/stars'); // ❌ No authentication!
 
 ### Game Service (Ports 22500, 22501)
 
-Independent Node.js service that replaces the original Go-based Flashpoint Game Server. Runs two HTTP servers:
+Independent Node.js service that replaces the original Go-based Flashpoint Game
+Server. Runs two HTTP servers:
 
 1. **HTTP Proxy Server (22500)**: Serves legacy web content with fallback chain:
-
    - Local htdocs (`D:/Flashpoint/Legacy/htdocs`)
    - Game data directory
    - ZIP archives (via zip-manager)
    - External CDN fallback (infinity.flashpointarchive.org)
    - Local file cache for downloaded content
 
-2. **GameZip Server (22501)**: Mounts and serves files from ZIP archives in `Data/Games/` without extraction using node-stream-zip
+2. **GameZip Server (22501)**: Mounts and serves files from ZIP archives in
+   `Data/Games/` without extraction using node-stream-zip
 
 **Key features:**
 
@@ -312,9 +351,18 @@ GAME_SERVICE_HOST=localhost
 LOG_LEVEL=info
 ```
 
-> **Note:** All paths (database, images, logos, htdocs, games) are automatically derived from `FLASHPOINT_PATH`. You only need to set the base Flashpoint installation path.
+> **Note:** All paths (database, images, logos, htdocs, games) are automatically
+> derived from `FLASHPOINT_PATH`. You only need to set the base Flashpoint
+> installation path.
 
-See `backend/.env.example` for complete configuration options including Redis, rate limiting, SQLite optimization, and OpenTelemetry settings.
+> **Edition auto-detection:** The Flashpoint edition (Infinity or Ultimate) is
+> automatically detected from `{FLASHPOINT_PATH}/version.txt` on startup. No
+> environment variable is needed. The detected edition and version string are
+> stored in the `system_settings` table as `metadata.flashpoint_edition` and
+> `metadata.flashpoint_version`.
+
+See `backend/.env.example` for complete configuration options including Redis,
+rate limiting, SQLite optimization, and OpenTelemetry settings.
 
 ### Game Service (.env)
 
@@ -327,17 +375,20 @@ LOG_LEVEL=info
 EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
 ```
 
-> **Note:** All paths (htdocs, games) are automatically derived from `FLASHPOINT_PATH`.
+> **Note:** All paths (htdocs, games) are automatically derived from
+> `FLASHPOINT_PATH`.
 
 ### Frontend
 
-The frontend does not require environment variables for local development. API calls are proxied through Vite to the backend.
+The frontend does not require environment variables for local development. API
+calls are proxied through Vite to the backend.
 
 ```bash
 VITE_APP_VERSION=1.0.0  # Optional: displayed in settings
 ```
 
-Vite proxy configuration in `vite.config.ts` handles `/api/*` routing to backend. In production, Nginx proxies API requests to the backend container.
+Vite proxy configuration in `vite.config.ts` handles `/api/*` routing to
+backend. In production, Nginx proxies API requests to the backend container.
 
 ## Database Schema
 
@@ -345,18 +396,22 @@ Vite proxy configuration in `vite.config.ts` handles `/api/*` routing to backend
 
 Read-only database from Flashpoint project. Key tables:
 
-- `game`: Main game metadata (id, title, platform, library, developer, publisher, etc.)
+- `game`: Main game metadata (id, title, platform, library, developer,
+  publisher, etc.)
 - `platform`: Gaming platforms
 - `tag`: Tags and categories
 - `game_tags_tag`: Many-to-many relationship between games and tags
 - `playlist`: User playlists
 - `playlist_game`: Playlist entries
 
-**Important:** This database is managed by the Flashpoint Launcher. The backend watches for file changes and automatically reloads connections when updates occur.
+**Important:** This database is managed by the Flashpoint Launcher. The backend
+watches for file changes and automatically reloads connections when updates
+occur.
 
 ### User Database (user.db)
 
-Application-specific SQLite database. Schema managed via migrations in `backend/src/migrations/`. Tables include:
+Application-specific SQLite database. Schema managed via migrations in
+`backend/src/migrations/`. Tables include:
 
 - `users`: User accounts with hashed passwords (bcrypt)
 - `roles`: RBAC roles (admin, moderator, user, guest)
@@ -365,7 +420,8 @@ Application-specific SQLite database. Schema managed via migrations in `backend/
 - `user_playlists`: User-created playlists
 - `user_favorites`: Favorited games per user
 - `play_sessions`: Game play tracking with duration, completion status
-- `system_settings`: Global system-wide configuration (auth, app, metadata, features, game, storage, rate limiting)
+- `system_settings`: Global system-wide configuration (auth, app, metadata,
+  features, game, storage, rate limiting)
 
 Migrations run automatically on server startup via UserDatabaseService.
 
@@ -396,11 +452,14 @@ The application uses JWT-based authentication with RBAC:
 **Maintenance mode:**
 
 - Controlled via `app.maintenance_mode` setting in `system_settings` table
-- When enabled, blocks all non-admin users from accessing endpoints (returns 503)
+- When enabled, blocks all non-admin users from accessing endpoints
+  (returns 503)
 - Admin users identified by `settings.update` permission bypass maintenance mode
-- Minimal public paths always accessible: `/health`, `/api/auth/login`, `/api/auth/refresh`, `/api/settings/public`, `/proxy/*`
+- Minimal public paths always accessible: `/health`, `/api/auth/login`,
+  `/api/auth/refresh`, `/api/settings/public`, `/proxy/*`
 - Implemented in `backend/src/middleware/maintenanceMode.ts`
-- Depends on `softAuth` middleware to populate `req.user` before checking permissions
+- Depends on `softAuth` middleware to populate `req.user` before checking
+  permissions
 
 **Permission caching:**
 
@@ -425,8 +484,10 @@ Frontend testing setup TBD.
 ### Database Access Patterns
 
 - **Never** use write operations on flashpoint.sqlite - it's read-only
-- User database writes use prepared statements with transactions for data consistency
-- DatabaseService includes file watcher to detect external changes from Flashpoint Launcher
+- User database writes use prepared statements with transactions for data
+  consistency
+- DatabaseService includes file watcher to detect external changes from
+  Flashpoint Launcher
 - Use BetterSqlite3 synchronous API (not async wrapper) for better performance
 
 ### Game File Serving
@@ -438,11 +499,14 @@ Game files are **not** served by the backend. The flow is:
 3. Frontend creates player iframe pointing to game-service (port 22500)
 4. Game-service handles all file serving, proxying, and ZIP mounting
 
-This separation prevents backend from blocking on large file transfers and allows independent scaling.
+This separation prevents backend from blocking on large file transfers and
+allows independent scaling.
 
 ### Ruffle Integration
 
-Ruffle emulator files are copied from npm package to `frontend/public/ruffle/` during `npm install` (postinstall hook). The player component loads Ruffle from `/ruffle/ruffle.js` and creates instances for Flash content.
+Ruffle emulator files are copied from npm package to `frontend/public/ruffle/`
+during `npm install` (postinstall hook). The player component loads Ruffle from
+`/ruffle/ruffle.js` and creates instances for Flash content.
 
 **Scale modes supported:** exactfit, noborder, showall (default), noscale
 
@@ -464,37 +528,55 @@ Background job runs every 6 hours to clean up abandoned sessions.
 
 ## Common Pitfalls
 
-1. **Flashpoint path not found**: Verify `FLASHPOINT_PATH` in .env points to valid Flashpoint installation
-2. **Database locked errors**: Flashpoint Launcher may lock flashpoint.sqlite - close it before migrations
+1. **Flashpoint path not found**: Verify `FLASHPOINT_PATH` in .env points to
+   valid Flashpoint installation
+2. **Database locked errors**: Flashpoint Launcher may lock flashpoint.sqlite -
+   close it before migrations
 3. **Port conflicts**: Ports 3100, 5173, 22500, 22501 must be available
 4. **Game files not loading**: Ensure game-service is running before backend
-5. **JWT secret in production**: Change default JWT_SECRET in production environments
-6. **Ruffle files missing**: Run `npm run copy-ruffle` in frontend if Ruffle doesn't load
-7. **503 errors in maintenance mode**: If admin users get 503 errors, check if components are using raw `fetch()` instead of the authenticated `api` instance from `lib/api.ts`. The axios interceptors automatically add authentication headers.
-8. **Unauthenticated API calls**: Never use raw `fetch()` for backend API endpoints. Always add new endpoints to `frontend/src/lib/api.ts` and use the typed API methods. See "Frontend API Guidelines" section above.
+5. **JWT secret in production**: Change default JWT_SECRET in production
+   environments
+6. **Ruffle files missing**: Run `npm run copy-ruffle` in frontend if Ruffle
+   doesn't load
+7. **503 errors in maintenance mode**: If admin users get 503 errors, check if
+   components are using raw `fetch()` instead of the authenticated `api`
+   instance from `lib/api.ts`. The axios interceptors automatically add
+   authentication headers.
+8. **Unauthenticated API calls**: Never use raw `fetch()` for backend API
+   endpoints. Always add new endpoints to `frontend/src/lib/api.ts` and use the
+   typed API methods. See "Frontend API Guidelines" section above.
 
 ## Recent Changes & Lessons Learned
 
 ### 2026-01-28: Maintenance Mode Admin Bypass Fix
 
-**Issue:** Admin users were getting 503 errors when accessing `/api/github/stars` while maintenance mode was enabled.
+**Issue:** Admin users were getting 503 errors when accessing
+`/api/github/stars` while maintenance mode was enabled.
 
-**Root Cause:** The `GitHubButton` component was using raw `fetch()` instead of the authenticated axios instance, so requests had no `Authorization` header. The maintenance mode middleware blocked these unauthenticated requests.
+**Root Cause:** The `GitHubButton` component was using raw `fetch()` instead of
+the authenticated axios instance, so requests had no `Authorization` header. The
+maintenance mode middleware blocked these unauthenticated requests.
 
 **Fix:**
+
 1. Added `githubApi.getStarCount()` method to `frontend/src/lib/api.ts`
 2. Updated `GitHubButton.tsx` to use the authenticated API method
 3. The axios instance automatically adds JWT token via request interceptor
 
-**Key Lesson:** **NEVER use raw `fetch()` for backend API calls.** Always use the centralized `api` instance from `lib/api.ts` which handles authentication, token refresh, and error handling automatically.
+**Key Lesson:** **NEVER use raw `fetch()` for backend API calls.** Always use
+the centralized `api` instance from `lib/api.ts` which handles authentication,
+token refresh, and error handling automatically.
 
 **Verification Steps Taken:**
+
 1. Checked database - confirmed admin role has `settings.update` permission ✅
 2. Tested backend directly - confirmed maintenance mode allows admin access ✅
 3. Identified frontend was making unauthenticated requests ❌
 4. Fixed component to use authenticated axios instance ✅
 
-**Prevention:** See "Frontend API Guidelines" section for the correct pattern. When adding new API endpoints, always:
+**Prevention:** See "Frontend API Guidelines" section for the correct pattern.
+When adding new API endpoints, always:
+
 1. Add typed method to appropriate API object in `lib/api.ts`
 2. Import and use the API method in components
 3. Test with maintenance mode enabled
@@ -503,9 +585,11 @@ Background job runs every 6 hours to clean up abandoned sessions.
 
 ### 2026-01-29: Game Service Directory Traversal Protection
 
-**Issue:** Game service lacked comprehensive path validation, potentially allowing directory traversal attacks through crafted URLs.
+**Issue:** Game service lacked comprehensive path validation, potentially
+allowing directory traversal attacks through crafted URLs.
 
-**Implementation:** Created centralized security utilities in `game-service/src/utils/pathSecurity.ts`:
+**Implementation:** Created centralized security utilities in
+`game-service/src/utils/pathSecurity.ts`:
 
 1. **Path Sanitization & Validation**:
    - `sanitizeAndValidatePath()` - Ensures paths stay within allowed directories
@@ -513,16 +597,19 @@ Background job runs every 6 hours to clean up abandoned sessions.
    - Validates resolved paths against base directories
 
 2. **URL Path Sanitization**:
-   - `sanitizeUrlPath()` - Detects null bytes, URL-encoded traversal, backslash attacks
+   - `sanitizeUrlPath()` - Detects null bytes, URL-encoded traversal, backslash
+     attacks
    - Runs before path resolution for early detection
 
 3. **Applied to both servers**:
-   - **Legacy Server**: URL sanitization + path validation before all file access
+   - **Legacy Server**: URL sanitization + path validation before all file
+     access
    - **GameZip Server**: URL sanitization in file requests
 
 **Test Coverage**: 17 comprehensive test cases (all passing)
 
 **Security Guarantees**:
+
 - ✅ Blocks `../../../etc/passwd` attempts
 - ✅ Blocks absolute path escapes (`/etc/passwd`)
 - ✅ Blocks URL-encoded traversal (`..%2F`, `..%5C`)
@@ -530,25 +617,86 @@ Background job runs every 6 hours to clean up abandoned sessions.
 - ✅ Blocks backslash traversal (`..\..\..\`)
 - ✅ All blocked attempts logged with full details
 
-**Key Lesson:** Always validate that resolved file paths stay within allowed base directories. Use `path.resolve()` and check the resolved path starts with the base directory. Never trust user input, even after URL decoding.
+**Key Lesson:** Always validate that resolved file paths stay within allowed
+base directories. Use `path.resolve()` and check the resolved path starts with
+the base directory. Never trust user input, even after URL decoding.
 
 **Documentation**:
+
 - Detailed guide: `docs/13-security/directory-traversal-protection.md`
 - Updated: `docs/12-reference/security-measures.md`
 
-**Phase**: Phase 1 (Security) - Critical priority fix from comprehensive project review
+**Phase**: Phase 1 (Security) - Critical priority fix from comprehensive project
+review
+
+---
+
+### 2026-02-03: Auto-detect Flashpoint Edition from version.txt
+
+**Change:** Replaced the `FLASHPOINT_EDITION` environment variable with
+automatic detection from `{FLASHPOINT_PATH}/version.txt`. Edition and version
+are held in the backend `config` object — **not** stored in the
+`system_settings` database table. Backend services read `config` directly.
+The frontend receives edition/version via `/api/settings/public` (injected from
+`config`).
+
+**How it works:**
+
+- On startup, `backend/src/config.ts` reads `version.txt` and parses the edition
+  (Infinity/Ultimate) and full version string
+- Values stored in `config.flashpointEdition` and
+  `config.flashpointVersionString` (not in the database)
+- Backend services (GameService, MetadataSyncService, MetadataUpdateService)
+  import and read `config` directly
+- The `/api/settings/public` endpoint injects edition/version from `config` into
+  the response (same pattern as `homeRecentHours`)
+- Frontend uses the `usePublicSettings()` hook (already cached, no extra request)
+- Falls back to `'infinity'` if `version.txt` is missing or unparseable
+
+**Files changed:**
+
+- `backend/src/config.ts` - Added `parseVersionFile()`, replaced env var
+- `backend/src/routes/system-settings.ts` - Injects edition/version into
+  `/public` response from config
+- `backend/src/server.ts` - Removed DB upserts, kept log lines only
+- `backend/src/migrations/001_complete_schema.sql` - Removed
+  `metadata.flashpoint_edition` and `metadata.flashpoint_version` seed rows
+- `backend/src/services/GameService.ts` - Uses `config` directly, removed
+  `CachedSystemSettingsService` dependency
+- `backend/src/services/MetadataUpdateService.ts` - Uses `config` directly,
+  removed `CachedSystemSettingsService` dependency
+- `backend/src/services/MetadataSyncService.ts` - Uses `config` directly,
+  removed `CachedSystemSettingsService` dependency
+- `frontend/src/components/settings/GeneralSettingsTab.tsx` - Uses
+  `usePublicSettings()` instead of `systemSettingsApi.getCategory("metadata")`
+- `frontend/src/views/SettingsView.tsx` - Uses `usePublicSettings()` instead of
+  `systemSettingsApi.getCategory("metadata")`
+- `frontend/src/types/settings.ts` - Added `metadata` to `PublicSettings`,
+  removed `flashpointEdition` from `MetadataSettings`
+- `backend/.env.example` - Removed `FLASHPOINT_EDITION`
+- `docker-compose.yml` - Removed `FLASHPOINT_EDITION`
+- `docker-compose.dev.yml` - Removed `FLASHPOINT_EDITION`
+
+**Key Lesson:** Auto-detection from the Flashpoint installation itself is more
+reliable than manual configuration. Keeping runtime-detected values in `config`
+(not in the database) avoids unnecessary DB writes on every startup and
+simplifies the service layer by removing `CachedSystemSettingsService`
+dependencies from services that only need the edition.
 
 ---
 
 ### 2026-01-28: Database Migration Consolidation
 
 **Change:** Consolidated 16 separate migration files into 2 files:
+
 - `001_initialize_schema.sql`: All table definitions
 - `002_seed_default_data.sql`: All seed data (roles, permissions, settings)
 
-**Added:** Migration registry system in `bootstrap.sql` to track applied migrations with checksums and execution times.
+**Added:** Migration registry system in `bootstrap.sql` to track applied
+migrations with checksums and execution times.
 
 **Benefits:**
+
 - Cleaner migration directory
 - Industry-standard migration tracking (similar to Flyway, Knex)
 - Backward compatibility with existing databases
@@ -561,11 +709,15 @@ Background job runs every 6 hours to clean up abandoned sessions.
 - Flashpoint Launcher source code: D:\Repositories\Community\launcher
 - Flashpoint Game Server: D:\Repositories\Community\FlashpointGameServer
 
-## Flashpoint App Reference: D:\FP_Data\Flashpoint
+## Flashpoint App Reference:
+
+- Flashpoint Infinity Edition: "D:\Flashpoint Infinity 14.0.3"
+- Flashpoint Ultimate Edition: "E:\Flashpoint Ultimate"
 
 ## Documentation Maintenance
 
 **After ANY code change, always:**
+
 1. Verify no build errors: `npm run typecheck` and `npm run build`
 2. Check if documentation needs updates
 3. Ask the user if relevant documentation should be updated
@@ -575,6 +727,8 @@ Background job runs every 6 hours to clean up abandoned sessions.
    - Database schema changes → `docs/12-reference/database-schema-reference.md`
    - New features → `docs/10-features/`
    - Component changes → `docs/04-frontend/components/`
-   - Configuration changes → `docs/03-backend/configuration.md` or `docs/09-deployment/environment-variables.md`
+   - Configuration changes → `docs/03-backend/configuration.md` or
+     `docs/09-deployment/environment-variables.md`
 
-**Documentation is a first-class concern** - keeping it current ensures the project remains maintainable.
+**Documentation is a first-class concern** - keeping it current ensures the
+project remains maintainable.

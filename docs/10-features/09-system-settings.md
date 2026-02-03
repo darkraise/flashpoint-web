@@ -10,7 +10,7 @@ System Settings provides flexible, centralized configuration management for Flas
 |----------|---------|--------------|
 | auth | Authentication/security | guestAccessEnabled, maxLoginAttempts, lockoutDurationMinutes |
 | app | Application settings | siteName, maintenanceMode, dateFormat, timeFormat |
-| metadata | Metadata sync config | autoSyncEnabled, syncIntervalMinutes, syncTags |
+| metadata | Metadata sync config | autoSyncEnabled, syncIntervalMinutes, syncTags, syncPlatforms |
 | features | Feature flags | enablePlaylists, enableFavorites, enableStatistics |
 | game | Game player config | defaultScaleMode, defaultVolume, enableFlash |
 
@@ -49,7 +49,7 @@ CREATE TABLE system_settings (
 ## Settings Tabs
 
 #### General Tab
-- **Version Information** - View app and Flashpoint versions
+- **Version Information** - View Flashpoint version and edition (auto-detected from `version.txt`, served via `/api/settings/public`), web app version, and Ruffle emulator version
 - **Date & Time Format** - Choose from 7 date and 4 time formats
 - **Ruffle Emulator Management** - Check for and install updates (admin only)
 - **Authentication Settings** - Control registration and guest access (admin only)
@@ -136,6 +136,8 @@ All settings use JSON Schema validation:
 - syncIntervalMinutes: 60
 - syncTags: true
 - syncPlatforms: true
+
+**Note:** Flashpoint edition and version are not database settings. They are auto-detected from `version.txt` at startup and injected into the `/api/settings/public` response from the backend `config` object.
 
 **Features Defaults:**
 - All features enabled by default

@@ -4,7 +4,8 @@ import { AnimatePresence } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/store/auth";
 import { useQuery } from "@tanstack/react-query";
-import { ruffleApi, systemSettingsApi } from "@/lib/api";
+import { ruffleApi } from "@/lib/api";
+import { usePublicSettings } from "@/hooks/usePublicSettings";
 
 // Tab components
 import { GeneralSettingsTab } from "@/components/settings/GeneralSettingsTab";
@@ -49,17 +50,11 @@ export function SettingsView() {
     enabled: !isAdmin, // Only fetch for non-admin users (admin users get it from GeneralSettingsTab)
   });
 
-  // Fetch metadata settings for Flashpoint version
-  const { data: metadataSettings } = useQuery({
-    queryKey: ["systemSettings", "metadata"],
-    queryFn: () => systemSettingsApi.getCategory("metadata"),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !isAdmin, // Only fetch for non-admin users
-  });
+  // Public settings (cached, no extra request) for edition/version
+  const { data: publicSettings } = usePublicSettings();
 
   // Get version strings
-  const flashpointVersion =
-    (typeof metadataSettings?.flashpointVersion === 'string' ? metadataSettings.flashpointVersion : null) || "Unknown";
+  const flashpointVersion = publicSettings?.metadata?.flashpointVersion || "Unknown";
   const webAppVersion = import.meta.env.VITE_APP_VERSION || "1.0.0";
 
   return (

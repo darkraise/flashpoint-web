@@ -94,6 +94,31 @@ All other Flashpoint paths are automatically derived from `FLASHPOINT_PATH`:
 
 You do not need to set environment variables for these paths - they are calculated automatically from `FLASHPOINT_PATH`.
 
+### Flashpoint Edition Auto-Detection
+
+The Flashpoint edition is **automatically detected** from `${FLASHPOINT_PATH}/version.txt` on server startup. No environment variable is needed.
+
+**How it works:**
+
+1. On startup, `backend/src/config.ts` reads `version.txt` from the Flashpoint installation directory
+2. The file content is parsed for "Infinity" or "Ultimate" (case-insensitive)
+3. The detected edition and full version string are stored in the `config` object:
+   - `config.flashpointEdition` — `"infinity"` or `"ultimate"`
+   - `config.flashpointVersionString` — Full version string (e.g., `"Flashpoint 14.0.3 Infinity - Kingfisher"`)
+4. Backend services (GameService, MetadataSyncService, MetadataUpdateService) read `config` directly
+5. The frontend receives edition/version via the `/api/settings/public` endpoint (injected from `config`, not stored in DB)
+6. If `version.txt` is missing or unparseable, defaults to `"infinity"`
+
+**Example version.txt contents:**
+- Infinity: `Flashpoint 14.0.3 Infinity - Kingfisher`
+- Ultimate: `Flashpoint 14 Ultimate - Kingfisher`
+
+**Edition differences:**
+- **Infinity**: Supports metadata sync from FPFSS, game table includes `logoPath`/`screenshotPath` columns
+- **Ultimate**: No metadata sync, game table lacks `logoPath`/`screenshotPath` columns
+
+The edition is displayed as read-only information in the Settings UI (not user-configurable).
+
 ### Game Service Configuration
 
 #### `GAME_SERVICE_HOST`

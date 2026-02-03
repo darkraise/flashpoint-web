@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 import { DatabaseService } from './DatabaseService';
 import { GameMetadataSource } from './MetadataUpdateService';
 import { SyncStatusService } from './SyncStatusService';
-import { CachedSystemSettingsService } from './CachedSystemSettingsService';
+
 
 interface SyncResult {
   success: boolean;
@@ -97,20 +97,17 @@ interface FlashpointPreferences {
 export class MetadataSyncService {
   private preferencesPath: string;
   private syncStatusService: SyncStatusService;
-  private systemSettings: CachedSystemSettingsService;
 
   constructor() {
     this.preferencesPath = path.join(config.flashpointPath, 'preferences.json');
     this.syncStatusService = SyncStatusService.getInstance();
-    this.systemSettings = new CachedSystemSettingsService();
   }
 
   /**
-   * Get the current Flashpoint edition from system settings
+   * Get the current Flashpoint edition from config (auto-detected from version.txt)
    */
   private getEdition(): string {
-    const edition = this.systemSettings.get('metadata.flashpoint_edition');
-    return (typeof edition === 'string' ? edition : config.flashpointEdition) || 'infinity';
+    return config.flashpointEdition;
   }
 
   /**
