@@ -44,6 +44,7 @@ export interface GameSettings {
  * Metadata and content sync settings
  */
 export interface MetadataSettings {
+  flashpointEdition: 'infinity' | 'ultimate';
   enableExtendedMetadata: boolean;
   cacheImages: boolean;
   imageCacheExpiryDays: number;

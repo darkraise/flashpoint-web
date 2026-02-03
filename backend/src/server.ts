@@ -89,6 +89,25 @@ async function startServer() {
     process.exit(1);
   }
 
+  // Sync Flashpoint edition from env var to system settings
+  // The env var provides the initial/default value; admin can override via UI
+  try {
+    const systemSettings = new CachedSystemSettingsService();
+    const currentEdition = systemSettings.get('metadata.flashpoint_edition');
+    if (currentEdition === null) {
+      // Setting doesn't exist yet (existing DB before this feature) - insert it
+      UserDatabaseService.run(
+        `INSERT OR IGNORE INTO system_settings (key, value, data_type, category, description, is_public, default_value, validation_schema)
+         VALUES ('metadata.flashpoint_edition', ?, 'string', 'metadata', 'Flashpoint edition (infinity or ultimate)', 1, 'infinity', '{"type":"string","enum":["infinity","ultimate"]}')`,
+        [config.flashpointEdition]
+      );
+      logger.info(`[Edition] Initialized flashpoint_edition setting to: ${config.flashpointEdition}`);
+    }
+    logger.info(`[Edition] Flashpoint edition: ${currentEdition || config.flashpointEdition}`);
+  } catch (error) {
+    logger.warn('[Edition] Failed to sync edition setting:', error);
+  }
+
   // Pre-warm game search cache for instant first page load
   // Run asynchronously to not block server startup
   GameSearchCache.prewarmCache().catch(error => {

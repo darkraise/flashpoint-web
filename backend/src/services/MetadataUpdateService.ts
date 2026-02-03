@@ -3,6 +3,7 @@ import path from 'path';
 import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { CachedSystemSettingsService } from './CachedSystemSettingsService';
 
 export interface GameMetadataSource {
   name: string;
@@ -37,10 +38,20 @@ export interface MetadataUpdateInfo {
 
 export class MetadataUpdateService {
   private preferencesPath: string;
+  private systemSettings: CachedSystemSettingsService;
 
   constructor() {
     // Preferences file is in the Flashpoint root directory
     this.preferencesPath = path.join(config.flashpointPath, 'preferences.json');
+    this.systemSettings = new CachedSystemSettingsService();
+  }
+
+  /**
+   * Get the current Flashpoint edition from system settings
+   */
+  getEdition(): string {
+    const edition = this.systemSettings.get('metadata.flashpoint_edition');
+    return (typeof edition === 'string' ? edition : config.flashpointEdition) || 'infinity';
   }
 
   /**
@@ -50,6 +61,14 @@ export class MetadataUpdateService {
    */
   async getMetadataUpdateInfo(): Promise<MetadataUpdateInfo> {
     try {
+      // Ultimate edition does not support metadata sync
+      if (this.getEdition() === 'ultimate') {
+        return {
+          hasUpdates: false,
+          gamesUpdateAvailable: false,
+          tagsUpdateAvailable: false
+        };
+      }
       // Read preferences file
       const preferencesContent = await fs.readFile(this.preferencesPath, 'utf-8');
       const preferences = JSON.parse(preferencesContent);

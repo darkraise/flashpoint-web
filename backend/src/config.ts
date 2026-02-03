@@ -116,7 +116,12 @@ export const config = {
   sqliteMmapSize: parseInt(process.env.SQLITE_MMAP_SIZE || '268435456', 10), // 256MB default
 
   // Cache Pre-warming
-  enableCachePrewarm: process.env.ENABLE_CACHE_PREWARM !== 'false' // Enabled by default
+  enableCachePrewarm: process.env.ENABLE_CACHE_PREWARM !== 'false', // Enabled by default
+
+  // Flashpoint Edition: 'infinity' or 'ultimate'
+  // Infinity: has metadata source for sync, game table includes logoPath/screenshotPath
+  // Ultimate: no metadata source, game table lacks logoPath/screenshotPath
+  flashpointEdition: (process.env.FLASHPOINT_EDITION || 'infinity').toLowerCase() as 'infinity' | 'ultimate'
 };
 
 /**

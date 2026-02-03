@@ -37,6 +37,7 @@ interface MetadataUpdateInfo {
   tagsUpdateCount?: number;
   lastCheckedTime?: string;
   lastUpdateTime?: string;
+  edition?: string;
 }
 
 interface UpdateSettingsTabProps {
@@ -310,30 +311,51 @@ export function UpdateSettingsTab({
               <Database size={24} className="text-primary" />
               <h2 className="text-xl font-semibold">Game Metadata</h2>
             </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={checkMetadataUpdates}
-                  disabled={isFetchingMetadata.current}
-                  size="icon"
-                  variant="outline"
-                >
-                  <RefreshCw
-                    size={18}
-                    className={isFetchingMetadata.current ? "animate-spin" : ""}
-                  />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>
-                  {isFetchingMetadata.current
-                    ? "Checking..."
-                    : "Check for Updates"}
-                </p>
-              </TooltipContent>
-            </Tooltip>
+            {metadataInfo?.edition !== "ultimate" && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={checkMetadataUpdates}
+                    disabled={isFetchingMetadata.current}
+                    size="icon"
+                    variant="outline"
+                  >
+                    <RefreshCw
+                      size={18}
+                      className={isFetchingMetadata.current ? "animate-spin" : ""}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {isFetchingMetadata.current
+                      ? "Checking..."
+                      : "Check for Updates"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
 
+          {/* Ultimate Edition: No metadata sync available */}
+          {metadataInfo?.edition === "ultimate" && (
+            <div className="bg-muted border border-border rounded-lg p-4 flex items-center gap-3">
+              <Info size={20} className="text-muted-foreground flex-shrink-0" />
+              <div>
+                <p className="text-foreground font-medium">
+                  Metadata sync not available
+                </p>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Flashpoint Ultimate edition does not include a metadata source
+                  server. Metadata sync is only available with Flashpoint Infinity.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Infinity Edition: Metadata sync UI */}
+          {metadataInfo?.edition !== "ultimate" && (
+            <>
           {/* Error Message */}
           {error && (
             <div className="bg-red-500/10 border border-red-500 rounded-lg p-3 mb-4 flex items-start gap-2">
@@ -462,6 +484,8 @@ export function UpdateSettingsTab({
                 </div>
               )}
             </div>
+          )}
+            </>
           )}
         </div>
       )}

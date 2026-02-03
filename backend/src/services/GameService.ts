@@ -1,5 +1,7 @@
 import { DatabaseService } from './DatabaseService';
 import { logger } from '../utils/logger';
+import { CachedSystemSettingsService } from './CachedSystemSettingsService';
+import { config } from '../config';
 
 export interface GameSearchQuery {
   search?: string;
@@ -57,6 +59,8 @@ export interface Game {
   playtime?: number;
   playCounter?: number;
   archiveState?: number;
+  logoPath?: string;       // Infinity edition only
+  screenshotPath?: string; // Infinity edition only
 }
 
 export interface PaginatedResult<T> {
@@ -68,11 +72,27 @@ export interface PaginatedResult<T> {
 }
 
 export class GameService {
+  private systemSettings: CachedSystemSettingsService;
+
+  constructor() {
+    this.systemSettings = new CachedSystemSettingsService();
+  }
+
+  /**
+   * Check if running Infinity edition (has logoPath/screenshotPath columns)
+   */
+  private isInfinityEdition(): boolean {
+    const edition = this.systemSettings.get('metadata.flashpoint_edition');
+    return (typeof edition === 'string' ? edition : config.flashpointEdition) !== 'ultimate';
+  }
+
   /**
    * Get column list based on field selection mode
    * OPTIMIZATION: Reduce payload size for list views by selecting only essential columns
    */
   private getColumnSelection(fields?: 'list' | 'detail'): string {
+    const isInfinity = this.isInfinityEdition();
+
     if (fields === 'list') {
       // Minimal columns for list views (12 essential fields)
       return `
@@ -83,15 +103,22 @@ export class GameService {
     }
 
     // Default: All columns for detail views
-    return `
+    const baseColumns = `
       g.id, g.parentGameId, g.title, g.alternateTitles, g.series,
       g.developer, g.publisher, g.platformName, g.platformsStr, g.platformId,
       g.playMode, g.status, g.broken, g.extreme, g.notes, g.tagsStr,
       g.source, g.applicationPath, g.launchCommand, g.releaseDate,
       g.version, g.originalDescription, g.language,
       g.library, g.orderTitle, g.dateAdded, g.dateModified,
-      g.lastPlayed, g.playtime, g.playCounter, g.archiveState
-    `;
+      g.lastPlayed, g.playtime, g.playCounter, g.archiveState`;
+
+    // Infinity edition has logoPath and screenshotPath columns
+    if (isInfinity) {
+      return baseColumns + `,
+      g.logoPath, g.screenshotPath`;
+    }
+
+    return baseColumns;
   }
 
   async searchGames(query: GameSearchQuery): Promise<PaginatedResult<Game>> {
@@ -291,15 +318,10 @@ export class GameService {
 
   async getGameById(id: string): Promise<Game | null> {
     try {
+      const columns = this.getColumnSelection('detail');
       const sql = `
         SELECT
-          g.id, g.parentGameId, g.title, g.alternateTitles, g.series,
-          g.developer, g.publisher, g.platformName, g.platformsStr, g.platformId,
-          g.playMode, g.status, g.broken, g.extreme, g.notes, g.tagsStr,
-          g.source, g.applicationPath, g.launchCommand, g.releaseDate,
-          g.version, g.originalDescription, g.language,
-          g.library, g.orderTitle, g.dateAdded, g.dateModified,
-          g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
+          ${columns},
           MAX(gd.presentOnDisk) as presentOnDisk
         FROM game g
         LEFT JOIN game_data gd ON gd.gameId = g.id
@@ -325,16 +347,11 @@ export class GameService {
         return [];
       }
 
+      const columns = this.getColumnSelection('detail');
       const placeholders = ids.map(() => '?').join(', ');
       const sql = `
         SELECT
-          g.id, g.parentGameId, g.title, g.alternateTitles, g.series,
-          g.developer, g.publisher, g.platformName, g.platformsStr, g.platformId,
-          g.playMode, g.status, g.broken, g.extreme, g.notes, g.tagsStr,
-          g.source, g.applicationPath, g.launchCommand, g.releaseDate,
-          g.version, g.originalDescription, g.language,
-          g.library, g.orderTitle, g.dateAdded, g.dateModified,
-          g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
+          ${columns},
           MAX(gd.presentOnDisk) as presentOnDisk
         FROM game g
         LEFT JOIN game_data gd ON gd.gameId = g.id

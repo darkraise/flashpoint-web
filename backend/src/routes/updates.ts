@@ -62,11 +62,13 @@ router.get(
  * GET /api/updates/metadata
  * Check for game metadata updates (like Flashpoint Launcher)
  * Returns info about game database updates from FPFSS
+ * Includes edition info so frontend knows whether sync is available
  */
 router.get('/metadata', asyncHandler(async (req, res) => {
-  logger.info('[Updates API] Checking for metadata updates...');
+  const edition = metadataUpdateService.getEdition();
+  logger.info(`[Updates API] Checking for metadata updates... (edition: ${edition})`);
   const metadataInfo = await metadataUpdateService.getMetadataUpdateInfo();
-  res.json(metadataInfo);
+  res.json({ ...metadataInfo, edition });
 }));
 
 /**

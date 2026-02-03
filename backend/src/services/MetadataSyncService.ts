@@ -6,6 +6,7 @@ import { logger } from '../utils/logger';
 import { DatabaseService } from './DatabaseService';
 import { GameMetadataSource } from './MetadataUpdateService';
 import { SyncStatusService } from './SyncStatusService';
+import { CachedSystemSettingsService } from './CachedSystemSettingsService';
 
 interface SyncResult {
   success: boolean;
@@ -96,16 +97,39 @@ interface FlashpointPreferences {
 export class MetadataSyncService {
   private preferencesPath: string;
   private syncStatusService: SyncStatusService;
+  private systemSettings: CachedSystemSettingsService;
 
   constructor() {
     this.preferencesPath = path.join(config.flashpointPath, 'preferences.json');
     this.syncStatusService = SyncStatusService.getInstance();
+    this.systemSettings = new CachedSystemSettingsService();
+  }
+
+  /**
+   * Get the current Flashpoint edition from system settings
+   */
+  private getEdition(): string {
+    const edition = this.systemSettings.get('metadata.flashpoint_edition');
+    return (typeof edition === 'string' ? edition : config.flashpointEdition) || 'infinity';
   }
 
   /**
    * Main sync function - syncs all metadata (games, tags, platforms)
    */
   async syncMetadata(): Promise<SyncResult> {
+    // Ultimate edition does not support metadata sync
+    if (this.getEdition() === 'ultimate') {
+      logger.warn('[MetadataSync] Metadata sync is not available for Ultimate edition');
+      return {
+        success: false,
+        gamesUpdated: 0,
+        gamesDeleted: 0,
+        tagsUpdated: 0,
+        platformsUpdated: 0,
+        error: 'Metadata sync is not available for Flashpoint Ultimate edition',
+        timestamp: new Date().toISOString()
+      };
+    }
     const startTime = new Date();
     let gamesUpdated = 0;
     let gamesDeleted = 0;
