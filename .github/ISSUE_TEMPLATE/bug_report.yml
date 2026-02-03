@@ -1,0 +1,71 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: "When I click X, Y happens instead of Z..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: "I expected..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Logs
+      description: Paste screenshots, browser console errors, or backend logs.
+    validations:
+      required: false
+
+  - type: input
+    id: flashpoint-version
+    attributes:
+      label: Flashpoint version
+      placeholder: "e.g., Flashpoint 14.0.3 Infinity"
+    validations:
+      required: false
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      placeholder: "e.g., Chrome 120, Firefox 121"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: service
+    attributes:
+      label: Which part is affected?
+      options:
+        - Frontend (UI)
+        - Backend (API)
+        - Game Player
+        - Game Service
+        - Docker / Deployment
+        - Don't know
+    validations:
+      required: false

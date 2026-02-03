@@ -45,9 +45,9 @@ The workflow pushes images to **Docker Hub**.
 
 4. **Images will be pushed to**:
    ```
-   docker.io/<dockerhub-username>/flashpoint-backend:latest
-   docker.io/<dockerhub-username>/flashpoint-frontend:latest
-   docker.io/<dockerhub-username>/flashpoint-game-service:latest
+   docker.io/darkraise/flashpoint-backend:latest
+   docker.io/darkraise/flashpoint-frontend:latest
+   docker.io/darkraise/flashpoint-game-service:latest
    ```
 
 #### Image Tags
@@ -102,12 +102,12 @@ The workflow uses GitHub Actions cache to speed up builds:
 
 ```bash
 # Pull latest images
-docker pull <dockerhub-username>/flashpoint-backend:latest
-docker pull <dockerhub-username>/flashpoint-frontend:latest
-docker pull <dockerhub-username>/flashpoint-game-service:latest
+docker pull darkraise/flashpoint-backend:latest
+docker pull darkraise/flashpoint-frontend:latest
+docker pull darkraise/flashpoint-game-service:latest
 
 # Or use a specific version
-docker pull <dockerhub-username>/flashpoint-backend:1.0.0
+docker pull darkraise/flashpoint-backend:1.0.0
 ```
 
 ##### Use in Docker Compose
@@ -119,20 +119,20 @@ version: '3.8'
 
 services:
   backend:
-    image: <dockerhub-username>/flashpoint-backend:latest
+    image: darkraise/flashpoint-backend:latest
     # Remove build section
     ports:
       - "3100:3100"
     # ... rest of config
 
   frontend:
-    image: <dockerhub-username>/flashpoint-frontend:latest
+    image: darkraise/flashpoint-frontend:latest
     ports:
       - "80:8080"
     # ... rest of config
 
   game-service:
-    image: <dockerhub-username>/flashpoint-game-service:latest
+    image: darkraise/flashpoint-game-service:latest
     ports:
       - "22500:22500"
       - "22501:22501"
