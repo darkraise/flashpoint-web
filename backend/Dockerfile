@@ -50,8 +50,8 @@ WORKDIR /app
 RUN apk add --no-cache curl tzdata su-exec shadow
 
 # Copy pruned production node_modules from builder (avoids a second npm ci)
+# npm workspaces hoist all deps to root; workspace node_modules is empty in single-workspace builds
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/backend/node_modules ./backend/node_modules
 
 # Copy package files (needed for Node.js module resolution)
 COPY --from=builder /app/package.json ./
