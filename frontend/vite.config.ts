@@ -20,6 +20,9 @@ export default defineConfig({
     }
   },
   assetsInclude: ['**/*.wasm'],
+  esbuild: {
+    drop: ['console', 'debugger']
+  },
   build: {
     // Target modern browsers for smaller bundles
     target: 'es2020',
@@ -27,15 +30,8 @@ export default defineConfig({
     // Increase chunk size warning limit (default is 500kb)
     chunkSizeWarningLimit: 600,
 
-    // Enable minification
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.debug'] // Remove specific console methods
-      }
-    },
+    // Enable minification (esbuild is Vite's default — fast, no extra dependency)
+    minify: 'esbuild',
 
     rollupOptions: {
       output: {
@@ -85,10 +81,9 @@ export default defineConfig({
             return 'utils';
           }
 
-          // Other node_modules
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+          // Remaining node_modules: let Rollup decide optimal chunking
+          // A catch-all 'vendor' bucket causes circular deps with react-vendor
+          // because packages like framer-motion/axios import React
         }
       }
     },
