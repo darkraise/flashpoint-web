@@ -43,6 +43,9 @@ Flashpoint Web is built with modern, production-ready technologies chosen for th
 | node-stream-zip | 1.15 | ZIP archive streaming |
 | Axios | 1.6 | HTTP client for CDN |
 | Winston | 3.11 | Logging |
+| Zod | 4.3 | Schema validation |
+
+> **Note:** Game Service uses TypeScript 5.3 while Backend/Frontend use 5.4. This is intentional and both versions are compatible.
 
 ### Development Tools
 

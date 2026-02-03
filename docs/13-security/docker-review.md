@@ -620,14 +620,10 @@ services:
       - PORT=3100
       - HOST=0.0.0.0
       - FLASHPOINT_PATH=/data/flashpoint
-      - FLASHPOINT_DB_PATH=/data/flashpoint/Data/flashpoint.sqlite
-      - FLASHPOINT_HTDOCS_PATH=/data/flashpoint/Legacy/htdocs
-      - FLASHPOINT_IMAGES_PATH=/data/flashpoint/Data/Images
-      - FLASHPOINT_LOGOS_PATH=/data/flashpoint/Data/Logos
-      - FLASHPOINT_PLAYLISTS_PATH=/data/flashpoint/Data/Playlists
-      - FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
-      - GAME_SERVICE_PROXY_URL=http://game-service:22500
-      - GAME_SERVICE_GAMEZIP_URL=http://game-service:22501
+      # Note: FLASHPOINT_DB_PATH, FLASHPOINT_HTDOCS_PATH, IMAGES_PATH, LOGOS_PATH, PLAYLISTS_PATH, GAMES_PATH
+      # are all derived automatically from FLASHPOINT_PATH
+      - GAME_SERVICE_HOST=game-service
+      # Note: Proxy and GameZip URLs are derived automatically from GAME_SERVICE_HOST
       - DOMAIN=http://localhost:${WEB_PORT:-80}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:

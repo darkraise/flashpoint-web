@@ -173,43 +173,19 @@ cp .env.example .env
 
 #### Configure Required Variables
 
-Edit the `.env` file and update these critical paths:
+Edit the `.env` file and update these critical settings:
 
 ```bash
 # =============================================================================
-# CRITICAL: Update these paths to match your Flashpoint installation
+# CRITICAL: Only FLASHPOINT_PATH needs to be set
+# All other paths are derived automatically!
 # =============================================================================
 
 # Base path to your Flashpoint installation
 FLASHPOINT_PATH=D:/Flashpoint
 
-# Database path (should be inside Flashpoint installation)
-FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
-
-# Legacy web content directory
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-
-# Images directory
-FLASHPOINT_IMAGES_PATH=D:/Flashpoint/Data/Images
-
-# Logos directory
-FLASHPOINT_LOGOS_PATH=D:/Flashpoint/Data/Logos
-
-# Playlists directory
-FLASHPOINT_PLAYLISTS_PATH=D:/Flashpoint/Data/Playlists
-
-# Game data directory (ZIP files)
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
-
-# =============================================================================
-# Service URLs (use defaults for local development)
-# =============================================================================
-
-# Game service proxy URL
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-
-# Game service GameZip URL
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
+# Game service host (use localhost for development)
+GAME_SERVICE_HOST=localhost
 
 # Frontend origin for CORS
 DOMAIN=http://localhost:5173
@@ -240,6 +216,18 @@ RATE_LIMIT_MAX_REQUESTS=100
 - **Linux/macOS**: Use absolute paths
   - Example: `/home/username/Flashpoint` or `/Users/username/Flashpoint`
 
+**Path Derivation**:
+
+All other paths are automatically derived from `FLASHPOINT_PATH`:
+- Database: `${FLASHPOINT_PATH}/Data/flashpoint.sqlite`
+- HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
+- Images: `${FLASHPOINT_PATH}/Data/Images`
+- Logos: `${FLASHPOINT_PATH}/Data/Logos`
+- Playlists: `${FLASHPOINT_PATH}/Data/Playlists`
+- Games: `${FLASHPOINT_PATH}/Data/Games`
+
+You do not need to set individual path environment variables.
+
 ### Step 4: Configure Game Service Environment
 
 The game service also needs to know where Flashpoint is installed.
@@ -257,10 +245,8 @@ cp .env.example .env
 Update these variables in `game-service/.env`:
 
 ```bash
-# Flashpoint paths
+# Flashpoint path (HTDOCS and Games paths are derived automatically)
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
 
 # Server ports (defaults should work)
 PROXY_PORT=22500
@@ -273,19 +259,11 @@ EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/h
 LOG_LEVEL=info
 ```
 
-### Step 5: Configure Frontend Environment (Optional)
+### Step 5: Frontend Configuration (No Environment Variables Needed)
 
-The frontend has minimal configuration and works with defaults for development.
+The frontend does not require any environment variable configuration. The Vite development server uses a proxy configuration in `vite.config.ts` to automatically route API requests to the backend at `http://localhost:3100`.
 
-```bash
-# Navigate to frontend directory
-cd ../frontend
-
-# Create .env file (optional - defaults work for development)
-echo "VITE_API_URL=http://localhost:3100" > .env
-```
-
-The Vite development server uses a proxy configuration in `vite.config.ts`, so this is optional.
+No `.env` file is needed for the frontend in development or production.
 
 ### Step 6: Verify Configuration
 
@@ -535,8 +513,8 @@ GAMEZIPSERVER_PORT=22503
 
 **Solution**:
 1. Verify game service is running on ports 22500 and 22501
-2. Check paths in `game-service/.env`
-3. Verify `FLASHPOINT_HTDOCS_PATH` and `FLASHPOINT_GAMES_PATH` are correct
+2. Check `FLASHPOINT_PATH` in `game-service/.env` (paths are derived automatically)
+3. Verify FLASHPOINT_PATH points to correct Flashpoint installation
 
 ### Issue: SQLite "database is locked" error
 

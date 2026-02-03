@@ -101,9 +101,8 @@ npm start
 See [configuration.md](./configuration.md) for complete environment variable documentation.
 
 Required variables:
-- `FLASHPOINT_PATH` - Path to Flashpoint installation
-- `FLASHPOINT_DB_PATH` - Path to flashpoint.sqlite
-- `GAME_SERVICE_PROXY_URL` - URL to game-service proxy (default: http://localhost:22500)
+- `FLASHPOINT_PATH` - Path to Flashpoint installation (all other paths are derived automatically)
+- `GAME_SERVICE_HOST` - Game service hostname/IP (default: localhost)
 - `DOMAIN` - Frontend URL (default: http://localhost:5173)
 
 ## Core Concepts
@@ -294,8 +293,8 @@ npm test -- --coverage
 
 ### Game Files Not Loading
 - Verify game-service is running on port 22500/22501
-- Check GAME_SERVICE_PROXY_URL in .env
-- Ensure Flashpoint paths are correct
+- Check GAME_SERVICE_HOST in .env (default: localhost)
+- Ensure FLASHPOINT_PATH is correct
 
 ## Related Documentation
 

@@ -172,9 +172,9 @@ interface JWTPayload {
 #### Backend
 ```env
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
+# Note: All other paths (DB, HTDOCS, IMAGES, LOGOS, PLAYLISTS, GAMES) are derived automatically
+GAME_SERVICE_HOST=localhost
+# Note: Proxy and GameZip URLs are derived automatically from GAME_SERVICE_HOST
 DOMAIN=http://localhost:5173
 JWT_SECRET=your-secret-key
 JWT_EXPIRES_IN=1h

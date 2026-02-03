@@ -137,65 +137,58 @@ cp .env.example .env
 **2. Edit `.env` file:**
 
 ```bash
-# Windows paths (use forward slashes or escaped backslashes)
+# Required
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=D:/Flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=D:/Flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=D:/Flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
+JWT_SECRET=your-secret-key-change-in-production
 
-# Linux/Mac paths
-# FLASHPOINT_PATH=/home/user/Flashpoint
-# FLASHPOINT_DB_PATH=/home/user/Flashpoint/Data/flashpoint.sqlite
-# ... etc
-
-# Game service URLs
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
-
-# Server configuration
-PORT=3100
+# Optional settings
+NODE_ENV=development
+LOG_LEVEL=info
 DOMAIN=http://localhost:5173
 
-# JWT secret (change in production!)
-JWT_SECRET=your-secret-key-change-in-production
-JWT_EXPIRES_IN=7d
-JWT_REFRESH_EXPIRES_IN=30d
+# Backend -> game-service connection (local development)
+GAME_SERVICE_HOST=localhost
 
-# Logging
-LOG_LEVEL=info
+# Rate limiting
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Auth
+JWT_EXPIRES_IN=1h
+BCRYPT_SALT_ROUNDS=10
+
+# Redis (optional)
+REDIS_ENABLED=false
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Database optimization (for network storage)
+ENABLE_LOCAL_DB_COPY=false
+SQLITE_CACHE_SIZE=-64000
+SQLITE_MMAP_SIZE=268435456
+ENABLE_CACHE_PREWARM=true
 ```
+
+> **Note:** All paths (database, images, logos, htdocs, games) are automatically derived from `FLASHPOINT_PATH`. You only need to set the base path.
 
 **3. Verify paths:**
 
 ```bash
-# Test that paths are accessible
-ls $FLASHPOINT_DB_PATH
+# Test that Flashpoint path is accessible
+ls $FLASHPOINT_PATH/Data/flashpoint.sqlite
 
 # Windows CMD
-dir %FLASHPOINT_DB_PATH%
+dir %FLASHPOINT_PATH%\Data\flashpoint.sqlite
 
 # Windows PowerShell
-Test-Path $env:FLASHPOINT_DB_PATH
+Test-Path "$env:FLASHPOINT_PATH\Data\flashpoint.sqlite"
 ```
 
 ### Frontend Configuration
 
-**1. Create environment file:**
+The frontend does not require a `.env` file for local development. API calls are automatically proxied through Vite to the backend.
 
-```bash
-cd frontend
-cp .env.example .env
-```
-
-**2. Edit `.env` file:**
-
-```bash
-# Backend API URL
-VITE_API_URL=http://localhost:3100
-```
+> **Note:** In production (Docker), the frontend uses Nginx to proxy API requests to the backend container.
 
 ### Game Service Configuration
 
@@ -209,20 +202,21 @@ cp .env.example .env
 **2. Edit `.env` file:**
 
 ```bash
-# Server ports
-PROXY_PORT=22500
-GAMEZIPSERVER_PORT=22501
-
-# Flashpoint paths (must match backend)
+# Flashpoint Installation Path (required)
+# All other paths are automatically derived from this
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
-
-# External fallback CDNs
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
 
 # Logging
 LOG_LEVEL=info
+NODE_ENV=development
+
+# External Fallback URLs (comma-separated)
+# Used when files are not found locally
+EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
+
+# CGI and Advanced Features (optional)
+ENABLE_CGI=false
+ENABLE_HTACCESS=false
 ```
 
 ---
@@ -471,9 +465,9 @@ npm run kill-port
 ls D:/Flashpoint/Data/flashpoint.sqlite
 
 # Check .env file
-cat backend/.env | grep FLASHPOINT_DB_PATH
+cat backend/.env | grep FLASHPOINT_PATH
 
-# Ensure path matches
+# Ensure path matches (db and other paths are derived automatically from FLASHPOINT_PATH)
 ```
 
 **Issue: Dependencies Won't Install**
@@ -589,38 +583,46 @@ Use this checklist to verify your setup:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `FLASHPOINT_PATH` | Yes | - | Path to Flashpoint installation |
-| `FLASHPOINT_DB_PATH` | Yes | - | Path to flashpoint.sqlite |
-| `FLASHPOINT_HTDOCS_PATH` | Yes | - | Path to htdocs folder |
-| `FLASHPOINT_IMAGES_PATH` | Yes | - | Path to Images folder |
-| `FLASHPOINT_LOGOS_PATH` | Yes | - | Path to Logos folder |
-| `FLASHPOINT_PLAYLISTS_PATH` | Yes | - | Path to Playlists folder |
-| `FLASHPOINT_GAMES_PATH` | Yes | - | Path to Games folder |
-| `GAME_SERVICE_PROXY_URL` | Yes | - | Game service proxy URL |
-| `GAME_SERVICE_GAMEZIP_URL` | Yes | - | Game service GameZip URL |
-| `PORT` | No | 3100 | Backend server port |
-| `DOMAIN` | Yes | - | Frontend URL for CORS |
-| `JWT_SECRET` | No | auto | JWT signing secret |
-| `JWT_EXPIRES_IN` | No | 7d | JWT expiration |
-| `LOG_LEVEL` | No | info | Logging level |
+| `FLASHPOINT_PATH` | Yes | - | Path to Flashpoint installation (all other paths derived from this) |
+| `JWT_SECRET` | Yes* | auto-generated | JWT signing secret (*required in production) |
+| `NODE_ENV` | No | development | Environment mode |
+| `DOMAIN` | No | http://localhost:5173 | Frontend URL for CORS |
+| `GAME_SERVICE_HOST` | No | localhost | Hostname of game service |
+| `LOG_LEVEL` | No | info | Logging level (error, warn, info, debug) |
+| `JWT_EXPIRES_IN` | No | 1h | JWT access token expiration |
+| `BCRYPT_SALT_ROUNDS` | No | 10 | Password hashing rounds |
+| `RATE_LIMIT_WINDOW_MS` | No | 60000 | Rate limit window in milliseconds |
+| `RATE_LIMIT_MAX_REQUESTS` | No | 100 | Max requests per window |
+| `REDIS_ENABLED` | No | false | Enable Redis caching |
+| `REDIS_HOST` | No | localhost | Redis server hostname |
+| `REDIS_PORT` | No | 6379 | Redis server port |
+| `ENABLE_LOCAL_DB_COPY` | No | false | Copy flashpoint.sqlite locally (for network storage) |
+| `SQLITE_CACHE_SIZE` | No | -64000 | SQLite cache size (negative = KB) |
+| `SQLITE_MMAP_SIZE` | No | 268435456 | SQLite memory-mapped I/O size |
+| `ENABLE_CACHE_PREWARM` | No | true | Pre-warm caches on startup |
 
-### Frontend (.env)
+### Frontend
+
+The frontend does not require environment variables for local development. API calls are proxied through Vite.
+
+For production builds, you can optionally set:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VITE_API_URL` | Yes | - | Backend API URL |
+| `VITE_APP_VERSION` | No | 1.0.0 | Displayed app version |
 
 ### Game Service (.env)
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `PROXY_PORT` | No | 22500 | Proxy server port |
-| `GAMEZIPSERVER_PORT` | No | 22501 | GameZip server port |
 | `FLASHPOINT_PATH` | Yes | - | Path to Flashpoint installation |
-| `FLASHPOINT_HTDOCS_PATH` | Yes | - | Path to htdocs folder |
-| `FLASHPOINT_GAMES_PATH` | Yes | - | Path to Games folder |
-| `EXTERNAL_FALLBACK_URLS` | No | - | Comma-separated CDN URLs |
+| `NODE_ENV` | No | development | Environment mode |
+| `PROXY_PORT` | No | 22500 | HTTP proxy server port |
+| `GAMEZIPSERVER_PORT` | No | 22501 | GameZip server port |
+| `EXTERNAL_FALLBACK_URLS` | No | - | Comma-separated CDN URLs for fallback |
 | `LOG_LEVEL` | No | info | Logging level |
+| `ENABLE_CGI` | No | false | Enable CGI support |
+| `ENABLE_HTACCESS` | No | false | Enable .htaccess support |
 
 ---
 

@@ -54,13 +54,15 @@ HOST=127.0.0.1
 |----------|------|----------|-------------|
 | `FLASHPOINT_PATH` | string | Yes | Root directory of Flashpoint installation. All other paths are automatically derived from this. |
 
-**Automatically derived paths:**
+**Automatically derived paths (no environment variable needed):**
 - Database: `${FLASHPOINT_PATH}/Data/flashpoint.sqlite`
 - HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
 - Images: `${FLASHPOINT_PATH}/Data/Images`
 - Logos: `${FLASHPOINT_PATH}/Data/Logos`
 - Playlists: `${FLASHPOINT_PATH}/Data/Playlists`
 - Games: `${FLASHPOINT_PATH}/Data/Games`
+
+All paths are derived automatically from `FLASHPOINT_PATH`. You only need to set `FLASHPOINT_PATH` - no need to set individual path variables.
 
 **Example (Windows):**
 
@@ -81,29 +83,30 @@ FLASHPOINT_PATH=/data/flashpoint
 FLASHPOINT_PATH=/data/flashpoint
 ```
 
-### Game Service URLs
+### Game Service Host
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `GAME_SERVICE_PROXY_URL` | string | `http://localhost:22500` | URL to game-service HTTP proxy |
-| `GAME_SERVICE_GAMEZIP_URL` | string | `http://localhost:22501` | URL to game-service GameZip server |
-| `GAME_SERVER_URL` | string | - | Legacy alias for `GAME_SERVICE_PROXY_URL` |
-| `GAME_SERVER_HTTP_PORT` | number | - | Legacy alias for GameZip port |
+| `GAME_SERVICE_HOST` | string | `localhost` | Hostname/IP of game-service for constructing URLs to proxy and GameZip servers |
+
+The proxy and GameZip URLs are automatically constructed as:
+- Proxy URL: `http://${GAME_SERVICE_HOST}:22500`
+- GameZip URL: `http://${GAME_SERVICE_HOST}:22501`
 
 **Examples:**
 
 ```bash
-# Local development
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
+# Local development (default)
+GAME_SERVICE_HOST=localhost
+# Results in: http://localhost:22500 and http://localhost:22501
 
 # Docker (internal network)
-GAME_SERVICE_PROXY_URL=http://game-service:22500
-GAME_SERVICE_GAMEZIP_URL=http://game-service:22501
+GAME_SERVICE_HOST=game-service
+# Results in: http://game-service:22500 and http://game-service:22501
 
 # Remote game service
-GAME_SERVICE_PROXY_URL=http://192.168.1.100:22500
-GAME_SERVICE_GAMEZIP_URL=http://192.168.1.100:22501
+GAME_SERVICE_HOST=192.168.1.100
+# Results in: http://192.168.1.100:22500 and http://192.168.1.100:22501
 ```
 
 ### Image CDN URLs (Automatic)
@@ -426,45 +429,13 @@ LOG_ERRORS=true
 
 ## Frontend Environment Variables
 
-Location: `frontend/.env` (build time only)
+**The frontend does not require any environment variables in development or production.**
 
-### Build Configuration
+The API requests are proxied through the backend, either:
+- **Development**: Via Vite proxy configuration in `vite.config.ts` to `http://localhost:3100`
+- **Production**: Via Nginx reverse proxy or the same domain
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `VITE_API_URL` | string | `http://localhost:3100` | Backend API URL |
-
-**IMPORTANT:** Frontend environment variables are embedded at build time. Changes require rebuild.
-
-**Examples:**
-
-```bash
-# Development
-VITE_API_URL=http://localhost:3100
-
-# Production (same domain)
-VITE_API_URL=https://flashpoint.example.com
-
-# Production (API subdomain)
-VITE_API_URL=https://api.flashpoint.example.com
-
-# Production (different port)
-VITE_API_URL=https://flashpoint.example.com:8443
-```
-
-### Build with Custom API URL
-
-```bash
-# Option 1: Set in .env file
-echo "VITE_API_URL=https://api.example.com" > frontend/.env
-npm run build
-
-# Option 2: Inline environment variable
-VITE_API_URL=https://api.example.com npm run build
-
-# Option 3: Docker build arg
-docker build --build-arg VITE_API_URL=https://api.example.com -t frontend .
-```
+No `VITE_API_URL` configuration is needed. The frontend automatically uses the relative API paths `/api/*`.
 
 ## Docker Environment Variables
 
@@ -547,18 +518,11 @@ NODE_ENV=development
 PORT=3100
 HOST=0.0.0.0
 
-# Flashpoint paths
+# Flashpoint paths (only FLASHPOINT_PATH is needed - others are derived automatically)
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=D:/Flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=D:/Flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=D:/Flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
 
-# Game service
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
+# Game service (derive URLs from host)
+GAME_SERVICE_HOST=localhost
 
 # Security (weak for dev only)
 JWT_SECRET=development-secret-change-in-production
@@ -585,18 +549,11 @@ NODE_ENV=production
 PORT=3100
 HOST=127.0.0.1
 
-# Flashpoint paths
+# Flashpoint paths (only FLASHPOINT_PATH is needed - others are derived automatically)
 FLASHPOINT_PATH=/data/flashpoint
-FLASHPOINT_DB_PATH=/data/flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=/data/flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=/data/flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=/data/flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=/data/flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
 
-# Game service
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
+# Game service (derive URLs from host)
+GAME_SERVICE_HOST=game-service
 
 # Security (CHANGE THESE!)
 JWT_SECRET=CHANGE-THIS-TO-A-RANDOM-64-CHARACTER-STRING
@@ -612,7 +569,7 @@ LOG_FILE=/var/log/flashpoint-backend.log
 
 # Redis (enabled)
 REDIS_ENABLED=true
-REDIS_HOST=localhost
+REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_TTL=3600
 
@@ -648,9 +605,6 @@ LOG_LEVEL=warn
 # External URLs (game content fallback)
 EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
 # Note: Image CDN URLs are automatically read from Flashpoint preferences
-
-# API URL (for frontend build)
-VITE_API_URL=https://flashpoint.example.com
 ```
 
 ## Validation and Defaults
@@ -680,18 +634,10 @@ export const config = envSchema.parse(process.env);
 These variables MUST be set or the application will fail to start:
 
 **Backend:**
-- `FLASHPOINT_PATH`
-- `FLASHPOINT_DB_PATH`
-- `FLASHPOINT_HTDOCS_PATH`
-- `FLASHPOINT_IMAGES_PATH`
-- `FLASHPOINT_LOGOS_PATH`
-- `FLASHPOINT_PLAYLISTS_PATH`
-- `FLASHPOINT_GAMES_PATH`
+- `FLASHPOINT_PATH` (all other paths are derived automatically)
 
 **Game Service:**
-- `FLASHPOINT_PATH`
-- `FLASHPOINT_HTDOCS_PATH`
-- `FLASHPOINT_GAMES_PATH`
+- `FLASHPOINT_PATH` (FLASHPOINT_HTDOCS_PATH and FLASHPOINT_GAMES_PATH are derived automatically)
 
 **Production (Backend):**
 - `JWT_SECRET` (must be changed from default)
@@ -706,8 +652,8 @@ Test configuration without starting services:
 cd backend
 node -e "require('dotenv').config(); console.log(process.env)"
 
-# Validate Flashpoint paths exist
-node -e "require('dotenv').config(); const fs=require('fs'); console.log(fs.existsSync(process.env.FLASHPOINT_DB_PATH) ? 'OK' : 'NOT FOUND')"
+# Validate Flashpoint path exists
+node -e "require('dotenv').config(); const fs=require('fs'); console.log(fs.existsSync(process.env.FLASHPOINT_PATH) ? 'OK' : 'NOT FOUND')"
 ```
 
 ## Security Best Practices

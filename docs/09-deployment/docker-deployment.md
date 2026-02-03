@@ -253,10 +253,12 @@ networks:
 
 | Service | Internal Port | Host Port | Description |
 |---------|---------------|-----------|-------------|
-| Frontend | 80 | 80 | Web UI |
+| Frontend | 8080 | 80 | Web UI (Nginx) |
 | Backend | 3100 | 3100 | REST API |
 | Game Service (Proxy) | 22500 | 22500 | HTTP Proxy |
 | Game Service (ZIP) | 22501 | 22501 | GameZip Server |
+
+> **Note:** The frontend container runs Nginx on internal port 8080, which is mapped to host port 80 by default.
 
 **Custom Port Configuration:**
 
@@ -277,31 +279,45 @@ Each service includes health checks for container orchestration:
 
 ### Backend Health Check
 
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
-  CMD node -e "require('http').get('http://localhost:3100/health', (res) => { \
-    process.exit(res.statusCode === 200 ? 0 : 1); \
-  }).on('error', () => process.exit(1));"
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "--fail", "http://localhost:3100/api/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+```
+
+**Endpoint:** `GET /api/health`
+**Expected Response:** `200 OK`
+
+### Game Service Health Check
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "--fail", "http://localhost:22500/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
 ```
 
 **Endpoint:** `GET /health`
 **Expected Response:** `200 OK`
 
-### Game Service Health Check
-
-```dockerfile
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30s \
-  CMD node -e "require('http').get('http://localhost:22500/', (res) => { \
-    process.exit(res.statusCode < 500 ? 0 : 1); \
-  }).on('error', () => process.exit(1));"
-```
-
-**Endpoint:** `GET /`
-**Expected Response:** Any non-5xx status
-
 ### Frontend Health Check
 
-Nginx automatically serves 200 OK on root path.
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "--fail", "http://localhost:8080/"]
+  interval: 30s
+  timeout: 3s
+  retries: 3
+  start_period: 10s
+```
+
+**Endpoint:** `GET /` (Nginx root)
+**Expected Response:** `200 OK`
 
 ### Check Health Status
 
@@ -341,14 +357,8 @@ services:
       - PORT=3100
       - HOST=0.0.0.0
       - FLASHPOINT_PATH=/data/flashpoint
-      - FLASHPOINT_DB_PATH=/data/flashpoint/Data/flashpoint.sqlite
-      - FLASHPOINT_HTDOCS_PATH=/data/flashpoint/Legacy/htdocs
-      - FLASHPOINT_IMAGES_PATH=/data/flashpoint/Data/Images
-      - FLASHPOINT_LOGOS_PATH=/data/flashpoint/Data/Logos
-      - FLASHPOINT_PLAYLISTS_PATH=/data/flashpoint/Data/Playlists
-      - FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
-      - GAME_SERVICE_PROXY_URL=http://game-service:22500
-      - GAME_SERVICE_GAMEZIP_URL=http://game-service:22501
+      # Note: FLASHPOINT_DB_PATH, FLASHPOINT_HTDOCS_PATH, etc. are derived automatically from FLASHPOINT_PATH
+      - GAME_SERVICE_HOST=game-service
       - JWT_SECRET=${JWT_SECRET}
       - DOMAIN=${DOMAIN:-http://localhost}
       - LOG_LEVEL=${LOG_LEVEL:-info}
@@ -392,11 +402,9 @@ services:
       - PROXY_PORT=22500
       - GAMEZIPSERVER_PORT=22501
       - FLASHPOINT_PATH=/data/flashpoint
-      - FLASHPOINT_HTDOCS_PATH=/data/flashpoint/Legacy/htdocs
-      - FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
+      # Note: FLASHPOINT_HTDOCS_PATH and FLASHPOINT_GAMES_PATH are derived automatically from FLASHPOINT_PATH
       - EXTERNAL_FALLBACK_URLS=${EXTERNAL_FALLBACK_URLS}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      - ALLOW_CROSS_DOMAIN=true
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:22500/', (res) => { process.exit(res.statusCode < 500 ? 0 : 1); }).on('error', () => process.exit(1));"]
       interval: 30s
@@ -417,8 +425,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
-      args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:3100}
     image: flashpoint-frontend:latest
     container_name: flashpoint-frontend
     restart: unless-stopped
@@ -550,9 +556,7 @@ RUN npm ci
 # Copy source
 COPY . .
 
-# Build production bundle
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
+# Build production bundle (no VITE_API_URL needed - frontend uses relative API paths)
 RUN npm run build
 
 # Production stage

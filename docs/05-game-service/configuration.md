@@ -87,33 +87,14 @@ FLASHPOINT_PATH=/Applications/Flashpoint
 FLASHPOINT_PATH=/Users/user/flashpoint
 ```
 
-#### FLASHPOINT_HTDOCS_PATH
+**Automatically Derived Paths (no configuration needed):**
 
-Legacy htdocs directory path.
+All other Flashpoint paths are automatically derived from `FLASHPOINT_PATH`:
 
-```bash
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-```
+- HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
+- Games: `${FLASHPOINT_PATH}/Data/Games`
 
-**Default**: `${FLASHPOINT_PATH}/Legacy/htdocs`
-**Type**: Absolute path
-**Required**: No (derived from FLASHPOINT_PATH)
-
-**Use case**: Override htdocs location
-
-#### FLASHPOINT_GAMES_PATH
-
-Game ZIP archives directory.
-
-```bash
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
-```
-
-**Default**: `${FLASHPOINT_PATH}/Data/Games`
-**Type**: Absolute path
-**Required**: No (derived from FLASHPOINT_PATH)
-
-**Use case**: Override games directory location
+You do not need to set environment variables for these paths - they are calculated automatically from `FLASHPOINT_PATH`.
 
 ### Proxy Settings
 
@@ -487,11 +468,12 @@ export class ConfigManager {
 const proxySettingsPath = path.join(flashpointPath, 'Server', 'proxySettings.json');
 const proxySettings = JSON.parse(await fs.readFile(proxySettingsPath, 'utf-8'));
 
-// 2. Override with environment variables
+// 2. Derive paths automatically from FLASHPOINT_PATH
 this.settings = {
   proxyPort: parseInt(process.env.PROXY_PORT || '22500'),
-  legacyHTDOCSPath: process.env.FLASHPOINT_HTDOCS_PATH ||
-                    path.join(flashpointPath, 'Legacy', 'htdocs'),
+  // All paths are derived automatically from flashpointPath:
+  legacyHTDOCSPath: path.join(flashpointPath, 'Legacy', 'htdocs'),
+  gamesPath: path.join(flashpointPath, 'Data', 'Games'),
   // ... etc
 };
 ```
@@ -516,7 +498,7 @@ console.log(`Proxy port: ${settings.proxyPort}`);
 Settings that MUST be configured:
 
 1. **FLASHPOINT_PATH**: Must point to valid Flashpoint installation
-2. **FLASHPOINT_HTDOCS_PATH**: Must exist and be readable
+   - All other paths (HTDOCS, GAMES) are derived automatically from this
 
 ### Validation Process
 

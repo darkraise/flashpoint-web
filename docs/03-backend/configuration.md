@@ -17,9 +17,20 @@ export const config = {
   port: parseInt(process.env.PORT || '3100', 10),
   host: process.env.HOST || '0.0.0.0',
 
-  // Flashpoint paths
+  // Flashpoint paths (only FLASHPOINT_PATH is needed)
   flashpointPath: process.env.FLASHPOINT_PATH || 'D:/Flashpoint',
-  flashpointDbPath: process.env.FLASHPOINT_DB_PATH || 'D:/Flashpoint/Data/flashpoint.sqlite',
+  // All other paths are derived automatically:
+  // - flashpointDbPath: ${flashpointPath}/Data/flashpoint.sqlite
+  // - htdocsPath: ${flashpointPath}/Legacy/htdocs
+  // - imagesPath: ${flashpointPath}/Data/Images
+  // - logosPath: ${flashpointPath}/Data/Logos
+  // - playlistsPath: ${flashpointPath}/Data/Playlists
+  // - gamesPath: ${flashpointPath}/Data/Games
+
+  // Game service host (proxy and gamezip URLs derived automatically)
+  gameServiceHost: process.env.GAME_SERVICE_HOST || 'localhost',
+  // - proxyUrl: http://${gameServiceHost}:22500
+  // - gamezipUrl: http://${gameServiceHost}:22501
   // ... more config
 };
 ```
@@ -70,87 +81,35 @@ export const config = {
   FLASHPOINT_PATH=/mnt/flashpoint  # Linux
   ```
 
-#### `FLASHPOINT_DB_PATH`
-- **Type**: string
-- **Default**: `D:/Flashpoint/Data/flashpoint.sqlite`
-- **Required**: Yes
-- **Description**: Path to Flashpoint game metadata database
-- **Usage**:
-  ```bash
-  FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
-  ```
+**Automatically Derived Paths (no configuration needed):**
 
-#### `FLASHPOINT_HTDOCS_PATH`
-- **Type**: string
-- **Default**: `D:/Flashpoint/Legacy/htdocs`
-- **Description**: Path to legacy web content directory
-- **Usage**:
-  ```bash
-  FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-  ```
+All other Flashpoint paths are automatically derived from `FLASHPOINT_PATH`:
 
-#### `FLASHPOINT_IMAGES_PATH`
-- **Type**: string
-- **Default**: `D:/Flashpoint/Data/Images`
-- **Description**: Path to game screenshots directory
-- **Usage**:
-  ```bash
-  FLASHPOINT_IMAGES_PATH=D:/Flashpoint/Data/Images
-  ```
+- Database: `${FLASHPOINT_PATH}/Data/flashpoint.sqlite`
+- HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
+- Images: `${FLASHPOINT_PATH}/Data/Images`
+- Logos: `${FLASHPOINT_PATH}/Data/Logos`
+- Playlists: `${FLASHPOINT_PATH}/Data/Playlists`
+- Games: `${FLASHPOINT_PATH}/Data/Games`
 
-#### `FLASHPOINT_LOGOS_PATH`
-- **Type**: string
-- **Default**: `D:/Flashpoint/Data/Logos`
-- **Description**: Path to game logos/box art directory
-- **Usage**:
-  ```bash
-  FLASHPOINT_LOGOS_PATH=D:/Flashpoint/Data/Logos
-  ```
-
-#### `FLASHPOINT_PLAYLISTS_PATH`
-- **Type**: string
-- **Default**: `D:/Flashpoint/Data/Playlists`
-- **Description**: Path to playlist files directory
-- **Usage**:
-  ```bash
-  FLASHPOINT_PLAYLISTS_PATH=D:/Flashpoint/Data/Playlists
-  ```
-
-#### `FLASHPOINT_GAMES_PATH`
-- **Type**: string
-- **Default**: `D:/Flashpoint/Data/Games`
-- **Description**: Path to game data/ZIP files directory
-- **Usage**:
-  ```bash
-  FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
-  ```
+You do not need to set environment variables for these paths - they are calculated automatically from `FLASHPOINT_PATH`.
 
 ### Game Service Configuration
 
-#### `GAME_SERVICE_PROXY_URL`
+#### `GAME_SERVICE_HOST`
 - **Type**: string
-- **Default**: `http://localhost:22500`
-- **Description**: URL to game-service HTTP proxy server
+- **Default**: `localhost`
+- **Description**: Hostname/IP of game-service for constructing proxy and GameZip URLs
 - **Usage**:
   ```bash
-  GAME_SERVICE_PROXY_URL=http://localhost:22500
-  GAME_SERVICE_PROXY_URL=http://game-service:22500  # Docker
+  GAME_SERVICE_HOST=localhost  # Development
+  GAME_SERVICE_HOST=game-service  # Docker
+  GAME_SERVICE_HOST=192.168.1.100  # Remote
   ```
 
-#### `GAME_SERVICE_GAMEZIP_URL`
-- **Type**: string
-- **Default**: `http://localhost:22501`
-- **Description**: URL to game-service GameZip server
-- **Usage**:
-  ```bash
-  GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
-  ```
-
-#### `GAME_SERVER_URL` (Legacy)
-- **Type**: string
-- **Default**: `http://localhost:22500`
-- **Description**: Legacy alias for `GAME_SERVICE_PROXY_URL`
-- **Note**: Deprecated, use `GAME_SERVICE_PROXY_URL` instead
+The proxy and GameZip server URLs are automatically constructed as:
+- Proxy: `http://${GAME_SERVICE_HOST}:22500`
+- GameZip: `http://${GAME_SERVICE_HOST}:22501`
 
 ### External Resources
 
@@ -326,17 +285,11 @@ PORT=3100
 HOST=0.0.0.0
 
 # Flashpoint (Windows)
+# All other paths are derived automatically from FLASHPOINT_PATH
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=D:/Flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=D:/Flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=D:/Flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
 
 # Game Service
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
+GAME_SERVICE_HOST=localhost
 
 # Database
 USER_DB_PATH=./user.db
@@ -363,17 +316,11 @@ PORT=3100
 HOST=0.0.0.0
 
 # Flashpoint (Linux)
+# All other paths are derived automatically from FLASHPOINT_PATH
 FLASHPOINT_PATH=/mnt/flashpoint
-FLASHPOINT_DB_PATH=/mnt/flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=/mnt/flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=/mnt/flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=/mnt/flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=/mnt/flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=/mnt/flashpoint/Data/Games
 
 # Game Service
-GAME_SERVICE_PROXY_URL=http://game-service:22500
-GAME_SERVICE_GAMEZIP_URL=http://game-service:22501
+GAME_SERVICE_HOST=game-service
 
 # Database
 USER_DB_PATH=/data/user.db
@@ -409,17 +356,11 @@ PORT=3100
 HOST=0.0.0.0
 
 # Flashpoint (mounted volume)
+# All other paths are derived automatically from FLASHPOINT_PATH
 FLASHPOINT_PATH=/flashpoint
-FLASHPOINT_DB_PATH=/flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=/flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=/flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=/flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=/flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=/flashpoint/Data/Games
 
 # Game Service (Docker network)
-GAME_SERVICE_PROXY_URL=http://game-service:22500
-GAME_SERVICE_GAMEZIP_URL=http://game-service:22501
+GAME_SERVICE_HOST=game-service
 
 # Database (Docker volume)
 USER_DB_PATH=/data/user.db
@@ -508,7 +449,8 @@ if (!fs.existsSync(config.flashpointDbPath)) {
 **Database not found**:
 ```
 Error: Flashpoint database not found at: D:/Flashpoint/Data/flashpoint.sqlite
-Solution: Verify FLASHPOINT_DB_PATH points to valid database file
+Solution: Verify FLASHPOINT_PATH environment variable points to valid Flashpoint installation
+(Database path is derived automatically as ${FLASHPOINT_PATH}/Data/flashpoint.sqlite)
 ```
 
 **Port already in use**:

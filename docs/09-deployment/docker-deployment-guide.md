@@ -232,7 +232,7 @@ Each service uses a production-optimized Dockerfile with multi-stage builds for 
 | Service | Build Args | Default |
 |---------|-----------|---------|
 | Backend | None | - |
-| Frontend | `VITE_API_URL` | `http://localhost:3100` |
+| Frontend | None | Frontend proxies to backend via Nginx, no build-time API configuration needed |
 | Game Service | None | - |
 
 **Note:** For development, use `npm run dev` locally outside of Docker for faster iteration.
@@ -244,8 +244,8 @@ Each service uses a production-optimized Dockerfile with multi-stage builds for 
 # Backend
 docker build -t flashpoint-backend:latest backend/
 
-# Frontend (with API URL)
-docker build --build-arg VITE_API_URL=http://localhost:3100 -t flashpoint-frontend:latest frontend/
+# Frontend (no build-time API URL configuration needed)
+docker build -t flashpoint-frontend:latest frontend/
 
 # Game Service
 docker build -t flashpoint-game-service:latest game-service/
@@ -540,15 +540,14 @@ docker system prune -a --volumes
 
 ### Custom Build Args
 
-Modify Dockerfiles with build arguments:
+Frontend no longer requires build-time API configuration. Backend and game-service can be customized via environment variables in docker-compose.override.yml if needed:
 
 ```yaml
 # docker-compose.override.yml
 services:
-  frontend:
-    build:
-      args:
-        - VITE_API_URL=https://api.example.com
+  backend:
+    environment:
+      - LOG_LEVEL=debug
 ```
 
 ### Multi-Host Deployment

@@ -678,19 +678,14 @@ Create `.vscode/tasks.json`:
 ### Required for Commands
 
 **Backend:**
-- `FLASHPOINT_PATH`: Path to Flashpoint installation
-- `FLASHPOINT_DB_PATH`: Path to flashpoint.sqlite
-- `FLASHPOINT_HTDOCS_PATH`: Path to htdocs folder
-- `GAME_SERVICE_PROXY_URL`: Game service proxy URL
-- `GAME_SERVICE_GAMEZIP_URL`: Game service GameZip URL
+- `FLASHPOINT_PATH`: Path to Flashpoint installation (all other paths derived automatically)
+- `GAME_SERVICE_HOST`: Game service hostname/IP (default: localhost)
 
 **Game Service:**
-- `FLASHPOINT_PATH`: Path to Flashpoint installation
-- `FLASHPOINT_HTDOCS_PATH`: Path to htdocs folder
-- `FLASHPOINT_GAMES_PATH`: Path to Games folder
+- `FLASHPOINT_PATH`: Path to Flashpoint installation (all other paths derived automatically)
 
 **Frontend:**
-- `VITE_API_URL`: Backend API URL (build time)
+- No environment variables required (proxies through backend via Vite in development, Nginx in production)
 
 See [Configuration Documentation](../03-backend/configuration.md) for complete details.
 

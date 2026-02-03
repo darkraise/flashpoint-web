@@ -302,47 +302,42 @@ Independent Node.js service that replaces the original Go-based Flashpoint Game 
 Required variables:
 
 ```bash
+# Required
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=D:/Flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=D:/Flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=D:/Flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
+JWT_SECRET=your-secure-random-string
 
-# Game service URLs (separate service)
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
-
-# Frontend origin for CORS
+# Optional
 DOMAIN=http://localhost:5173
+GAME_SERVICE_HOST=localhost
+LOG_LEVEL=info
 ```
 
-Optional: JWT*SECRET, REDIS_ENABLED, LOG_LEVEL, RATE_LIMIT*\*
+> **Note:** All paths (database, images, logos, htdocs, games) are automatically derived from `FLASHPOINT_PATH`. You only need to set the base Flashpoint installation path.
 
-See `backend/.env.example` for complete configuration options.
+See `backend/.env.example` for complete configuration options including Redis, rate limiting, SQLite optimization, and OpenTelemetry settings.
 
 ### Game Service (.env)
 
 ```bash
-PROXY_PORT=22500
-GAMEZIPSERVER_PORT=22501
+# Required
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
-FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
+
+# Optional
 LOG_LEVEL=info
+EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
 ```
+
+> **Note:** All paths (htdocs, games) are automatically derived from `FLASHPOINT_PATH`.
 
 ### Frontend
 
-Environment variables are injected at build time via Vite:
+The frontend does not require environment variables for local development. API calls are proxied through Vite to the backend.
 
 ```bash
-VITE_API_URL=http://localhost:3100
+VITE_APP_VERSION=1.0.0  # Optional: displayed in settings
 ```
 
-Vite proxy configuration in `vite.config.ts` handles `/api/*` and `/proxy/*` routing to backend.
+Vite proxy configuration in `vite.config.ts` handles `/api/*` routing to backend. In production, Nginx proxies API requests to the backend container.
 
 ## Database Schema
 

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/YOUR_USERNAME/flashpoint-web/tree/master/docs
+    about: Check the documentation before opening an issue
+  - name: Flashpoint Archive
+    url: https://flashpointarchive.org/
+    about: For issues with Flashpoint itself (not this web interface)
+  - name: Ruffle Flash Emulator
+    url: https://github.com/ruffle-rs/ruffle/issues
+    about: For Flash emulation issues, report to the Ruffle project

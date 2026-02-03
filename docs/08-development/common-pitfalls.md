@@ -43,13 +43,15 @@ cp .env.example .env
 # 3. Edit .env with correct paths
 # Windows paths use forward slashes or escaped backslashes
 FLASHPOINT_PATH=D:/Flashpoint
-FLASHPOINT_DB_PATH=D:/Flashpoint/Data/flashpoint.sqlite
+JWT_SECRET=your-secure-secret
 
 # Alternative Windows format
 FLASHPOINT_PATH=D:\\Flashpoint
-FLASHPOINT_DB_PATH=D:\\Flashpoint\\Data\\flashpoint.sqlite
 
-# 4. Verify paths in .env match actual installation
+# Note: All other paths (database, images, logos, etc.) are
+# automatically derived from FLASHPOINT_PATH
+
+# 4. Verify FLASHPOINT_PATH points to valid Flashpoint installation
 ```
 
 **Prevention:**
@@ -486,8 +488,8 @@ ls -l D:/Flashpoint/Legacy/htdocs/
 
 # 6. Verify backend proxy configuration
 # backend/.env
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
+GAME_SERVICE_HOST=localhost
+# (proxy and gamezip URLs are derived automatically as http://localhost:22500 and :22501)
 ```
 
 **Prevention:**

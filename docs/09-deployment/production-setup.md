@@ -121,18 +121,12 @@ NODE_ENV=production
 PORT=3100
 HOST=127.0.0.1  # Only bind to localhost (Nginx will proxy)
 
-# Flashpoint paths
+# Flashpoint paths - only FLASHPOINT_PATH is needed
+# All other paths (DB, HTDOCS, IMAGES, LOGOS, PLAYLISTS, GAMES) are derived automatically
 FLASHPOINT_PATH=/data/flashpoint
-FLASHPOINT_DB_PATH=/data/flashpoint/Data/flashpoint.sqlite
-FLASHPOINT_HTDOCS_PATH=/data/flashpoint/Legacy/htdocs
-FLASHPOINT_IMAGES_PATH=/data/flashpoint/Data/Images
-FLASHPOINT_LOGOS_PATH=/data/flashpoint/Data/Logos
-FLASHPOINT_PLAYLISTS_PATH=/data/flashpoint/Data/Playlists
-FLASHPOINT_GAMES_PATH=/data/flashpoint/Data/Games
 
-# Game service (localhost)
-GAME_SERVICE_PROXY_URL=http://localhost:22500
-GAME_SERVICE_GAMEZIP_URL=http://localhost:22501
+# Game service host - URLs are constructed as http://${GAME_SERVICE_HOST}:22500 and :22501
+GAME_SERVICE_HOST=localhost
 
 # Security (CHANGE THESE!)
 JWT_SECRET=<generate-strong-random-secret-64-chars>
