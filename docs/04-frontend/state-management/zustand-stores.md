@@ -1,22 +1,26 @@
 # Zustand Stores
 
-This document describes the Zustand stores used for client-side state management in the Flashpoint Web frontend.
+This document describes the Zustand stores used for client-side state management
+in the Flashpoint Web frontend.
 
 ## Overview
 
-The application uses three main Zustand stores for different aspects of UI state:
+The application uses three main Zustand stores for different aspects of UI
+state:
 
 1. **useAuthStore** - Authentication state, JWT tokens, user permissions
 2. **useThemeStore** - Theme mode (light/dark/system), primary color
 3. **useUIStore** - Sidebar visibility, view modes, card sizes
 
-All stores use the `persist` middleware to save state to localStorage (or sessionStorage for guest mode).
+All stores use the `persist` middleware to save state to localStorage (or
+sessionStorage for guest mode).
 
 ## useAuthStore
 
 Manages authentication state, user information, and JWT tokens.
 
 ### Location
+
 `D:\Repositories\Personal\flashpoint-web\frontend\src\store\auth.ts`
 
 ### State
@@ -77,7 +81,7 @@ const handleLogin = async (credentials) => {
   const response = await authApi.login(credentials);
   setAuth(response.user, {
     accessToken: response.accessToken,
-    refreshToken: response.refreshToken
+    refreshToken: response.refreshToken,
   });
 };
 ```
@@ -169,7 +173,8 @@ if (hasAllPermissions(['users.read', 'users.write', 'users.delete'])) {
 
 ### Persistence Strategy
 
-The auth store uses a custom storage strategy that separates guest and authenticated sessions:
+The auth store uses a custom storage strategy that separates guest and
+authenticated sessions:
 
 ```typescript
 storage: createJSONStorage(() => ({
@@ -199,18 +204,20 @@ storage: createJSONStorage(() => ({
   removeItem: (name) => {
     localStorage.removeItem(name);
     sessionStorage.removeItem(name);
-  }
-}))
+  },
+}));
 ```
 
 **Benefits:**
+
 - Guest sessions cleared on browser close (sessionStorage)
 - Authenticated sessions persist across browser restarts (localStorage)
 - Prevents guest data from polluting localStorage
 
 ### Theme Loading on Login
 
-After successful login, the auth store automatically loads theme settings from the server:
+After successful login, the auth store automatically loads theme settings from
+the server:
 
 ```typescript
 setAuth: (user: User, tokens: AuthTokens) => {
@@ -219,7 +226,7 @@ setAuth: (user: User, tokens: AuthTokens) => {
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
     isAuthenticated: true,
-    isGuest: false
+    isGuest: false,
   });
 
   // Load theme settings from server
@@ -227,7 +234,7 @@ setAuth: (user: User, tokens: AuthTokens) => {
   themeStore.loadThemeFromServer().catch((error) => {
     console.debug('Failed to load theme settings after login:', error);
   });
-}
+};
 ```
 
 ## useThemeStore
@@ -235,14 +242,15 @@ setAuth: (user: User, tokens: AuthTokens) => {
 Manages theme mode (light/dark/system) and primary color selection.
 
 ### Location
+
 `D:\Repositories\Personal\flashpoint-web\frontend\src\store\theme.ts`
 
 ### State
 
 ```typescript
 interface ThemeState {
-  mode: ThemeMode;  // 'light' | 'dark' | 'system'
-  primaryColor: PrimaryColor;  // 21 color options
+  mode: ThemeMode; // 'light' | 'dark' | 'system'
+  primaryColor: PrimaryColor; // 21 color options
   isLoading: boolean;
 
   setMode: (mode: ThemeMode) => void;
@@ -258,19 +266,42 @@ interface ThemeState {
 
 ```typescript
 export type PrimaryColor =
-  | 'blue'      // Default
-  | 'slate' | 'gray' | 'zinc' | 'neutral' | 'stone'
-  | 'red' | 'orange' | 'amber' | 'yellow'
-  | 'lime' | 'green' | 'emerald' | 'teal' | 'cyan'
-  | 'sky' | 'indigo' | 'violet' | 'purple'
-  | 'fuchsia' | 'pink' | 'rose';
+  | 'blue' // Default
+  | 'slate'
+  | 'gray'
+  | 'zinc'
+  | 'neutral'
+  | 'stone'
+  | 'red'
+  | 'orange'
+  | 'amber'
+  | 'yellow'
+  | 'lime'
+  | 'green'
+  | 'emerald'
+  | 'teal'
+  | 'cyan'
+  | 'sky'
+  | 'indigo'
+  | 'violet'
+  | 'purple'
+  | 'fuchsia'
+  | 'pink'
+  | 'rose';
 ```
 
 Each color has light and dark mode variants stored as HSL values:
 
 ```typescript
-export const colorPalette: Record<PrimaryColor, { light: string; dark: string; label: string }> = {
-  blue: { light: '221.2 83.2% 53.3%', dark: '217.2 91.2% 59.8%', label: 'Blue' },
+export const colorPalette: Record<
+  PrimaryColor,
+  { light: string; dark: string; label: string }
+> = {
+  blue: {
+    light: '221.2 83.2% 53.3%',
+    dark: '217.2 91.2% 59.8%',
+    label: 'Blue',
+  },
   red: { light: '0 72.2% 50.6%', dark: '0 72.2% 60.6%', label: 'Red' },
   // ... 19 more colors
 };
@@ -303,10 +334,11 @@ Changes theme mode and applies to document:
 ```typescript
 const { setMode } = useThemeStore();
 
-setMode('dark');  // Immediately applies dark theme
+setMode('dark'); // Immediately applies dark theme
 ```
 
 Automatically:
+
 - Updates CSS classes on `<html>` element
 - Reapplies primary color for new theme
 - Syncs to server (if authenticated)
@@ -318,10 +350,11 @@ Changes primary color and applies to CSS variables:
 ```typescript
 const { setPrimaryColor } = useThemeStore();
 
-setPrimaryColor('emerald');  // Applies emerald color theme
+setPrimaryColor('emerald'); // Applies emerald color theme
 ```
 
 Automatically:
+
 - Updates `--primary` and `--ring` CSS variables
 - Syncs to server (if authenticated)
 
@@ -336,6 +369,7 @@ await loadThemeFromServer();
 ```
 
 Called automatically:
+
 - After successful login
 - On app rehydration (if authenticated)
 
@@ -350,6 +384,7 @@ await syncThemeToServer();
 ```
 
 Called automatically:
+
 - When mode changes
 - When primary color changes
 - Silent failure if not authenticated
@@ -393,13 +428,15 @@ const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
 Listens for system theme changes when in 'system' mode:
 
 ```typescript
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  const state = useThemeStore.getState();
-  if (state.mode === 'system') {
-    applyTheme('system');
-    applyPrimaryColor(state.primaryColor, 'system');
-  }
-});
+window
+  .matchMedia('(prefers-color-scheme: dark)')
+  .addEventListener('change', () => {
+    const state = useThemeStore.getState();
+    if (state.mode === 'system') {
+      applyTheme('system');
+      applyPrimaryColor(state.primaryColor, 'system');
+    }
+  });
 ```
 
 ### Persistence
@@ -408,12 +445,14 @@ Theme state is persisted to localStorage:
 
 ```typescript
 persist(
-  (set, get) => ({ /* ... */ }),
+  (set, get) => ({
+    /* ... */
+  }),
   {
     name: 'flashpoint-theme-settings',
     partialize: (state) => ({
       mode: state.mode,
-      primaryColor: state.primaryColor
+      primaryColor: state.primaryColor,
     }),
     onRehydrateStorage: () => (state) => {
       if (state) {
@@ -426,9 +465,9 @@ persist(
           console.debug('Failed to load theme from server:', error);
         });
       }
-    }
+    },
   }
-)
+);
 ```
 
 ## useUIStore
@@ -436,6 +475,7 @@ persist(
 Manages UI state like sidebar visibility, view modes, and display preferences.
 
 ### Location
+
 `D:\Repositories\Personal\flashpoint-web\frontend\src\store\ui.ts`
 
 ### State
@@ -444,10 +484,10 @@ Manages UI state like sidebar visibility, view modes, and display preferences.
 interface UIState {
   sidebarOpen: boolean;
   sidebarCollapsed: boolean;
-  viewMode: ViewMode;  // 'grid' | 'list'
+  viewMode: ViewMode; // 'grid' | 'list'
   selectedGameId: string | null;
-  cardSize: CardSize;  // 'small' | 'medium' | 'large'
-  listColumns: ListColumns;  // 1 | 2 | 3 | 4
+  cardSize: CardSize; // 'small' | 'medium' | 'large'
+  listColumns: ListColumns; // 1 | 2 | 3 | 4
 
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
@@ -496,7 +536,7 @@ const {
   setSidebarOpen,
   sidebarCollapsed,
   toggleSidebarCollapsed,
-  setSidebarCollapsed
+  setSidebarCollapsed,
 } = useUIStore();
 
 // Toggle sidebar open/closed (mobile)
@@ -514,8 +554,8 @@ toggleSidebarCollapsed();
 ```typescript
 const { viewMode, setViewMode } = useUIStore();
 
-setViewMode('grid');  // Switch to grid view
-setViewMode('list');  // Switch to list view
+setViewMode('grid'); // Switch to grid view
+setViewMode('list'); // Switch to list view
 ```
 
 #### Card Size Actions
@@ -523,9 +563,9 @@ setViewMode('list');  // Switch to list view
 ```typescript
 const { cardSize, setCardSize } = useUIStore();
 
-setCardSize('small');   // Smaller cards
-setCardSize('medium');  // Medium cards (default)
-setCardSize('large');   // Larger cards
+setCardSize('small'); // Smaller cards
+setCardSize('medium'); // Medium cards (default)
+setCardSize('large'); // Larger cards
 ```
 
 #### List Columns Actions
@@ -533,10 +573,10 @@ setCardSize('large');   // Larger cards
 ```typescript
 const { listColumns, setListColumns } = useUIStore();
 
-setListColumns(1);  // Single column
-setListColumns(2);  // Two columns
-setListColumns(3);  // Three columns
-setListColumns(4);  // Four columns
+setListColumns(1); // Single column
+setListColumns(2); // Two columns
+setListColumns(3); // Three columns
+setListColumns(4); // Four columns
 ```
 
 ### Default Values
@@ -558,7 +598,9 @@ UI state is persisted to localStorage:
 
 ```typescript
 persist(
-  (set) => ({ /* ... */ }),
+  (set) => ({
+    /* ... */
+  }),
   {
     name: 'flashpoint-ui-settings',
     partialize: (state) => ({
@@ -566,11 +608,11 @@ persist(
       sidebarCollapsed: state.sidebarCollapsed,
       cardSize: state.cardSize,
       viewMode: state.viewMode,
-      listColumns: state.listColumns
+      listColumns: state.listColumns,
       // selectedGameId is intentionally not persisted
-    })
+    }),
   }
-)
+);
 ```
 
 ## Best Practices
@@ -601,7 +643,7 @@ const token = useAuthStore.getState().accessToken;
 Zustand automatically batches state updates:
 
 ```typescript
-setAuth(user, tokens);  // Single update, single re-render
+setAuth(user, tokens); // Single update, single re-render
 ```
 
 ### 4. DevTools Integration
@@ -612,10 +654,7 @@ Enable Redux DevTools for debugging:
 import { devtools } from 'zustand/middleware';
 
 export const useAuthStore = create<AuthState>()(
-  devtools(
-    persist(/* ... */),
-    { name: 'Auth Store' }
-  )
+  devtools(persist(/* ... */), { name: 'Auth Store' })
 );
 ```
 

@@ -12,15 +12,8 @@ interface SwipeGestureOptions {
  * @param options Configuration options for swipe detection
  * @returns Ref to attach to the element that should detect swipes
  */
-export function useSwipeGesture<T extends HTMLElement>(
-  options: SwipeGestureOptions
-): RefObject<T> {
-  const {
-    onSwipeLeft,
-    onSwipeRight,
-    minSwipeDistance = 50,
-    maxSwipeTime = 300
-  } = options;
+export function useSwipeGesture<T extends HTMLElement>(options: SwipeGestureOptions): RefObject<T> {
+  const { onSwipeLeft, onSwipeRight, minSwipeDistance = 50, maxSwipeTime = 300 } = options;
 
   const elementRef = useRef<T>(null);
   const touchStartX = useRef<number>(0);
@@ -51,10 +44,7 @@ export function useSwipeGesture<T extends HTMLElement>(
       // Check if this is a horizontal swipe (more horizontal than vertical)
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         // Check if swipe was fast enough and long enough
-        if (
-          Math.abs(deltaX) >= minSwipeDistance &&
-          deltaTime <= maxSwipeTime
-        ) {
+        if (Math.abs(deltaX) >= minSwipeDistance && deltaTime <= maxSwipeTime) {
           if (deltaX > 0 && onSwipeRight) {
             onSwipeRight();
           } else if (deltaX < 0 && onSwipeLeft) {

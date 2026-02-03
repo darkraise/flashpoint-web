@@ -43,11 +43,13 @@ export async function createHTTPProxyServer(options: ProxyServerOptions): Promis
       // Health check endpoint
       if (req.url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          status: 'healthy',
-          service: 'flashpoint-game-service',
-          timestamp: new Date().toISOString()
-        }));
+        res.end(
+          JSON.stringify({
+            status: 'healthy',
+            service: 'flashpoint-game-service',
+            timestamp: new Date().toISOString(),
+          })
+        );
         return;
       }
 

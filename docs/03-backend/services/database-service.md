@@ -1,10 +1,12 @@
 # DatabaseService
 
-Manages connection to the Flashpoint game metadata database (flashpoint.sqlite) with automatic hot-reload when the database file changes.
+Manages connection to the Flashpoint game metadata database (flashpoint.sqlite)
+with automatic hot-reload when the database file changes.
 
 ## Overview
 
-Implements singleton pattern for database access with file watching and hot-reload.
+Implements singleton pattern for database access with file watching and
+hot-reload.
 
 ## Key Features
 
@@ -12,7 +14,8 @@ Implements singleton pattern for database access with file watching and hot-relo
 - **File watching**: Detects when Flashpoint Launcher updates the database
 - **Hot-reload**: Automatically reconnects when database changes
 - **Read/Write access**: Allows play statistics updates
-- **Synchronous API**: Uses better-sqlite3 for better performance than async wrappers
+- **Synchronous API**: Uses better-sqlite3 for better performance than async
+  wrappers
 
 ## Public API
 
@@ -44,10 +47,7 @@ const result = db.prepare('SELECT * FROM game WHERE id = ?').get(gameId);
 Execute a query and return the first result row.
 
 ```typescript
-const game = DatabaseService.get(
-  'SELECT * FROM game WHERE id = ?',
-  [gameId]
-);
+const game = DatabaseService.get('SELECT * FROM game WHERE id = ?', [gameId]);
 ```
 
 **Returns**: First result row or null if no results
@@ -153,7 +153,9 @@ DatabaseService.run(
 Main tables in Flashpoint database:
 
 ### game
+
 Main game metadata table:
+
 - `id` (TEXT PRIMARY KEY) - UUID
 - `title` (TEXT) - Game title
 - `developer` (TEXT) - Developer name
@@ -168,12 +170,15 @@ Main game metadata table:
 - `lastPlayed` (TEXT) - Last played timestamp
 
 ### platform
+
 Platform definitions with id and name.
 
 ### tag
+
 Tag definitions with id, name, and category.
 
 ### game_tags_tag
+
 Many-to-many relationship between games and tags.
 
 ## Error Handling
@@ -208,15 +213,18 @@ this.watcher = fs.watch(config.flashpointDbPath, (eventType) => {
 });
 ```
 
-**Debouncing**: Waits 500ms after last change to prevent excessive reloads during Launcher operations.
+**Debouncing**: Waits 500ms after last change to prevent excessive reloads
+during Launcher operations.
 
 ### Edge Cases
 
-**Launcher Lock**: When Flashpoint Launcher is updating, reload waits 500ms then retries if lock still present.
+**Launcher Lock**: When Flashpoint Launcher is updating, reload waits 500ms then
+retries if lock still present.
 
 **Rapid Changes**: Multiple rapid changes debounce to single reload.
 
-**File Deletion**: If database is deleted, error logged and service remains in error state until file restored.
+**File Deletion**: If database is deleted, error logged and service remains in
+error state until file restored.
 
 ## Performance
 
@@ -224,7 +232,7 @@ this.watcher = fs.watch(config.flashpointDbPath, (eventType) => {
 
 - Use indexed columns in WHERE clauses
 - Limit result sets with LIMIT
-- Avoid SELECT * for large tables
+- Avoid SELECT \* for large tables
 - Use prepared statements (cached by better-sqlite3)
 
 ### Connection Reuse
@@ -246,6 +254,7 @@ this.watcher = fs.watch(config.flashpointDbPath, (eventType) => {
 **Symptom**: `SQLITE_BUSY: database is locked`
 
 **Solutions**:
+
 - Close Flashpoint Launcher
 - Wait for operations to complete
 - Use shorter transactions
@@ -255,6 +264,7 @@ this.watcher = fs.watch(config.flashpointDbPath, (eventType) => {
 **Symptom**: `Flashpoint database not found at: <path>`
 
 **Solutions**:
+
 - Verify path in .env
 - Check Flashpoint installation
 - Verify file permissions
@@ -264,6 +274,7 @@ this.watcher = fs.watch(config.flashpointDbPath, (eventType) => {
 **Symptom**: Database changes not reflected
 
 **Solutions**:
+
 - Check logs for watcher start message
 - Wait 500ms+ after change
 - Manually call `reload()`

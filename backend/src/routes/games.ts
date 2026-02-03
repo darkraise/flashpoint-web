@@ -41,12 +41,14 @@ const searchQuerySchema = z.object({
   yearTo: z.coerce.number().int().min(1970).max(2100).optional(),
   dateAddedSince: z.string().datetime().optional(),
   dateModifiedSince: z.string().datetime().optional(),
-  sortBy: z.enum(['title', 'releaseDate', 'dateAdded', 'dateModified', 'developer']).default('title'),
+  sortBy: z
+    .enum(['title', 'releaseDate', 'dateAdded', 'dateModified', 'developer'])
+    .default('title'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   showBroken: booleanSchema.default(false),
-  showExtreme: booleanSchema.default(false)
+  showExtreme: booleanSchema.default(false),
 });
 
 // GET /api/games - List games with pagination and filters
@@ -54,14 +56,25 @@ router.get(
   '/',
   logActivity('games.search', 'games', (req, res) => {
     // Count active filters
-    const filters = ['platform', 'series', 'developers', 'publishers', 'playModes', 'languages', 'library', 'tags', 'yearFrom', 'yearTo'];
-    const activeFilters = filters.filter(f => req.query[f]).length;
+    const filters = [
+      'platform',
+      'series',
+      'developers',
+      'publishers',
+      'playModes',
+      'languages',
+      'library',
+      'tags',
+      'yearFrom',
+      'yearTo',
+    ];
+    const activeFilters = filters.filter((f) => req.query[f]).length;
 
     return {
       query: req.query.search || null,
       filterCount: activeFilters,
       resultCount: res.locals.resultCount || 0,
-      hasSearch: !!req.query.search
+      hasSearch: !!req.query.search,
     };
   }),
   asyncHandler(async (req, res) => {
@@ -87,7 +100,7 @@ router.get(
       page: query.page,
       limit: query.limit,
       showBroken: query.showBroken,
-      showExtreme: query.showExtreme
+      showExtreme: query.showExtreme,
     });
 
     // Store result count for activity logging
@@ -98,22 +111,28 @@ router.get(
 );
 
 // GET /api/games/filter-options - Get all filter options for dropdowns
-router.get('/filter-options', asyncHandler(async (req, res) => {
-  const filterOptions = await gameService.getFilterOptions();
-  res.json(filterOptions);
-}));
+router.get(
+  '/filter-options',
+  asyncHandler(async (req, res) => {
+    const filterOptions = await gameService.getFilterOptions();
+    res.json(filterOptions);
+  })
+);
 
 // GET /api/games/most-played - Get most played games globally
-router.get('/most-played', asyncHandler(async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
-  const games = await gameService.getMostPlayedGames(limit);
+router.get(
+  '/most-played',
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const games = await gameService.getMostPlayedGames(limit);
 
-  res.json({
-    success: true,
-    data: games,
-    total: games.length
-  });
-}));
+    res.json({
+      success: true,
+      data: games,
+      total: games.length,
+    });
+  })
+);
 
 // GET /api/games/:id - Get single game by ID
 router.get(
@@ -123,7 +142,7 @@ router.get(
     platform: res.locals.game?.platformName,
     library: res.locals.game?.library,
     broken: res.locals.game?.broken,
-    extreme: res.locals.game?.extreme
+    extreme: res.locals.game?.extreme,
   })),
   asyncHandler(async (req, res) => {
     const game = await gameService.getGameById(req.params.id);
@@ -140,24 +159,31 @@ router.get(
 );
 
 // GET /api/games/:id/related - Get related games
-router.get('/:id/related', validateSharedGameAccess('id'), asyncHandler(async (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-  const relatedGames = await gameService.getRelatedGames(req.params.id, limit);
+router.get(
+  '/:id/related',
+  validateSharedGameAccess('id'),
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const relatedGames = await gameService.getRelatedGames(req.params.id, limit);
 
-  res.json(relatedGames);
-}));
+    res.json(relatedGames);
+  })
+);
 
 // GET /api/games/random - Get random game
-router.get('/random', asyncHandler(async (req, res) => {
-  const library = req.query.library as string | undefined;
-  const game = await gameService.getRandomGame(library);
+router.get(
+  '/random',
+  asyncHandler(async (req, res) => {
+    const library = req.query.library as string | undefined;
+    const game = await gameService.getRandomGame(library);
 
-  if (!game) {
-    throw new AppError(404, 'No games found');
-  }
+    if (!game) {
+      throw new AppError(404, 'No games found');
+    }
 
-  res.json(game);
-}));
+    res.json(game);
+  })
+);
 
 // GET /api/games/:id/launch - Get game launch data
 router.get(
@@ -166,7 +192,7 @@ router.get(
   logActivity('games.launch.request', 'games', (req, res) => ({
     platform: res.locals.platform,
     canPlayInBrowser: res.locals.canPlayInBrowser,
-    launchCommand: res.locals.launchCommand
+    launchCommand: res.locals.launchCommand,
   })),
   asyncHandler(async (req, res) => {
     const game = await gameService.getGameById(req.params.id);
@@ -253,7 +279,7 @@ router.get(
       contentUrl,
       applicationPath: game.applicationPath,
       playMode: game.playMode,
-      canPlayInBrowser
+      canPlayInBrowser,
     });
   })
 );

@@ -20,24 +20,26 @@ export class ImageUrlService {
         // Construct full image URL from Flashpoint CDN base URL
         const urls = [
           `${baseUrl}/Flashpoint/Data/Images`,
-          'https://infinity.unstable.life/Flashpoint/Data/Images' // Secondary fallback
+          'https://infinity.unstable.life/Flashpoint/Data/Images', // Secondary fallback
         ];
 
         logger.info('Using external image URLs from Flashpoint preferences', {
           baseUrl: preferences.onDemandBaseUrl,
-          constructedUrls: urls
+          constructedUrls: urls,
         });
 
         return urls;
       }
     } catch (error) {
-      logger.warn('Failed to read image URLs from Flashpoint preferences, using defaults', { error });
+      logger.warn('Failed to read image URLs from Flashpoint preferences, using defaults', {
+        error,
+      });
     }
 
     // Fallback to hardcoded defaults
     const defaultUrls = [
       'https://infinity.flashpointarchive.org/Flashpoint/Data/Images',
-      'https://infinity.unstable.life/Flashpoint/Data/Images'
+      'https://infinity.unstable.life/Flashpoint/Data/Images',
     ];
 
     logger.info('Using default image URLs', { urls: defaultUrls });
@@ -57,7 +59,7 @@ export class ImageUrlService {
       return {
         images: preferences.imageFolderPath || 'Data/Images',
         logos: preferences.logoFolderPath || 'Data/Logos',
-        playlists: preferences.playlistFolderPath || 'Data/Playlists'
+        playlists: preferences.playlistFolderPath || 'Data/Playlists',
       };
     } catch (error) {
       // Return defaults if preferences unavailable
@@ -65,7 +67,7 @@ export class ImageUrlService {
       return {
         images: 'Data/Images',
         logos: 'Data/Logos',
-        playlists: 'Data/Playlists'
+        playlists: 'Data/Playlists',
       };
     }
   }

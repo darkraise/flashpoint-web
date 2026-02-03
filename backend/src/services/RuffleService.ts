@@ -73,9 +73,9 @@ export class RuffleService {
       const response = await axios.get(`${this.githubApiUrl}?per_page=1`, {
         timeout: 10000,
         headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'Flashpoint-Web'
-        }
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'Flashpoint-Web',
+        },
       });
 
       const release = response.data[0];
@@ -84,9 +84,7 @@ export class RuffleService {
       }
 
       // Find web-selfhosted asset
-      const asset = release.assets.find((a: any) =>
-        a.name.includes('web-selfhosted.zip')
-      );
+      const asset = release.assets.find((a: any) => a.name.includes('web-selfhosted.zip'));
 
       if (!asset) {
         throw new Error('web-selfhosted.zip not found in release');
@@ -96,7 +94,7 @@ export class RuffleService {
         version: release.tag_name.replace('nightly-', ''),
         downloadUrl: asset.browser_download_url,
         publishedAt: release.published_at,
-        changelog: release.body || 'No changelog available.'
+        changelog: release.body || 'No changelog available.',
       };
     } catch (error) {
       logger.error('Error fetching latest Ruffle version:', error);
@@ -128,7 +126,7 @@ export class RuffleService {
       latestVersion: latest.version,
       updateAvailable,
       changelog: latest.changelog,
-      publishedAt: latest.publishedAt
+      publishedAt: latest.publishedAt,
     };
   }
 
@@ -149,8 +147,8 @@ export class RuffleService {
         responseType: 'arraybuffer',
         timeout: 60000, // 60 seconds for download
         headers: {
-          'User-Agent': 'Flashpoint-Web'
-        }
+          'User-Agent': 'Flashpoint-Web',
+        },
       });
 
       logger.info('[RuffleService] Download complete, extracting...');
@@ -198,7 +196,7 @@ export class RuffleService {
       return {
         success: true,
         version: latest.version,
-        message: `Successfully updated Ruffle to version ${latest.version}`
+        message: `Successfully updated Ruffle to version ${latest.version}`,
       };
     } catch (error) {
       logger.error('[RuffleService] Error updating Ruffle:', error);

@@ -94,17 +94,13 @@ async function runAllBenchmarks(): Promise<void> {
   benchmarks.push(await runBenchmark('Library: arcade', { library: 'arcade' }));
 
   // Benchmark 6: Year range
-  benchmarks.push(
-    await runBenchmark('Years: 2000-2010', { yearFrom: 2000, yearTo: 2010 })
-  );
+  benchmarks.push(await runBenchmark('Years: 2000-2010', { yearFrom: 2000, yearTo: 2010 }));
 
   // Benchmark 7: Tag filter (single tag)
   benchmarks.push(await runBenchmark('Tag: Puzzle', { tags: ['Puzzle'] }));
 
   // Benchmark 8: Multiple tags
-  benchmarks.push(
-    await runBenchmark('Tags: Puzzle + Action', { tags: ['Puzzle', 'Action'] })
-  );
+  benchmarks.push(await runBenchmark('Tags: Puzzle + Action', { tags: ['Puzzle', 'Action'] }));
 
   // Benchmark 9: Complex filter combination
   benchmarks.push(
@@ -168,11 +164,11 @@ async function runAllBenchmarks(): Promise<void> {
   console.log('└────┴──────────────────────────────────┴──────────┴────────┴──────────┘\n');
 
   // Summary statistics
-  const times = benchmarks.map(b => b.executionTime);
+  const times = benchmarks.map((b) => b.executionTime);
   const avgTime = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
   const minTime = Math.min(...times);
   const maxTime = Math.max(...times);
-  const slowQueries = benchmarks.filter(b => b.executionTime >= 100);
+  const slowQueries = benchmarks.filter((b) => b.executionTime >= 100);
 
   console.log('SUMMARY:\n');
   console.log(`  Average execution time: ${avgTime}ms`);
@@ -182,7 +178,7 @@ async function runAllBenchmarks(): Promise<void> {
 
   if (slowQueries.length > 0) {
     console.log('\n⚠️  SLOW QUERIES DETECTED:\n');
-    slowQueries.forEach(q => {
+    slowQueries.forEach((q) => {
       console.log(`  - ${q.name}: ${q.executionTime}ms`);
     });
   }

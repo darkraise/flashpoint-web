@@ -40,10 +40,12 @@ sequenceDiagram
 ```
 
 **Data Transformation**:
+
 - Frontend state: `{ search: "mario", platform: "Flash", page: 1, limit: 50 }`
 - URL params: `?search=mario&platform=Flash&page=1&limit=50`
 - Backend validation: Zod schema validation
-- SQL: `SELECT * FROM game WHERE platformName = 'Flash' AND title LIKE '%mario%' ... LIMIT 50 OFFSET 0`
+- SQL:
+  `SELECT * FROM game WHERE platformName = 'Flash' AND title LIKE '%mario%' ... LIMIT 50 OFFSET 0`
 
 ## 2. Game Detail View Flow
 
@@ -132,18 +134,15 @@ sequenceDiagram
 ```
 
 **Filter Options Response**:
+
 ```json
 {
   "platforms": [
     { "name": "Flash", "count": 85000 },
     { "name": "HTML5", "count": 15000 }
   ],
-  "developers": [
-    { "name": "Developer A", "count": 500 }
-  ],
-  "tags": [
-    { "name": "Action", "count": 15000 }
-  ],
+  "developers": [{ "name": "Developer A", "count": 500 }],
+  "tags": [{ "name": "Action", "count": 15000 }],
   "yearRange": { "min": 1995, "max": 2024 }
 }
 ```
@@ -251,18 +250,20 @@ sequenceDiagram
 ```
 
 **Debounce Implementation**:
+
 ```typescript
 const debouncedSearch = useMemo(
-  () => debounce((value: string) => {
-    onSearch(value);
-  }, 300),
+  () =>
+    debounce((value: string) => {
+      onSearch(value);
+    }, 300),
   [onSearch]
 );
 
 const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   const value = e.target.value;
-  setSearchValue(value);        // Immediate UI update
-  debouncedSearch(value);       // Debounced API call
+  setSearchValue(value); // Immediate UI update
+  debouncedSearch(value); // Debounced API call
 };
 ```
 
@@ -293,12 +294,13 @@ sequenceDiagram
 ```
 
 **Multi-Select SQL**:
+
 ```typescript
 // Frontend: Array to string
-const platformParam = selectedPlatforms.join(',');  // "Flash,HTML5"
+const platformParam = selectedPlatforms.join(','); // "Flash,HTML5"
 
 // Backend: Parse back
-const platforms = query.platform?.split(',').filter(Boolean);  // ["Flash", "HTML5"]
+const platforms = query.platform?.split(',').filter(Boolean); // ["Flash", "HTML5"]
 
 // SQL: Dynamic placeholders
 if (platforms?.length > 0) {
@@ -366,14 +368,15 @@ graph TB
 ```
 
 **Stale-While-Revalidate**:
+
 ```typescript
 useQuery({
   queryKey: ['games', filters],
   queryFn: () => gamesApi.search(filters),
-  staleTime: 5 * 60 * 1000,         // 5 min - fresh
-  cacheTime: 10 * 60 * 1000,        // 10 min - in memory
-  refetchOnWindowFocus: true,       // Refresh on tab focus
-  keepPreviousData: true            // Show old while fetching new
+  staleTime: 5 * 60 * 1000, // 5 min - fresh
+  cacheTime: 10 * 60 * 1000, // 10 min - in memory
+  refetchOnWindowFocus: true, // Refresh on tab focus
+  keepPreviousData: true, // Show old while fetching new
 });
 ```
 

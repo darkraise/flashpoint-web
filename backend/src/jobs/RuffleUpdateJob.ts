@@ -46,9 +46,7 @@ export class RuffleUpdateJob {
       const result = await this.ruffleService.updateRuffle();
 
       if (result.success) {
-        logger.info(
-          `[RuffleUpdateJob] Update completed successfully - Version: ${result.version}`
-        );
+        logger.info(`[RuffleUpdateJob] Update completed successfully - Version: ${result.version}`);
         return `Ruffle updated to ${result.version}`;
       } else {
         logger.error(`[RuffleUpdateJob] Update failed: ${result.message}`);

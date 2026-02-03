@@ -50,7 +50,9 @@ export class DomainService {
     }
 
     const rows = this.db
-      .prepare('SELECT id, hostname, is_default, created_at FROM domains ORDER BY is_default DESC, hostname ASC')
+      .prepare(
+        'SELECT id, hostname, is_default, created_at FROM domains ORDER BY is_default DESC, hostname ASC'
+      )
       .all() as DomainRow[];
 
     cachedDomains = rows.map(this.mapRow);
@@ -102,17 +104,15 @@ export class DomainService {
     const validated = this.validateHostname(hostname);
 
     // Check for duplicate
-    const existing = this.db
-      .prepare('SELECT id FROM domains WHERE hostname = ?')
-      .get(validated) as { id: number } | undefined;
+    const existing = this.db.prepare('SELECT id FROM domains WHERE hostname = ?').get(validated) as
+      | { id: number }
+      | undefined;
 
     if (existing) {
       throw new Error(`Domain "${validated}" already exists`);
     }
 
-    const stmt = this.db.prepare(
-      'INSERT INTO domains (hostname, created_by) VALUES (?, ?)'
-    );
+    const stmt = this.db.prepare('INSERT INTO domains (hostname, created_by) VALUES (?, ?)');
     const result = stmt.run(validated, createdBy);
 
     this.invalidateCache();
@@ -129,9 +129,9 @@ export class DomainService {
    * Delete a domain by ID
    */
   deleteDomain(id: number): boolean {
-    const existing = this.db
-      .prepare('SELECT hostname FROM domains WHERE id = ?')
-      .get(id) as { hostname: string } | undefined;
+    const existing = this.db.prepare('SELECT hostname FROM domains WHERE id = ?').get(id) as
+      | { hostname: string }
+      | undefined;
 
     if (!existing) {
       return false;

@@ -97,10 +97,7 @@ export function ConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={handleCancel}>{cancelText}</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleConfirm}
-            className={getButtonClassName()}
-          >
+          <AlertDialogAction onClick={handleConfirm} className={getButtonClassName()}>
             {confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>

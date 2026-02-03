@@ -5,9 +5,15 @@ import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
 import { ChartErrorBoundary } from './ChartErrorBoundary';
 
 // Lazy load chart components to reduce initial bundle size
-const PlaytimeChart = lazy(() => import('./PlaytimeChart').then(m => ({ default: m.PlaytimeChart })));
-const TopGamesChart = lazy(() => import('./TopGamesChart').then(m => ({ default: m.TopGamesChart })));
-const GamesDistributionChart = lazy(() => import('./GamesDistributionChart').then(m => ({ default: m.GamesDistributionChart })));
+const PlaytimeChart = lazy(() =>
+  import('./PlaytimeChart').then((m) => ({ default: m.PlaytimeChart }))
+);
+const TopGamesChart = lazy(() =>
+  import('./TopGamesChart').then((m) => ({ default: m.TopGamesChart }))
+);
+const GamesDistributionChart = lazy(() =>
+  import('./GamesDistributionChart').then((m) => ({ default: m.GamesDistributionChart }))
+);
 
 // Skeleton loader for chart components
 function ChartSkeleton({ height = 'h-80' }: { height?: string }) {
@@ -61,7 +67,9 @@ export function UserStatsPanel() {
           <BarChart3 size={20} className="text-primary" />
           Play Statistics
         </h3>
-        <p className="text-muted-foreground">No play data available yet. Start playing some games!</p>
+        <p className="text-muted-foreground">
+          No play data available yet. Start playing some games!
+        </p>
       </div>
     );
   }
@@ -72,22 +80,22 @@ export function UserStatsPanel() {
       label: 'Games Played',
       value: stats.totalGamesPlayed.toString(),
       color: 'text-blue-400',
-      bgColor: 'bg-blue-500/10'
+      bgColor: 'bg-blue-500/10',
     },
     {
       icon: Clock,
       label: 'Total Playtime',
       value: formatPlaytime(stats.totalPlaytimeSeconds),
       color: 'text-green-400',
-      bgColor: 'bg-green-500/10'
+      bgColor: 'bg-green-500/10',
     },
     {
       icon: TrendingUp,
       label: 'Play Sessions',
       value: stats.totalSessions.toString(),
       color: 'text-purple-400',
-      bgColor: 'bg-purple-500/10'
-    }
+      bgColor: 'bg-purple-500/10',
+    },
   ];
 
   return (
@@ -126,11 +134,15 @@ export function UserStatsPanel() {
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
           <div>
             <p className="text-muted-foreground text-sm">First Played</p>
-            <p className="font-medium">{stats.firstPlayAt ? formatDate(stats.firstPlayAt) : 'Never'}</p>
+            <p className="font-medium">
+              {stats.firstPlayAt ? formatDate(stats.firstPlayAt) : 'Never'}
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground text-sm">Last Played</p>
-            <p className="font-medium">{stats.lastPlayAt ? formatDate(stats.lastPlayAt) : 'Never'}</p>
+            <p className="font-medium">
+              {stats.lastPlayAt ? formatDate(stats.lastPlayAt) : 'Never'}
+            </p>
           </div>
         </div>
       </div>

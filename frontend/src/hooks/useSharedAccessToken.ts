@@ -18,40 +18,33 @@ interface UseSharedAccessTokenResult {
 }
 
 export function useSharedAccessToken(): UseSharedAccessTokenResult {
-  const {
-    shareToken: currentShareToken,
-    isValid,
-    setToken,
-    clearToken
-  } = useSharedAccessStore();
+  const { shareToken: currentShareToken, isValid, setToken, clearToken } = useSharedAccessStore();
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const generateToken = useCallback(async (shareToken: string) => {
-    // Don't regenerate if we already have a valid token for this shareToken
-    if (isValid() && currentShareToken === shareToken) {
-      return;
-    }
+  const generateToken = useCallback(
+    async (shareToken: string) => {
+      // Don't regenerate if we already have a valid token for this shareToken
+      if (isValid() && currentShareToken === shareToken) {
+        return;
+      }
 
-    setIsGenerating(true);
-    setError(null);
+      setIsGenerating(true);
+      setError(null);
 
-    try {
-      const response = await sharedPlaylistsApi.generateAccessToken(shareToken);
-      setToken(
-        response.accessToken,
-        shareToken,
-        response.playlistId,
-        response.expiresIn
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to generate access token'));
-      throw err;
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [currentShareToken, isValid, setToken]);
+      try {
+        const response = await sharedPlaylistsApi.generateAccessToken(shareToken);
+        setToken(response.accessToken, shareToken, response.playlistId, response.expiresIn);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to generate access token'));
+        throw err;
+      } finally {
+        setIsGenerating(false);
+      }
+    },
+    [currentShareToken, isValid, setToken]
+  );
 
   return {
     hasValidToken: isValid(),
@@ -59,6 +52,6 @@ export function useSharedAccessToken(): UseSharedAccessTokenResult {
     clearToken,
     currentShareToken,
     isGenerating,
-    error
+    error,
   };
 }

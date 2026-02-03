@@ -1,14 +1,18 @@
 # Mermaid Diagrams
 
-This directory contains Mermaid diagram source files for the Flashpoint Web documentation. These diagrams can be rendered in any Markdown viewer that supports Mermaid syntax (GitHub, GitLab, VS Code with Mermaid extension, etc.).
+This directory contains Mermaid diagram source files for the Flashpoint Web
+documentation. These diagrams can be rendered in any Markdown viewer that
+supports Mermaid syntax (GitHub, GitLab, VS Code with Mermaid extension, etc.).
 
 ## Diagram Files
 
 ### 1. System Architecture (`system-architecture.mmd`)
 
-Complete system architecture showing all three services, databases, and data flow patterns.
+Complete system architecture showing all three services, databases, and data
+flow patterns.
 
 **Contents:**
+
 - Overall system architecture with all components
 - Frontend service architecture (React, Vite, TanStack Query, Zustand)
 - Backend service architecture (Express, middleware, services)
@@ -17,6 +21,7 @@ Complete system architecture showing all three services, databases, and data flo
 - External services (CDN)
 
 **Use cases:**
+
 - Understanding the overall system design
 - Onboarding new developers
 - Architecture decision documentation
@@ -29,6 +34,7 @@ Complete system architecture showing all three services, databases, and data flo
 Complete authentication lifecycle including login, token refresh, and logout.
 
 **Contents:**
+
 - User login sequence
 - Token refresh flow
 - Protected request with RBAC
@@ -36,6 +42,7 @@ Complete authentication lifecycle including login, token refresh, and logout.
 - Guest mode flow
 
 **Use cases:**
+
 - Understanding authentication implementation
 - Debugging auth issues
 - Security audits
@@ -48,6 +55,7 @@ Complete authentication lifecycle including login, token refresh, and logout.
 Complete game launch sequence from user click to game playing.
 
 **Contents:**
+
 - Complete game launch sequence
 - ZIP mounting process
 - HTTP proxy request resolution
@@ -55,6 +63,7 @@ Complete game launch sequence from user click to game playing.
 - Asset loading workflow
 
 **Use cases:**
+
 - Understanding game launch mechanics
 - Debugging game loading issues
 - Optimizing game load times
@@ -67,12 +76,14 @@ Complete game launch sequence from user click to game playing.
 Session tracking lifecycle from start to cleanup.
 
 **Contents:**
+
 - Play session lifecycle (start/end)
 - Statistics aggregation
 - Cleanup job for abandoned sessions
 - Real-time statistics queries
 
 **Use cases:**
+
 - Understanding play tracking implementation
 - Debugging session tracking issues
 - Analytics implementation
@@ -82,9 +93,11 @@ Session tracking lifecycle from start to cleanup.
 
 ### 5. Service Communication (`service-communication.mmd`)
 
-Inter-service communication patterns between frontend, backend, and game service.
+Inter-service communication patterns between frontend, backend, and game
+service.
 
 **Contents:**
+
 - Service communication overview
 - Frontend to backend communication
 - Backend to game service communication
@@ -93,6 +106,7 @@ Inter-service communication patterns between frontend, backend, and game service
 - State synchronization patterns
 
 **Use cases:**
+
 - Understanding service interactions
 - Debugging communication issues
 - API design decisions
@@ -105,6 +119,7 @@ Inter-service communication patterns between frontend, backend, and game service
 Entity relationship diagrams for both databases.
 
 **Contents:**
+
 - Flashpoint database schema (flashpoint.sqlite)
 - User database authentication & authorization tables
 - User database play tracking & statistics tables
@@ -113,6 +128,7 @@ Entity relationship diagrams for both databases.
 - Database access patterns
 
 **Use cases:**
+
 - Understanding data models
 - Database migrations
 - Query optimization
@@ -125,6 +141,7 @@ Entity relationship diagrams for both databases.
 Frontend component organization and data flow.
 
 **Contents:**
+
 - Frontend component hierarchy
 - Component data flow
 - State management architecture
@@ -132,6 +149,7 @@ Frontend component organization and data flow.
 - Protected route pattern
 
 **Use cases:**
+
 - Understanding frontend architecture
 - Component refactoring
 - State management decisions
@@ -143,7 +161,8 @@ Frontend component organization and data flow.
 
 ### In GitHub/GitLab
 
-Mermaid diagrams render automatically in Markdown files on GitHub and GitLab. Simply view any `.md` file containing Mermaid code blocks.
+Mermaid diagrams render automatically in Markdown files on GitHub and GitLab.
+Simply view any `.md` file containing Mermaid code blocks.
 
 ### In VS Code
 
@@ -158,13 +177,18 @@ Mermaid diagrams render automatically in Markdown files on GitHub and GitLab. Si
 
 ### In Documentation Sites
 
-These diagrams are embedded in the main documentation files in the `docs/` directory:
+These diagrams are embedded in the main documentation files in the `docs/`
+directory:
 
-- `system-architecture.mmd` → Used in `docs/02-architecture/system-architecture.md`
-- `authentication-flow.mmd` → Used in `docs/02-architecture/authentication-flow.md`
+- `system-architecture.mmd` → Used in
+  `docs/02-architecture/system-architecture.md`
+- `authentication-flow.mmd` → Used in
+  `docs/02-architecture/authentication-flow.md`
 - `game-launch-flow.mmd` → Used in `docs/02-architecture/game-launch-flow.md`
-- `play-tracking-flow.mmd` → Used in `docs/02-architecture/play-tracking-flow.md`
-- `service-communication.mmd` → Used in `docs/02-architecture/service-communication.md`
+- `play-tracking-flow.mmd` → Used in
+  `docs/02-architecture/play-tracking-flow.md`
+- `service-communication.mmd` → Used in
+  `docs/02-architecture/service-communication.md`
 - `database-schema.mmd` → Used in `docs/03-backend/database/schema.md`
 - `component-hierarchy.mmd` → Used in `docs/04-frontend/architecture.md`
 
@@ -172,9 +196,11 @@ These diagrams are embedded in the main documentation files in the `docs/` direc
 
 ## Diagram Syntax
 
-All diagrams use [Mermaid](https://mermaid.js.org/) syntax. Common diagram types used:
+All diagrams use [Mermaid](https://mermaid.js.org/) syntax. Common diagram types
+used:
 
 ### Flowchart (graph)
+
 ```mermaid
 graph TB
     A[Start] --> B[Process]
@@ -182,6 +208,7 @@ graph TB
 ```
 
 ### Sequence Diagram
+
 ```mermaid
 sequenceDiagram
     Alice->>Bob: Hello Bob
@@ -189,6 +216,7 @@ sequenceDiagram
 ```
 
 ### Entity Relationship Diagram
+
 ```mermaid
 erDiagram
     CUSTOMER ||--o{ ORDER : places

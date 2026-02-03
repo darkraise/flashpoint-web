@@ -26,13 +26,7 @@ export function FilterInput({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type="text"
-        value={value}
-        onChange={handleChange}
-        placeholder={placeholder}
-      />
+      <Input id={id} type="text" value={value} onChange={handleChange} placeholder={placeholder} />
     </div>
   );
 }

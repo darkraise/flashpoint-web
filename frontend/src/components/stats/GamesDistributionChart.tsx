@@ -78,7 +78,9 @@ export function GamesDistributionChart() {
       <div className="bg-card rounded-lg p-6 border border-border shadow-md">
         <h3 className="text-lg font-semibold mb-4">Playtime Distribution</h3>
         <div className="h-96 flex items-center justify-center">
-          <p className="text-muted-foreground">No games played yet. Start playing to see distribution!</p>
+          <p className="text-muted-foreground">
+            No games played yet. Start playing to see distribution!
+          </p>
         </div>
       </div>
     );
@@ -91,24 +93,21 @@ export function GamesDistributionChart() {
     fullName: game.name,
     value: game.value,
     percentage: (game.value / totalPlaytime) * 100,
-    color: COLORS[index % COLORS.length]
+    color: COLORS[index % COLORS.length],
   }));
 
   const renderLegend = (props: CustomLegendProps) => {
     const { payload } = props;
     return (
       <div className="flex flex-wrap gap-2 justify-center mt-4">
-        {payload?.map((entry, index: number) => (
+        {payload?.map((entry, index: number) =>
           entry.value ? (
             <div key={`legend-${index}`} className="flex items-center gap-2 text-xs">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: entry.color }}
-              />
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
               <span className="text-muted-foreground">{entry.value}</span>
             </div>
           ) : null
-        ))}
+        )}
       </div>
     );
   };
@@ -118,31 +117,31 @@ export function GamesDistributionChart() {
       <h3 className="text-lg font-semibold mb-4">Playtime Distribution</h3>
       <div className="bg-accent rounded-lg p-4">
         <ResponsiveContainer width="100%" height={380}>
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={(props: { percent?: number }) => {
-              if (!props.percent) return '';
-              const percentage = props.percent * 100;
-              return `${percentage.toFixed(0)}%`;
-            }}
-            outerRadius={120}
-            innerRadius={60}
-            fill="#8884d8"
-            dataKey="value"
-            paddingAngle={2}
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-          <Tooltip content={<CustomTooltip />} />
-          <Legend content={renderLegend} />
-        </PieChart>
-      </ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={(props: { percent?: number }) => {
+                if (!props.percent) return '';
+                const percentage = props.percent * 100;
+                return `${percentage.toFixed(0)}%`;
+              }}
+              outerRadius={120}
+              innerRadius={60}
+              fill="#8884d8"
+              dataKey="value"
+              paddingAngle={2}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip />} />
+            <Legend content={renderLegend} />
+          </PieChart>
+        </ResponsiveContainer>
         <div className="text-center mt-4">
           <p className="text-muted-foreground text-sm">
             Total Playtime: <span className="font-semibold">{formatPlaytime(totalPlaytime)}</span>

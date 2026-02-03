@@ -171,12 +171,7 @@ export class UserPlaylistService {
       VALUES (?, ?, ?, ?)
     `);
 
-    const result = stmt.run(
-      userId,
-      data.title,
-      data.description || null,
-      data.icon || null
-    );
+    const result = stmt.run(userId, data.title, data.description || null, data.icon || null);
 
     logger.info(`Created playlist "${data.title}" for user ${userId}`);
 
@@ -219,7 +214,7 @@ export class UserPlaylistService {
       return playlist;
     }
 
-    updates.push('updated_at = datetime(\'now\')');
+    updates.push("updated_at = datetime('now')");
     values.push(playlistId, userId);
 
     const stmt = db.prepare(`
@@ -381,7 +376,7 @@ export class UserPlaylistService {
       // Create new user playlist
       const userPlaylist = this.createPlaylist(userId, {
         title: newTitle || `${flashpointPlaylist.title} (Copy)`,
-        description: flashpointPlaylist.description || undefined
+        description: flashpointPlaylist.description || undefined,
       });
 
       // Extract game IDs from flashpoint playlist
@@ -430,7 +425,9 @@ export class UserPlaylistService {
     // Verify ownership
     const playlist = this.getPlaylistById(playlistId, userId);
     if (!playlist) {
-      logger.warn(`Cannot enable sharing for playlist ${playlistId}: not found or not owned by user ${userId}`);
+      logger.warn(
+        `Cannot enable sharing for playlist ${playlistId}: not found or not owned by user ${userId}`
+      );
       return null;
     }
 
@@ -448,20 +445,14 @@ export class UserPlaylistService {
       WHERE id = ? AND user_id = ?
     `);
 
-    stmt.run(
-      shareToken,
-      options.expiresAt || null,
-      options.showOwner ? 1 : 0,
-      playlistId,
-      userId
-    );
+    stmt.run(shareToken, options.expiresAt || null, options.showOwner ? 1 : 0, playlistId, userId);
 
     logger.info(`Enabled sharing for playlist ${playlistId} (user ${userId})`);
 
     return {
       shareToken,
       expiresAt: options.expiresAt || null,
-      showOwner: options.showOwner || false
+      showOwner: options.showOwner || false,
     };
   }
 
@@ -475,7 +466,9 @@ export class UserPlaylistService {
     // Verify ownership
     const playlist = this.getPlaylistById(playlistId, userId);
     if (!playlist) {
-      logger.warn(`Cannot disable sharing for playlist ${playlistId}: not found or not owned by user ${userId}`);
+      logger.warn(
+        `Cannot disable sharing for playlist ${playlistId}: not found or not owned by user ${userId}`
+      );
       return null;
     }
 
@@ -502,7 +495,9 @@ export class UserPlaylistService {
     // Verify ownership
     const playlist = this.getPlaylistById(playlistId, userId);
     if (!playlist) {
-      logger.warn(`Cannot regenerate token for playlist ${playlistId}: not found or not owned by user ${userId}`);
+      logger.warn(
+        `Cannot regenerate token for playlist ${playlistId}: not found or not owned by user ${userId}`
+      );
       return null;
     }
 
@@ -523,7 +518,7 @@ export class UserPlaylistService {
     return {
       shareToken: newToken,
       expiresAt: playlist.shareExpiresAt || null,
-      showOwner: playlist.showOwner || false
+      showOwner: playlist.showOwner || false,
     };
   }
 
@@ -540,7 +535,9 @@ export class UserPlaylistService {
     // Verify ownership
     const playlist = this.getPlaylistById(playlistId, userId);
     if (!playlist) {
-      logger.warn(`Cannot update share settings for playlist ${playlistId}: not found or not owned by user ${userId}`);
+      logger.warn(
+        `Cannot update share settings for playlist ${playlistId}: not found or not owned by user ${userId}`
+      );
       return null;
     }
 
@@ -559,7 +556,7 @@ export class UserPlaylistService {
 
     stmt.run(
       options.expiresAt !== undefined ? options.expiresAt : playlist.shareExpiresAt,
-      options.showOwner !== undefined ? (options.showOwner ? 1 : 0) : (playlist.showOwner ? 1 : 0),
+      options.showOwner !== undefined ? (options.showOwner ? 1 : 0) : playlist.showOwner ? 1 : 0,
       playlistId,
       userId
     );
@@ -568,8 +565,9 @@ export class UserPlaylistService {
 
     return {
       shareToken: playlist.shareToken,
-      expiresAt: options.expiresAt !== undefined ? options.expiresAt : (playlist.shareExpiresAt || null),
-      showOwner: options.showOwner !== undefined ? options.showOwner : (playlist.showOwner || false)
+      expiresAt:
+        options.expiresAt !== undefined ? options.expiresAt : playlist.shareExpiresAt || null,
+      showOwner: options.showOwner !== undefined ? options.showOwner : playlist.showOwner || false,
     };
   }
 
@@ -591,7 +589,9 @@ export class UserPlaylistService {
     const playlist = stmt.get(shareToken) as UserPlaylist | undefined;
 
     if (!playlist) {
-      logger.debug(`Shared playlist not found or expired for token: ${shareToken.substring(0, 8)}...`);
+      logger.debug(
+        `Shared playlist not found or expired for token: ${shareToken.substring(0, 8)}...`
+      );
       return null;
     }
 
@@ -661,11 +661,7 @@ export class UserPlaylistService {
    * Creates new playlist with same title (+ " (Copy)"), description, icon
    * Copies all games with same order
    */
-  cloneSharedPlaylist(
-    shareToken: string,
-    userId: number,
-    newTitle?: string
-  ): UserPlaylist | null {
+  cloneSharedPlaylist(shareToken: string, userId: number, newTitle?: string): UserPlaylist | null {
     const db = this.userDb.getDatabase();
 
     // Get shared playlist
@@ -680,7 +676,7 @@ export class UserPlaylistService {
     const newPlaylist = this.createPlaylist(userId, {
       title,
       description: sourcePlaylist.description || undefined,
-      icon: sourcePlaylist.icon || undefined
+      icon: sourcePlaylist.icon || undefined,
     });
 
     // Copy games with same order

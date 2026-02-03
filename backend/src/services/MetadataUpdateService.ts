@@ -4,7 +4,6 @@ import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
-
 export interface GameMetadataSource {
   name: string;
   baseUrl: string;
@@ -63,7 +62,7 @@ export class MetadataUpdateService {
         return {
           hasUpdates: false,
           gamesUpdateAvailable: false,
-          tagsUpdateAvailable: false
+          tagsUpdateAvailable: false,
         };
       }
       // Read preferences file
@@ -78,7 +77,7 @@ export class MetadataUpdateService {
         return {
           hasUpdates: false,
           gamesUpdateAvailable: false,
-          tagsUpdateAvailable: false
+          tagsUpdateAvailable: false,
         };
       }
 
@@ -98,7 +97,9 @@ export class MetadataUpdateService {
       const hasUpdates = gamesUpdateAvailable || tagsUpdateAvailable;
 
       logger.info(`[MetadataUpdate] Games: ${gamesUpdateCount} updates available`);
-      logger.info(`[MetadataUpdate] Tags: ${tagsUpdateCount} updates available (synced via game records)`);
+      logger.info(
+        `[MetadataUpdate] Tags: ${tagsUpdateCount} updates available (synced via game records)`
+      );
 
       return {
         hasUpdates,
@@ -108,7 +109,7 @@ export class MetadataUpdateService {
         tagsUpdateCount,
         lastCheckedTime: source.games.actualUpdateTime,
         lastUpdateTime: source.games.latestUpdateTime,
-        source
+        source,
       };
     } catch (error) {
       logger.error('[MetadataUpdate] Failed to read metadata update info:', error);
@@ -117,7 +118,7 @@ export class MetadataUpdateService {
       return {
         hasUpdates: false,
         gamesUpdateAvailable: false,
-        tagsUpdateAvailable: false
+        tagsUpdateAvailable: false,
       };
     }
   }
@@ -127,7 +128,10 @@ export class MetadataUpdateService {
    * Queries: ${baseUrl}/api/games/updates?after=${timestamp}
    * Returns the actual count of updates from the server
    */
-  private async getUpdateCount(source: GameMetadataSource, type: 'games' | 'tags'): Promise<number> {
+  private async getUpdateCount(
+    source: GameMetadataSource,
+    type: 'games' | 'tags'
+  ): Promise<number> {
     try {
       // Add 2 seconds to update time to prevent rounding down errors (like Launcher does)
       const d = new Date(source[type].latestUpdateTime);
@@ -138,7 +142,7 @@ export class MetadataUpdateService {
       logger.debug(`[MetadataUpdate] Querying ${type} updates: ${countUrl}`);
 
       const response = await axios.get(countUrl, {
-        timeout: 10000
+        timeout: 10000,
       });
 
       if (response.data && typeof response.data.total === 'number') {
@@ -148,7 +152,10 @@ export class MetadataUpdateService {
       logger.warn(`[MetadataUpdate] Invalid response from ${countUrl}`);
       return 0;
     } catch (error) {
-      logger.error(`[MetadataUpdate] Error fetching ${type} update count:`, error instanceof Error ? error.message : 'Unknown error');
+      logger.error(
+        `[MetadataUpdate] Error fetching ${type} update count:`,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
       return -1; // Return -1 on error (like Launcher does)
     }
   }
@@ -176,18 +183,21 @@ export class MetadataUpdateService {
       // Query FPFSS API for latest metadata info
       const response = await axios.get(fpfssUrl, {
         timeout: 10000,
-        validateStatus: (status) => status === 200
+        validateStatus: (status) => status === 200,
       });
 
       if (response.data && response.data.games && response.data.games.latestUpdateTime) {
         return {
-          latestUpdateTime: response.data.games.latestUpdateTime
+          latestUpdateTime: response.data.games.latestUpdateTime,
         };
       }
 
       return null;
     } catch (error) {
-      logger.warn('[MetadataUpdate] Failed to check remote updates:', error instanceof Error ? error.message : 'Unknown error');
+      logger.warn(
+        '[MetadataUpdate] Failed to check remote updates:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
       return null;
     }
   }
@@ -214,7 +224,7 @@ export class MetadataUpdateService {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 }

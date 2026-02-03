@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { PlaylistService, CreatePlaylistDto, AddGamesToPlaylistDto } from '../services/PlaylistService';
+import {
+  PlaylistService,
+  CreatePlaylistDto,
+  AddGamesToPlaylistDto,
+} from '../services/PlaylistService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authenticate } from '../middleware/auth';
@@ -19,22 +23,28 @@ router.use(requireFeature('enablePlaylists'));
 
 // GET /api/playlists - List all playlists
 // No additional auth needed - softAuth already runs at router level
-router.get('/', asyncHandler(async (req, res) => {
-  const playlists = await playlistService.getAllPlaylists();
-  res.json(playlists);
-}));
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const playlists = await playlistService.getAllPlaylists();
+    res.json(playlists);
+  })
+);
 
 // GET /api/playlists/:id - Get playlist by ID with games
 // No additional auth needed - softAuth already runs at router level
-router.get('/:id', asyncHandler(async (req, res) => {
-  const playlist = await playlistService.getPlaylistById(req.params.id);
+router.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const playlist = await playlistService.getPlaylistById(req.params.id);
 
-  if (!playlist) {
-    throw new AppError(404, 'Playlist not found');
-  }
+    if (!playlist) {
+      throw new AppError(404, 'Playlist not found');
+    }
 
-  res.json(playlist);
-}));
+    res.json(playlist);
+  })
+);
 
 // POST /api/playlists - Create new playlist
 router.post(

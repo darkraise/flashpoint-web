@@ -59,7 +59,7 @@ export class HashValidator {
       logger.warn('Hash validation failed', {
         filePath,
         expected,
-        actual: actualHash
+        actual: actualHash,
       });
     }
 
@@ -74,12 +74,18 @@ export class HashValidator {
    * @param source - Source name for error messages
    * @throws Error if hash doesn't match or file cannot be read
    */
-  static async validateOrThrow(filePath: string, expectedHash: string, source?: string): Promise<void> {
+  static async validateOrThrow(
+    filePath: string,
+    expectedHash: string,
+    source?: string
+  ): Promise<void> {
     const isValid = await this.validate(filePath, expectedHash);
 
     if (!isValid) {
       const sourceInfo = source ? ` from ${source}` : '';
-      throw new Error(`Hash validation failed${sourceInfo}: File hash does not match expected SHA256`);
+      throw new Error(
+        `Hash validation failed${sourceInfo}: File hash does not match expected SHA256`
+      );
     }
   }
 
@@ -96,7 +102,7 @@ export class HashValidator {
 
     return {
       hash,
-      size: stats.size
+      size: stats.size,
     };
   }
 }

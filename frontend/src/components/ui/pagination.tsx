@@ -136,10 +136,7 @@ export function Pagination({
               onClick={() => onPageChange(page)}
               aria-label={`Go to page ${page}`}
               aria-current={isActive ? 'page' : undefined}
-              className={cn(
-                'h-9 w-9',
-                isActive && 'pointer-events-none'
-              )}
+              className={cn('h-9 w-9', isActive && 'pointer-events-none')}
             >
               {page}
             </Button>
@@ -196,11 +193,7 @@ export function PaginationInfo({
   const end = Math.min(currentPage * pageSize, totalItems);
 
   if (totalItems === 0) {
-    return (
-      <p className={cn('text-sm text-muted-foreground', className)}>
-        No results found
-      </p>
-    );
+    return <p className={cn('text-sm text-muted-foreground', className)}>No results found</p>;
   }
 
   return (
@@ -235,11 +228,7 @@ export function PaginationWithInfo({
   return (
     <div className={cn('flex flex-col items-center gap-4', className)}>
       {showInfo ? (
-        <PaginationInfo
-          currentPage={currentPage}
-          pageSize={pageSize}
-          totalItems={totalItems}
-        />
+        <PaginationInfo currentPage={currentPage} pageSize={pageSize} totalItems={totalItems} />
       ) : null}
       <Pagination
         currentPage={currentPage}

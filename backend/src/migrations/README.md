@@ -4,54 +4,64 @@ This directory contains SQL migration scripts for the user database (`user.db`).
 
 ## Current Migration Strategy (Simplified)
 
-**Date:** 2026-01-30
-**Status:** Consolidated into single migration file
+**Date:** 2026-01-30 **Status:** Consolidated into single migration file
 
-All previous migrations have been consolidated into a single comprehensive migration file:
+All previous migrations have been consolidated into a single comprehensive
+migration file:
 
-- **`001_complete_schema.sql`** - Complete database schema with all tables, indexes, triggers, seed data
+- **`001_complete_schema.sql`** - Complete database schema with all tables,
+  indexes, triggers, seed data
 
 This migration is **idempotent** and safe to run multiple times.
 
 ### What's Included:
 
 ✅ **All Tables** (15 total):
-- Users & Authentication (users, roles, permissions, role_permissions, refresh_tokens)
+
+- Users & Authentication (users, roles, permissions, role_permissions,
+  refresh_tokens)
 - Activity Tracking (activity_logs, login_attempts)
 - Game Play Tracking (user_game_plays, user_game_stats, user_stats)
 - User Data (user_settings, user_playlists, user_playlist_games, user_favorites)
 - System (system_settings, job_execution_logs)
 
 ✅ **All Indexes** (50+ optimized indexes):
+
 - Basic indexes for foreign keys and lookups
 - Composite indexes for complex queries
 - Partial indexes for conditional queries
 - Performance indexes for frequently-accessed patterns
 
 ✅ **All Triggers**:
+
 - Auto-update playlist game_count
 
 ✅ **All Seed Data**:
+
 - Default roles (admin, user, guest)
 - Default permissions (18 permissions)
 - Role-permission mappings
 - System settings (35+ default settings)
 
 ✅ **Playlist Sharing Features**:
+
 - share_token, share_expires_at, show_owner columns
 - Unique indexes for secure sharing
 
 ## Migration Execution
 
-Migrations are automatically executed on server startup by `UserDatabaseService.ts`:
+Migrations are automatically executed on server startup by
+`UserDatabaseService.ts`:
 
 1. **Bootstrap** - Creates migration registry table (`migrations_applied`)
-2. **Schema Creation** - Runs `001_complete_schema.sql` if database doesn't exist
+2. **Schema Creation** - Runs `001_complete_schema.sql` if database doesn't
+   exist
 3. **Idempotent** - Safe to run multiple times (uses `IF NOT EXISTS` everywhere)
 
 ### Migration Registry (`bootstrap.sql`)
 
-The migration system tracks applied migrations in the `migrations_applied` table:
+The migration system tracks applied migrations in the `migrations_applied`
+table:
 
 ```sql
 CREATE TABLE IF NOT EXISTS migrations_applied (
@@ -65,6 +75,7 @@ CREATE TABLE IF NOT EXISTS migrations_applied (
 ```
 
 This allows:
+
 - Detecting which migrations have been applied
 - Preventing duplicate execution
 - Verifying migration integrity with checksums
@@ -72,7 +83,8 @@ This allows:
 
 ## Archived Migrations
 
-Previous migration files (001-014) have been moved to `archived/` directory for reference:
+Previous migration files (001-014) have been moved to `archived/` directory for
+reference:
 
 - `001_initialize_schema_OLD.sql` - Original schema definition
 - `002_seed_default_data.sql` - Original seed data
@@ -91,6 +103,7 @@ When you need to modify the database schema after deployment:
 For new columns, indexes, or seed data:
 
 1. **Create a new migration file** with the next version number:
+
    ```bash
    cd backend/src/migrations
    touch 002_your_migration_name.sql
@@ -99,6 +112,7 @@ For new columns, indexes, or seed data:
    Current version: **001** (next available: **002**)
 
 2. **Write idempotent SQL** using defensive checks:
+
    ```sql
    -- Migration 002: Description of changes
    -- Created: 2026-MM-DD
@@ -114,6 +128,7 @@ For new columns, indexes, or seed data:
    ```
 
 3. **Update `UserDatabaseService.ts`** to run the new migration:
+
    ```typescript
    // In runMigrations() method, after the 001 migration:
 
@@ -258,6 +273,7 @@ COMMIT;
 ### Migration checksum mismatch
 
 If you see checksum warnings:
+
 - Migration file was modified after being applied
 - This is usually safe if changes are additive
 - Check `migrations_applied` table for recorded checksum
@@ -315,6 +331,7 @@ VALUES
 ### Consolidation (2026-01-30)
 
 Previous migration strategy used 14+ separate files:
+
 - `001_initialize_schema.sql` - Base tables
 - `002_seed_default_data.sql` - Seed data
 - `003-013` - Incremental changes
@@ -323,6 +340,7 @@ Previous migration strategy used 14+ separate files:
 **Consolidated into:** Single `001_complete_schema.sql` file
 
 **Benefits:**
+
 - ✅ Simpler deployment (one file vs many)
 - ✅ Guaranteed consistency (all-or-nothing)
 - ✅ Easier testing (single execution)

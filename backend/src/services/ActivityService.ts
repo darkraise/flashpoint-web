@@ -1,7 +1,12 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { ActivityLog, LogActivityData } from '../types/auth';
 import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../utils/pagination';
-import { ActivityBreakdownRow, UserBreakdownRow, ResourceBreakdownRow, IpBreakdownRow } from '../types/database-rows';
+import {
+  ActivityBreakdownRow,
+  UserBreakdownRow,
+  ResourceBreakdownRow,
+  IpBreakdownRow,
+} from '../types/database-rows';
 import { TimeRange, getHoursFromTimeRange } from '../utils/timeRangeUtils';
 import { AUTH_ACTIONS, categorizeAction } from '../utils/activityUtils';
 
@@ -58,9 +63,7 @@ export class ActivityService {
       params.push(filters.endDate);
     }
 
-    const sql = conditions.length > 0
-      ? 'WHERE ' + conditions.join(' AND ')
-      : '';
+    const sql = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
 
     return { sql, params };
   }
@@ -83,7 +86,7 @@ export class ActivityService {
         data.resourceId || null,
         detailsJson,
         data.ipAddress || null,
-        data.userAgent || null
+        data.userAgent || null,
       ]
     );
   }
@@ -105,7 +108,7 @@ export class ActivityService {
       username: 'username',
       action: 'action',
       resource: 'resource',
-      ipAddress: 'ip_address'
+      ipAddress: 'ip_address',
     };
     const dbColumn = columnMap[sortBy] || 'created_at';
     const order = sortOrder.toUpperCase();
@@ -121,10 +124,12 @@ export class ActivityService {
       LIMIT ? OFFSET ?
     `;
 
-    const logs = UserDatabaseService.all<ActivityLog>(sql, [...whereParams, limit, offset]).map(log => ({
-      ...log,
-      details: log.details ? JSON.parse(log.details as string) : null
-    }));
+    const logs = UserDatabaseService.all<ActivityLog>(sql, [...whereParams, limit, offset]).map(
+      (log) => ({
+        ...log,
+        details: log.details ? JSON.parse(log.details as string) : null,
+      })
+    );
 
     const countSql = `SELECT COUNT(*) as count FROM activity_logs ${whereClause}`;
     const total = UserDatabaseService.get<{ count: number }>(countSql, whereParams)?.count || 0;
@@ -146,7 +151,10 @@ export class ActivityService {
   /**
    * Get aggregate statistics for dashboard
    */
-  async getStats(timeRange: TimeRange = '24h', customRange?: { startDate?: string; endDate?: string }) {
+  async getStats(
+    timeRange: TimeRange = '24h',
+    customRange?: { startDate?: string; endDate?: string }
+  ) {
     let startDate: string;
     let endDate: string = new Date().toISOString();
 
@@ -195,7 +203,9 @@ export class ActivityService {
     ) as { hour: number; count: number } | null;
 
     // Get previous period stats for trends
-    const previousPeriodStart = new Date(new Date(startDate).getTime() - (new Date(endDate).getTime() - new Date(startDate).getTime())).toISOString();
+    const previousPeriodStart = new Date(
+      new Date(startDate).getTime() - (new Date(endDate).getTime() - new Date(startDate).getTime())
+    ).toISOString();
     const previousStats = UserDatabaseService.get(
       `SELECT
         COUNT(*) as total,
@@ -235,21 +245,21 @@ export class ActivityService {
         ? {
             hour: peakHourData.hour,
             count: peakHourData.count,
-            formattedRange: formatHourRange(peakHourData.hour)
+            formattedRange: formatHourRange(peakHourData.hour),
           }
         : { hour: 0, count: 0, formattedRange: '12:00 AM - 1:00 AM' },
       authEvents: {
         total: currentStats?.authEvents || 0,
         successful: currentStats?.authSuccessful || 0,
-        failed: currentStats?.authFailed || 0
+        failed: currentStats?.authFailed || 0,
       },
       failedOperations: currentStats?.failedOperations || 0,
       systemEvents: currentStats?.systemEvents || 0,
       trends: {
         totalChange: calculateTrend(currentStats?.total || 0, previousStats?.total || 0),
         userChange: calculateTrend(currentStats?.uniqueUsers || 0, previousStats?.uniqueUsers || 0),
-        authChange: calculateTrend(currentStats?.authEvents || 0, previousStats?.authEvents || 0)
-      }
+        authChange: calculateTrend(currentStats?.authEvents || 0, previousStats?.authEvents || 0),
+      },
     };
   }
 
@@ -264,7 +274,7 @@ export class ActivityService {
     if (granularity === 'hour') {
       groupFormat = "datetime(strftime('%Y-%m-%d %H:00:00', created_at))";
     } else {
-      groupFormat = "date(created_at)";
+      groupFormat = 'date(created_at)';
     }
 
     const trendData = UserDatabaseService.all(
@@ -293,8 +303,8 @@ export class ActivityService {
         granularity,
         startDate,
         endDate: new Date().toISOString(),
-        dataPoints: trendData.length
-      }
+        dataPoints: trendData.length,
+      },
     };
   }
 
@@ -353,7 +363,7 @@ export class ActivityService {
     }>;
 
     return {
-      data: topActions.map(action => ({
+      data: topActions.map((action) => ({
         action: action.action,
         count: action.count,
         percentage: totalActivities > 0 ? (action.count / totalActivities) * 100 : 0,
@@ -361,13 +371,13 @@ export class ActivityService {
         topResource: action.topResource,
         exampleActivity: {
           username: action.exampleUsername || 'System',
-          timestamp: action.exampleTimestamp
-        }
+          timestamp: action.exampleTimestamp,
+        },
       })),
       meta: {
         totalActivities,
-        uniqueActions: topActions.length
-      }
+        uniqueActions: topActions.length,
+      },
     };
   }
 
@@ -450,33 +460,41 @@ export class ActivityService {
         throw new Error(`Invalid groupBy parameter: ${groupBy}`);
     }
 
-    const results = UserDatabaseService.all(sql, groupBy === 'user' || groupBy === 'resource' ? [startDate, startDate, limit] : [startDate, limit]) as ActivityBreakdownRow[];
+    const results = UserDatabaseService.all(
+      sql,
+      groupBy === 'user' || groupBy === 'resource'
+        ? [startDate, startDate, limit]
+        : [startDate, limit]
+    ) as ActivityBreakdownRow[];
 
     return {
       data: results.map((row: ActivityBreakdownRow) => ({
         key: row.key || 'Unknown',
         count: row.count,
         percentage: totalActivities > 0 ? (row.count / totalActivities) * 100 : 0,
-        metadata: groupBy === 'user'
-          ? {
-              userId: (row as UserBreakdownRow).userId,
-              lastActivity: (row as UserBreakdownRow).lastActivity,
-              topAction: (row as UserBreakdownRow).topAction
-            }
-          : groupBy === 'ip'
-          ? {
-              associatedUserCount: (row as IpBreakdownRow).associatedUserCount,
-              associatedUsers: (row as IpBreakdownRow).associatedUsers ? (row as IpBreakdownRow).associatedUsers.split(',').slice(0, 5) : [],
-              failedAttempts: (row as IpBreakdownRow).failedAttempts
-            }
-          : {
-              topAction: (row as ResourceBreakdownRow).topAction
-            }
+        metadata:
+          groupBy === 'user'
+            ? {
+                userId: (row as UserBreakdownRow).userId,
+                lastActivity: (row as UserBreakdownRow).lastActivity,
+                topAction: (row as UserBreakdownRow).topAction,
+              }
+            : groupBy === 'ip'
+              ? {
+                  associatedUserCount: (row as IpBreakdownRow).associatedUserCount,
+                  associatedUsers: (row as IpBreakdownRow).associatedUsers
+                    ? (row as IpBreakdownRow).associatedUsers.split(',').slice(0, 5)
+                    : [],
+                  failedAttempts: (row as IpBreakdownRow).failedAttempts,
+                }
+              : {
+                  topAction: (row as ResourceBreakdownRow).topAction,
+                },
       })),
       meta: {
         groupBy,
-        total: totalActivities
-      }
+        total: totalActivities,
+      },
     };
   }
 }

@@ -22,25 +22,30 @@ Error: `404 Not Found` if session doesn't exist
 
 `GET /api/play/stats` - Requires `games.play` permission
 
-Returns totalSessions, totalPlayTimeMinutes, totalGamesPlayed, averageSessionMinutes, completedSessions, abandonedSessions, firstPlayedAt, lastPlayedAt.
+Returns totalSessions, totalPlayTimeMinutes, totalGamesPlayed,
+averageSessionMinutes, completedSessions, abandonedSessions, firstPlayedAt,
+lastPlayedAt.
 
 ## Get Game Stats
 
 `GET /api/play/game-stats?limit=50&offset=0` - Requires `games.play` permission
 
-Returns paginated array with gameId, gameTitle, totalSessions, totalPlayTimeMinutes, lastPlayedAt, firstPlayedAt, averageSessionMinutes.
+Returns paginated array with gameId, gameTitle, totalSessions,
+totalPlayTimeMinutes, lastPlayedAt, firstPlayedAt, averageSessionMinutes.
 
 ## Get Play History
 
 `GET /api/play/history?limit=50&offset=0` - Requires `games.play` permission
 
-Returns paginated array with sessionId, gameId, gameTitle, startedAt, endedAt, durationMinutes, completed.
+Returns paginated array with sessionId, gameId, gameTitle, startedAt, endedAt,
+durationMinutes, completed.
 
 ## Get Top Games
 
 `GET /api/play/top-games?limit=10` - Requires `games.play` permission
 
-Returns array sorted by total play time (descending) with gameId, gameTitle, totalSessions, totalPlayTimeMinutes, lastPlayedAt.
+Returns array sorted by total play time (descending) with gameId, gameTitle,
+totalSessions, totalPlayTimeMinutes, lastPlayedAt.
 
 ## Get Activity Over Time
 
@@ -48,20 +53,23 @@ Returns array sorted by total play time (descending) with gameId, gameTitle, tot
 
 Query param: `days` (default: 30, max: 365)
 
-Returns array with date, sessions, totalMinutes, uniqueGames for each day (includes days with 0 activity).
+Returns array with date, sessions, totalMinutes, uniqueGames for each day
+(includes days with 0 activity).
 
 ## Get Games Distribution
 
 `GET /api/play/games-distribution?limit=10` - Requires `games.play` permission
 
-Returns pie chart data with gameTitle, playTimeMinutes, percentage. Games beyond limit grouped as "Others".
+Returns pie chart data with gameTitle, playTimeMinutes, percentage. Games beyond
+limit grouped as "Others".
 
 ## Session Management Pattern
 
 ```javascript
 class PlaySessionManager {
   async start(gameId, gameTitle, token) {
-    const { data } = await axios.post('/api/play/start',
+    const { data } = await axios.post(
+      '/api/play/start',
       { gameId, gameTitle },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -72,7 +80,8 @@ class PlaySessionManager {
   async end() {
     if (!this.sessionId) return;
     try {
-      await axios.post('/api/play/end',
+      await axios.post(
+        '/api/play/end',
         { sessionId: this.sessionId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -91,17 +100,25 @@ class PlaySessionManager {
 ```javascript
 async function loadStatsDashboard(token) {
   const [stats, topGames, activity, distribution] = await Promise.all([
-    axios.get('/api/play/stats', { headers: { Authorization: `Bearer ${token}` } }),
-    axios.get('/api/play/top-games?limit=5', { headers: { Authorization: `Bearer ${token}` } }),
-    axios.get('/api/play/activity-over-time?days=30', { headers: { Authorization: `Bearer ${token}` } }),
-    axios.get('/api/play/games-distribution?limit=10', { headers: { Authorization: `Bearer ${token}` } })
+    axios.get('/api/play/stats', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    axios.get('/api/play/top-games?limit=5', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    axios.get('/api/play/activity-over-time?days=30', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    axios.get('/api/play/games-distribution?limit=10', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
   ]);
 
   return {
     overview: stats.data,
     topGames: topGames.data,
     activityChart: activity.data,
-    distributionChart: distribution.data
+    distributionChart: distribution.data,
   };
 }
 ```
@@ -117,7 +134,8 @@ async function loadStatsDashboard(token) {
 
 ## Notes
 
-- Sessions have three states: Active, Completed, Abandoned (auto-cleaned after 24h)
+- Sessions have three states: Active, Completed, Abandoned (auto-cleaned after
+  24h)
 - Cleanup job runs every 6 hours
 - Play time rounded to minutes
 - Backend batches session writes for efficiency

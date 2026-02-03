@@ -65,10 +65,10 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
           name === 'admin'
             ? 'default'
             : name === 'user'
-            ? 'secondary'
-            : name === 'guest'
-            ? 'outline'
-            : 'secondary';
+              ? 'secondary'
+              : name === 'guest'
+                ? 'outline'
+                : 'secondary';
         return (
           <Badge variant={variant} className="capitalize">
             {name}
@@ -79,27 +79,19 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
     {
       accessorKey: 'description',
       header: 'Description',
-      cell: ({ row }) => (
-        <div className="text-muted-foreground">{row.getValue('description')}</div>
-      ),
+      cell: ({ row }) => <div className="text-muted-foreground">{row.getValue('description')}</div>,
     },
     {
       accessorKey: 'priority',
       header: 'Priority',
-      cell: ({ row }) => (
-        <div className="text-muted-foreground">{row.getValue('priority')}</div>
-      ),
+      cell: ({ row }) => <div className="text-muted-foreground">{row.getValue('priority')}</div>,
     },
     {
       accessorKey: 'permissions',
       header: 'Permissions',
       cell: ({ row }) => {
         const permissions = row.getValue('permissions') as string[];
-        return (
-          <div className="text-muted-foreground">
-            {permissions.length} permissions
-          </div>
-        );
+        return <div className="text-muted-foreground">{permissions.length} permissions</div>;
       },
     },
     {
@@ -122,10 +114,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <RoleGuard permission="roles.update">
-                  <DropdownMenuItem
-                    onClick={() => onEdit(role)}
-                    disabled={isSystemRole}
-                  >
+                  <DropdownMenuItem onClick={() => onEdit(role)} disabled={isSystemRole}>
                     Edit Role
                   </DropdownMenuItem>
                 </RoleGuard>
@@ -145,9 +134,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
                 </RoleGuard>
               </DropdownMenuContent>
             </DropdownMenu>
-            {isSystemRole ? (
-              <span className="text-xs text-muted-foreground">(System)</span>
-            ) : null}
+            {isSystemRole ? <span className="text-xs text-muted-foreground">(System)</span> : null}
           </div>
         );
       },
@@ -157,8 +144,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
   if (isError) {
     return (
       <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-destructive">
-        Error loading roles:{' '}
-        {getErrorMessage(error) || 'Unknown error'}
+        Error loading roles: {getErrorMessage(error) || 'Unknown error'}
       </div>
     );
   }

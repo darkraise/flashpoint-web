@@ -17,17 +17,20 @@ const updateSettingsSchema = z.object({
   requireEmailVerification: z.boolean().optional(),
   sessionTimeoutMinutes: z.number().int().positive().optional(),
   maxLoginAttempts: z.number().int().positive().optional(),
-  lockoutDurationMinutes: z.number().int().positive().optional()
+  lockoutDurationMinutes: z.number().int().positive().optional(),
 });
 
 /**
  * GET /api/settings/auth
  * Get current auth settings (public endpoint)
  */
-router.get('/', asyncHandler(async (req, res) => {
-  const settings = authSettingsService.getSettings();
-  res.json(settings);
-}));
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const settings = authSettingsService.getSettings();
+    res.json(settings);
+  })
+);
 
 /**
  * PATCH /api/settings/auth

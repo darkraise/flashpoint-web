@@ -29,36 +29,40 @@ async function startServer() {
   const app: Express = express();
 
   // Security middleware
-  app.use(helmet({
-    contentSecurityPolicy: false, // Will be configured in frontend via meta tag
-    crossOriginEmbedderPolicy: false,
-    frameguard: {
-      action: 'deny' // Equivalent to frame-ancestors 'none'
-    }
-  }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Will be configured in frontend via meta tag
+      crossOriginEmbedderPolicy: false,
+      frameguard: {
+        action: 'deny', // Equivalent to frame-ancestors 'none'
+      },
+    })
+  );
 
   // CORS - dynamic origin to support configured domains
-  app.use(cors({
-    origin: (origin, callback) => {
-      // Allow same-origin and server-to-server requests
-      if (!origin) return callback(null, true);
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        // Allow same-origin and server-to-server requests
+        if (!origin) return callback(null, true);
 
-      // Always allow the configured domain from env
-      if (origin === config.domain) return callback(null, true);
+        // Always allow the configured domain from env
+        if (origin === config.domain) return callback(null, true);
 
-      // Check domains from the database
-      try {
-        const domainService = new DomainService();
-        const allowed = domainService.getAllowedOrigins();
-        if (allowed.has(origin)) return callback(null, true);
-      } catch {
-        // DB not ready during startup - fall through
-      }
+        // Check domains from the database
+        try {
+          const domainService = new DomainService();
+          const allowed = domainService.getAllowedOrigins();
+          if (allowed.has(origin)) return callback(null, true);
+        } catch {
+          // DB not ready during startup - fall through
+        }
 
-      callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true
-  }));
+        callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true,
+    })
+  );
 
   // Body parsing with size limits (prevent DoS attacks)
   app.use(express.json({ limit: '1mb' }));
@@ -116,7 +120,7 @@ async function startServer() {
 
   // Pre-warm game search cache for instant first page load
   // Run asynchronously to not block server startup
-  GameSearchCache.prewarmCache().catch(error => {
+  GameSearchCache.prewarmCache().catch((error) => {
     logger.warn('Failed to pre-warm game search cache:', error);
     // Non-fatal: server continues without pre-warmed cache
   });
@@ -148,9 +152,15 @@ async function startServer() {
     JobScheduler.registerJob({
       id: 'metadata-sync',
       name: 'Metadata Sync',
-      enabled: typeof jobSettings.metadataSyncEnabled === 'boolean' ? jobSettings.metadataSyncEnabled : false,
-      cronSchedule: typeof jobSettings.metadataSyncSchedule === 'string' ? jobSettings.metadataSyncSchedule : '0 * * * *', // Default: hourly
-      run: () => metadataSyncJob.run()
+      enabled:
+        typeof jobSettings.metadataSyncEnabled === 'boolean'
+          ? jobSettings.metadataSyncEnabled
+          : false,
+      cronSchedule:
+        typeof jobSettings.metadataSyncSchedule === 'string'
+          ? jobSettings.metadataSyncSchedule
+          : '0 * * * *', // Default: hourly
+      run: () => metadataSyncJob.run(),
     });
 
     // Register Ruffle update job
@@ -158,9 +168,15 @@ async function startServer() {
     JobScheduler.registerJob({
       id: 'ruffle-update',
       name: 'Ruffle Update',
-      enabled: typeof jobSettings.ruffleUpdateEnabled === 'boolean' ? jobSettings.ruffleUpdateEnabled : false,
-      cronSchedule: typeof jobSettings.ruffleUpdateSchedule === 'string' ? jobSettings.ruffleUpdateSchedule : '0 0 * * *', // Default: daily at midnight
-      run: () => ruffleUpdateJob.run()
+      enabled:
+        typeof jobSettings.ruffleUpdateEnabled === 'boolean'
+          ? jobSettings.ruffleUpdateEnabled
+          : false,
+      cronSchedule:
+        typeof jobSettings.ruffleUpdateSchedule === 'string'
+          ? jobSettings.ruffleUpdateSchedule
+          : '0 0 * * *', // Default: daily at midnight
+      run: () => ruffleUpdateJob.run(),
     });
 
     // Start all enabled jobs
@@ -184,7 +200,7 @@ async function startServer() {
       timestamp: new Date().toISOString(),
       flashpointPath: config.flashpointPath,
       databaseConnected: DatabaseService.isConnected(),
-      gameServiceUrl: config.gameServerUrl
+      gameServiceUrl: config.gameServerUrl,
     });
   });
 
@@ -224,14 +240,17 @@ async function startServer() {
 
   // Start cleanup scheduler for abandoned play sessions (every 6 hours)
   const playTrackingService = new PlayTrackingService();
-  const cleanupInterval = setInterval(() => {
-    playTrackingService.cleanupAbandonedSessions().catch(error => {
-      logger.error('Failed to cleanup abandoned sessions:', error);
-    });
-  }, 6 * 60 * 60 * 1000); // 6 hours
+  const cleanupInterval = setInterval(
+    () => {
+      playTrackingService.cleanupAbandonedSessions().catch((error) => {
+        logger.error('Failed to cleanup abandoned sessions:', error);
+      });
+    },
+    6 * 60 * 60 * 1000
+  ); // 6 hours
 
   // Run initial cleanup
-  playTrackingService.cleanupAbandonedSessions().catch(error => {
+  playTrackingService.cleanupAbandonedSessions().catch((error) => {
     logger.error('Failed to cleanup abandoned sessions:', error);
   });
 

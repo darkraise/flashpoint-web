@@ -45,7 +45,7 @@ export class UpdateService {
         { id: 'core-manager', name: 'Manager' },
         { id: 'core-database', name: 'Database' },
         { id: 'core-server-legacy', name: 'Legacy Server' },
-        { id: 'core-configuration', name: 'Configuration' }
+        { id: 'core-configuration', name: 'Configuration' },
       ];
 
       // Read components directory to check installed versions
@@ -58,7 +58,10 @@ export class UpdateService {
           const componentPath = path.join(componentsDir, component.id);
 
           // Check if component file exists
-          const exists = await fs.access(componentPath).then(() => true).catch(() => false);
+          const exists = await fs
+            .access(componentPath)
+            .then(() => true)
+            .catch(() => false);
 
           if (exists) {
             // Read component file - first line contains hash, size, and dependencies
@@ -76,14 +79,14 @@ export class UpdateService {
               id: component.id,
               name: component.name,
               state: 'UP_TO_DATE',
-              currentVersion
+              currentVersion,
             });
           } else {
             logger.warn(`[UpdateService] Component file not found: ${componentPath}`);
             componentsStatus.push({
               id: component.id,
               name: component.name,
-              state: 'ERROR'
+              state: 'ERROR',
             });
           }
         } catch (error) {
@@ -91,7 +94,7 @@ export class UpdateService {
           componentsStatus.push({
             id: component.id,
             name: component.name,
-            state: 'ERROR'
+            state: 'ERROR',
           });
         }
       }
@@ -104,7 +107,6 @@ export class UpdateService {
       } catch (error) {
         logger.warn('[UpdateService] Could not fetch remote component list:', error);
       }
-
     } catch (error) {
       logger.error('[UpdateService] Error during update check:', error);
     }
@@ -136,7 +138,7 @@ export class UpdateService {
       version,
       buildDate,
       componentsStatus,
-      lastChecked: new Date().toISOString()
+      lastChecked: new Date().toISOString(),
     };
   }
 
@@ -145,13 +147,16 @@ export class UpdateService {
 
     try {
       // Check if Flashpoint Manager exists
-      const managerExists = await fs.access(this.managerPath).then(() => true).catch(() => false);
+      const managerExists = await fs
+        .access(this.managerPath)
+        .then(() => true)
+        .catch(() => false);
 
       if (!managerExists) {
         logger.warn('[UpdateService] Flashpoint Manager not found at:', this.managerPath);
         return {
           success: false,
-          message: 'Flashpoint Manager not found. Please update manually.'
+          message: 'Flashpoint Manager not found. Please update manually.',
         };
       }
 
@@ -159,7 +164,7 @@ export class UpdateService {
       return new Promise((resolve, reject) => {
         const fpm = spawn(this.managerPath, ['update'], {
           cwd: path.join(this.flashpointRoot, 'Manager'),
-          windowsHide: true
+          windowsHide: true,
         });
 
         let errorOutput = '';
@@ -178,13 +183,13 @@ export class UpdateService {
             logger.info('[UpdateService] Updates installed successfully');
             resolve({
               success: true,
-              message: 'Updates installed successfully. Please restart the application.'
+              message: 'Updates installed successfully. Please restart the application.',
             });
           } else {
             logger.error('[UpdateService] Update failed with code:', code);
             resolve({
               success: false,
-              message: `Update failed: ${errorOutput || 'Unknown error'}`
+              message: `Update failed: ${errorOutput || 'Unknown error'}`,
             });
           }
         });
@@ -195,28 +200,37 @@ export class UpdateService {
         });
 
         // Timeout after 5 minutes
-        setTimeout(() => {
-          fpm.kill();
-          reject(new Error('Update process timed out'));
-        }, 5 * 60 * 1000);
+        setTimeout(
+          () => {
+            fpm.kill();
+            reject(new Error('Update process timed out'));
+          },
+          5 * 60 * 1000
+        );
       });
-
     } catch (error) {
       logger.error('[UpdateService] Error during update installation:', error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to install updates'
+        message: error instanceof Error ? error.message : 'Failed to install updates',
       };
     }
   }
 
-  async getSystemInfo(): Promise<{ flashpointRoot: string; managerPath: string; managerExists: boolean }> {
-    const managerExists = await fs.access(this.managerPath).then(() => true).catch(() => false);
+  async getSystemInfo(): Promise<{
+    flashpointRoot: string;
+    managerPath: string;
+    managerExists: boolean;
+  }> {
+    const managerExists = await fs
+      .access(this.managerPath)
+      .then(() => true)
+      .catch(() => false);
 
     return {
       flashpointRoot: this.flashpointRoot,
       managerPath: this.managerPath,
-      managerExists
+      managerExists,
     };
   }
 }

@@ -38,20 +38,14 @@ export function UsersView() {
           <h1 className="text-3xl font-bold">User Management</h1>
         </div>
         <RoleGuard permission="users.create">
-          <Button onClick={() => setShowUserForm(true)}>
-            Create User
-          </Button>
+          <Button onClick={() => setShowUserForm(true)}>Create User</Button>
         </RoleGuard>
       </div>
 
       <UserTable onEdit={handleEdit} onChangePassword={handleChangePassword} />
 
       {showUserForm ? (
-        <UserForm
-          user={editingUser}
-          onClose={handleCloseForm}
-          onSuccess={handleSuccess}
-        />
+        <UserForm user={editingUser} onClose={handleCloseForm} onSuccess={handleSuccess} />
       ) : null}
 
       {changingPasswordUser ? (

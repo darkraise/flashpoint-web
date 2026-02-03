@@ -98,7 +98,8 @@ export function GamePlayer({
     if (isWebPlatform && !launchCommand) {
       // Missing content data
       reason = 'This game is missing content data and cannot be played.';
-      details = 'This game entry is incomplete. Try launching it from the Flashpoint Launcher instead.';
+      details =
+        'This game entry is incomplete. Try launching it from the Flashpoint Launcher instead.';
     } else {
       // Not a web platform
       reason = `The ${platform} platform requires the Flashpoint Launcher.`;
@@ -106,7 +107,9 @@ export function GamePlayer({
     }
 
     return (
-      <div className={`flex items-center justify-center bg-card border border-border rounded-lg p-8 ${className}`}>
+      <div
+        className={`flex items-center justify-center bg-card border border-border rounded-lg p-8 ${className}`}
+      >
         <div className="text-center">
           <AlertCircle size={48} className="text-yellow-500 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Cannot Play in Browser</h3>
@@ -122,9 +125,7 @@ export function GamePlayer({
     );
   }
 
-  const containerClasses = isFullscreen
-    ? 'fixed inset-0 z-50 bg-black'
-    : className;
+  const containerClasses = isFullscreen ? 'fixed inset-0 z-50 bg-black' : className;
 
   // Special handling for aspect-video containers - use flex layout
   const isAspectVideo = height === 'aspect-video';
@@ -170,12 +171,14 @@ export function GamePlayer({
       {/* Game Player Container */}
       <div
         className={`bg-black relative ${isAspectVideo ? 'flex-1 min-h-0' : ''}`}
-        style={isAspectVideo ? {} : {
-          height: isFullscreen
-            ? showControls ? 'calc(100vh - 64px)' : '100vh'
-            : height,
-          minHeight: isFullscreen ? 'auto' : '600px'
-        }}
+        style={
+          isAspectVideo
+            ? {}
+            : {
+                height: isFullscreen ? (showControls ? 'calc(100vh - 64px)' : '100vh') : height,
+                minHeight: isFullscreen ? 'auto' : '600px',
+              }
+        }
       >
         {platform === 'Flash' && contentUrl ? (
           <RufflePlayer

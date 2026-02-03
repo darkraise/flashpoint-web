@@ -53,15 +53,18 @@ export function IconSelector({
 
   // Flatten all icons from all categories into a single array (memoized to prevent GC pressure)
   const allIcons = useMemo(
-    () => Object.values(ICON_CATEGORIES).flatMap(category => category.icons),
+    () => Object.values(ICON_CATEGORIES).flatMap((category) => category.icons),
     [] // ICON_CATEGORIES is static, no dependencies needed
   );
 
   // Memoized handler to select an icon and close popover
-  const handleIconSelect = useCallback((iconName: PlaylistIconName) => {
-    onChange(iconName);
-    setOpen(false);
-  }, [onChange]);
+  const handleIconSelect = useCallback(
+    (iconName: PlaylistIconName) => {
+      onChange(iconName);
+      setOpen(false);
+    },
+    [onChange]
+  );
 
   // Memoized handler to clear selection
   const handleClear = useCallback(() => {

@@ -1,7 +1,7 @@
-import { ReactNode } from "react";
-import { Header } from "./Header";
-import { Sidebar } from "./Sidebar";
-import { useUIStore } from "@/store/ui";
+import { ReactNode } from 'react';
+import { Header } from './Header';
+import { Sidebar } from './Sidebar';
+import { useUIStore } from '@/store/ui';
 
 interface AppShellProps {
   children: ReactNode;

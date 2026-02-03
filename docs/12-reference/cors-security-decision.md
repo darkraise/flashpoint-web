@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Game Service intentionally uses `Access-Control-Allow-Origin: *` (wildcard) to allow cross-origin requests from any origin. This document explains the security rationale and justification for this decision.
+The Game Service intentionally uses `Access-Control-Allow-Origin: *` (wildcard)
+to allow cross-origin requests from any origin. This document explains the
+security rationale and justification for this decision.
 
 ## Location
 
@@ -20,13 +22,16 @@ The Game Service intentionally uses `Access-Control-Allow-Origin: *` (wildcard) 
 
 ### 1. Public Game Content
 
-The game-service serves **public, read-only game content** from the Flashpoint Archive:
+The game-service serves **public, read-only game content** from the Flashpoint
+Archive:
+
 - Flash game files (.swf)
 - HTML5 game files (.html, .js, .css)
 - Game assets (images, audio, etc.)
 - Animation files
 
 All content served is:
+
 - ✅ Public domain or freely redistributable
 - ✅ Read-only (no data modification)
 - ✅ Non-sensitive (no user data, credentials, or private information)
@@ -35,43 +40,51 @@ All content served is:
 ### 2. Game Embedding Use Cases
 
 The wildcard CORS policy supports legitimate use cases:
+
 - Embedding Flash/HTML5 games in iframes across different domains
-- Running games from `http://localhost:22500` while frontend is on `http://localhost:5173`
+- Running games from `http://localhost:22500` while frontend is on
+  `http://localhost:5173`
 - Supporting different development environments and ports
 - Allowing community-hosted instances with various domain configurations
 
 ### 3. No Sensitive Data Exposure
 
 The game-service does **NOT** serve:
+
 - ❌ User data or personal information
 - ❌ Authentication tokens or credentials
 - ❌ Private database records
 - ❌ Configuration secrets
 - ❌ API keys or sensitive settings
 
-All sensitive operations are handled by the backend service (port 3100) which has **restrictive CORS** configured to only allow the specific frontend origin.
+All sensitive operations are handled by the backend service (port 3100) which
+has **restrictive CORS** configured to only allow the specific frontend origin.
 
 ### 4. Security Boundaries
 
 **Backend Service (Port 3100)** - Restricted CORS:
+
 ```typescript
 // backend/src/server.ts
 cors({
   origin: process.env.DOMAIN || 'http://localhost:5173',
-  credentials: true
-})
+  credentials: true,
+});
 ```
+
 - Handles authentication
 - Manages user data
 - Enforces RBAC permissions
 - Uses restrictive CORS with credentials
 
 **Game Service (Ports 22500, 22501)** - Permissive CORS:
+
 ```typescript
 // game-service/src/utils/cors.ts
 setCorsHeaders(res, { allowCrossDomain: true });
 // Sets: Access-Control-Allow-Origin: *
 ```
+
 - Serves public game files only
 - No authentication required
 - No sensitive data access
@@ -105,21 +118,25 @@ Even with wildcard CORS, the game-service implements:
 
 ### Alternative 1: Whitelist Frontend Origin Only
 
-**Rejected**: Would break game embedding and require reconfiguration for every deployment environment.
+**Rejected**: Would break game embedding and require reconfiguration for every
+deployment environment.
 
 ### Alternative 2: Dynamic Origin Validation
 
-**Rejected**: Adds complexity with no security benefit given the public, read-only nature of served content.
+**Rejected**: Adds complexity with no security benefit given the public,
+read-only nature of served content.
 
 ### Alternative 3: Separate Authenticated Endpoint
 
-**Already Implemented**: The backend service (port 3100) already handles all authenticated operations with restrictive CORS.
+**Already Implemented**: The backend service (port 3100) already handles all
+authenticated operations with restrictive CORS.
 
 ## Risk Assessment
 
 **Risk Level**: ✅ LOW
 
 **Justification**:
+
 - Content is public and intended for broad distribution
 - No sensitive data exposure
 - No write operations
@@ -129,43 +146,52 @@ Even with wildcard CORS, the game-service implements:
 ## Monitoring and Compliance
 
 **Monitoring**:
+
 - Request logs track file access patterns
 - Unusual access patterns can be detected via backend activity logging
 - ZIP mount operations are logged for audit
 
 **Compliance**:
+
 - Meets OWASP security guidelines for public content delivery
 - Follows principle of least privilege (game-service has no database access)
 - Implements defense in depth (multiple security layers)
 
 ## Backend Dynamic CORS (Updated 2026-02)
 
-The backend service now supports **dynamic CORS** in addition to the static `DOMAIN` environment variable:
+The backend service now supports **dynamic CORS** in addition to the static
+`DOMAIN` environment variable:
 
 **Implementation**: `backend/src/server.ts`
 
 ```typescript
 origin: (origin, callback) => {
-  if (!origin) return callback(null, true);       // same-origin
+  if (!origin) return callback(null, true); // same-origin
   if (origin === config.domain) return callback(null, true); // env var
   // Check domains table (cached 60s)
   const allowed = domainService.getAllowedOrigins();
   if (allowed.has(origin)) return callback(null, true);
   callback(new Error('Not allowed by CORS'));
-}
+};
 ```
 
 **How it works:**
+
 - Admins configure domains via `/api/domains` endpoints
-- `DomainService.getAllowedOrigins()` generates both `http://` and `https://` variants per hostname
+- `DomainService.getAllowedOrigins()` generates both `http://` and `https://`
+  variants per hostname
 - Results cached in-memory for 60 seconds, invalidated on any domain mutation
 - Falls back to `DOMAIN` env var if no domains configured or DB unavailable
 
-**Security**: This does NOT affect the game-service, which retains its wildcard CORS policy for public game content. Only the backend API service uses dynamic CORS.
+**Security**: This does NOT affect the game-service, which retains its wildcard
+CORS policy for public game content. Only the backend API service uses dynamic
+CORS.
 
 ## Conclusion
 
-The wildcard CORS policy for game-service is a **justified security decision** that:
+The wildcard CORS policy for game-service is a **justified security decision**
+that:
+
 1. Serves only public, read-only game content
 2. Exposes no sensitive data
 3. Supports legitimate embedding and development use cases
@@ -176,6 +202,5 @@ This decision has been reviewed and documented for security audit purposes.
 
 ---
 
-**Last Updated**: 2026-01-27
-**Reviewed By**: Code Review Process
-**Status**: Approved - Justified for public content delivery
+**Last Updated**: 2026-01-27 **Reviewed By**: Code Review Process **Status**:
+Approved - Justified for public content delivery

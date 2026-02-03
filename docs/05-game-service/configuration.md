@@ -1,6 +1,7 @@
 # Configuration
 
-The game-service configuration system uses environment variables and `proxySettings.json` to provide flexible deployment options.
+The game-service configuration system uses environment variables and
+`proxySettings.json` to provide flexible deployment options.
 
 ## Configuration Sources
 
@@ -27,14 +28,12 @@ HTTP Proxy Server port.
 PROXY_PORT=22500
 ```
 
-**Default**: 22500
-**Type**: Integer
-**Range**: 1024-65535
-**Required**: No
+**Default**: 22500 **Type**: Integer **Range**: 1024-65535 **Required**: No
 
 **Use case**: Change if port conflict occurs
 
 **Examples**:
+
 ```bash
 PROXY_PORT=22500  # Default
 PROXY_PORT=8080   # Alternative HTTP port
@@ -49,10 +48,7 @@ GameZip Server port.
 GAMEZIPSERVER_PORT=22501
 ```
 
-**Default**: 22501
-**Type**: Integer
-**Range**: 1024-65535
-**Required**: No
+**Default**: 22501 **Type**: Integer **Range**: 1024-65535 **Required**: No
 
 **Use case**: Change if port conflict occurs
 
@@ -66,13 +62,13 @@ Flashpoint installation root directory.
 FLASHPOINT_PATH=D:/Flashpoint
 ```
 
-**Default**: D:/Flashpoint
-**Type**: Absolute path
-**Required**: Yes (for production)
+**Default**: D:/Flashpoint **Type**: Absolute path **Required**: Yes (for
+production)
 
 **Use case**: Point to Flashpoint installation
 
 **Platform-specific**:
+
 ```bash
 # Windows
 FLASHPOINT_PATH=D:/Flashpoint
@@ -94,7 +90,8 @@ All other Flashpoint paths are automatically derived from `FLASHPOINT_PATH`:
 - HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
 - Games: `${FLASHPOINT_PATH}/Data/Games`
 
-You do not need to set environment variables for these paths - they are calculated automatically from `FLASHPOINT_PATH`.
+You do not need to set environment variables for these paths - they are
+calculated automatically from `FLASHPOINT_PATH`.
 
 ### Proxy Settings
 
@@ -106,12 +103,11 @@ Streaming chunk size in bytes.
 PROXY_CHUNK_SIZE=8192
 ```
 
-**Default**: 8192 (8KB)
-**Type**: Integer
-**Range**: 1024-1048576 (1KB-1MB)
+**Default**: 8192 (8KB) **Type**: Integer **Range**: 1024-1048576 (1KB-1MB)
 **Required**: No
 
 **Performance tuning**:
+
 ```bash
 PROXY_CHUNK_SIZE=4096    # Low memory, high CPU
 PROXY_CHUNK_SIZE=8192    # Balanced (default)
@@ -119,6 +115,7 @@ PROXY_CHUNK_SIZE=65536   # High memory, low CPU
 ```
 
 **Trade-offs**:
+
 - Smaller chunks: Lower memory, higher CPU, more I/O calls
 - Larger chunks: Higher memory, lower CPU, fewer I/O calls
 
@@ -130,19 +127,19 @@ Enable CORS headers.
 ALLOW_CROSS_DOMAIN=true
 ```
 
-**Default**: true
-**Type**: Boolean (true/false)
-**Required**: No
+**Default**: true **Type**: Boolean (true/false) **Required**: No
 
 **Use case**: Disable for internal networks
 
 **Values**:
+
 ```bash
 ALLOW_CROSS_DOMAIN=true   # Enable CORS (default)
 ALLOW_CROSS_DOMAIN=false  # Disable CORS
 ```
 
 **Impact**:
+
 - `true`: Adds `Access-Control-Allow-Origin: *`
 - `false`: No CORS headers, cross-domain requests blocked
 
@@ -156,18 +153,19 @@ Comma-separated list of external CDN URLs.
 EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
 ```
 
-**Default**: infinity.flashpointarchive.org
-**Type**: Comma-separated URLs
+**Default**: infinity.flashpointarchive.org **Type**: Comma-separated URLs
 **Required**: No
 
 **Use case**: Add backup CDNs
 
 **Format**:
+
 ```bash
 EXTERNAL_FALLBACK_URLS=https://cdn1.example.com,https://cdn2.example.com,https://cdn3.example.com
 ```
 
 **Notes**:
+
 - HTTP URLs auto-upgraded to HTTPS
 - Tried in order
 - First successful response used
@@ -182,12 +180,11 @@ Logging verbosity level.
 LOG_LEVEL=info
 ```
 
-**Default**: info
-**Type**: String
-**Values**: error, warn, info, debug
+**Default**: info **Type**: String **Values**: error, warn, info, debug
 **Required**: No
 
 **Levels**:
+
 ```bash
 LOG_LEVEL=error  # Errors only
 LOG_LEVEL=warn   # Warnings and errors
@@ -196,6 +193,7 @@ LOG_LEVEL=debug  # Verbose logging
 ```
 
 **Impact**:
+
 - `error`: Minimal logs, production recommended
 - `warn`: Important messages
 - `info`: Request logging, file serves
@@ -209,14 +207,13 @@ Node.js environment mode.
 NODE_ENV=development
 ```
 
-**Default**: development
-**Type**: String
-**Values**: development, production, test
-**Required**: No
+**Default**: development **Type**: String **Values**: development, production,
+test **Required**: No
 
 **Use case**: Production optimization
 
 **Values**:
+
 ```bash
 NODE_ENV=development  # Development mode (default)
 NODE_ENV=production   # Production optimizations
@@ -233,9 +230,7 @@ Enable CGI script execution.
 ENABLE_CGI=false
 ```
 
-**Default**: false
-**Type**: Boolean
-**Required**: No
+**Default**: false **Type**: Boolean **Required**: No
 
 **Use case**: Execute PHP/Perl scripts
 
@@ -249,9 +244,7 @@ Enable .htaccess file parsing.
 ENABLE_HTACCESS=false
 ```
 
-**Default**: false
-**Type**: Boolean
-**Required**: No
+**Default**: false **Type**: Boolean **Required**: No
 
 **Use case**: Apache-style directory configuration
 
@@ -295,12 +288,12 @@ Override directories in htdocs.
 "legacyOverridePaths": ["custom", "fixes", "overrides"]
 ```
 
-**Default**: []
-**Type**: Array of strings
+**Default**: [] **Type**: Array of strings
 
 **Use case**: Patch broken games with fixed versions
 
 **Path resolution**:
+
 ```
 Request: www.example.com/game.swf
 Override: htdocs/custom/www.example.com/game.swf
@@ -315,8 +308,7 @@ Primary external CDN URL.
 "infinityServerURL": "https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/"
 ```
 
-**Default**: https://infinity.flashpointarchive.org/...
-**Type**: String (URL)
+**Default**: https://infinity.flashpointarchive.org/... **Type**: String (URL)
 
 **Use case**: Change primary CDN
 
@@ -331,8 +323,7 @@ Additional external CDN URLs.
 ]
 ```
 
-**Default**: []
-**Type**: Array of URLs
+**Default**: [] **Type**: Array of URLs
 
 **Use case**: Add backup CDNs
 
@@ -344,8 +335,7 @@ Enable MAD4FP content sources.
 "mad4fpEnabled": false
 ```
 
-**Default**: false
-**Type**: Boolean
+**Default**: false **Type**: Boolean
 
 **Use case**: Access MAD4FP community content
 
@@ -359,8 +349,7 @@ MAD4FP content URLs.
 ]
 ```
 
-**Default**: []
-**Type**: Array of URLs
+**Default**: [] **Type**: Array of URLs
 
 **Use case**: MAD4FP CDN locations
 
@@ -456,8 +445,8 @@ Maximum security (breaks most games).
 export class ConfigManager {
   private static settings: ServerSettings | null = null;
 
-  static async loadConfig(flashpointPath: string): Promise<ServerSettings>
-  static getSettings(): ServerSettings
+  static async loadConfig(flashpointPath: string): Promise<ServerSettings>;
+  static getSettings(): ServerSettings;
 }
 ```
 
@@ -465,7 +454,11 @@ export class ConfigManager {
 
 ```typescript
 // 1. Load from proxySettings.json
-const proxySettingsPath = path.join(flashpointPath, 'Server', 'proxySettings.json');
+const proxySettingsPath = path.join(
+  flashpointPath,
+  'Server',
+  'proxySettings.json'
+);
 const proxySettings = JSON.parse(await fs.readFile(proxySettingsPath, 'utf-8'));
 
 // 2. Derive paths automatically from FLASHPOINT_PATH
@@ -619,6 +612,7 @@ ENV GAMEZIPSERVER_PORT=${GAMEZIPSERVER_PORT}
 **Symptom**: Using default values instead of configured values
 
 **Debug steps**:
+
 1. Check .env file exists in correct location
 2. Verify dotenv is loading: `console.log(process.env.PROXY_PORT)`
 3. Check for typos in variable names
@@ -631,6 +625,7 @@ ENV GAMEZIPSERVER_PORT=${GAMEZIPSERVER_PORT}
 **Symptom**: `Flashpoint path not found: D:/Flashpoint`
 
 **Debug steps**:
+
 1. Verify path exists: `dir D:\Flashpoint` (Windows) or `ls /flashpoint` (Linux)
 2. Check path format (forward slashes on all platforms)
 3. Verify permissions (read access required)
@@ -643,6 +638,7 @@ ENV GAMEZIPSERVER_PORT=${GAMEZIPSERVER_PORT}
 **Symptom**: `Port 22500 already in use`
 
 **Debug steps**:
+
 1. Find process: `netstat -ano | findstr :22500`
 2. Kill process or change port
 3. Check for multiple game-service instances
@@ -654,6 +650,7 @@ ENV GAMEZIPSERVER_PORT=${GAMEZIPSERVER_PORT}
 **Symptom**: Files not found from external sources
 
 **Debug steps**:
+
 1. Test URL manually: `curl https://infinity.flashpointarchive.org/...`
 2. Check EXTERNAL_FALLBACK_URLS format
 3. Verify network connectivity
@@ -691,21 +688,25 @@ LOG_LEVEL=error  # Minimal logging overhead
 ## Security Best Practices
 
 1. **Disable CGI in production**:
+
    ```bash
    ENABLE_CGI=false
    ```
 
 2. **Restrict CORS if internal**:
+
    ```bash
    ALLOW_CROSS_DOMAIN=false  # Internal networks only
    ```
 
 3. **Use HTTPS for external URLs**:
+
    ```bash
    EXTERNAL_FALLBACK_URLS=https://cdn.example.com  # HTTPS only
    ```
 
 4. **Minimal logging in production**:
+
    ```bash
    LOG_LEVEL=warn  # Don't log sensitive paths
    ```
@@ -733,6 +734,8 @@ Planned configuration options:
 ## References
 
 - dotenv documentation: https://github.com/motdotla/dotenv
-- Node.js environment variables: https://nodejs.org/api/process.html#process_process_env
+- Node.js environment variables:
+  https://nodejs.org/api/process.html#process_process_env
 - Flashpoint proxySettings.json specification
-- Docker environment configuration: https://docs.docker.com/compose/environment-variables/
+- Docker environment configuration:
+  https://docs.docker.com/compose/environment-variables/

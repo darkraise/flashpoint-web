@@ -175,7 +175,7 @@ export const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   wrl: 'model/vrml',
   wvr: 'x-world/x-wvr',
   x3db: 'model/x3d+binary',
-  xvr: 'x-world/x-xvr'
+  xvr: 'x-world/x-xvr',
 };
 
 // Standard MIME types for common web files
@@ -230,7 +230,7 @@ const STANDARD_MIME_TYPES: { [key: string]: string } = {
   // Binary
   bin: 'application/octet-stream',
   exe: 'application/octet-stream',
-  dll: 'application/octet-stream'
+  dll: 'application/octet-stream',
 };
 
 /**

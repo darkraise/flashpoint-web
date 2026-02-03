@@ -57,7 +57,13 @@ router.post(
       const domain = domainService.addDomain(validation.data.hostname, req.user!.id);
       res.status(201).json(domain);
     } catch (error) {
-      if (error instanceof Error && (error.message.includes('already exists') || error.message.includes('must not') || error.message.includes('Invalid') || error.message.includes('cannot be empty'))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('already exists') ||
+          error.message.includes('must not') ||
+          error.message.includes('Invalid') ||
+          error.message.includes('cannot be empty'))
+      ) {
         return res.status(400).json({
           error: { message: error.message },
         });

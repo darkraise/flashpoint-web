@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { JobStatusEnriched } from "@/types/jobs";
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { JobStatusEnriched } from '@/types/jobs';
 import {
   Dialog,
   DialogContent,
@@ -8,13 +8,13 @@ import {
   DialogTitle,
   DialogBody,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Info, Settings, AlertCircle } from "lucide-react";
-import { systemSettingsApi } from "@/lib/api";
-import { useDialog } from "@/contexts/DialogContext";
-import { cronToReadable, isValidCron } from "@/lib/cron-utils";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Info, Settings, AlertCircle } from 'lucide-react';
+import { systemSettingsApi } from '@/lib/api';
+import { useDialog } from '@/contexts/DialogContext';
+import { cronToReadable, isValidCron } from '@/lib/cron-utils';
 
 interface JobEditDialogProps {
   job: JobStatusEnriched | null;
@@ -26,20 +26,18 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
   const { showToast } = useDialog();
   const queryClient = useQueryClient();
 
-  const [cronSchedule, setCronSchedule] = useState(
-    job?.cronSchedule || "0 * * * *",
-  );
+  const [cronSchedule, setCronSchedule] = useState(job?.cronSchedule || '0 * * * *');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Validate cron expression
   const validateCronExpression = (cron: string) => {
     if (!cron.trim()) {
-      setValidationError("Cron expression is required");
+      setValidationError('Cron expression is required');
       return false;
     }
 
     if (!isValidCron(cron)) {
-      setValidationError("Invalid cron expression format");
+      setValidationError('Invalid cron expression format');
       return false;
     }
 
@@ -64,18 +62,16 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
   // Update job settings mutation
   const updateJobSettings = useMutation({
     mutationFn: (settings: Record<string, any>) =>
-      systemSettingsApi.updateCategory("jobs", settings),
+      systemSettingsApi.updateCategory('jobs', settings),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["jobs"] });
-      queryClient.invalidateQueries({ queryKey: ["systemSettings", "jobs"] });
-      showToast("Job settings updated successfully", "success");
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['systemSettings', 'jobs'] });
+      showToast('Job settings updated successfully', 'success');
       onOpenChange(false);
     },
     onError: (error: any) => {
-      const message =
-        error?.response?.data?.error?.message ||
-        "Failed to update job settings";
-      showToast(message, "error");
+      const message = error?.response?.data?.error?.message || 'Failed to update job settings';
+      showToast(message, 'error');
     },
   });
 
@@ -84,12 +80,12 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
 
     // Validate before saving
     if (!validateCronExpression(cronSchedule)) {
-      showToast("Please fix the validation errors before saving", "error");
+      showToast('Please fix the validation errors before saving', 'error');
       return;
     }
 
     // Map job ID to settings keys
-    const settingsKey = job.id === "metadata-sync" ? "metadataSync" : job.id;
+    const settingsKey = job.id === 'metadata-sync' ? 'metadataSync' : job.id;
 
     updateJobSettings.mutate({
       [`${settingsKey}Schedule`]: cronSchedule,
@@ -115,8 +111,7 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
               Schedule (Cron Expression)
             </Label>
             <p className="text-sm text-muted-foreground mb-2">
-              Define when the job should run automatically using a cron
-              expression. Use the format:{" "}
+              Define when the job should run automatically using a cron expression. Use the format:{' '}
               <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">
                 minute hour day month weekday
               </code>
@@ -127,8 +122,8 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
               placeholder="0 * * * *"
               className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-1 font-mono text-sm ${
                 validationError
-                  ? "border-red-500 focus:ring-red-500"
-                  : "border-border focus:ring-primary"
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-border focus:ring-primary'
               }`}
               value={cronSchedule}
               onChange={(e) => handleCronChange(e.target.value)}
@@ -156,35 +151,35 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
               <button
                 type="button"
                 className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
-                onClick={() => handleCronChange("*/15 * * * *")}
+                onClick={() => handleCronChange('*/15 * * * *')}
               >
                 Every 15 min
               </button>
               <button
                 type="button"
                 className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
-                onClick={() => handleCronChange("*/30 * * * *")}
+                onClick={() => handleCronChange('*/30 * * * *')}
               >
                 Every 30 min
               </button>
               <button
                 type="button"
                 className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
-                onClick={() => handleCronChange("0 * * * *")}
+                onClick={() => handleCronChange('0 * * * *')}
               >
                 Hourly
               </button>
               <button
                 type="button"
                 className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
-                onClick={() => handleCronChange("0 */6 * * *")}
+                onClick={() => handleCronChange('0 */6 * * *')}
               >
                 Every 6 hours
               </button>
               <button
                 type="button"
                 className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded transition-colors"
-                onClick={() => handleCronChange("0 0 * * *")}
+                onClick={() => handleCronChange('0 0 * * *')}
               >
                 Daily
               </button>
@@ -198,9 +193,7 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">
                   <span>Current Schedule: </span>
-                  {validationError
-                    ? "Invalid cron expression"
-                    : cronToReadable(cronSchedule)}
+                  {validationError ? 'Invalid cron expression' : cronToReadable(cronSchedule)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   <code className="font-mono bg-background px-1 py-0.5 rounded">
@@ -220,11 +213,8 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={updateJobSettings.isPending || !!validationError}
-          >
-            {updateJobSettings.isPending ? "Saving..." : "Save Changes"}
+          <Button onClick={handleSave} disabled={updateJobSettings.isPending || !!validationError}>
+            {updateJobSettings.isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>

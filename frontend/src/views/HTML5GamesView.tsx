@@ -5,11 +5,5 @@ import { GameBrowseLayout } from '@/components/library/GameBrowseLayout';
  * Uses the reusable GameBrowseLayout with HTML5 platform filter
  */
 export function HTML5GamesView() {
-  return (
-    <GameBrowseLayout
-      title="HTML5 Games"
-      library="arcade"
-      platform="HTML5"
-    />
-  );
+  return <GameBrowseLayout title="HTML5 Games" library="arcade" platform="HTML5" />;
 }

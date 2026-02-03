@@ -14,7 +14,7 @@ export function useFavorites(limit?: number, offset?: number) {
   return useQuery({
     queryKey: ['favorites', { limit, offset }],
     queryFn: () => favoritesApi.getAll(limit, offset),
-    enabled: enableFavorites
+    enabled: enableFavorites,
   });
 }
 
@@ -50,7 +50,7 @@ export function useFavoriteGames(
   return useQuery({
     queryKey: ['favorites', 'games', { limit, offset, sortBy, sortOrder }],
     queryFn: () => favoritesApi.getGames(limit, offset, sortBy, sortOrder),
-    enabled: enableFavorites
+    enabled: enableFavorites,
   });
 }
 
@@ -63,7 +63,7 @@ export function useFavoritesStats() {
   return useQuery({
     queryKey: ['favorites', 'stats'],
     queryFn: () => favoritesApi.getStats(),
-    enabled: enableFavorites
+    enabled: enableFavorites,
   });
 }
 
@@ -90,8 +90,8 @@ export function useToggleFavorite() {
       queryClient.setQueryData<string[]>(['favorites', 'game-ids'], (old = []) => {
         const isFavorited = old.includes(gameId);
         return isFavorited
-          ? old.filter(id => id !== gameId)  // Remove
-          : [...old, gameId];                // Add
+          ? old.filter((id) => id !== gameId) // Remove
+          : [...old, gameId]; // Add
       });
 
       // Update stats optimistically
@@ -101,7 +101,9 @@ export function useToggleFavorite() {
         const wasAdded = !previousIds.includes(gameId);
         return {
           ...old,
-          totalFavorites: wasAdded ? (old.totalFavorites || 0) + 1 : Math.max(0, (old.totalFavorites || 0) - 1)
+          totalFavorites: wasAdded
+            ? (old.totalFavorites || 0) + 1
+            : Math.max(0, (old.totalFavorites || 0) - 1),
         };
       });
 
@@ -127,9 +129,9 @@ export function useToggleFavorite() {
           query.queryKey[0] === 'favorites' &&
           query.queryKey.length > 1 &&
           query.queryKey[1] !== 'game-ids' &&
-          query.queryKey[1] !== 'stats'
+          query.queryKey[1] !== 'stats',
       });
-    }
+    },
   });
 }
 
@@ -178,9 +180,9 @@ export function useAddFavorite() {
           query.queryKey[0] === 'favorites' &&
           query.queryKey.length > 1 &&
           query.queryKey[1] !== 'game-ids' &&
-          query.queryKey[1] !== 'stats'
+          query.queryKey[1] !== 'stats',
       });
-    }
+    },
   });
 }
 
@@ -201,7 +203,7 @@ export function useRemoveFavorite() {
 
       // Remove from cache
       queryClient.setQueryData<string[]>(['favorites', 'game-ids'], (old = []) => {
-        return old.filter(id => id !== gameId);
+        return old.filter((id) => id !== gameId);
       });
 
       // Update stats
@@ -228,9 +230,9 @@ export function useRemoveFavorite() {
           query.queryKey[0] === 'favorites' &&
           query.queryKey.length > 1 &&
           query.queryKey[1] !== 'game-ids' &&
-          query.queryKey[1] !== 'stats'
+          query.queryKey[1] !== 'stats',
       });
-    }
+    },
   });
 }
 
@@ -251,7 +253,7 @@ export function useBatchAddFavorites() {
 
       // Add all to cache
       queryClient.setQueryData<string[]>(['favorites', 'game-ids'], (old = []) => {
-        const newIds = gameIds.filter(id => !old.includes(id));
+        const newIds = gameIds.filter((id) => !old.includes(id));
         return [...old, ...newIds];
       });
 
@@ -259,7 +261,7 @@ export function useBatchAddFavorites() {
       queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
         const previousIds = queryClient.getQueryData<string[]>(['favorites', 'game-ids']) || [];
-        const newIds = gameIds.filter(id => !previousIds.includes(id));
+        const newIds = gameIds.filter((id) => !previousIds.includes(id));
         return { ...old, totalFavorites: (old.totalFavorites || 0) + newIds.length };
       });
 
@@ -281,9 +283,9 @@ export function useBatchAddFavorites() {
           query.queryKey[0] === 'favorites' &&
           query.queryKey.length > 1 &&
           query.queryKey[1] !== 'game-ids' &&
-          query.queryKey[1] !== 'stats'
+          query.queryKey[1] !== 'stats',
       });
-    }
+    },
   });
 }
 
@@ -304,7 +306,7 @@ export function useBatchRemoveFavorites() {
 
       // Remove all from cache
       queryClient.setQueryData<string[]>(['favorites', 'game-ids'], (old = []) => {
-        return old.filter(id => !gameIds.includes(id));
+        return old.filter((id) => !gameIds.includes(id));
       });
 
       // Update stats
@@ -332,9 +334,9 @@ export function useBatchRemoveFavorites() {
           query.queryKey[0] === 'favorites' &&
           query.queryKey.length > 1 &&
           query.queryKey[1] !== 'game-ids' &&
-          query.queryKey[1] !== 'stats'
+          query.queryKey[1] !== 'stats',
       });
-    }
+    },
   });
 }
 
@@ -376,6 +378,6 @@ export function useClearAllFavorites() {
     onSuccess: () => {
       // Invalidate all favorites queries
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
-    }
+    },
   });
 }

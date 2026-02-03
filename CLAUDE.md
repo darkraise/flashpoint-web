@@ -361,8 +361,8 @@ LOG_LEVEL=info
 > stored in the `system_settings` table as `metadata.flashpoint_edition` and
 > `metadata.flashpoint_version`.
 
-See `backend/.env.example` for complete configuration options including
-rate limiting, SQLite optimization, and OpenTelemetry settings.
+See `backend/.env.example` for complete configuration options including rate
+limiting, SQLite optimization, and OpenTelemetry settings.
 
 ### Game Service (.env)
 
@@ -698,8 +698,8 @@ without extra API calls.
 **Change:** Replaced the `FLASHPOINT_EDITION` environment variable with
 automatic detection from `{FLASHPOINT_PATH}/version.txt`. Edition and version
 are held in the backend `config` object — **not** stored in the
-`system_settings` database table. Backend services read `config` directly.
-The frontend receives edition/version via `/api/settings/public` (injected from
+`system_settings` database table. Backend services read `config` directly. The
+frontend receives edition/version via `/api/settings/public` (injected from
 `config`).
 
 **How it works:**
@@ -712,7 +712,8 @@ The frontend receives edition/version via `/api/settings/public` (injected from
   import and read `config` directly
 - The `/api/settings/public` endpoint injects edition/version from `config` into
   the response (same pattern as `homeRecentHours`)
-- Frontend uses the `usePublicSettings()` hook (already cached, no extra request)
+- Frontend uses the `usePublicSettings()` hook (already cached, no extra
+  request)
 - Falls back to `'infinity'` if `version.txt` is missing or unparseable
 
 **Files changed:**
@@ -780,10 +781,14 @@ migrations with checksums and execution times.
 
 **After ANY code change, always:**
 
-1. Verify no build errors: `npm run typecheck` and `npm run build`
-2. Check if documentation needs updates
-3. Ask the user if relevant documentation should be updated
-4. Update the following docs as needed:
+1. **Run Prettier** on all new and modified files:
+   `npx prettier --write <file1> <file2> ...` When using sub-agents (Task tool),
+   instruct each agent to run Prettier on every file it creates or modifies
+   before finishing.
+2. Verify no build errors: `npm run typecheck` and `npm run build`
+3. Check if documentation needs updates
+4. Ask the user if relevant documentation should be updated
+5. Update the following docs as needed:
    - Architecture changes → `docs/02-architecture/`
    - New/modified API endpoints → `docs/06-api-reference/`
    - Database schema changes → `docs/12-reference/database-schema-reference.md`

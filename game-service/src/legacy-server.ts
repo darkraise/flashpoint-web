@@ -80,7 +80,10 @@ export class LegacyServer {
    * Build all path candidates in priority order
    * Replicates the path resolution algorithm from Go's ServeLegacy()
    */
-  private buildPathCandidates(relPath: string, urlPath: string): Array<{ path: string; type: string }> {
+  private buildPathCandidates(
+    relPath: string,
+    urlPath: string
+  ): Array<{ path: string; type: string }> {
     const candidates: Array<{ path: string; type: string }> = [];
     const seenPaths = new Set<string>();
 
@@ -142,10 +145,7 @@ export class LegacyServer {
 
     // 3. CGI-BIN paths (for script files)
     if (this.isScriptUrl(urlPath)) {
-      addCandidate(
-        path.join(this.settings.legacyCGIBINPath, relPath),
-        'cgi-bin'
-      );
+      addCandidate(path.join(this.settings.legacyCGIBINPath, relPath), 'cgi-bin');
 
       if (pathWithoutQuery !== relPath) {
         addCandidate(
@@ -237,7 +237,7 @@ export class LegacyServer {
     return {
       data,
       contentType,
-      source: 'local-htdocs'
+      source: 'local-htdocs',
     };
   }
 
@@ -349,7 +349,7 @@ export class LegacyServer {
       'data',
       'files',
       'secure',
-      'download'
+      'download',
     ];
 
     // Add subdomain variations

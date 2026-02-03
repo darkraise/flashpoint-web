@@ -22,7 +22,8 @@ Returns `{ "gameIds": ["uuid1", "uuid2", ...] }` for quick checks.
 
 `GET /api/favorites/games` - Requires `playlists.read` permission
 
-Query params: `limit`, `offset`, `sortBy` (title|dateAdded, default: dateAdded), `sortOrder` (asc|desc, default: desc)
+Query params: `limit`, `offset`, `sortBy` (title|dateAdded, default: dateAdded),
+`sortOrder` (asc|desc, default: desc)
 
 Returns array of game objects with full metadata including addedAt timestamp.
 
@@ -85,23 +86,26 @@ Returns `{ "removed": 47 }`
 ## Usage Examples
 
 ### Check if game is favorited
+
 ```javascript
 const { gameIds } = await api.get('/favorites/game-ids');
 const isFavorited = gameIds.includes(gameId);
 ```
 
 ### Batch operations (efficient)
+
 ```javascript
 // Adding 5 games = 1 rate limit unit
-await api.post('/favorites/batch', { gameIds: [1,2,3,4,5] });
+await api.post('/favorites/batch', { gameIds: [1, 2, 3, 4, 5] });
 
 // Adding 5 individually = 5 rate limit units (inefficient)
-for (const id of [1,2,3,4,5]) {
+for (const id of [1, 2, 3, 4, 5]) {
   await api.post('/favorites', { gameId: id });
 }
 ```
 
 ### Create playlist from favorites
+
 ```javascript
 const { gameIds } = await api.get('/favorites/game-ids');
 const playlist = await api.post('/playlists', { title: 'My Favorites' });
@@ -117,19 +121,20 @@ await api.post(`/playlists/${playlist.id}/games`, { gameIds });
 
 ## Permission Matrix
 
-| Endpoint | Method | Required Permission |
-|----------|--------|-------------------|
-| `/api/favorites` | GET | `playlists.read` |
-| `/api/favorites/game-ids` | GET | `playlists.read` |
-| `/api/favorites/games` | GET | `playlists.read` |
-| `/api/favorites/stats` | GET | `playlists.read` |
-| `/api/favorites/toggle` | POST | `playlists.create` |
-| `/api/favorites` | POST | `playlists.create` |
-| `/api/favorites/:gameId` | DELETE | `playlists.delete` |
-| `/api/favorites/batch` | POST | `playlists.create` |
-| `/api/favorites/batch` | DELETE | `playlists.delete` |
-| `/api/favorites` | DELETE | `playlists.delete` |
+| Endpoint                  | Method | Required Permission |
+| ------------------------- | ------ | ------------------- |
+| `/api/favorites`          | GET    | `playlists.read`    |
+| `/api/favorites/game-ids` | GET    | `playlists.read`    |
+| `/api/favorites/games`    | GET    | `playlists.read`    |
+| `/api/favorites/stats`    | GET    | `playlists.read`    |
+| `/api/favorites/toggle`   | POST   | `playlists.create`  |
+| `/api/favorites`          | POST   | `playlists.create`  |
+| `/api/favorites/:gameId`  | DELETE | `playlists.delete`  |
+| `/api/favorites/batch`    | POST   | `playlists.create`  |
+| `/api/favorites/batch`    | DELETE | `playlists.delete`  |
+| `/api/favorites`          | DELETE | `playlists.delete`  |
 
 ## Rate Limiting
 
-Subject to global rate limit (default: 100 requests per 15 minutes). Batch operations count as single request for efficiency.
+Subject to global rate limit (default: 100 requests per 15 minutes). Batch
+operations count as single request for efficiency.

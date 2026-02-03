@@ -4,12 +4,13 @@ Complete REST API reference for Flashpoint Web backend service.
 
 ## Base URL
 
-Development: `http://localhost:3100/api`
-Production: Configure via `DOMAIN` environment variable
+Development: `http://localhost:3100/api` Production: Configure via `DOMAIN`
+environment variable
 
 ## Authentication
 
 Most endpoints require JWT token in Authorization header:
+
 ```
 Authorization: Bearer <access_token>
 ```
@@ -19,6 +20,7 @@ Obtain tokens via `/api/auth/login` or `/api/auth/register`.
 ## Response Format
 
 ### Success Response
+
 ```json
 {
   "data": { ... },
@@ -27,6 +29,7 @@ Obtain tokens via `/api/auth/login` or `/api/auth/register`.
 ```
 
 ### Error Response
+
 ```json
 {
   "error": { "code": 400, "message": "Validation error: ..." }
@@ -46,11 +49,13 @@ Obtain tokens via `/api/auth/login` or `/api/auth/register`.
 
 ## Rate Limiting
 
-Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`,
+`X-RateLimit-Remaining`, `X-RateLimit-Reset`.
 
 ## API Endpoints
 
 ### Authentication
+
 - [POST /api/auth/login](./authentication-api.md#login)
 - [POST /api/auth/register](./authentication-api.md#register)
 - [POST /api/auth/refresh](./authentication-api.md#refresh-token)
@@ -58,6 +63,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [GET /api/auth/me](./authentication-api.md#get-current-user)
 
 ### Games
+
 - [GET /api/games](./games-api.md#search-games)
 - [GET /api/games/filter-options](./games-api.md#get-filter-options)
 - [GET /api/games/random](./games-api.md#get-random-game)
@@ -66,6 +72,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [GET /api/games/:id/related](./games-api.md#get-related-games)
 
 ### Users
+
 - [GET /api/users](./users-api.md#list-users)
 - [GET /api/users/:id](./users-api.md#get-user)
 - [POST /api/users](./users-api.md#create-user)
@@ -76,6 +83,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [PATCH /api/users/me/settings](./users-api.md#update-user-settings)
 
 ### Roles & Permissions
+
 - [GET /api/roles](./roles-api.md#list-roles)
 - [GET /api/roles/permissions](./roles-api.md#list-permissions)
 - [GET /api/roles/:id](./roles-api.md#get-role)
@@ -85,6 +93,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [DELETE /api/roles/:id](./roles-api.md#delete-role)
 
 ### Playlists
+
 - [GET /api/playlists](./playlists-api.md#list-playlists)
 - [GET /api/playlists/:id](./playlists-api.md#get-playlist)
 - [POST /api/playlists](./playlists-api.md#create-playlist)
@@ -93,6 +102,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [DELETE /api/playlists/:id](./playlists-api.md#delete-playlist)
 
 ### Favorites
+
 - [GET /api/favorites](./favorites-api.md#get-all-favorites)
 - [GET /api/favorites/game-ids](./favorites-api.md#get-favorite-game-ids)
 - [GET /api/favorites/games](./favorites-api.md#get-favorites-with-full-game-data)
@@ -105,6 +115,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [DELETE /api/favorites](./favorites-api.md#clear-all-favorites)
 
 ### Play Tracking
+
 - [POST /api/play/start](./play-tracking-api.md#start-session)
 - [POST /api/play/end](./play-tracking-api.md#end-session)
 - [GET /api/play/stats](./play-tracking-api.md#get-user-stats)
@@ -115,6 +126,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [GET /api/play/games-distribution](./play-tracking-api.md#get-games-distribution)
 
 ### Shared & Community Playlists
+
 - [GET /api/playlists/shared/:shareToken](./shared-playlists-api.md#get-shared-playlist-metadata)
 - [GET /api/playlists/shared/:shareToken/games](./shared-playlists-api.md#get-games-in-shared-playlist)
 - [POST /api/playlists/shared/:shareToken/clone](./shared-playlists-api.md#clone-shared-playlist-to-user-account)
@@ -124,10 +136,12 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [GET /api/games/:id/download/progress](./shared-playlists-api.md#monitor-download-progress-sse)
 
 ### Platforms & Tags
+
 - [GET /api/platforms](./platforms-tags-api.md#list-platforms)
 - [GET /api/tags](./platforms-tags-api.md#list-tags)
 
 ### Activities & Audit Logs
+
 - [GET /api/activities](./activities-api.md#list-activity-logs)
 - [GET /api/activities/stats](./activities-api.md#get-activity-statistics)
 - [GET /api/activities/trend](./activities-api.md#get-activity-trend)
@@ -135,6 +149,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [GET /api/activities/breakdown](./activities-api.md#get-activity-breakdown)
 
 ### Admin & Operations
+
 - [GET /api/health](./admin-api.md#basic-health-check)
 - [GET /api/health/detailed](./admin-api.md#detailed-health-check)
 - [GET /api/cache/stats](./admin-api.md#get-cache-statistics)
@@ -147,15 +162,17 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`, `X-RateLimit
 - [GET /api/github/stars](./admin-api.md#get-github-star-count)
 - [GET /api/settings/auth](./admin-api.md#get-auth-settings)
 - [PATCH /api/settings/auth](./admin-api.md#update-auth-settings)
-- [GET /game-files/*](./admin-api.md#get-game-file)
+- [GET /game-files/\*](./admin-api.md#get-game-file)
 
 ### Domains
+
 - [GET /api/domains](./domains-api.md#list-domains)
 - [POST /api/domains](./domains-api.md#add-domain)
 - [DELETE /api/domains/:id](./domains-api.md#delete-domain)
 - [PATCH /api/domains/:id/default](./domains-api.md#set-default-domain)
 
 ### System Settings
+
 - [GET /api/settings](./settings-api.md#get-all-settings)
 - [GET /api/settings/:category](./settings-api.md#get-category-settings)
 - [PATCH /api/settings/:category](./settings-api.md#update-category-settings)

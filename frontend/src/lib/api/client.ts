@@ -96,7 +96,10 @@ apiClient.interceptors.response.use(
       const errorCode = error.response.data?.code;
 
       // Handle shared access token errors differently
-      if (errorCode === 'SHARED_ACCESS_INVALID' || originalRequest.headers?.Authorization?.startsWith('SharedAccess ')) {
+      if (
+        errorCode === 'SHARED_ACCESS_INVALID' ||
+        originalRequest.headers?.Authorization?.startsWith('SharedAccess ')
+      ) {
         useSharedAccessStore.getState().clearToken();
         const { toast } = await import('sonner');
         toast.error('Your shared access has expired. Return to the playlist to continue browsing.');

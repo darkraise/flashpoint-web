@@ -11,11 +11,7 @@ import { GameFilters } from '@/types/game';
  * @param hours - Time window in hours for "recent" games (default: 24)
  * @returns TanStack Query result with recent games
  */
-export function useRecentGames(
-  type: 'added' | 'modified',
-  limit: number = 20,
-  hours: number = 24
-) {
+export function useRecentGames(type: 'added' | 'modified', limit: number = 20, hours: number = 24) {
   return useQuery({
     queryKey: ['games', 'recent', type, limit, hours],
     queryFn: async () => {

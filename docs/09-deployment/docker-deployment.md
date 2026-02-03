@@ -16,6 +16,7 @@ Deploy Flashpoint Web using Docker Compose.
 ## Quick Start
 
 1. Set Flashpoint path:
+
 ```bash
 # Linux/Mac
 export FLASHPOINT_HOST_PATH=/path/to/flashpoint
@@ -25,11 +26,13 @@ $env:FLASHPOINT_HOST_PATH="D:\Flashpoint"
 ```
 
 2. Start services:
+
 ```bash
 docker-compose up -d --build
 ```
 
 3. Access:
+
 - Frontend: http://localhost
 - Backend API: http://localhost:3100
 - Game Proxy: http://localhost:22500
@@ -37,13 +40,14 @@ docker-compose up -d --build
 
 ## Container Architecture
 
-| Service | Image | Port | Purpose |
-|---------|-------|------|---------|
-| backend | flashpoint-backend:latest | 3100 | REST API |
+| Service      | Image                          | Port        | Purpose                 |
+| ------------ | ------------------------------ | ----------- | ----------------------- |
+| backend      | flashpoint-backend:latest      | 3100        | REST API                |
 | game-service | flashpoint-game-service:latest | 22500/22501 | Game proxy + ZIP server |
-| frontend | flashpoint-frontend:latest | 80 | Web UI (Nginx) |
+| frontend     | flashpoint-frontend:latest     | 80          | Web UI (Nginx)          |
 
 **Resource Recommendations:**
+
 - Backend: 1 CPU, 1GB RAM
 - Game Service: 2 CPUs, 2GB RAM
 - Frontend: 0.5 CPU, 256MB RAM
@@ -51,12 +55,14 @@ docker-compose up -d --build
 ## Volume Configuration
 
 **Flashpoint Data (read-only):**
+
 ```yaml
 volumes:
   - ${FLASHPOINT_HOST_PATH}:/data/flashpoint:ro
 ```
 
 **User Database (persistent):**
+
 ```yaml
 volumes:
   - user-db:/app/data
@@ -66,14 +72,15 @@ volumes:
 
 **Port Mappings:**
 
-| Service | Internal | Host | Notes |
-|---------|----------|------|-------|
-| Frontend | 8080 | 80 | Nginx |
-| Backend | 3100 | 3100 | API |
-| Game (Proxy) | 22500 | 22500 | HTTP |
-| Game (ZIP) | 22501 | 22501 | ZIP Server |
+| Service      | Internal | Host  | Notes      |
+| ------------ | -------- | ----- | ---------- |
+| Frontend     | 8080     | 80    | Nginx      |
+| Backend      | 3100     | 3100  | API        |
+| Game (Proxy) | 22500    | 22500 | HTTP       |
+| Game (ZIP)   | 22501    | 22501 | ZIP Server |
 
 **Custom ports** via environment variables:
+
 ```bash
 export WEB_PORT=8080
 export API_PORT=8001
@@ -86,7 +93,15 @@ All services include health checks:
 
 ```yaml
 healthcheck:
-  test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/api/health"]
+  test:
+    [
+      'CMD',
+      'wget',
+      '--quiet',
+      '--tries=1',
+      '--spider',
+      'http://localhost:3100/api/health',
+    ]
   interval: 30s
   timeout: 10s
   retries: 3
@@ -94,24 +109,30 @@ healthcheck:
 ```
 
 Check status:
+
 ```bash
 docker-compose ps
 ```
 
 ## Nginx Configuration
 
-The frontend uses a template-based configuration with environment variable substitution.
+The frontend uses a template-based configuration with environment variable
+substitution.
 
 **Key files:**
+
 - `frontend/.nginx/nginx.conf` - Global settings (worker processes, logging)
-- `frontend/.nginx/default.conf.template` - Server block with `${BACKEND_HOST}`, `${BACKEND_PORT}` variables
+- `frontend/.nginx/default.conf.template` - Server block with `${BACKEND_HOST}`,
+  `${BACKEND_PORT}` variables
 
 **At runtime:**
+
 1. Docker entrypoint runs `envsubst` to substitute variables
 2. Processed config written to `/etc/nginx/conf.d/default.conf`
 3. Nginx starts with final configuration
 
 **Features:**
+
 - SPA routing (serves index.html for non-static routes)
 - Gzip compression
 - Security headers (HSTS, CSP, X-Frame-Options)
@@ -120,16 +141,19 @@ The frontend uses a template-based configuration with environment variable subst
 ## Running Containers
 
 Start all services:
+
 ```bash
 docker-compose up -d
 ```
 
 Stop services:
+
 ```bash
 docker-compose down
 ```
 
 Restart with rebuild:
+
 ```bash
 docker-compose up -d --build --force-recreate
 ```
@@ -137,6 +161,7 @@ docker-compose up -d --build --force-recreate
 ## Monitoring and Logs
 
 View logs:
+
 ```bash
 docker-compose logs -f backend
 docker-compose logs -f game-service
@@ -144,11 +169,13 @@ docker-compose logs -f frontend
 ```
 
 Container stats:
+
 ```bash
 docker stats
 ```
 
 Execute command in container:
+
 ```bash
 docker-compose exec backend node -v
 docker-compose exec backend sh  # Open shell
@@ -157,6 +184,7 @@ docker-compose exec backend sh  # Open shell
 ## Troubleshooting
 
 **Port already in use:**
+
 ```bash
 # Linux/Mac
 lsof -i :3100
@@ -166,11 +194,13 @@ netstat -ano | findstr :3100
 ```
 
 **Volume mount failed:**
+
 - Verify `FLASHPOINT_HOST_PATH` is set
 - Check path exists and is readable
 - On Windows, ensure Docker has drive access
 
 **Health check failing:**
+
 ```bash
 # Check directly
 curl http://localhost:3100/api/health
@@ -183,6 +213,7 @@ docker inspect flashpoint-backend --format='{{json .State.Health}}' | jq
 ```
 
 **Database connection issues:**
+
 ```bash
 # Verify database exists
 docker-compose exec backend ls -la /data/flashpoint/Data/flashpoint.sqlite
@@ -192,6 +223,7 @@ docker-compose exec backend sqlite3 /data/flashpoint/Data/flashpoint.sqlite "SEL
 ```
 
 **Network issues:**
+
 ```bash
 # Test backend to game-service
 docker-compose exec backend curl http://game-service:22500/

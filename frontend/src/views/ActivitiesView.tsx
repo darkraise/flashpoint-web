@@ -12,9 +12,7 @@ const ActivityHeader = memo(() => (
       <Activity size={32} className="text-primary" />
       <h1 className="text-3xl font-bold">Activity Logs</h1>
     </div>
-    <p className="text-muted-foreground">
-      View all user activity and system events
-    </p>
+    <p className="text-muted-foreground">View all user activity and system events</p>
   </div>
 ));
 

@@ -67,7 +67,7 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
         title: values.title,
         description: values.description?.trim() || undefined,
         author: values.author?.trim() || undefined,
-        library: values.library
+        library: values.library,
       });
 
       // Reset form
@@ -97,100 +97,84 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
         <DialogBody>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Playlist Title *</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="My Awesome Playlist"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="A collection of my favorite games..."
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="author"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Author</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Your name"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="library"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Library</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  >
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Playlist Title *</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select library" />
-                      </SelectTrigger>
+                      <Input placeholder="My Awesome Playlist" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="arcade">Arcade</SelectItem>
-                      <SelectItem value="theatre">Theatre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={createPlaylist.isPending}
-              >
-                {createPlaylist.isPending ? 'Creating...' : 'Create Playlist'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="A collection of my favorite games..."
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="author"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Author</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="library"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Library</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select library" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="arcade">Arcade</SelectItem>
+                        <SelectItem value="theatre">Theatre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createPlaylist.isPending}>
+                  {createPlaylist.isPending ? 'Creating...' : 'Create Playlist'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogBody>
       </DialogContent>
     </Dialog>

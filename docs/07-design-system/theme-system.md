@@ -1,6 +1,7 @@
 # Theme System
 
-Dynamic theme system with light/dark modes and 22 customizable color palettes. Uses CSS variables for instant theme switching with Zustand state management.
+Dynamic theme system with light/dark modes and 22 customizable color palettes.
+Uses CSS variables for instant theme switching with Zustand state management.
 
 ## Architecture
 
@@ -15,6 +16,7 @@ User Preferences → Zustand Store → CSS Variables → UI
 ## Theme Modes
 
 ### Light Mode
+
 Clean, bright interface for daylight viewing.
 
 ```tsx
@@ -25,12 +27,14 @@ setMode('light');
 ```
 
 **Characteristics:**
+
 - Light backgrounds (98% lightness)
 - Dark text on light backgrounds
 - Subtle shadows
 - Vibrant primary colors
 
 ### Dark Mode
+
 Eye-friendly interface for low-light viewing.
 
 ```tsx
@@ -38,19 +42,22 @@ setMode('dark');
 ```
 
 **Characteristics:**
+
 - Deep backgrounds (4.9% lightness)
 - Light text on dark
 - Reduced brightness
 - Slightly muted primary colors
 
 ### System Mode (Auto)
+
 Automatically matches OS preference.
 
 ```tsx
 setMode('system');
 ```
 
-Listens to `prefers-color-scheme` media query and updates when system preference changes.
+Listens to `prefers-color-scheme` media query and updates when system preference
+changes.
 
 ## Primary Color Customization
 
@@ -66,12 +73,9 @@ setPrimaryColor('green');
 setPrimaryColor('rose');
 ```
 
-**Available Colors:**
-Neutral: Slate, Gray, Zinc, Neutral, Stone
-Warm: Red, Orange, Amber, Yellow
-Cool: Lime, Green, Emerald, Teal, Cyan, Sky, Blue
-Purple: Indigo, Violet, Purple, Fuchsia
-Pink: Pink, Rose
+**Available Colors:** Neutral: Slate, Gray, Zinc, Neutral, Stone Warm: Red,
+Orange, Amber, Yellow Cool: Lime, Green, Emerald, Teal, Cyan, Sky, Blue Purple:
+Indigo, Violet, Purple, Fuchsia Pink: Pink, Rose
 
 ## CSS Variables
 
@@ -83,7 +87,7 @@ All theme values use CSS custom properties for dynamic updates.
 :root {
   --background: 0 0% 98%;
   --foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;        /* Blue default */
+  --primary: 221.2 83.2% 53.3%; /* Blue default */
   --secondary: 210 40% 96.1%;
   --destructive: 0 84.2% 60.2%;
   --muted: 210 40% 96.1%;
@@ -100,7 +104,7 @@ All theme values use CSS custom properties for dynamic updates.
 .dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;        /* Lighter blue */
+  --primary: 217.2 91.2% 59.8%; /* Lighter blue */
   --secondary: 217.2 32.6% 17.5%;
   --destructive: 0 62.8% 30.6%;
   --border: 217.2 32.6% 17.5%;
@@ -140,13 +144,8 @@ interface ThemeState {
 import { useThemeStore } from '@/store/theme';
 
 function ThemeSettings() {
-  const {
-    mode,
-    setMode,
-    primaryColor,
-    setPrimaryColor,
-    isLoading
-  } = useThemeStore();
+  const { mode, setMode, primaryColor, setPrimaryColor, isLoading } =
+    useThemeStore();
 
   return (
     <div>
@@ -156,7 +155,10 @@ function ThemeSettings() {
         <option value="system">System</option>
       </select>
 
-      <select value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)}>
+      <select
+        value={primaryColor}
+        onChange={(e) => setPrimaryColor(e.target.value)}
+      >
         <option value="blue">Blue</option>
         <option value="purple">Purple</option>
         <option value="green">Green</option>
@@ -190,6 +192,7 @@ function Header() {
 ```
 
 **Features:**
+
 - 3 options (Light, Dark, System)
 - Icon changes based on current mode
 - Keyboard accessible
@@ -213,6 +216,7 @@ function Settings() {
 ```
 
 **Features:**
+
 - Visual color swatches
 - Grouped by category
 - Live preview
@@ -248,6 +252,7 @@ const settings = await usersApi.getThemeSettings();
 ```
 
 Endpoints:
+
 - `GET /api/users/me/theme` - Fetch
 - `PUT /api/users/me/theme` - Update
 
@@ -292,7 +297,8 @@ document.documentElement.style.setProperty('--ring', colorValue);
 Listens to OS-level theme changes in "system" mode:
 
 ```typescript
-window.matchMedia('(prefers-color-scheme: dark)')
+window
+  .matchMedia('(prefers-color-scheme: dark)')
   .addEventListener('change', (e) => {
     const state = useThemeStore.getState();
     if (state.mode === 'system') {
@@ -303,6 +309,7 @@ window.matchMedia('(prefers-color-scheme: dark)')
 ```
 
 Supports:
+
 - Windows dark mode toggle
 - macOS dark mode schedule
 - Linux desktop themes
@@ -327,6 +334,7 @@ Focus rings use primary color for consistency:
 ### Color Contrast
 
 All palettes meet WCAG 2.1 AA:
+
 - Normal text: 4.5:1 ratio
 - Large text: 3:1 ratio
 - Interactive: 3:1 ratio
@@ -365,7 +373,7 @@ const { setMode } = useThemeStore();
 
 <button onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}>
   Toggle Theme
-</button>
+</button>;
 ```
 
 ### 3. Respect User Preferences
@@ -386,12 +394,12 @@ Design components to work in any theme:
 
 ```tsx
 // Good: Works in any theme
-<Card className="bg-card text-card-foreground">
-  Content
-</Card>
+<Card className="bg-card text-card-foreground">Content</Card>;
 
 // Bad: Theme-specific components
-{mode === 'dark' ? <DarkCard /> : <LightCard />}
+{
+  mode === 'dark' ? <DarkCard /> : <LightCard />;
+}
 ```
 
 ## Troubleshooting

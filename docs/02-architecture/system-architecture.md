@@ -2,7 +2,9 @@
 
 ## Overview
 
-Flashpoint Web is a monorepo containing three independent microservices: frontend (React UI), backend (Express API), and game-service (game file proxy). Services communicate via HTTP with clean separation of concerns.
+Flashpoint Web is a monorepo containing three independent microservices:
+frontend (React UI), backend (Express API), and game-service (game file proxy).
+Services communicate via HTTP with clean separation of concerns.
 
 ## Architecture Diagram
 
@@ -92,15 +94,18 @@ graph TB
 
 **Purpose**: React single-page application for user interface
 
-**Technology**: React 18, TypeScript, Vite, React Router, TanStack Query, Zustand, Tailwind CSS, Ruffle
+**Technology**: React 18, TypeScript, Vite, React Router, TanStack Query,
+Zustand, Tailwind CSS, Ruffle
 
 **State Management**:
+
 - **Server State** (TanStack Query): Games, playlists, user data
 - **UI State** (Zustand): Sidebar, view modes, auth state
 - **URL State** (React Router): Search params, filters
 - **Local Storage**: Auth tokens, preferences
 
-**Key Features**: Game browsing, search, filtering, play tracking, favorites, playlists
+**Key Features**: Game browsing, search, filtering, play tracking, favorites,
+playlists
 
 ### Backend Service (Port 3100)
 
@@ -109,6 +114,7 @@ graph TB
 **Technology**: Express.js, TypeScript, BetterSqlite3, JWT, Bcrypt, Zod
 
 **Key Responsibilities**:
+
 - Game metadata queries
 - User management and authentication
 - Role-based access control (RBAC)
@@ -117,6 +123,7 @@ graph TB
 - Database hot-reloading for Flashpoint Launcher updates
 
 **Databases**:
+
 - **flashpoint.sqlite**: Read-only with file watcher
 - **user.db**: Read-write with schema migrations
 
@@ -127,6 +134,7 @@ graph TB
 **Purpose**: Game file serving and ZIP mounting
 
 **HTTP Proxy Server (22500)**:
+
 - Serves legacy web content with fallback chain:
   1. Local htdocs directory
   2. Game data directory
@@ -135,6 +143,7 @@ graph TB
   5. Local cache
 
 **GameZip Server (22501)**:
+
 - Mounts and streams ZIP archives
 - Zero-extraction design
 - LRU cache (max 100, 30-min TTL)
@@ -178,6 +187,7 @@ graph LR
 ```
 
 **Frontend → Backend**:
+
 1. User interaction triggers component action
 2. Custom hook calls API client
 3. API client adds JWT token via interceptor
@@ -185,6 +195,7 @@ graph LR
 5. Vite proxy forwards to Express (development)
 
 **Backend Processing**:
+
 1. Express route receives request
 2. Authentication middleware verifies JWT
 3. RBAC middleware checks permissions
@@ -195,6 +206,7 @@ graph LR
 8. Response sent back to client
 
 **Frontend State Update**:
+
 1. TanStack Query receives response
 2. Cache updated with new data
 3. Components re-render
@@ -209,6 +221,7 @@ graph LR
 **Hot-Reload**: FileSystem watcher detects changes and reloads connection
 
 **Key Tables**:
+
 - `game`: Game metadata (100,000+ entries)
 - `game_data`: Game file paths and launch commands
 - `platform`: Gaming platforms (Flash, HTML5, etc.)
@@ -220,22 +233,26 @@ graph LR
 **Ownership**: Application-managed with migrations
 
 **Authentication & Authorization**:
+
 - `users`: User accounts with hashed passwords (bcrypt)
 - `roles`: RBAC roles (admin, moderator, user, guest)
 - `role_permissions`: Role-permission mappings
 - `system_settings`: Global configuration
 
 **User Features**:
+
 - `user_playlists`: User-created playlists
 - `user_favorites`: Favorited games
 - `user_settings`: User preferences
 
 **Play Tracking**:
+
 - `user_game_plays`: Individual sessions
 - `user_game_stats`: Per-game aggregates
 - `user_stats`: Overall user stats
 
 **Activity Logging**:
+
 - `activity_logs`: Audit trail
 
 ## Security Architecture
@@ -266,11 +283,13 @@ sequenceDiagram
 ### Authorization
 
 **Role-Based Access Control**:
+
 ```
 User → Role → Permissions → Resources
 ```
 
 **Default Roles**:
+
 - `admin`: Full system access
 - `moderator`: Content management
 - `user`: Standard features
@@ -296,6 +315,7 @@ D:/Flashpoint/
 ```
 
 **Access Patterns**:
+
 - **Images/Logos**: Served by backend from file system
 - **Game Content**: Delegated to game-service proxy
 - **ZIPs**: Mounted by GameZip server on-demand
@@ -317,11 +337,13 @@ All services run on localhost with SQLite databases.
 ### Scaling Strategies (Future)
 
 **Horizontal**:
+
 - Frontend: Static hosting on CDN (Vercel, Netlify)
 - Backend: Multiple instances behind load balancer
 - Game Service: Region-specific replicas
 
 **Vertical**:
+
 - flashpoint.sqlite read replicas
 - user.db: PostgreSQL/MySQL for better concurrency
 - Redis for session storage and caching
@@ -341,13 +363,15 @@ All services run on localhost with SQLite databases.
 
 **Frontend**: Static build in `dist/`, minified, tree-shaken
 
-**Backend**: Compiled TypeScript, INFO logging, rate limiting, environment-specific JWT secret
+**Backend**: Compiled TypeScript, INFO logging, rate limiting,
+environment-specific JWT secret
 
 **Game Service**: Compiled TypeScript, structured logging, optimized concurrency
 
 ## Error Handling
 
 **Frontend Error Boundaries**:
+
 ```typescript
 <ErrorBoundary fallback={<ErrorPage />}>
   <GameList />
@@ -355,9 +379,13 @@ All services run on localhost with SQLite databases.
 ```
 
 **Backend**:
+
 ```typescript
 class AppError extends Error {
-  constructor(public statusCode: number, message: string) {}
+  constructor(
+    public statusCode: number,
+    message: string
+  ) {}
 }
 
 app.use((err, req, res, next) => {
@@ -373,11 +401,14 @@ app.use((err, req, res, next) => {
 
 ## Monitoring & Logging
 
-**Activity Logging**: All significant user actions logged with userId, action, targetType, targetId, timestamp
+**Activity Logging**: All significant user actions logged with userId, action,
+targetType, targetId, timestamp
 
-**Performance Metrics**: Play session durations, API response times, database query performance
+**Performance Metrics**: Play session durations, API response times, database
+query performance
 
 **Log Levels**:
+
 - `DEBUG`: Development
 - `INFO`: Normal operations
 - `WARN`: Recoverable issues
@@ -385,14 +416,21 @@ app.use((err, req, res, next) => {
 
 ## Technology Rationale
 
-**TypeScript**: Type safety, IDE support, refactoring, shared types, reduced runtime errors
+**TypeScript**: Type safety, IDE support, refactoring, shared types, reduced
+runtime errors
 
-**BetterSqlite3**: Synchronous API, performance, perfect for read-heavy workloads, WAL mode
+**BetterSqlite3**: Synchronous API, performance, perfect for read-heavy
+workloads, WAL mode
 
-**TanStack Query**: Automatic caching, invalidation, background refetching, optimistic updates
+**TanStack Query**: Automatic caching, invalidation, background refetching,
+optimistic updates
 
-**Monorepo**: Shared types, coordinated development, single deployment, consistent tooling
+**Monorepo**: Shared types, coordinated development, single deployment,
+consistent tooling
 
 ## Conclusion
 
-Flashpoint Web balances simplicity with scalability, maintaining clean service separation while enabling efficient inter-service communication. The three-service design allows independent scaling and deployment while keeping the codebase maintainable and type-safe.
+Flashpoint Web balances simplicity with scalability, maintaining clean service
+separation while enabling efficient inter-service communication. The
+three-service design allows independent scaling and deployment while keeping the
+codebase maintainable and type-safe.

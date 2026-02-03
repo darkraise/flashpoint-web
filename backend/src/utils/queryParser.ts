@@ -40,17 +40,11 @@ export function parsePaginationQuery(
   query: any,
   defaults: PaginationDefaults = {}
 ): PaginationResult {
-  const {
-    limit: defaultLimit = 50,
-    maxLimit = 100,
-    offset: defaultOffset = 0,
-  } = defaults;
+  const { limit: defaultLimit = 50, maxLimit = 100, offset: defaultOffset = 0 } = defaults;
 
   // Parse limit with default and max cap
   const parsedLimit = parseInt(query.limit as string);
-  const limit = isNaN(parsedLimit)
-    ? defaultLimit
-    : Math.min(parsedLimit, maxLimit);
+  const limit = isNaN(parsedLimit) ? defaultLimit : Math.min(parsedLimit, maxLimit);
 
   // Parse offset with default
   const parsedOffset = parseInt(query.offset as string);

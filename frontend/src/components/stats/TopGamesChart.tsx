@@ -1,4 +1,13 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 import { useTopGames } from '../../hooks/usePlayTracking';
 import type { CustomTooltipProps } from '@/types/chart';
 
@@ -77,7 +86,9 @@ export function TopGamesChart() {
       <div className="bg-card rounded-lg p-6 border border-border shadow-md">
         <h3 className="text-lg font-semibold mb-4">Top Played Games</h3>
         <div className="h-96 flex items-center justify-center">
-          <p className="text-muted-foreground">No games played yet. Start playing to see your top games!</p>
+          <p className="text-muted-foreground">
+            No games played yet. Start playing to see your top games!
+          </p>
         </div>
       </div>
     );
@@ -88,7 +99,7 @@ export function TopGamesChart() {
     fullTitle: game.gameTitle,
     playtime: game.totalPlaytimeSeconds,
     plays: game.totalPlays,
-    color: COLORS[index % COLORS.length]
+    color: COLORS[index % COLORS.length],
   }));
 
   return (
@@ -96,33 +107,33 @@ export function TopGamesChart() {
       <h3 className="text-lg font-semibold mb-4">Top Played Games</h3>
       <div className="bg-accent rounded-lg p-4">
         <ResponsiveContainer width="100%" height={400}>
-        <BarChart
-          data={chartData}
-          layout="vertical"
-          margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
-          <XAxis
-            type="number"
-            stroke="#9ca3af"
-            tick={{ fill: '#9ca3af', fontSize: 12 }}
-            tickFormatter={(value: number) => formatPlaytime(value)}
-          />
-          <YAxis
-            type="category"
-            dataKey="name"
-            stroke="#9ca3af"
-            tick={{ fill: '#9ca3af', fontSize: 12 }}
-            width={120}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="playtime" radius={[0, 8, 8, 0]}>
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
+            <XAxis
+              type="number"
+              stroke="#9ca3af"
+              tick={{ fill: '#9ca3af', fontSize: 12 }}
+              tickFormatter={(value: number) => formatPlaytime(value)}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              stroke="#9ca3af"
+              tick={{ fill: '#9ca3af', fontSize: 12 }}
+              width={120}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="playtime" radius={[0, 8, 8, 0]}>
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

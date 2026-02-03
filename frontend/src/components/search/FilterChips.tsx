@@ -27,7 +27,7 @@ export function FilterChips({ chips, onRemove, onClearAll, className }: FilterCh
   }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+    <div className={cn('flex flex-wrap items-center gap-2', className)}>
       <span className="text-sm text-muted-foreground font-medium">Active Filters:</span>
 
       {chips.map((chip) => (

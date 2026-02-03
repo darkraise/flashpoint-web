@@ -45,7 +45,7 @@ export const mockPlaylist = {
 export const handlers = [
   // Auth endpoints
   http.post(`/api/auth/login`, async ({ request }) => {
-    const body = await request.json() as any;
+    const body = (await request.json()) as any;
 
     if (body.username === 'testuser' && body.password === 'password123') {
       return HttpResponse.json({
@@ -55,10 +55,7 @@ export const handlers = [
       });
     }
 
-    return HttpResponse.json(
-      { error: 'Invalid credentials' },
-      { status: 401 }
-    );
+    return HttpResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }),
 
   http.post(`/api/auth/logout`, () => {
@@ -111,7 +108,7 @@ export const handlers = [
   }),
 
   http.post(`/api/user-playlists`, async ({ request }) => {
-    const body = await request.json() as any;
+    const body = (await request.json()) as any;
     return HttpResponse.json({
       id: 'new-playlist-id',
       title: body.title,

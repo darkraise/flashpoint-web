@@ -24,7 +24,8 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { setAuth, setGuestMode, clearAuth, refreshToken, updateAccessToken, setMaintenanceMode } = useAuthStore();
+  const { setAuth, setGuestMode, clearAuth, refreshToken, updateAccessToken, setMaintenanceMode } =
+    useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -59,40 +60,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Login function
    */
-  const login = useCallback(async (credentials: LoginCredentials, redirectPath?: string) => {
-    try {
-      const result = await authApi.login(credentials);
+  const login = useCallback(
+    async (credentials: LoginCredentials, redirectPath?: string) => {
+      try {
+        const result = await authApi.login(credentials);
 
-      // Clear all cached queries EXCEPT public settings when user logs in
-      // Public settings are not user-specific and should persist across sessions
-      queryClient.removeQueries({
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          // Keep public settings in cache
-          return !(queryKey[0] === 'system-settings' && queryKey[1] === 'public');
+        // Clear all cached queries EXCEPT public settings when user logs in
+        // Public settings are not user-specific and should persist across sessions
+        queryClient.removeQueries({
+          predicate: (query) => {
+            const queryKey = query.queryKey;
+            // Keep public settings in cache
+            return !(queryKey[0] === 'system-settings' && queryKey[1] === 'public');
+          },
+        });
+
+        setAuth(result.user, result.tokens);
+
+        // Check maintenance mode after login
+        const isMaintenanceActive = await checkMaintenanceMode();
+
+        // If maintenance mode is active and user is not admin, redirect to maintenance page
+        const isAdmin = result.user.permissions?.includes('settings.update');
+
+        if (isMaintenanceActive && !isAdmin) {
+          navigate('/maintenance', { replace: true });
+          return;
         }
-      });
 
-      setAuth(result.user, result.tokens);
-
-      // Check maintenance mode after login
-      const isMaintenanceActive = await checkMaintenanceMode();
-
-      // If maintenance mode is active and user is not admin, redirect to maintenance page
-      const isAdmin = result.user.permissions?.includes('settings.update');
-
-      if (isMaintenanceActive && !isAdmin) {
-        navigate('/maintenance', { replace: true });
-        return;
+        // Normal login - redirect to requested page or home
+        navigate(redirectPath || '/', { replace: true });
+      } catch (error) {
+        logger.error('Login failed:', error);
+        throw error;
       }
-
-      // Normal login - redirect to requested page or home
-      navigate(redirectPath || '/', { replace: true });
-    } catch (error) {
-      logger.error('Login failed:', error);
-      throw error;
-    }
-  }, [setAuth, queryClient, checkMaintenanceMode, navigate]);
+    },
+    [setAuth, queryClient, checkMaintenanceMode, navigate]
+  );
 
   /**
    * Login as guest function (temporary session)
@@ -105,15 +109,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Register function
    */
-  const register = useCallback(async (userData: RegisterData) => {
-    try {
-      const result = await authApi.register(userData);
-      setAuth(result.user, result.tokens);
-    } catch (error) {
-      logger.error('Registration failed:', error);
-      throw error;
-    }
-  }, [setAuth]);
+  const register = useCallback(
+    async (userData: RegisterData) => {
+      try {
+        const result = await authApi.register(userData);
+        setAuth(result.user, result.tokens);
+      } catch (error) {
+        logger.error('Registration failed:', error);
+        throw error;
+      }
+    },
+    [setAuth]
+  );
 
   /**
    * Logout function
@@ -134,7 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const queryKey = query.queryKey;
           // Keep public settings in cache
           return !(queryKey[0] === 'system-settings' && queryKey[1] === 'public');
-        }
+        },
       });
       clearAuth();
       navigate('/login');
@@ -187,7 +194,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     register,
     logout,
     refreshAccessToken,
-    checkMaintenanceMode
+    checkMaintenanceMode,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

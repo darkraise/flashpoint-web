@@ -1,4 +1,4 @@
-import * as React from "react"
+import * as React from 'react';
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -10,13 +10,13 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+} from '@tanstack/react-table';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
-import { getSortIcon } from "./data-table-utils"
+import { getSortIcon } from './data-table-utils';
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -24,23 +24,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from '@/components/ui/table';
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
   pagination?: {
-    page: number
-    totalPages: number
-    total: number
-    limit: number
-  }
-  onPageChange?: (page: number) => void
-  sorting?: SortingState
-  onSortingChange?: (updater: SortingState | ((old: SortingState) => SortingState)) => void
-  isLoading?: boolean
-  emptyMessage?: string
-  caption?: string
+    page: number;
+    totalPages: number;
+    total: number;
+    limit: number;
+  };
+  onPageChange?: (page: number) => void;
+  sorting?: SortingState;
+  onSortingChange?: (updater: SortingState | ((old: SortingState) => SortingState)) => void;
+  isLoading?: boolean;
+  emptyMessage?: string;
+  caption?: string;
 }
 
 export function DataTable<TData, TValue>({
@@ -51,32 +51,32 @@ export function DataTable<TData, TValue>({
   sorting: controlledSorting,
   onSortingChange: onControlledSortingChange,
   isLoading = false,
-  emptyMessage = "No results.",
+  emptyMessage = 'No results.',
   caption,
 }: DataTableProps<TData, TValue>) {
-  const [internalSorting, setInternalSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState({})
+  const [internalSorting, setInternalSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState({});
 
   // Use controlled sorting if provided, otherwise use internal state
-  const sorting = controlledSorting ?? internalSorting
+  const sorting = controlledSorting ?? internalSorting;
 
   const setSorting = React.useCallback(
     (updater: SortingState | ((old: SortingState) => SortingState)) => {
       if (onControlledSortingChange) {
-        onControlledSortingChange(updater)
+        onControlledSortingChange(updater);
       } else {
         // Properly handle both function and value updaters
         if (typeof updater === 'function') {
-          setInternalSorting((old) => updater(old))
+          setInternalSorting((old) => updater(old));
         } else {
-          setInternalSorting(updater)
+          setInternalSorting(updater);
         }
       }
     },
     [onControlledSortingChange]
-  )
+  );
 
   const table = useReactTable({
     data,
@@ -99,7 +99,7 @@ export function DataTable<TData, TValue>({
     manualSorting: !!controlledSorting,
     pageCount: pagination?.totalPages,
     enableSortingRemoval: false,
-  })
+  });
 
   if (isLoading) {
     return (
@@ -112,7 +112,7 @@ export function DataTable<TData, TValue>({
         <span className="sr-only">Loading data, please wait...</span>
         <span aria-hidden="true">Loading...</span>
       </div>
-    )
+    );
   }
 
   return (
@@ -131,24 +131,27 @@ export function DataTable<TData, TValue>({
                           <div
                             className={
                               header.column.getCanSort()
-                                ? "flex items-center gap-2 cursor-pointer select-none hover:text-primary transition-colors"
-                                : ""
+                                ? 'flex items-center gap-2 cursor-pointer select-none hover:text-primary transition-colors'
+                                : ''
                             }
                             onClick={header.column.getToggleSortingHandler()}
-                            role={header.column.getCanSort() ? "button" : undefined}
+                            role={header.column.getCanSort() ? 'button' : undefined}
                             tabIndex={header.column.getCanSort() ? 0 : undefined}
                             onKeyDown={(e) => {
-                              if (header.column.getCanSort() && (e.key === "Enter" || e.key === " ")) {
-                                e.preventDefault()
-                                header.column.getToggleSortingHandler()?.(e as any)
+                              if (
+                                header.column.getCanSort() &&
+                                (e.key === 'Enter' || e.key === ' ')
+                              ) {
+                                e.preventDefault();
+                                header.column.getToggleSortingHandler()?.(e as any);
                               }
                             }}
                             aria-sort={
-                              header.column.getIsSorted() === "asc"
-                                ? "ascending"
-                                : header.column.getIsSorted() === "desc"
-                                ? "descending"
-                                : undefined
+                              header.column.getIsSorted() === 'asc'
+                                ? 'ascending'
+                                : header.column.getIsSorted() === 'desc'
+                                  ? 'descending'
+                                  : undefined
                             }
                             aria-label={
                               header.column.getCanSort()
@@ -161,7 +164,7 @@ export function DataTable<TData, TValue>({
                           </div>
                         )}
                       </TableHead>
-                    )
+                    );
                   })}
                 </TableRow>
               ))}
@@ -169,10 +172,7 @@ export function DataTable<TData, TValue>({
             <TableBody>
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
+                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -240,5 +240,5 @@ export function DataTable<TData, TValue>({
         ) : null}
       </Card>
     </div>
-  )
+  );
 }

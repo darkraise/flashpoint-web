@@ -1,6 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { activitiesApi } from '../lib/api';
-import { ActivityFilters, TimeRange, ActivitiesResponse, ActivityStatsResponse, ActivityTrendResponse, TopActionsResponse, ActivityBreakdownResponse } from '../types/auth';
+import {
+  ActivityFilters,
+  TimeRange,
+  ActivitiesResponse,
+  ActivityStatsResponse,
+  ActivityTrendResponse,
+  TopActionsResponse,
+  ActivityBreakdownResponse,
+} from '../types/auth';
 
 /**
  * Hook to fetch activity logs with pagination and filters
@@ -12,14 +20,18 @@ export function useActivities(page = 1, limit = 50, filters?: ActivityFilters) {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     // Keep window focus refetch enabled for fresh table data
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
   });
 }
 
 /**
  * Hook to fetch activity statistics
  */
-export function useActivityStats(timeRange: TimeRange = '24h', customRange?: { startDate?: string; endDate?: string }, autoRefresh = false) {
+export function useActivityStats(
+  timeRange: TimeRange = '24h',
+  customRange?: { startDate?: string; endDate?: string },
+  autoRefresh = false
+) {
   return useQuery<ActivityStatsResponse>({
     queryKey: ['activity-stats', timeRange, customRange],
     queryFn: () => activitiesApi.getStats(timeRange, customRange),
@@ -27,7 +39,7 @@ export function useActivityStats(timeRange: TimeRange = '24h', customRange?: { s
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchInterval: autoRefresh ? 30 * 1000 : false, // Auto-refresh every 30s if enabled
     // Disable window focus refetch - dashboard only, rely on auto-refresh instead
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -42,7 +54,7 @@ export function useActivityTrend(days = 7, autoRefresh = false) {
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchInterval: autoRefresh ? 30 * 1000 : false,
     // Disable window focus refetch - dashboard only, rely on auto-refresh instead
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -57,7 +69,7 @@ export function useTopActions(limit = 10, timeRange: TimeRange = '24h', autoRefr
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchInterval: autoRefresh ? 30 * 1000 : false,
     // Disable window focus refetch - dashboard only, rely on auto-refresh instead
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -77,6 +89,6 @@ export function useActivityBreakdown(
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchInterval: autoRefresh ? 30 * 1000 : false,
     // Disable window focus refetch - dashboard only, rely on auto-refresh instead
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   });
 }

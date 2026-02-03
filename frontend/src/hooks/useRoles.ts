@@ -46,8 +46,7 @@ export function useUpdateRole() {
   const { showToast } = useDialog();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateRoleData }) =>
-      rolesApi.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: UpdateRoleData }) => rolesApi.update(id, data),
     onSuccess: (updated) => {
       queryClient.setQueryData<Role[]>(['roles'], (old = []) => {
         return old.map((role) => (role.id === updated.id ? updated : role));

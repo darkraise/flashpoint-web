@@ -18,9 +18,9 @@ export class RoleService {
     );
 
     // Get permissions for each role
-    return roles.map(role => ({
+    return roles.map((role) => ({
       ...role,
-      permissions: this.getRolePermissions(role.id)
+      permissions: this.getRolePermissions(role.id),
     }));
   }
 
@@ -38,7 +38,7 @@ export class RoleService {
 
     return {
       ...role,
-      permissions: this.getRolePermissions(id)
+      permissions: this.getRolePermissions(id),
     };
   }
 
@@ -100,7 +100,12 @@ export class RoleService {
   /**
    * Update role
    */
-  async updateRole(id: number, name?: string, description?: string, priority?: number): Promise<Role> {
+  async updateRole(
+    id: number,
+    name?: string,
+    description?: string,
+    priority?: number
+  ): Promise<Role> {
     const role = await this.getRoleById(id);
     if (!role) {
       throw new AppError(404, 'Role not found');
@@ -115,10 +120,10 @@ export class RoleService {
     const params: any[] = [];
 
     if (name !== undefined) {
-      const existing = UserDatabaseService.get(
-        'SELECT id FROM roles WHERE name = ? AND id != ?',
-        [name, id]
-      );
+      const existing = UserDatabaseService.get('SELECT id FROM roles WHERE name = ? AND id != ?', [
+        name,
+        id,
+      ]);
       if (existing) {
         throw new AppError(409, 'Role name already exists');
       }
@@ -140,14 +145,11 @@ export class RoleService {
       return role;
     }
 
-    updates.push("updated_at = ?");
+    updates.push('updated_at = ?');
     params.push(new Date().toISOString());
     params.push(id);
 
-    UserDatabaseService.run(
-      `UPDATE roles SET ${updates.join(', ')} WHERE id = ?`,
-      params
-    );
+    UserDatabaseService.run(`UPDATE roles SET ${updates.join(', ')} WHERE id = ?`, params);
 
     return (await this.getRoleById(id))!;
   }
@@ -201,10 +203,9 @@ export class RoleService {
     }
 
     // Check if role is assigned to users
-    const userCount = UserDatabaseService.get(
-      'SELECT COUNT(*) as count FROM users WHERE role_id = ?',
-      [id]
-    )?.count || 0;
+    const userCount =
+      UserDatabaseService.get('SELECT COUNT(*) as count FROM users WHERE role_id = ?', [id])
+        ?.count || 0;
 
     if (userCount > 0) {
       throw new AppError(409, `Cannot delete role: ${userCount} users are assigned to this role`);

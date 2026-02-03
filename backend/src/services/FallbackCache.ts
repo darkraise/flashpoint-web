@@ -16,7 +16,7 @@ export class FallbackCache<T = any> {
       max: maxSize,
       ttl: this.FALLBACK_TTL,
       updateAgeOnGet: true,
-      allowStale: true // Allow stale data in fallback mode
+      allowStale: true, // Allow stale data in fallback mode
     });
   }
 
@@ -26,7 +26,7 @@ export class FallbackCache<T = any> {
   set(key: string, data: T): void {
     this.cache.set(key, {
       data,
-      cachedAt: Date.now()
+      cachedAt: Date.now(),
     });
   }
 
@@ -45,13 +45,13 @@ export class FallbackCache<T = any> {
     logger.debug('[FallbackCache] Serving cached data', {
       key: key.substring(0, 50),
       age: `${Math.round(age / 1000)}s`,
-      cachedAt: new Date(cached.cachedAt).toISOString()
+      cachedAt: new Date(cached.cachedAt).toISOString(),
     });
 
     return {
       data: cached.data,
       cachedAt: cached.cachedAt,
-      age
+      age,
     };
   }
 
@@ -75,7 +75,7 @@ export class FallbackCache<T = any> {
   getStats(): { size: number; max: number } {
     return {
       size: this.cache.size,
-      max: this.cache.max
+      max: this.cache.max,
     };
   }
 }

@@ -1,6 +1,7 @@
 # Layout Components
 
-This document describes the layout components that form the structure of the Flashpoint Web application.
+This document describes the layout components that form the structure of the
+Flashpoint Web application.
 
 ## Component Hierarchy
 
@@ -26,9 +27,11 @@ AppShell
 Main application layout container that wraps all pages.
 
 ### Location
+
 `D:\Repositories\Personal\flashpoint-web\frontend\src\components\layout\AppShell.tsx`
 
 ### Purpose
+
 Provides the main application structure with header and sidebar navigation.
 
 ### Props
@@ -86,6 +89,7 @@ export function AppShell({ children }: AppShellProps) {
 Top navigation bar with search, theme controls, and user menu.
 
 ### Location
+
 `D:\Repositories\Personal\flashpoint-web\frontend\src\components\layout\Header.tsx`
 
 ### Features
@@ -236,6 +240,7 @@ No props - reads state from Zustand stores.
 Collapsible navigation sidebar with route highlighting.
 
 ### Location
+
 `D:\Repositories\Personal\flashpoint-web\frontend\src\components\layout\Sidebar.tsx`
 
 ### Props
@@ -277,8 +282,16 @@ interface SidebarProps {
 
 ```typescript
 const gameNavItems: NavItem[] = [
-  { path: '/flash-games', iconImage: '/images/Flash.png', label: 'Flash Games' },
-  { path: '/html5-games', iconImage: '/images/HTML5.png', label: 'HTML5 Games' },
+  {
+    path: '/flash-games',
+    iconImage: '/images/Flash.png',
+    label: 'Flash Games',
+  },
+  {
+    path: '/html5-games',
+    iconImage: '/images/HTML5.png',
+    label: 'HTML5 Games',
+  },
   { path: '/animations', icon: Film, label: 'Animations' },
   { path: '/browse', icon: Gamepad2, label: 'Browse' },
 ];
@@ -338,7 +351,9 @@ const isNavItemActive = (item: NavItem) => {
 
   if (itemQuery) {
     // Exact match including query params
-    return location.pathname === itemPath && location.search === `?${itemQuery}`;
+    return (
+      location.pathname === itemPath && location.search === `?${itemQuery}`
+    );
   }
 
   // Special case: Home (/) should highlight Flash Games
@@ -361,7 +376,7 @@ const sidebarRef = useSwipeGesture<HTMLElement>({
       setSidebarOpen(false);
     }
   },
-  minSwipeDistance: 50
+  minSwipeDistance: 50,
 });
 ```
 
@@ -406,6 +421,7 @@ useEffect(() => {
 ### Collapsed State Behavior
 
 When `sidebarCollapsed` is true:
+
 - Width: 64px (w-16)
 - Icons only (no text)
 - Tooltips on hover (via `title` attribute)
@@ -433,15 +449,17 @@ UI state is persisted to localStorage:
 
 ```typescript
 persist(
-  (set) => ({ /* ... */ }),
+  (set) => ({
+    /* ... */
+  }),
   {
     name: 'flashpoint-ui-state',
     partialize: (state) => ({
       sidebarCollapsed: state.sidebarCollapsed,
       // sidebarOpen is intentionally not persisted (session-only)
-    })
+    }),
   }
-)
+);
 ```
 
 ## Styling and Theming
@@ -449,6 +467,7 @@ persist(
 ### Tailwind Classes
 
 Layout components use Tailwind utility classes:
+
 - `bg-card` - Card background color (theme-aware)
 - `border-border` - Border color (theme-aware)
 - `text-foreground` - Text color (theme-aware)
@@ -457,6 +476,7 @@ Layout components use Tailwind utility classes:
 ### Custom CSS Variables
 
 Applied via ThemeStore:
+
 - `--primary` - Primary theme color
 - `--background` - Background color
 - `--foreground` - Text color

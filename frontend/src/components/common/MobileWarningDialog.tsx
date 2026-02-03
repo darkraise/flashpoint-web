@@ -65,8 +65,8 @@ export function MobileWarningDialog() {
                   Best Experience on PC
                 </p>
                 <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  This web application is optimized for desktop computers.
-                  Flash and HTML5 games may not work properly on mobile devices.
+                  This web application is optimized for desktop computers. Flash and HTML5 games may
+                  not work properly on mobile devices.
                 </p>
               </div>
             </div>

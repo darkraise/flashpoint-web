@@ -55,7 +55,7 @@ export class PerformanceMetrics {
     const metrics = this.endpointMetrics.get(key)!;
     metrics.push({
       timestamp: Date.now(),
-      value: durationMs
+      value: durationMs,
     });
 
     // Trim old data points
@@ -67,7 +67,7 @@ export class PerformanceMetrics {
     if (durationMs > 1000) {
       logger.warn('[PerformanceMetrics] Slow endpoint detected', {
         endpoint: key,
-        duration: `${durationMs}ms`
+        duration: `${durationMs}ms`,
       });
     }
   }
@@ -100,7 +100,7 @@ export class PerformanceMetrics {
   static recordQuery(durationMs: number): void {
     this.queryMetrics.push({
       timestamp: Date.now(),
-      value: durationMs
+      value: durationMs,
     });
 
     // Trim old data points
@@ -151,7 +151,7 @@ export class PerformanceMetrics {
       stats[cacheName] = {
         hits: metrics.hits,
         misses: metrics.misses,
-        hitRate: Math.round(hitRate * 100) / 100 // Round to 2 decimal places
+        hitRate: Math.round(hitRate * 100) / 100, // Round to 2 decimal places
       };
     }
 
@@ -178,7 +178,7 @@ export class PerformanceMetrics {
     return Object.entries(endpointStats)
       .map(([endpoint, stats]) => ({
         endpoint,
-        avgDuration: Math.round(stats.avg)
+        avgDuration: Math.round(stats.avg),
       }))
       .sort((a, b) => b.avgDuration - a.avgDuration)
       .slice(0, limit);
@@ -188,7 +188,7 @@ export class PerformanceMetrics {
    * Calculate statistics from metric points
    */
   private static calculateStats(points: MetricPoint[]): MetricStats {
-    const values = points.map(p => p.value).sort((a, b) => a - b);
+    const values = points.map((p) => p.value).sort((a, b) => a - b);
     const count = values.length;
     const sum = values.reduce((acc, val) => acc + val, 0);
 
@@ -200,7 +200,7 @@ export class PerformanceMetrics {
       avg: sum / count,
       p50: this.percentile(values, 0.5),
       p95: this.percentile(values, 0.95),
-      p99: this.percentile(values, 0.99)
+      p99: this.percentile(values, 0.99),
     };
   }
 
@@ -220,7 +220,7 @@ export class PerformanceMetrics {
 
     // Cleanup endpoint metrics
     for (const [key, metrics] of this.endpointMetrics.entries()) {
-      const filtered = metrics.filter(m => m.timestamp > cutoff);
+      const filtered = metrics.filter((m) => m.timestamp > cutoff);
 
       if (filtered.length === 0) {
         this.endpointMetrics.delete(key);
@@ -230,7 +230,7 @@ export class PerformanceMetrics {
     }
 
     // Cleanup query metrics
-    this.queryMetrics = this.queryMetrics.filter(m => m.timestamp > cutoff);
+    this.queryMetrics = this.queryMetrics.filter((m) => m.timestamp > cutoff);
 
     logger.debug('[PerformanceMetrics] Cleaned up old metrics');
   }
@@ -256,10 +256,10 @@ export class PerformanceMetrics {
     return {
       endpoints: {
         total: this.endpointMetrics.size,
-        slowest: this.getSlowestEndpoints(5)
+        slowest: this.getSlowestEndpoints(5),
       },
       caches: this.getCacheStats(),
-      queries: this.getQueryStats()
+      queries: this.getQueryStats(),
     };
   }
 }

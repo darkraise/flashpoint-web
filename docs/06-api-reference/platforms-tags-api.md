@@ -28,7 +28,7 @@ Returns array with name, count. Sorted by count (highest first).
 
 ```javascript
 const games = await api.get('/games', {
-  params: { platform: 'Flash' }
+  params: { platform: 'Flash' },
 });
 ```
 
@@ -36,7 +36,7 @@ const games = await api.get('/games', {
 
 ```javascript
 const games = await api.get('/games', {
-  params: { platform: 'Flash,HTML5,Unity' }
+  params: { platform: 'Flash,HTML5,Unity' },
 });
 ```
 
@@ -58,8 +58,8 @@ const games = await api.get('/games', {
     platform: 'Flash',
     tags: 'Platformer',
     sortBy: 'releaseDate',
-    sortOrder: 'desc'
-  }
+    sortOrder: 'desc',
+  },
 });
 ```
 
@@ -70,9 +70,9 @@ const games = await api.get('/games', {
 ```javascript
 const { data: platforms } = await api.get('/platforms');
 
-const options = platforms.map(p => ({
+const options = platforms.map((p) => ({
   label: `${p.platform} (${p.count.toLocaleString()})`,
-  value: p.platform
+  value: p.platform,
 }));
 ```
 
@@ -88,7 +88,7 @@ class TagAutocomplete {
 
   filter(query) {
     const matches = this.tags
-      .filter(tag => tag.name.toLowerCase().includes(query.toLowerCase()))
+      .filter((tag) => tag.name.toLowerCase().includes(query.toLowerCase()))
       .slice(0, 10);
 
     this.showDropdown(matches);
@@ -100,11 +100,14 @@ class TagAutocomplete {
 
 Common tags organized by category:
 
-**Genres:** Action, Adventure, Platformer, Puzzle, RPG, Strategy, Shooter, Sports, Racing, Fighting
+**Genres:** Action, Adventure, Platformer, Puzzle, RPG, Strategy, Shooter,
+Sports, Racing, Fighting
 
-**Themes:** Fantasy, Sci-Fi, Horror, Mystery, Historical, Educational, Kids, Retro
+**Themes:** Fantasy, Sci-Fi, Horror, Mystery, Historical, Educational, Kids,
+Retro
 
-**Gameplay:** Multiplayer, Single Player, Turn-Based, Real-Time, Point-and-Click, Simulation
+**Gameplay:** Multiplayer, Single Player, Turn-Based, Real-Time,
+Point-and-Click, Simulation
 
 **Style:** Pixel Art, 3D, Cartoon, Realistic, Abstract, Anime
 
@@ -114,7 +117,8 @@ Platforms and tags change infrequently - ideal for caching:
 
 ```javascript
 class FilterCache {
-  constructor(ttl = 3600000) { // 1 hour
+  constructor(ttl = 3600000) {
+    // 1 hour
     this.ttl = ttl;
     this.cache = new Map();
   }

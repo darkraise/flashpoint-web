@@ -6,13 +6,15 @@ Manage curated game collections.
 
 `GET /api/playlists` - No auth required
 
-Returns array with id, title, description, author, icon, library, extreme, gameCount.
+Returns array with id, title, description, author, icon, library, extreme,
+gameCount.
 
 ## Get Playlist
 
 `GET /api/playlists/:id` - No auth required
 
-Returns full playlist with games array (id, title, developer, platformName, releaseDate, tags, description).
+Returns full playlist with games array (id, title, developer, platformName,
+releaseDate, tags, description).
 
 Error: `404 Not Found`
 
@@ -20,7 +22,8 @@ Error: `404 Not Found`
 
 `POST /api/playlists` - Optional auth
 
-Body: `{ "title": "string (required)", "description": "string (optional)", "author": "string (optional)", "icon": "string (optional)", "library": "arcade"|"theatre" (optional), "extreme": boolean (optional) }`
+Body:
+`{ "title": "string (required)", "description": "string (optional)", "author": "string (optional)", "icon": "string (optional)", "library": "arcade"|"theatre" (optional), "extreme": boolean (optional) }`
 
 Returns `201 Created` with new playlist (empty games array).
 
@@ -58,16 +61,16 @@ const playlist = await api.post('/playlists', {
   title: 'My Favorite Platformers',
   description: 'Collection of favorites',
   author: 'john_doe',
-  library: 'arcade'
+  library: 'arcade',
 });
 
 // 2. Search for games
 const results = await api.get('/games', {
-  params: { tags: 'Platformer', platform: 'Flash', limit: 20 }
+  params: { tags: 'Platformer', platform: 'Flash', limit: 20 },
 });
 
 // 3. Add games
-const gameIds = results.games.slice(0, 10).map(g => g.id);
+const gameIds = results.games.slice(0, 10).map((g) => g.id);
 await api.post(`/playlists/${playlist.id}/games`, { gameIds });
 ```
 
@@ -81,7 +84,7 @@ const exported = {
   description: playlist.description,
   author: playlist.author,
   library: playlist.library,
-  gameIds: playlist.games.map(g => g.id)
+  gameIds: playlist.games.map((g) => g.id),
 };
 
 // Save to file
@@ -101,7 +104,7 @@ const playlist = await api.post('/playlists', {
   title: `${username}'s Favorites`,
   description: 'Personal favorite games',
   author: username,
-  library: 'arcade'
+  library: 'arcade',
 });
 await api.post(`/playlists/${playlist.id}/games`, { gameIds });
 ```

@@ -1,6 +1,7 @@
 # Backend Architecture
 
-Architectural patterns and design decisions for the Flashpoint Web backend service.
+Architectural patterns and design decisions for the Flashpoint Web backend
+service.
 
 ## Architecture Overview
 
@@ -77,11 +78,14 @@ export class DatabaseService {
 Composable request processing; each middleware handles one concern.
 
 ```typescript
-router.post('/users',
-  authenticate,                      // Verify JWT
-  requirePermission('users.create'),  // Check permission
-  logActivity('create', 'users'),     // Log activity
-  async (req, res) => { /* handle */ }
+router.post(
+  '/users',
+  authenticate, // Verify JWT
+  requirePermission('users.create'), // Check permission
+  logActivity('create', 'users'), // Log activity
+  async (req, res) => {
+    /* handle */
+  }
 );
 ```
 
@@ -94,6 +98,7 @@ Abstract data access from business logic; centralized query logic.
 ### 1. Two-Database Architecture
 
 **Rationale:**
+
 - Flashpoint database managed by external Launcher
 - Prevents conflicts from simultaneous writes
 - User data needs different schema and write access
@@ -102,6 +107,7 @@ Abstract data access from business logic; centralized query logic.
 ### 2. Synchronous Database Access (better-sqlite3)
 
 **Rationale:**
+
 - SQLite is single-threaded; async provides no benefit
 - Simpler, more readable code
 - Better performance for SQLite workloads
@@ -110,17 +116,20 @@ Abstract data access from business logic; centralized query logic.
 ### 3. JWT-Based Authentication
 
 **Rationale:**
+
 - Stateless authentication (no session storage)
 - Works across multiple backend instances
 - Mobile-friendly
 
 **Implementation:**
+
 - Access token: 1 hour expiry
 - Refresh token: 30 days expiry, stored in DB
 
 ### 4. RBAC over ACL
 
 **Rationale:**
+
 - Easier to manage permissions for groups of users
 - Standard pattern for most applications
 - Simpler permission checks
@@ -129,18 +138,21 @@ Abstract data access from business logic; centralized query logic.
 ### 5. Activity Logging
 
 **Rationale:**
+
 - Audit trail for security
 - User behavior analytics
 - Debugging user issues
 - Compliance requirements
 
 **Implementation:**
+
 - Non-blocking (setImmediate)
 - Automatic cleanup (90-day retention)
 
 ### 6. Play Session Tracking
 
 **Rationale:**
+
 - Detailed play history per user
 - Calculate accurate statistics
 - Support for session duration
@@ -177,12 +189,14 @@ export class AppError extends Error {
 ### Connection Management
 
 **Flashpoint Database:**
+
 - Single read-only connection per process
 - File watcher for hot-reload
 - Automatic reconnection on file change
 - Debounced reload (500ms)
 
 **User Database:**
+
 - Single read/write connection per process
 - Foreign key enforcement enabled
 - Schema migrations on startup
@@ -192,7 +206,7 @@ export class AppError extends Error {
 - Indexes on foreign keys and frequently queried columns
 - Pagination to prevent memory issues
 - Prepared statements for reusable queries
-- Selective columns (avoid SELECT *)
+- Selective columns (avoid SELECT \*)
 
 ### Transaction Strategy
 
@@ -257,10 +271,12 @@ transaction(); // Execute atomically
 ### Caching Strategy
 
 **Currently Implemented:**
+
 - Permission caching in-memory (5-minute TTL)
 - 90%+ reduction in permission queries
 
 **Future Recommendations:**
+
 - Redis for distributed session storage
 - Cache game metadata queries
 - Cache filter options (platforms, tags)
@@ -270,6 +286,7 @@ transaction(); // Execute atomically
 ### Logging
 
 Winston logger with structured logging:
+
 ```typescript
 logger.info('User logged in', { userId, username, ipAddress });
 logger.error('Database error', { error: err.message });
@@ -278,6 +295,7 @@ logger.error('Database error', { error: err.message });
 ### Activity Logs
 
 Database-backed activity logging:
+
 - All user actions logged
 - IP address and user agent captured
 - Queryable for analytics
@@ -286,6 +304,7 @@ Database-backed activity logging:
 ### Health Checks
 
 `/health` endpoint returns:
+
 - Server status
 - Database connection status
 - Flashpoint path
@@ -322,24 +341,28 @@ Database-backed activity logging:
 ## Best Practices
 
 ### Service Methods
+
 - Return typed data (use TypeScript interfaces)
 - Throw `AppError` for business logic errors
 - Keep methods focused and single-purpose
 - Use transactions for multi-step operations
 
 ### Route Handlers
+
 - Validate input early
 - Use middleware for auth/permissions
 - Handle errors with try/catch
 - Return consistent JSON structure
 
 ### Database Queries
+
 - Use parameterized queries (prevent SQL injection)
 - Add indexes for frequently queried columns
 - Use LIMIT for potentially large results
 - Prefer prepared statements for reusable queries
 
 ### Error Handling
+
 - Use `AppError` for expected errors
 - Log unexpected errors with full stack trace
 - Never expose internal errors to clients
@@ -348,11 +371,13 @@ Database-backed activity logging:
 ## Testing Strategy
 
 ### Unit Tests
+
 - Test individual service methods
 - Mock database services
 - Focus on business logic
 
 ### Integration Tests
+
 - Test route handlers end-to-end
 - Use test database
 - Verify HTTP responses

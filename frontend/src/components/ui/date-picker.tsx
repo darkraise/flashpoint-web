@@ -1,14 +1,10 @@
-import * as React from "react";
-import { Calendar as CalendarIcon, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { useDateTimeFormat } from "@/hooks/useDateTimeFormat";
+import * as React from 'react';
+import { Calendar as CalendarIcon, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 
 export interface DatePickerProps {
   /** The selected date */
@@ -34,7 +30,7 @@ export interface DatePickerProps {
 export function DatePicker({
   date,
   onDateChange,
-  placeholder = "Pick a date",
+  placeholder = 'Pick a date',
   disabled = false,
   disabledDates,
   clearable = true,
@@ -66,17 +62,15 @@ export function DatePicker({
             id={id}
             variant="outline"
             className={cn(
-              "flex-1 justify-start text-left font-normal",
-              !date && "text-muted-foreground",
+              'flex-1 justify-start text-left font-normal',
+              !date && 'text-muted-foreground',
               className
             )}
             disabled={disabled}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {displayDate || placeholder}
-            {required && !date ? (
-              <span className="ml-1 text-destructive">*</span>
-            ) : null}
+            {required && !date ? <span className="ml-1 text-destructive">*</span> : null}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">

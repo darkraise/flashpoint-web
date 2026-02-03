@@ -19,7 +19,7 @@ export function formatDate(dateString?: string | null): string {
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   } catch (error) {
     return 'Unknown';
@@ -48,7 +48,7 @@ export function formatReleaseDate(dateString?: string | null): string {
       const date = new Date(parseInt(year), parseInt(month) - 1);
       return date.toLocaleDateString('en-US', {
         month: 'short',
-        year: 'numeric'
+        year: 'numeric',
       });
     } catch (error) {
       return dateString;

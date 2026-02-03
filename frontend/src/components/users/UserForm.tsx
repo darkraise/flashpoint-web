@@ -36,7 +36,10 @@ import {
 } from '@/components/ui/dialog';
 
 const createUserSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username must be at most 50 characters'),
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(50, 'Username must be at most 50 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   roleId: z.number(),
@@ -67,19 +70,20 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
 
   const form = useForm<CreateUserFormValues | UpdateUserFormValues>({
     resolver: zodResolver(isEditMode ? updateUserSchema : createUserSchema),
-    defaultValues: isEditMode && user
-      ? {
-          email: user.email,
-          roleId: user.roleId,
-          isActive: user.isActive,
-        }
-      : {
-          username: '',
-          email: '',
-          password: '',
-          roleId: 2, // Default to 'user' role
-          isActive: true,
-        },
+    defaultValues:
+      isEditMode && user
+        ? {
+            email: user.email,
+            roleId: user.roleId,
+            isActive: user.isActive,
+          }
+        : {
+            username: '',
+            email: '',
+            password: '',
+            roleId: 2, // Default to 'user' role
+            isActive: true,
+          },
   });
 
   useEffect(() => {
@@ -114,9 +118,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
     <Dialog open={true} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {isEditMode ? 'Edit User' : 'Create New User'}
-          </DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit User' : 'Create New User'}</DialogTitle>
         </DialogHeader>
 
         <DialogBody>
@@ -138,10 +140,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Username"
-                          {...field}
-                        />
+                        <Input placeholder="Username" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -154,11 +153,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Username
                   </label>
-                  <Input
-                    value={user.username}
-                    disabled
-                    className="bg-muted"
-                  />
+                  <Input value={user.username} disabled className="bg-muted" />
                   <p className="text-xs text-muted-foreground mt-1">Username cannot be changed</p>
                 </div>
               ) : null}
@@ -170,11 +165,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        {...field}
-                      />
+                      <Input type="email" placeholder="you@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -189,11 +180,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="******************"
-                          {...field}
-                        />
+                        <Input type="password" placeholder="******************" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -236,32 +223,20 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
                       <FormLabel>Active</FormLabel>
-                      <FormDescription>
-                        User can sign in and access the application
-                      </FormDescription>
+                      <FormDescription>User can sign in and access the application</FormDescription>
                     </div>
                     <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                   </FormItem>
                 )}
               />
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={onClose}
-                >
+                <Button type="button" variant="secondary" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={mutation.isPending}
-                >
+                <Button type="submit" disabled={mutation.isPending}>
                   {mutation.isPending ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
                 </Button>
               </DialogFooter>

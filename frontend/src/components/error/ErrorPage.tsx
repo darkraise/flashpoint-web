@@ -1,7 +1,14 @@
 import { ReactNode, useState } from 'react';
 import { logger } from '@/lib/logger';
 import { useNavigate } from 'react-router-dom';
-import { FileQuestion, AlertCircle, WifiOff, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  FileQuestion,
+  AlertCircle,
+  WifiOff,
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -138,11 +145,7 @@ export function ErrorPage({
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2">
                 <CardTitle className="text-2xl font-bold">{displayTitle}</CardTitle>
-                {errorCode ? (
-                  <Badge variant={config.badgeVariant}>
-                    {errorCode}
-                  </Badge>
-                ) : null}
+                {errorCode ? <Badge variant={config.badgeVariant}>{errorCode}</Badge> : null}
               </div>
               <p className="text-muted-foreground">{displayMessage}</p>
             </div>
@@ -209,9 +212,7 @@ export function ErrorPage({
                 </Button>
               ) : null}
               {hasReported ? (
-                <span className="text-sm text-muted-foreground">
-                  ✓ Error reported successfully
-                </span>
+                <span className="text-sm text-muted-foreground">✓ Error reported successfully</span>
               ) : null}
             </>
           )}

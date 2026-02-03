@@ -7,13 +7,13 @@ Tailwind CSS spacing scale for consistent layouts and visual rhythm.
 Base unit: **4px (0.25rem)**
 
 | Class | Pixels | Class | Pixels | Class | Pixels |
-|-------|--------|-------|--------|-------|--------|
-| `0` | 0px | `8` | 32px | `24` | 96px |
-| `1` | 4px | `10` | 40px | `32` | 128px |
-| `2` | 8px | `12` | 48px | `40` | 160px |
-| `3` | 12px | `14` | 56px | `48` | 192px |
-| `4` | 16px | `16` | 64px | `64` | 256px |
-| `6` | 24px | `20` | 80px | `96` | 384px |
+| ----- | ------ | ----- | ------ | ----- | ------ |
+| `0`   | 0px    | `8`   | 32px   | `24`  | 96px   |
+| `1`   | 4px    | `10`  | 40px   | `32`  | 128px  |
+| `2`   | 8px    | `12`  | 48px   | `40`  | 160px  |
+| `3`   | 12px   | `14`  | 56px   | `48`  | 192px  |
+| `4`   | 16px   | `16`  | 64px   | `64`  | 256px  |
+| `6`   | 24px   | `20`  | 80px   | `96`  | 384px  |
 
 ## Padding & Margin
 
@@ -146,22 +146,16 @@ Base unit: **4px (0.25rem)**
 ```tsx
 <div className="min-h-screen bg-background">
   <header className="border-b border-border">
-    <div className="container mx-auto px-4 py-4">
-      {/* Header content */}
-    </div>
+    <div className="container mx-auto px-4 py-4">{/* Header content */}</div>
   </header>
 
   <main className="container mx-auto px-4 py-8">
     <h1 className="text-4xl font-bold mb-6">Page Title</h1>
-    <div className="space-y-8">
-      {/* Page sections */}
-    </div>
+    <div className="space-y-8">{/* Page sections */}</div>
   </main>
 
   <footer className="border-t border-border mt-16">
-    <div className="container mx-auto px-4 py-8">
-      {/* Footer */}
-    </div>
+    <div className="container mx-auto px-4 py-8">{/* Footer */}</div>
   </footer>
 </div>
 ```
@@ -194,7 +188,9 @@ Base unit: **4px (0.25rem)**
   </div>
 
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-    {games.map(game => <GameCard key={game.id} game={game} />)}
+    {games.map((game) => (
+      <GameCard key={game.id} game={game} />
+    ))}
   </div>
 </div>
 ```
@@ -216,6 +212,7 @@ Max-width container with responsive padding:
 ```
 
 **Max Widths:**
+
 - Mobile: 100% (with padding)
 - 2xl (1400px+): 1400px fixed width
 
@@ -329,9 +326,7 @@ Max-width container with responsive padding:
 
 ```tsx
 // Increase spacing on larger screens
-<div className="px-4 md:px-6 lg:px-8">
-  Content
-</div>
+<div className="px-4 md:px-6 lg:px-8">Content</div>
 ```
 
 ---

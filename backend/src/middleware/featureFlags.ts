@@ -29,7 +29,10 @@ export function requireFeature(featureKey: string) {
         logger.warn(
           `[FeatureFlag] Feature '${featureKey}' is disabled, blocked ${req.method} ${req.path} from ${req.user?.username || 'guest'} (IP: ${req.ip})`
         );
-        throw new AppError(403, `This feature is currently disabled. Please contact your administrator.`);
+        throw new AppError(
+          403,
+          `This feature is currently disabled. Please contact your administrator.`
+        );
       }
 
       next();

@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 import { useActivityTrend } from '@/hooks/useActivities';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import type { CustomTooltipProps } from '@/types/chart';
@@ -74,11 +83,11 @@ export function ActivityTrendChart({ autoRefresh = false }: ActivityTrendChartPr
     );
   }
 
-  const chartData = data.data.map(item => ({
+  const chartData = data.data.map((item) => ({
     timestamp: formatTimestamp(item.timestamp),
     total: item.total,
     authEvents: item.authEvents,
-    failedActions: item.failedActions
+    failedActions: item.failedActions,
   }));
 
   return (
@@ -123,28 +132,21 @@ export function ActivityTrendChart({ autoRefresh = false }: ActivityTrendChartPr
           <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="colorAuth" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis
-              dataKey="timestamp"
-              stroke="#9ca3af"
-              tick={{ fill: '#9ca3af', fontSize: 12 }}
-            />
-            <YAxis
-              stroke="#9ca3af"
-              tick={{ fill: '#9ca3af', fontSize: 12 }}
-            />
+            <XAxis dataKey="timestamp" stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+            <YAxis stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
             <Tooltip content={<CustomTooltip />} />
             <Legend
               wrapperStyle={{ paddingTop: '20px' }}

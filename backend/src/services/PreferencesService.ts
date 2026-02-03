@@ -41,7 +41,7 @@ export class PreferencesService {
     const now = Date.now();
 
     // Return cached preferences if still valid
-    if (this.preferences && (now - this.lastLoadTime) < this.CACHE_TTL) {
+    if (this.preferences && now - this.lastLoadTime < this.CACHE_TTL) {
       return this.preferences;
     }
 
@@ -78,11 +78,13 @@ export class PreferencesService {
         sourceCount: parsed.gameDataSources?.length || 0,
         dataPacksPath: parsed.dataPacksFolderPath,
         imageFolderPath: parsed.imageFolderPath,
-        onDemandBaseUrl: parsed.onDemandBaseUrl
+        onDemandBaseUrl: parsed.onDemandBaseUrl,
       });
     } catch (error) {
       logger.error('Failed to load preferences:', error);
-      throw new Error(`Failed to load Flashpoint preferences: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to load Flashpoint preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 

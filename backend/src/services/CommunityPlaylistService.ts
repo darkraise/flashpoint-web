@@ -46,18 +46,20 @@ export class CommunityPlaylistService {
       const response = await axios.get(PLAYLISTS_WIKI_URL, {
         timeout: 30000,
         headers: {
-          'User-Agent': 'Flashpoint-Webapp/1.0'
-        }
+          'User-Agent': 'Flashpoint-Webapp/1.0',
+        },
       });
 
       // Parse HTML and extract playlists
       const categories = this.parsePlaylistTables(response.data);
 
-      logger.info(`[CommunityPlaylist] Found ${categories.length} categories with ${categories.reduce((sum, cat) => sum + cat.playlists.length, 0)} total playlists`);
+      logger.info(
+        `[CommunityPlaylist] Found ${categories.length} categories with ${categories.reduce((sum, cat) => sum + cat.playlists.length, 0)} total playlists`
+      );
 
       return {
         categories,
-        lastFetched: new Date().toISOString()
+        lastFetched: new Date().toISOString(),
       };
     } catch (error) {
       logger.error('[CommunityPlaylist] Failed to fetch community playlists:', error);
@@ -86,8 +88,8 @@ export class CommunityPlaylistService {
       const response = await axios.get(downloadUrl, {
         timeout: 60000,
         headers: {
-          'User-Agent': 'Flashpoint-Webapp/1.0'
-        }
+          'User-Agent': 'Flashpoint-Webapp/1.0',
+        },
       });
 
       const playlistData = response.data;
@@ -97,7 +99,7 @@ export class CommunityPlaylistService {
         logger.error('[CommunityPlaylist] Invalid playlist structure');
         return {
           success: false,
-          error: 'Invalid playlist format'
+          error: 'Invalid playlist format',
         };
       }
 
@@ -112,7 +114,7 @@ export class CommunityPlaylistService {
         return {
           success: false,
           conflict: true,
-          error: 'A playlist with this ID already exists'
+          error: 'A playlist with this ID already exists',
         };
       } catch {
         // File doesn't exist - good to proceed
@@ -121,11 +123,13 @@ export class CommunityPlaylistService {
       // Save playlist to disk
       await fs.writeFile(playlistFilePath, JSON.stringify(playlistData, null, '\t'), 'utf-8');
 
-      logger.info(`[CommunityPlaylist] Downloaded playlist: ${playlistData.title} (${playlistData.id})`);
+      logger.info(
+        `[CommunityPlaylist] Downloaded playlist: ${playlistData.title} (${playlistData.id})`
+      );
 
       return {
         success: true,
-        playlist: playlistData
+        playlist: playlistData,
       };
     } catch (error) {
       logger.error('[CommunityPlaylist] Failed to download playlist:', error);
@@ -134,26 +138,26 @@ export class CommunityPlaylistService {
         if (error.code === 'ECONNABORTED') {
           return {
             success: false,
-            error: 'Download timeout - please try again'
+            error: 'Download timeout - please try again',
           };
         }
         if (error.response?.status === 404) {
           return {
             success: false,
-            error: 'Playlist not found on server'
+            error: 'Playlist not found on server',
           };
         }
         if (error.response?.status && error.response.status >= 500) {
           return {
             success: false,
-            error: 'Server error - please try again later'
+            error: 'Server error - please try again later',
           };
         }
       }
 
       return {
         success: false,
-        error: 'Failed to download playlist'
+        error: 'Failed to download playlist',
       };
     }
   }
@@ -177,9 +181,11 @@ export class CommunityPlaylistService {
         const categoryName = headerText.replace(/\[edit.*?\]/g, '').trim();
 
         // Skip certain headers
-        if (categoryName.toLowerCase().includes('contents') ||
-            categoryName.toLowerCase().includes('navigation') ||
-            categoryName.toLowerCase().includes('tutorial')) {
+        if (
+          categoryName.toLowerCase().includes('contents') ||
+          categoryName.toLowerCase().includes('navigation') ||
+          categoryName.toLowerCase().includes('tutorial')
+        ) {
           return;
         }
 
@@ -202,36 +208,39 @@ export class CommunityPlaylistService {
         const playlists: CommunityPlaylist[] = [];
 
         // Parse table rows (skip header row)
-        $(elem).find('tr').slice(1).each((j, row) => {
-          const cells = $(row).find('td');
+        $(elem)
+          .find('tr')
+          .slice(1)
+          .each((j, row) => {
+            const cells = $(row).find('td');
 
-          if (cells.length >= 4) {
-            const name = $(cells[0]).text().trim();
-            const author = $(cells[1]).text().trim();
-            const description = $(cells[2]).text().trim();
-            const downloadLink = $(cells[3]).find('a').attr('href');
+            if (cells.length >= 4) {
+              const name = $(cells[0]).text().trim();
+              const author = $(cells[1]).text().trim();
+              const description = $(cells[2]).text().trim();
+              const downloadLink = $(cells[3]).find('a').attr('href');
 
-            if (name && downloadLink) {
-              // Make URL absolute
-              const absoluteUrl = this.makeAbsoluteUrl(downloadLink);
+              if (name && downloadLink) {
+                // Make URL absolute
+                const absoluteUrl = this.makeAbsoluteUrl(downloadLink);
 
-              // Determine category name
-              let categoryName = mainCategory;
-              if (mainCategory === 'Games' && subCategory) {
-                // For Games category, create separate categories for each subcategory
-                categoryName = `Games - ${subCategory}`;
+                // Determine category name
+                let categoryName = mainCategory;
+                if (mainCategory === 'Games' && subCategory) {
+                  // For Games category, create separate categories for each subcategory
+                  categoryName = `Games - ${subCategory}`;
+                }
+
+                playlists.push({
+                  name,
+                  author: author || 'Unknown',
+                  description: description || '',
+                  downloadUrl: absoluteUrl,
+                  category: categoryName,
+                });
               }
-
-              playlists.push({
-                name,
-                author: author || 'Unknown',
-                description: description || '',
-                downloadUrl: absoluteUrl,
-                category: categoryName
-              });
             }
-          }
-        });
+          });
 
         // Only add category if it has playlists (non-empty)
         if (playlists.length > 0) {
@@ -242,11 +251,11 @@ export class CommunityPlaylistService {
           }
 
           // Find or create category
-          let category = categories.find(cat => cat.name === categoryName);
+          let category = categories.find((cat) => cat.name === categoryName);
           if (!category) {
             category = {
               name: categoryName,
-              playlists: []
+              playlists: [],
             };
             categories.push(category);
           }
@@ -258,7 +267,7 @@ export class CommunityPlaylistService {
     });
 
     // Filter out empty categories
-    return categories.filter(cat => cat.playlists.length > 0);
+    return categories.filter((cat) => cat.playlists.length > 0);
   }
 
   /**

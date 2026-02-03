@@ -18,4 +18,9 @@ import { initializeTelemetry } from './otel';
 initializeTelemetry();
 
 // Re-export for convenience
-export { initializeTelemetry, shutdownTelemetry, isTelemetryEnabled, getTelemetryConfig } from './otel';
+export {
+  initializeTelemetry,
+  shutdownTelemetry,
+  isTelemetryEnabled,
+  getTelemetryConfig,
+} from './otel';

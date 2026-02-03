@@ -21,61 +21,64 @@ export function useDownload(gameId: string) {
   /**
    * Start downloading a game.
    */
-  const startDownload = useCallback(async (gameDataId?: number) => {
-    try {
-      setIsDownloading(true);
-      setProgress({
-        percent: 0,
-        status: 'waiting',
-        details: 'Starting download...'
-      });
+  const startDownload = useCallback(
+    async (gameDataId?: number) => {
+      try {
+        setIsDownloading(true);
+        setProgress({
+          percent: 0,
+          status: 'waiting',
+          details: 'Starting download...',
+        });
 
-      // Start download on backend
-      const result = await gamesApi.downloadGame(gameId, gameDataId);
+        // Start download on backend
+        const result = await gamesApi.downloadGame(gameId, gameDataId);
 
-      // Connect to SSE endpoint for progress updates
-      const eventSource = new EventSource(`/api/games/${gameId}/download/progress`);
-      eventSourceRef.current = eventSource;
+        // Connect to SSE endpoint for progress updates
+        const eventSource = new EventSource(`/api/games/${gameId}/download/progress`);
+        eventSourceRef.current = eventSource;
 
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data) as DownloadProgress;
-          setProgress(data);
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data) as DownloadProgress;
+            setProgress(data);
 
-          // If complete or error, close connection
-          if (data.status === 'complete' || data.status === 'error') {
-            eventSource.close();
-            setIsDownloading(false);
+            // If complete or error, close connection
+            if (data.status === 'complete' || data.status === 'error') {
+              eventSource.close();
+              setIsDownloading(false);
+            }
+          } catch (error) {
+            logger.error('Error parsing SSE data:', error);
           }
-        } catch (error) {
-          logger.error('Error parsing SSE data:', error);
-        }
-      };
+        };
 
-      eventSource.onerror = (error) => {
-        logger.error('SSE connection error:', error);
+        eventSource.onerror = (error) => {
+          logger.error('SSE connection error:', error);
+          setProgress({
+            percent: 0,
+            status: 'error',
+            details: 'Connection to server lost',
+            error: 'Connection error',
+          });
+          eventSource.close();
+          setIsDownloading(false);
+        };
+
+        return result;
+      } catch (error) {
+        setIsDownloading(false);
         setProgress({
           percent: 0,
           status: 'error',
-          details: 'Connection to server lost',
-          error: 'Connection error'
+          details: 'Failed to start download',
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
-        eventSource.close();
-        setIsDownloading(false);
-      };
-
-      return result;
-    } catch (error) {
-      setIsDownloading(false);
-      setProgress({
-        percent: 0,
-        status: 'error',
-        details: 'Failed to start download',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-      throw error;
-    }
-  }, [gameId]);
+        throw error;
+      }
+    },
+    [gameId]
+  );
 
   /**
    * Cancel an active download.
@@ -96,7 +99,7 @@ export function useDownload(gameId: string) {
         percent: 0,
         status: 'error',
         details: 'Download cancelled',
-        error: 'Cancelled by user'
+        error: 'Cancelled by user',
       });
     } catch (error) {
       logger.error('Error cancelling download:', error);
@@ -126,6 +129,6 @@ export function useDownload(gameId: string) {
     isDownloading,
     startDownload,
     cancelDownload,
-    resetProgress
+    resetProgress,
   };
 }

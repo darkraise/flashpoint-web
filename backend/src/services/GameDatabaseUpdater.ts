@@ -34,7 +34,7 @@ export class GameDatabaseUpdater {
     try {
       logger.info('Updating database for downloaded game data', {
         gameDataId,
-        filePath
+        filePath,
       });
 
       // First, fetch the current game data to get the gameId
@@ -50,7 +50,7 @@ export class GameDatabaseUpdater {
 
       logger.debug('Path conversion for database storage', {
         absolutePath: filePath,
-        relativePath
+        relativePath,
       });
 
       // Update game_data table
@@ -62,7 +62,7 @@ export class GameDatabaseUpdater {
 
       logger.debug('Executing UPDATE on game_data', {
         sql: updateGameDataSql,
-        params: [relativePath, gameDataId]
+        params: [relativePath, gameDataId],
       });
 
       DatabaseService.run(updateGameDataSql, [relativePath, gameDataId]);
@@ -87,19 +87,19 @@ export class GameDatabaseUpdater {
 
         logger.debug('Executing UPDATE on game table', {
           sql: updateGameSql,
-          params: [gameData.gameId, gameDataId]
+          params: [gameData.gameId, gameDataId],
         });
 
         DatabaseService.run(updateGameSql, [gameData.gameId, gameDataId]);
 
         logger.debug('game table UPDATE successful - activeDataOnDisk set to 1', {
-          gameId: gameData.gameId
+          gameId: gameData.gameId,
         });
       } else {
         logger.debug('Skipping game table update - game data is not active', {
           gameId: gameData.gameId,
           activeDataId: game?.activeDataId,
-          requestedDataId: gameDataId
+          requestedDataId: gameDataId,
         });
       }
 
@@ -109,7 +109,7 @@ export class GameDatabaseUpdater {
       logger.info('Database updated successfully', {
         gameDataId,
         gameId: gameData.gameId,
-        filePath
+        filePath,
       });
 
       // Fetch and return updated game data
@@ -123,12 +123,14 @@ export class GameDatabaseUpdater {
       logger.error('Failed to update database', {
         gameDataId,
         filePath,
-        error
+        error,
       });
 
       // Attempt to rollback by reloading database (sql.js limitation)
       // In a real scenario, we'd use a proper transaction system
-      throw new Error(`Database update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Database update failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -176,11 +178,13 @@ export class GameDatabaseUpdater {
       DatabaseService.save();
 
       logger.info('Database changes flushed to disk', {
-        path: config.flashpointDbPath
+        path: config.flashpointDbPath,
       });
     } catch (error) {
       logger.error('Failed to save database to disk', { error });
-      throw new Error(`Failed to persist database changes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to persist database changes: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -198,7 +202,7 @@ export class GameDatabaseUpdater {
       presentOnDisk: row.presentOnDisk,
       path: row.path,
       size: row.size,
-      parameters: row.parameters
+      parameters: row.parameters,
     };
   }
 

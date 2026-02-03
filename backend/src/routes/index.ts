@@ -95,8 +95,8 @@ export function setupRoutes(app: Express): void {
     res.status(404).json({
       error: {
         message: 'Route not found',
-        statusCode: 404
-      }
+        statusCode: 404,
+      },
     });
   });
 }

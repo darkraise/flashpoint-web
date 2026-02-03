@@ -34,9 +34,12 @@ export class PermissionCache {
     if (this.cleanupInterval) return;
 
     // Run cleanup every 5 minutes
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 5 * 60 * 1000);
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanup();
+      },
+      5 * 60 * 1000
+    );
 
     logger.info('[PermissionCache] Cleanup interval started');
   }
@@ -79,10 +82,12 @@ export class PermissionCache {
   static setUserPermissions(userId: number, permissions: string[]): void {
     this.userPermissionsCache.set(userId, {
       data: permissions,
-      expiresAt: Date.now() + this.USER_PERMISSIONS_TTL
+      expiresAt: Date.now() + this.USER_PERMISSIONS_TTL,
     });
 
-    logger.debug(`[PermissionCache] Cached permissions for user ${userId} (${permissions.length} permissions, TTL: 5min)`);
+    logger.debug(
+      `[PermissionCache] Cached permissions for user ${userId} (${permissions.length} permissions, TTL: 5min)`
+    );
   }
 
   /**
@@ -112,10 +117,12 @@ export class PermissionCache {
   static setRolePermissions(roleId: number, permissions: string[]): void {
     this.rolePermissionsCache.set(roleId, {
       data: permissions,
-      expiresAt: Date.now() + this.ROLE_PERMISSIONS_TTL
+      expiresAt: Date.now() + this.ROLE_PERMISSIONS_TTL,
     });
 
-    logger.debug(`[PermissionCache] Cached permissions for role ${roleId} (${permissions.length} permissions, TTL: 10min)`);
+    logger.debug(
+      `[PermissionCache] Cached permissions for role ${roleId} (${permissions.length} permissions, TTL: 10min)`
+    );
   }
 
   /**
@@ -196,7 +203,9 @@ export class PermissionCache {
     }
 
     if (userExpired > 0 || roleExpired > 0) {
-      logger.debug(`[PermissionCache] Cleanup: removed ${userExpired} user entries, ${roleExpired} role entries`);
+      logger.debug(
+        `[PermissionCache] Cleanup: removed ${userExpired} user entries, ${roleExpired} role entries`
+      );
     }
   }
 
@@ -211,7 +220,7 @@ export class PermissionCache {
     return {
       userCacheSize: this.userPermissionsCache.size,
       roleCacheSize: this.rolePermissionsCache.size,
-      totalSize: this.userPermissionsCache.size + this.rolePermissionsCache.size
+      totalSize: this.userPermissionsCache.size + this.rolePermissionsCache.size,
     };
   }
 }

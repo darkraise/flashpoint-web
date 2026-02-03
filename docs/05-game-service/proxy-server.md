@@ -1,10 +1,12 @@
 # HTTP Proxy Server (Port 22500)
 
-The HTTP Proxy Server handles all HTTP requests for game content, implementing a multi-level fallback chain to ensure content availability.
+The HTTP Proxy Server handles all HTTP requests for game content, implementing a
+multi-level fallback chain to ensure content availability.
 
 ## Overview
 
-Replicates the functionality of the original FlashpointGameServer, providing legacy web content serving with intelligent fallback mechanisms.
+Replicates the functionality of the original FlashpointGameServer, providing
+legacy web content serving with intelligent fallback mechanisms.
 
 ## Server Configuration
 
@@ -15,9 +17,11 @@ await createHTTPProxyServer({
   proxyPort: 22500,
   legacyHTDOCSPath: 'D:/Flashpoint/Legacy/htdocs',
   gameDataPath: 'D:/Flashpoint/Data/Games',
-  externalFilePaths: ['https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs'],
+  externalFilePaths: [
+    'https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs',
+  ],
   allowCrossDomain: true,
-  chunkSize: 8192
+  chunkSize: 8192,
 });
 ```
 
@@ -25,16 +29,17 @@ await createHTTPProxyServer({
 
 ```typescript
 interface ProxyServerOptions {
-  proxyPort?: number;              // Default: 22500
-  legacyHTDOCSPath: string;        // Required
-  gameDataPath?: string;           // Optional
-  externalFilePaths?: string[];    // Optional
-  allowCrossDomain?: boolean;      // Default: true
-  chunkSize?: number;              // Default: 8192 bytes
+  proxyPort?: number; // Default: 22500
+  legacyHTDOCSPath: string; // Required
+  gameDataPath?: string; // Optional
+  externalFilePaths?: string[]; // Optional
+  allowCrossDomain?: boolean; // Default: true
+  chunkSize?: number; // Default: 8192 bytes
 }
 ```
 
 Server timeouts:
+
 - `timeout: 120000` (2 minutes for slow downloads)
 - `keepAliveTimeout: 65000` (65 seconds keep-alive)
 
@@ -45,18 +50,21 @@ Server timeouts:
 The proxy supports three URL formats:
 
 **1. Proxy-Style Requests**
+
 ```http
 GET http://www.example.com/path/file.swf HTTP/1.1
 Host: localhost:22500
 ```
 
 **2. Path-Based Requests**
+
 ```http
 GET /http://www.example.com/path/file.swf HTTP/1.1
 Host: localhost:22500
 ```
 
 **3. Standard Requests**
+
 ```http
 GET /path/file.swf HTTP/1.1
 Host: www.example.com
@@ -90,6 +98,7 @@ async handleRequest(req: IncomingMessage, res: ServerResponse) {
 ## Request Routing
 
 **Routing Chain:**
+
 1. Try GameZip Server (if available) - fast path
 2. Try Legacy Server (local + external)
 3. Send response or error
@@ -114,13 +123,15 @@ handleOptionsRequest(req, res) {
 ### Response Headers
 
 All responses include CORS headers when enabled:
+
 ```http
 Access-Control-Allow-Origin: *
 Access-Control-Allow-Methods: GET, POST, OPTIONS
 Access-Control-Allow-Headers: *
 ```
 
-**Why CORS required:** Flash games and web content make cross-domain requests for assets and API calls.
+**Why CORS required:** Flash games and web content make cross-domain requests
+for assets and API calls.
 
 ## HTML Polyfill Injection
 
@@ -142,12 +153,14 @@ private sendResponse(res: ServerResponse, data: Buffer, contentType: string) {
 ```
 
 **Polyfills Injected:**
+
 - Unity WebGL support
 - General browser compatibility shims
 
 ## Response Headers
 
 ### Standard Headers
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/x-shockwave-flash
@@ -161,6 +174,7 @@ Access-Control-Allow-Origin: *
 ### Custom Headers
 
 **X-Source** - Indicates where file was served from:
+
 ```
 X-Source: local-htdocs           # Local htdocs
 X-Source: gamezipserver:game-123 # GameZip server
@@ -169,6 +183,7 @@ X-Source: https://example.com    # Secondary source
 ```
 
 **Cache-Control** - Files cached for 24 hours:
+
 ```http
 Cache-Control: public, max-age=86400
 ```
@@ -176,6 +191,7 @@ Cache-Control: public, max-age=86400
 ## Error Handling
 
 ### Error Types
+
 1. **400 Bad Request** - No URL provided
 2. **404 Not Found** - File not found in any source
 3. **500 Internal Server Error** - Unexpected error
@@ -199,7 +215,8 @@ private sendError(res: ServerResponse, statusCode: number, message: string) {
 }
 ```
 
-**Why CORS on errors?** Missing CORS headers from error responses causes browsers to hide the actual error message.
+**Why CORS on errors?** Missing CORS headers from error responses causes
+browsers to hide the actual error message.
 
 ## GameZip Integration
 
@@ -229,6 +246,7 @@ private async tryGameZipServer(hostname: string, urlPath: string) {
 ```
 
 **Performance:**
+
 - Local request: <5ms
 - External request: 100-500ms
 - Speedup: 20-100x faster for ZIP-served content
@@ -254,6 +272,7 @@ Reuses TCP connections, reduces handshake overhead.
 ```
 
 **Log Levels:**
+
 - DEBUG: Detailed path resolution
 - INFO: Request summary
 - WARN: Errors, missing files
@@ -262,8 +281,10 @@ Reuses TCP connections, reduces handshake overhead.
 ## Integration with Backend
 
 **Request Flow:**
+
 1. Frontend requests `/api/games/123/launch`
-2. Backend returns: `{"launchUrl": "http://localhost:22500/http://www.example.com/game.swf"}`
+2. Backend returns:
+   `{"launchUrl": "http://localhost:22500/http://www.example.com/game.swf"}`
 3. Frontend loads game in player iframe
 4. Proxy serves content with CORS headers
 
@@ -288,15 +309,17 @@ curl -I "http://localhost:22500/http://www.example.com/test.html"
 ## Configuration Examples
 
 ### Basic
+
 ```typescript
 await createHTTPProxyServer({
   proxyPort: 22500,
   legacyHTDOCSPath: 'D:/Flashpoint/Legacy/htdocs',
-  allowCrossDomain: true
+  allowCrossDomain: true,
 });
 ```
 
 ### Production
+
 ```typescript
 await createHTTPProxyServer({
   proxyPort: parseInt(process.env.PROXY_PORT || '22500'),
@@ -304,7 +327,7 @@ await createHTTPProxyServer({
   gameDataPath: config.gamesPath,
   externalFilePaths: (process.env.EXTERNAL_FALLBACK_URLS || '').split(','),
   allowCrossDomain: process.env.ALLOW_CROSS_DOMAIN !== 'false',
-  chunkSize: parseInt(process.env.PROXY_CHUNK_SIZE || '8192')
+  chunkSize: parseInt(process.env.PROXY_CHUNK_SIZE || '8192'),
 });
 ```
 
@@ -312,16 +335,19 @@ await createHTTPProxyServer({
 
 ### Path Traversal Prevention
 
-All file paths are normalized and validated to prevent directory traversal attacks.
+All file paths are normalized and validated to prevent directory traversal
+attacks.
 
 ### CORS Security
 
 CORS enabled by default because:
+
 - Game content requires cross-domain access
 - Service runs locally, not internet-facing
 - No sensitive data served
 
 For internet-facing deployments, configure specific origins:
+
 ```typescript
 res.setHeader('Access-Control-Allow-Origin', 'https://trusted-domain.com');
 ```
@@ -334,18 +360,21 @@ res.setHeader('Access-Control-Allow-Origin', 'https://trusted-domain.com');
 ## Troubleshooting
 
 ### Port Already in Use
+
 ```bash
 netstat -ano | findstr :22500
 PROXY_PORT=22510  # Change in .env
 ```
 
 ### File Not Found
+
 1. Verify Flashpoint path
 2. Check file exists in htdocs
 3. Verify external fallback URLs accessible
 4. Enable DEBUG logging
 
 ### CORS Errors
+
 - Verify `ALLOW_CROSS_DOMAIN=true`
 - Check response headers: `curl -I <url>`
 - Ensure error responses include CORS headers

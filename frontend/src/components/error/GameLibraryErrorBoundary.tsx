@@ -29,7 +29,7 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       retryCount: 0,
-      isRetrying: false
+      isRetrying: false,
     };
   }
 
@@ -57,11 +57,11 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
       'connection',
       'aborted',
       'ECONNREFUSED',
-      'ETIMEDOUT'
+      'ETIMEDOUT',
     ];
 
     const errorMessage = error.message.toLowerCase();
-    return transientKeywords.some(keyword => errorMessage.includes(keyword));
+    return transientKeywords.some((keyword) => errorMessage.includes(keyword));
   }
 
   /**
@@ -75,11 +75,11 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
     setTimeout(() => {
       logger.info(`Attempting automatic retry ${this.state.retryCount + 1}/${this.maxRetries}`);
 
-      this.setState(prevState => ({
+      this.setState((prevState) => ({
         hasError: false,
         error: null,
         retryCount: prevState.retryCount + 1,
-        isRetrying: false
+        isRetrying: false,
       }));
 
       // Call custom retry handler if provided
@@ -96,7 +96,7 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       retryCount: 0,
-      isRetrying: false
+      isRetrying: false,
     });
 
     if (this.props.onRetry) {
@@ -139,7 +139,8 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
             {this.state.retryCount > 0 && !this.state.isRetrying ? (
               <div className="mb-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <p className="text-sm text-blue-400">
-                  Attempted {this.state.retryCount} automatic {this.state.retryCount === 1 ? 'retry' : 'retries'}
+                  Attempted {this.state.retryCount} automatic{' '}
+                  {this.state.retryCount === 1 ? 'retry' : 'retries'}
                 </p>
               </div>
             ) : null}
@@ -168,9 +169,7 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
 
             {/* Help text */}
             <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                If this problem persists, try:
-              </p>
+              <p className="text-sm text-muted-foreground">If this problem persists, try:</p>
               <ul className="mt-2 space-y-1 text-sm text-muted-foreground list-disc list-inside">
                 <li>Checking your internet connection</li>
                 <li>Refreshing the page (F5)</li>

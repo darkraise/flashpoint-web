@@ -39,12 +39,11 @@ export function useDownloadCommunityPlaylist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (downloadUrl: string) =>
-      communityPlaylistsApi.download(downloadUrl),
+    mutationFn: (downloadUrl: string) => communityPlaylistsApi.download(downloadUrl),
     onSuccess: () => {
       // Invalidate playlists cache so the new playlist appears immediately
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
-    }
+    },
   });
 }

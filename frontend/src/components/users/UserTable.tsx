@@ -63,28 +63,19 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
     {
       accessorKey: 'username',
       header: 'Username',
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('username')}</div>
-      ),
+      cell: ({ row }) => <div className="font-medium">{row.getValue('username')}</div>,
     },
     {
       accessorKey: 'email',
       header: 'Email',
-      cell: ({ row }) => (
-        <div className="text-muted-foreground">{row.getValue('email')}</div>
-      ),
+      cell: ({ row }) => <div className="text-muted-foreground">{row.getValue('email')}</div>,
     },
     {
       accessorKey: 'roleName',
       header: 'Role',
       cell: ({ row }) => {
         const role = row.getValue('roleName') as string;
-        const variant =
-          role === 'admin'
-            ? 'default'
-            : role === 'user'
-            ? 'secondary'
-            : 'outline';
+        const variant = role === 'admin' ? 'default' : role === 'user' ? 'secondary' : 'outline';
         return (
           <Badge variant={variant} className="capitalize">
             {role}
@@ -134,9 +125,7 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <RoleGuard permission="users.update">
-                <DropdownMenuItem onClick={() => onEdit(user)}>
-                  Edit User
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit(user)}>Edit User</DropdownMenuItem>
               </RoleGuard>
               <RoleGuard permission="users.update">
                 <DropdownMenuItem onClick={() => onChangePassword(user)}>
@@ -162,8 +151,7 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
   if (isError) {
     return (
       <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-destructive">
-        Error loading users:{' '}
-        {getErrorMessage(error) || 'Unknown error'}
+        Error loading users: {getErrorMessage(error) || 'Unknown error'}
       </div>
     );
   }

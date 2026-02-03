@@ -13,8 +13,10 @@ router.use(rateLimitStandard);
 router.use(optionalAuth);
 
 // GET /api/platforms - List all platforms
-router.get('/', asyncHandler(async (req, res) => {
-  const sql = `
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const sql = `
     SELECT DISTINCT platformName as platform, COUNT(*) as count
     FROM game
     WHERE platformName IS NOT NULL AND platformName != ''
@@ -22,9 +24,10 @@ router.get('/', asyncHandler(async (req, res) => {
     ORDER BY platformName ASC
   `;
 
-  const platforms = DatabaseService.all(sql, []) as Array<{ platform: string; count: number }>;
+    const platforms = DatabaseService.all(sql, []) as Array<{ platform: string; count: number }>;
 
-  res.json(platforms);
-}));
+    res.json(platforms);
+  })
+);
 
 export default router;

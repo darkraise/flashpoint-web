@@ -24,14 +24,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(6, 'Password must be at least 6 characters'),
-  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(6, 'Password must be at least 6 characters'),
+    newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
 type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
@@ -42,7 +44,12 @@ interface ChangePasswordDialogProps {
   onSuccess: () => void;
 }
 
-export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: ChangePasswordDialogProps) {
+export function ChangePasswordDialog({
+  isOpen,
+  user,
+  onClose,
+  onSuccess,
+}: ChangePasswordDialogProps) {
   const changePasswordMutation = useChangePassword();
 
   const form = useForm<ChangePasswordFormValues>({
@@ -60,8 +67,8 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
         id: user.id,
         passwordData: {
           currentPassword: values.currentPassword,
-          newPassword: values.newPassword
-        }
+          newPassword: values.newPassword,
+        },
       });
       onSuccess();
       onClose();
@@ -74,9 +81,7 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            Change Password for {user.username}
-          </DialogTitle>
+          <DialogTitle>Change Password for {user.username}</DialogTitle>
         </DialogHeader>
 
         <DialogBody>
@@ -97,11 +102,7 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
                   <FormItem>
                     <FormLabel>Current Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="******************"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="******************" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -115,11 +116,7 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
                   <FormItem>
                     <FormLabel>New Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="******************"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="******************" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -133,11 +130,7 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
                   <FormItem>
                     <FormLabel>Confirm New Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="******************"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="******************" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -145,17 +138,10 @@ export function ChangePasswordDialog({ isOpen, user, onClose, onSuccess }: Chang
               />
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={onClose}
-                >
+                <Button type="button" variant="secondary" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={changePasswordMutation.isPending}
-                >
+                <Button type="submit" disabled={changePasswordMutation.isPending}>
                   {changePasswordMutation.isPending ? 'Changing...' : 'Change Password'}
                 </Button>
               </DialogFooter>

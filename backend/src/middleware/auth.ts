@@ -68,7 +68,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
         username: 'guest',
         email: '',
         role: 'guest',
-        permissions: ['games.read', 'playlists.read']
+        permissions: ['games.read', 'playlists.read'],
       };
     }
 
@@ -131,7 +131,12 @@ export const sharedAccessAuth = asyncHandler(
           // Validate the shareToken is still valid
           const playlist = playlistService.getPlaylistByShareToken(payload.shareToken);
           if (!playlist) {
-            throw new AppError(401, 'Shared access token invalid or expired', true, 'SHARED_ACCESS_INVALID');
+            throw new AppError(
+              401,
+              'Shared access token invalid or expired',
+              true,
+              'SHARED_ACCESS_INVALID'
+            );
           }
 
           req.sharedAccess = payload;
@@ -162,7 +167,7 @@ export const sharedAccessAuth = asyncHandler(
       username: 'guest',
       email: '',
       role: 'guest',
-      permissions: ['games.read', 'playlists.read', 'games.play']
+      permissions: ['games.read', 'playlists.read', 'games.play'],
     };
 
     next();
@@ -193,7 +198,12 @@ export const validateSharedGameAccess = (gameIdParam: string = 'id') => {
       );
 
       if (!isInPlaylist) {
-        throw new AppError(403, 'Game not accessible via this shared playlist', true, 'GAME_NOT_IN_SHARED_PLAYLIST');
+        throw new AppError(
+          403,
+          'Game not accessible via this shared playlist',
+          true,
+          'GAME_NOT_IN_SHARED_PLAYLIST'
+        );
       }
 
       return next();

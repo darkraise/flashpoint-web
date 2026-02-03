@@ -54,17 +54,16 @@ export class MetadataSyncJob {
 
         logger.info(
           `[MetadataSyncJob] Sync completed successfully - ` +
-          `Games: ${result.gamesUpdated}, ` +
-          `Tags: ${result.tagsUpdated}, ` +
-          `Platforms: ${result.platformsUpdated}, ` +
-          `Deleted: ${result.gamesDeleted}`
+            `Games: ${result.gamesUpdated}, ` +
+            `Tags: ${result.tagsUpdated}, ` +
+            `Platforms: ${result.platformsUpdated}, ` +
+            `Deleted: ${result.gamesDeleted}`
         );
         return message;
       } else {
         logger.error(`[MetadataSyncJob] Sync failed: ${result.error}`);
         throw new Error(result.error || 'Metadata sync failed');
       }
-
     } catch (error) {
       logger.error('[MetadataSyncJob] Error running metadata sync job:', error);
       throw error; // Re-throw so JobScheduler marks execution as failed

@@ -15,7 +15,9 @@ The backend uses two separate SQLite databases:
 
 ### Purpose
 
-Contains the official Flashpoint Archive game metadata. This database is managed by the Flashpoint Launcher and should be treated as read-only (except for play statistics).
+Contains the official Flashpoint Archive game metadata. This database is managed
+by the Flashpoint Launcher and should be treated as read-only (except for play
+statistics).
 
 ### Main Tables
 
@@ -67,6 +69,7 @@ CREATE INDEX idx_game_library ON game(library);
 ```
 
 **Key Fields**:
+
 - `id`: Unique game identifier (UUID)
 - `platformName`: Platform name (Flash, HTML5, Shockwave, etc.)
 - `library`: Game library (arcade, theatre)
@@ -146,7 +149,9 @@ CREATE INDEX idx_game_data_gameId ON game_data(gameId);
 ```
 
 **Key Fields**:
-- `presentOnDisk`: Download status (NULL = no file needed, 0 = needs download, 1 = available)
+
+- `presentOnDisk`: Download status (NULL = no file needed, 0 = needs download, 1
+  = available)
 - `launchCommand`: Preferred launch command
 - `path`: File path for game content
 - `parameters`: URL parameters to append
@@ -192,7 +197,8 @@ CREATE TABLE playlist_game (
 
 ### Purpose
 
-Stores application-specific data: user accounts, authentication, roles, permissions, play tracking, and settings.
+Stores application-specific data: user accounts, authentication, roles,
+permissions, play tracking, and settings.
 
 ### Authentication Tables
 
@@ -221,6 +227,7 @@ CREATE INDEX idx_users_is_active ON users(is_active);
 ```
 
 **Default Users**:
+
 - Username: `admin`, Password: `admin123` (created on first run)
 
 ---
@@ -241,6 +248,7 @@ CREATE TABLE roles (
 ```
 
 **Default Roles**:
+
 - `admin` (id=1, priority=100): Full access
 - `user` (id=2, priority=50): Standard access
 - `guest` (id=3, priority=0): Read-only access
@@ -265,6 +273,7 @@ CREATE INDEX idx_permissions_resource_action ON permissions(resource, action);
 ```
 
 **Default Permissions**:
+
 - `games.read`, `games.play`, `games.download`
 - `playlists.read`, `playlists.create`, `playlists.update`, `playlists.delete`
 - `users.read`, `users.create`, `users.update`, `users.delete`
@@ -492,6 +501,7 @@ CREATE INDEX idx_user_settings_key ON user_settings(setting_key);
 ```
 
 **Common Settings**:
+
 - `theme_mode`: "light" | "dark" | "system"
 - `primary_color`: Color name (e.g., "blue", "green")
 - `sidebar_collapsed`: "true" | "false"
@@ -509,7 +519,8 @@ user_game_plays.game_id -> game.id (Flashpoint DB)
 user_game_stats.game_id -> game.id (Flashpoint DB)
 ```
 
-These are soft foreign keys (not enforced by SQLite) and must be maintained by application logic.
+These are soft foreign keys (not enforced by SQLite) and must be maintained by
+application logic.
 
 ### Permission Hierarchy
 
@@ -544,6 +555,7 @@ All foreign keys and frequently queried columns are indexed for performance:
 ## Data Types
 
 SQLite TEXT fields store:
+
 - **Dates/Times**: ISO 8601 format (`YYYY-MM-DDTHH:MM:SS.sssZ`)
 - **Booleans**: 0 (false) or 1 (true)
 - **JSON**: Stringified JSON objects in `details` columns
@@ -555,9 +567,11 @@ SQLite TEXT fields store:
 See [migrations.md](./migrations.md) for migration system documentation.
 
 Applied migrations:
+
 1. `001_user-schema.sql` - Initial user database schema
 2. `002_create-user-settings.sql` - Add user_settings table
-3. `003_drop-legacy-theme-columns.sql` - Remove old theme columns from users table
+3. `003_drop-legacy-theme-columns.sql` - Remove old theme columns from users
+   table
 
 ---
 
@@ -602,7 +616,9 @@ LIMIT 10;
 
 ## Related Documentation
 
-- [UserDatabaseService](../services/user-database-service.md) - Database access service
-- [DatabaseService](../services/database-service.md) - Flashpoint database service
+- [UserDatabaseService](../services/user-database-service.md) - Database access
+  service
+- [DatabaseService](../services/database-service.md) - Flashpoint database
+  service
 - [Migrations](./migrations.md) - Migration system
 - [Data Models](./data-models.md) - TypeScript types

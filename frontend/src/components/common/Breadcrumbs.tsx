@@ -23,12 +23,12 @@ interface BreadcrumbsProps {
 export function Breadcrumbs({
   items,
   showHome = true,
-  homeLabel = "Home",
-  homeHref = "/",
-  className
+  homeLabel = 'Home',
+  homeHref = '/',
+  className,
 }: BreadcrumbsProps) {
   return (
-    <nav aria-label="Breadcrumb" className={cn("flex items-center gap-2 text-sm", className)}>
+    <nav aria-label="Breadcrumb" className={cn('flex items-center gap-2 text-sm', className)}>
       <ol className="flex items-center gap-2 flex-wrap">
         {showHome ? (
           <>
@@ -67,12 +67,10 @@ export function Breadcrumbs({
               ) : (
                 <span
                   className={cn(
-                    "max-w-[200px] truncate",
-                    isActive
-                      ? "text-foreground font-medium"
-                      : "text-muted-foreground"
+                    'max-w-[200px] truncate',
+                    isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
                   )}
-                  aria-current={isActive ? "page" : undefined}
+                  aria-current={isActive ? 'page' : undefined}
                   title={item.label}
                 >
                   {item.label}

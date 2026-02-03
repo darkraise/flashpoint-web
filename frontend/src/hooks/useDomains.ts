@@ -27,10 +27,7 @@ export function useAddDomain() {
   return useMutation({
     mutationFn: (hostname: string) => domainsApi.add(hostname),
     onSuccess: (newDomain) => {
-      queryClient.setQueryData<Domain[]>(DOMAINS_QUERY_KEY, (old = []) => [
-        ...old,
-        newDomain,
-      ]);
+      queryClient.setQueryData<Domain[]>(DOMAINS_QUERY_KEY, (old = []) => [...old, newDomain]);
       // Invalidate public settings so default domain updates
       queryClient.invalidateQueries({ queryKey: ['system-settings', 'public'] });
       showToast('Domain added', 'success');

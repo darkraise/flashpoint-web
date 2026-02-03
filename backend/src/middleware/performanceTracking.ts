@@ -34,11 +34,13 @@ export function performanceTracking(req: Request, res: Response, next: NextFunct
  * - /api/users/789 → /api/users/:id
  */
 function normalizePath(path: string): string {
-  return path
-    // Replace UUIDs
-    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
-    // Replace numeric IDs
-    .replace(/\/\d+/g, '/:id')
-    // Replace alphanumeric IDs (game IDs, share tokens)
-    .replace(/\/[a-zA-Z0-9_-]{8,}/g, '/:id');
+  return (
+    path
+      // Replace UUIDs
+      .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
+      // Replace numeric IDs
+      .replace(/\/\d+/g, '/:id')
+      // Replace alphanumeric IDs (game IDs, share tokens)
+      .replace(/\/[a-zA-Z0-9_-]{8,}/g, '/:id')
+  );
 }

@@ -2,8 +2,8 @@
 
 Manage custom domains for playlist sharing URLs and CORS configuration.
 
-**Authentication:** Required (JWT Bearer token)
-**Permissions:** `settings.read` (list), `settings.update` (add, delete, set default)
+**Authentication:** Required (JWT Bearer token) **Permissions:** `settings.read`
+(list), `settings.update` (add, delete, set default)
 
 ## List Domains
 
@@ -12,6 +12,7 @@ Manage custom domains for playlist sharing URLs and CORS configuration.
 Returns all configured domains, ordered by default status then hostname.
 
 **Response:**
+
 ```json
 [
   {
@@ -36,6 +37,7 @@ Returns all configured domains, ordered by default status then hostname.
 Adds a new domain for CORS and share link configuration.
 
 **Request Body:**
+
 ```json
 {
   "hostname": "play.example.com"
@@ -43,6 +45,7 @@ Adds a new domain for CORS and share link configuration.
 ```
 
 **Validation Rules:**
+
 - No protocol prefix (`http://` or `https://` rejected)
 - No path, query string, or fragment (`/`, `?`, `#` rejected)
 - Ports allowed (e.g., `localhost:5173`)
@@ -50,6 +53,7 @@ Adds a new domain for CORS and share link configuration.
 - Case-insensitive uniqueness (stored lowercase)
 
 Returns `201 Created`:
+
 ```json
 {
   "id": 3,
@@ -60,7 +64,9 @@ Returns `201 Created`:
 ```
 
 Errors:
-- `400 Bad Request` - Invalid hostname format, duplicate hostname, or empty hostname
+
+- `400 Bad Request` - Invalid hostname format, duplicate hostname, or empty
+  hostname
 - `401 Unauthorized` - Authentication required
 - `403 Forbidden` - Insufficient permissions
 
@@ -68,9 +74,11 @@ Errors:
 
 `DELETE /api/domains/:id` - Requires `settings.update` permission
 
-Removes a domain. If the deleted domain was the default, no domain is default until one is explicitly set.
+Removes a domain. If the deleted domain was the default, no domain is default
+until one is explicitly set.
 
 Returns `200 OK`:
+
 ```json
 {
   "success": true
@@ -78,20 +86,24 @@ Returns `200 OK`:
 ```
 
 Errors:
+
 - `404 Not Found` - Domain not found
 
 ## Set Default Domain
 
 `PATCH /api/domains/:id/default` - Requires `settings.update` permission
 
-Sets the specified domain as the default. Clears the previous default in a transaction.
+Sets the specified domain as the default. Clears the previous default in a
+transaction.
 
 The default domain is:
+
 - Used in share links for non-admin users
 - Exposed via `GET /api/settings/public` as `domains.defaultDomain`
 - Returned to regular users through the `usePublicSettings()` hook
 
 Returns `200 OK`:
+
 ```json
 {
   "id": 1,
@@ -102,13 +114,17 @@ Returns `200 OK`:
 ```
 
 Errors:
+
 - `404 Not Found` - Domain not found
 
 ## CORS Integration
 
-All configured domains are automatically added to the backend's dynamic CORS whitelist. Both `http://` and `https://` variants are generated for each hostname.
+All configured domains are automatically added to the backend's dynamic CORS
+whitelist. Both `http://` and `https://` variants are generated for each
+hostname.
 
-The CORS cache refreshes every 60 seconds and is immediately invalidated when domains are added, deleted, or modified.
+The CORS cache refreshes every 60 seconds and is immediately invalidated when
+domains are added, deleted, or modified.
 
 ## Common Workflows
 
@@ -117,7 +133,7 @@ The CORS cache refreshes every 60 seconds and is immediately invalidated when do
 ```javascript
 // 1. Add domain
 const domain = await api.post('/domains', {
-  hostname: 'play.example.com'
+  hostname: 'play.example.com',
 });
 
 // 2. Make it default (used in share links)
@@ -138,7 +154,7 @@ const domains = await api.get('/domains');
 await api.delete(`/domains/${oldDomainId}`);
 
 // Set new default
-const newDefault = domains.find(d => d.hostname === 'new.example.com');
+const newDefault = domains.find((d) => d.hostname === 'new.example.com');
 await api.patch(`/domains/${newDefault.id}/default`);
 ```
 
@@ -163,7 +179,12 @@ const updated = await domainsApi.setDefault(1);
 **React Query Hooks:**
 
 ```typescript
-import { useDomains, useAddDomain, useDeleteDomain, useSetDefaultDomain } from '@/hooks/useDomains';
+import {
+  useDomains,
+  useAddDomain,
+  useDeleteDomain,
+  useSetDefaultDomain,
+} from '@/hooks/useDomains';
 
 const { data: domains, isLoading } = useDomains();
 const addMutation = useAddDomain();
@@ -174,14 +195,14 @@ const setDefaultMutation = useSetDefaultDomain();
 addMutation.mutate('play.example.com', {
   onSuccess: (newDomain) => {
     console.log('Domain added:', newDomain.hostname);
-  }
+  },
 });
 
 // Delete domain
 deleteMutation.mutate(1, {
   onSuccess: () => {
     console.log('Domain deleted');
-  }
+  },
 });
 
 // Set default (supports optimistic updates)
@@ -199,6 +220,9 @@ setDefaultMutation.mutate(1);
 
 ## Related
 
-- [Settings API](./settings-api.md) - Public settings include `domains.defaultDomain`
-- [System Settings Feature](../10-features/system-settings.md) - Domain Settings UI tab
-- [Database Schema](../12-reference/database-schema-reference.md) - `domains` table schema
+- [Settings API](./settings-api.md) - Public settings include
+  `domains.defaultDomain`
+- [System Settings Feature](../10-features/system-settings.md) - Domain Settings
+  UI tab
+- [Database Schema](../12-reference/database-schema-reference.md) - `domains`
+  table schema

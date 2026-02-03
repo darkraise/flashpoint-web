@@ -50,8 +50,4 @@ export const asyncHandler = (
  * router.get('/games', asyncHandler(getGames));
  * ```
  */
-export type AsyncRouteHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => Promise<any>;
+export type AsyncRouteHandler = (req: Request, res: Response, next: NextFunction) => Promise<any>;

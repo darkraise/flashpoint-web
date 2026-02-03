@@ -1,23 +1,25 @@
 # Directory Traversal Protection
 
-**Date:** 2026-01-29
-**Status:** Implemented
-**Priority:** Critical
+**Date:** 2026-01-29 **Status:** Implemented **Priority:** Critical
 
 ## Overview
 
-The game-service has been hardened against directory traversal attacks through comprehensive path validation and sanitization utilities.
+The game-service has been hardened against directory traversal attacks through
+comprehensive path validation and sanitization utilities.
 
 ## Problem
 
-Previous implementation allowed potential directory traversal attacks in two areas:
+Previous implementation allowed potential directory traversal attacks in two
+areas:
 
-1. **Legacy Server**: Used `path.join()` and `path.normalize()` but didn't validate resolved paths
+1. **Legacy Server**: Used `path.join()` and `path.normalize()` but didn't
+   validate resolved paths
 2. **GameZip Server**: Had partial validation but lacked URL path sanitization
 
 ## Solution
 
-Implemented centralized path security utilities in `game-service/src/utils/pathSecurity.ts`:
+Implemented centralized path security utilities in
+`game-service/src/utils/pathSecurity.ts`:
 
 ### 1. Path Sanitization and Validation
 
@@ -31,13 +33,14 @@ sanitizeAndValidatePath(basePath: string, requestPath: string): string
 - Throws error if directory traversal detected
 
 **Example:**
+
 ```typescript
 // ✓ SAFE
-sanitizeAndValidatePath('/var/www/htdocs', 'files/game.swf')
+sanitizeAndValidatePath('/var/www/htdocs', 'files/game.swf');
 // Returns: /var/www/htdocs/files/game.swf
 
 // ✗ BLOCKED
-sanitizeAndValidatePath('/var/www/htdocs', '../../../etc/passwd')
+sanitizeAndValidatePath('/var/www/htdocs', '../../../etc/passwd');
 // Throws: Error('Invalid path: Directory traversal detected')
 ```
 
@@ -81,6 +84,7 @@ sanitizeUrlPath(urlPath: string): string
 - All tests passing
 
 **Test Categories:**
+
 1. Valid paths within base directory ✓
 2. Directory traversal with `../` ✓
 3. Directory traversal with absolute paths ✓
@@ -103,15 +107,15 @@ After this implementation:
 
 ## Attack Vectors Blocked
 
-| Attack Type | Example | Status |
-|-------------|---------|--------|
-| Unix path traversal | `../../../etc/passwd` | ✓ Blocked |
+| Attack Type            | Example                            | Status    |
+| ---------------------- | ---------------------------------- | --------- |
+| Unix path traversal    | `../../../etc/passwd`              | ✓ Blocked |
 | Windows path traversal | `..\..\..\windows\system32\config` | ✓ Blocked |
-| URL-encoded Unix | `..%2F..%2F..%2Fetc/passwd` | ✓ Blocked |
-| URL-encoded Windows | `..%5C..%5C..%5Cwindows` | ✓ Blocked |
-| Null byte injection | `file.swf\0.txt` | ✓ Blocked |
-| Absolute path escape | `/etc/passwd` | ✓ Blocked |
-| Mixed traversal | `files/../../etc/passwd` | ✓ Blocked |
+| URL-encoded Unix       | `..%2F..%2F..%2Fetc/passwd`        | ✓ Blocked |
+| URL-encoded Windows    | `..%5C..%5C..%5Cwindows`           | ✓ Blocked |
+| Null byte injection    | `file.swf\0.txt`                   | ✓ Blocked |
+| Absolute path escape   | `/etc/passwd`                      | ✓ Blocked |
+| Mixed traversal        | `files/../../etc/passwd`           | ✓ Blocked |
 
 ## Performance Impact
 
@@ -122,12 +126,14 @@ After this implementation:
 ## Logging
 
 All blocked attempts logged with:
+
 - Original request path
 - Resolved absolute path
 - Base directory being protected
 - Security warning level
 
 **Example log output:**
+
 ```
 [game-service] warn: [Security] Path traversal attempt blocked: ../../../etc/passwd
 [game-service] warn: [Security] Resolved to: D:\etc\passwd
@@ -150,6 +156,7 @@ All blocked attempts logged with:
 
 ## References
 
-- **OWASP**: [Path Traversal](https://owasp.org/www-community/attacks/Path_Traversal)
+- **OWASP**:
+  [Path Traversal](https://owasp.org/www-community/attacks/Path_Traversal)
 - **CWE-22**: Directory Traversal
 - **Phase**: Phase 1 - Security (Critical priority fix)

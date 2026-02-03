@@ -5,11 +5,13 @@ Documentation for managing filter and pagination state in URL search params.
 ## Overview
 
 The application uses URL search parameters (query strings) to manage:
+
 - Filters (platform, tags, search, etc.)
 - Pagination (page, limit)
 - Sort options
 
 **Benefits:**
+
 - Shareable URLs
 - Browser back/forward support
 - Bookmark-able search results
@@ -64,7 +66,7 @@ Filters in URL sync with TanStack Query:
 const { data, isLoading } = useGames({
   platform: searchParams.get('platform'),
   search: searchParams.get('search'),
-  page: parseInt(searchParams.get('page') || '1')
+  page: parseInt(searchParams.get('page') || '1'),
 });
 ```
 
@@ -77,6 +79,7 @@ const { data, isLoading } = useGames({
 ```
 
 Parameters:
+
 - `platform` - Filter by platform (Flash, HTML5, etc.)
 - `search` - Search query
 - `page` - Current page number
@@ -115,7 +118,7 @@ function getFiltersFromURL(searchParams: URLSearchParams): GameFilters {
     order: searchParams.get('order') || undefined,
     tags: searchParams.get('tags')?.split(',') || undefined,
     playMode: searchParams.get('playMode') || undefined,
-    library: searchParams.get('library') || undefined
+    library: searchParams.get('library') || undefined,
   };
 }
 ```
@@ -180,6 +183,7 @@ function Pagination({ total, page, limit }: PaginationProps) {
 ### Shareable Links
 
 Users can share exact search results:
+
 ```
 https://flashpoint.app/browse?platform=Flash&search=pokemon&sort=title
 ```
@@ -187,6 +191,7 @@ https://flashpoint.app/browse?platform=Flash&search=pokemon&sort=title
 ### Browser Navigation
 
 Back/forward buttons work naturally:
+
 - Back: Previous filter state
 - Forward: Next filter state
 
@@ -199,6 +204,7 @@ Users can bookmark specific searches and return to exact state.
 ### URL Length Limits
 
 Be cautious with very long filter combinations. Consider:
+
 - Limiting number of tags
 - Using shortened parameter names
 - Storing complex filters server-side

@@ -15,6 +15,6 @@ export function useStatistics() {
     queryKey: ['statistics'],
     queryFn: statisticsApi.getStatistics,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    retry: 1
+    retry: 1,
   });
 }

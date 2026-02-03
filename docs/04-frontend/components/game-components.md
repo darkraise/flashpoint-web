@@ -23,7 +23,8 @@ interface GameCardProps {
 ### Features
 
 - **Image Display** - Shows game logo or screenshot with lazy loading
-- **Availability Indicator** - Green checkmark (available) or yellow download icon (needs download)
+- **Availability Indicator** - Green checkmark (available) or yellow download
+  icon (needs download)
 - **Platform Badge** - Platform logo and name
 - **Hover Actions** - Add to playlist, toggle favorite (shown on hover)
 - **Loading States** - Blur placeholder while image loads
@@ -51,7 +52,7 @@ Responsive grid layout for game cards.
 ```typescript
 interface GameGridProps {
   games: Game[];
-  cardSize?: CardSize;  // 'small' | 'medium' | 'large'
+  cardSize?: CardSize; // 'small' | 'medium' | 'large'
   onAddToPlaylist?: (gameId: string) => void;
   onToggleFavorite?: (gameId: string) => void;
   favoritedGames?: string[];
@@ -60,9 +61,12 @@ interface GameGridProps {
 
 ### Grid Breakpoints
 
-- Small cards: `grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8`
-- Medium cards: `grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6`
-- Large cards: `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5`
+- Small cards:
+  `grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8`
+- Medium cards:
+  `grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6`
+- Large cards:
+  `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5`
 
 ## GameList
 

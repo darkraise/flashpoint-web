@@ -1,5 +1,12 @@
 import { apiClient as api } from './api/client';
-import { Game, PaginatedResult, GameFilters, FilterOptions, Playlist, GameLaunchData } from '@/types/game';
+import {
+  Game,
+  PaginatedResult,
+  GameFilters,
+  FilterOptions,
+  Playlist,
+  GameLaunchData,
+} from '@/types/game';
 import {
   LoginCredentials,
   RegisterData,
@@ -24,7 +31,7 @@ import {
   ActivityTrendResponse,
   TopActionsResponse,
   ActivityBreakdownResponse,
-  TimeRange
+  TimeRange,
 } from '@/types/auth';
 import {
   StartSessionResponse,
@@ -33,13 +40,13 @@ import {
   GameStats,
   PlaySession,
   PlayActivityData,
-  GameDistribution
+  GameDistribution,
 } from '@/types/play-tracking';
 import {
   UserPlaylist,
   CreatePlaylistData,
   UpdatePlaylistData,
-  PlaylistStats
+  PlaylistStats,
 } from '@/types/playlist';
 import {
   Favorite,
@@ -50,7 +57,7 @@ import {
   AddFavoriteResponse,
   BatchAddFavoritesResponse,
   BatchRemoveFavoritesResponse,
-  ClearAllFavoritesResponse
+  ClearAllFavoritesResponse,
 } from '@/types/favorite';
 import { SystemSettings, PublicSettings } from '@/types/settings';
 import { JobStatusEnriched, JobLogsResponse } from '@/types/jobs';
@@ -81,14 +88,14 @@ export const gamesApi = {
 
   getRelated: async (id: string, limit = 10): Promise<Game[]> => {
     const { data } = await api.get<Game[]>(`/games/${id}/related`, {
-      params: { limit }
+      params: { limit },
     });
     return data;
   },
 
   getRandom: async (library?: string): Promise<Game> => {
     const { data } = await api.get<Game>('/games/random', {
-      params: { library }
+      params: { library },
     });
     return data;
   },
@@ -98,28 +105,36 @@ export const gamesApi = {
     return data;
   },
 
-  downloadGame: async (id: string, gameDataId?: number): Promise<{ success: boolean; message: string; gameDataId: number; sha256: string }> => {
+  downloadGame: async (
+    id: string,
+    gameDataId?: number
+  ): Promise<{ success: boolean; message: string; gameDataId: number; sha256: string }> => {
     const { data } = await api.post(`/games/${id}/download`, { gameDataId });
     return data;
   },
 
-  cancelDownload: async (id: string): Promise<{ success: boolean; cancelled: boolean; message: string }> => {
+  cancelDownload: async (
+    id: string
+  ): Promise<{ success: boolean; cancelled: boolean; message: string }> => {
     const { data } = await api.delete(`/games/${id}/download`);
     return data;
   },
 
   getMostPlayed: async (limit = 20): Promise<PaginatedResult<Game>> => {
-    const { data } = await api.get<{ success: boolean; data: Game[]; total: number }>('/games/most-played', {
-      params: { limit }
-    });
+    const { data } = await api.get<{ success: boolean; data: Game[]; total: number }>(
+      '/games/most-played',
+      {
+        params: { limit },
+      }
+    );
     return {
       data: data.data,
       total: data.total,
       page: 1,
       limit,
-      totalPages: 1
+      totalPages: 1,
     };
-  }
+  },
 };
 
 export const playlistsApi = {
@@ -129,11 +144,16 @@ export const playlistsApi = {
   },
 
   getById: async (id: string): Promise<Playlist> => {
-    const { data} = await api.get<Playlist>(`/playlists/${id}`);
+    const { data } = await api.get<Playlist>(`/playlists/${id}`);
     return data;
   },
 
-  create: async (playlist: { title: string; description?: string; author?: string; library?: string }): Promise<Playlist> => {
+  create: async (playlist: {
+    title: string;
+    description?: string;
+    author?: string;
+    library?: string;
+  }): Promise<Playlist> => {
     const { data } = await api.post<Playlist>('/playlists', playlist);
     return data;
   },
@@ -144,28 +164,30 @@ export const playlistsApi = {
   },
 
   removeGames: async (playlistId: string, gameIds: string[]): Promise<Playlist> => {
-    const { data } = await api.delete<Playlist>(`/playlists/${playlistId}/games`, { data: { gameIds } });
+    const { data } = await api.delete<Playlist>(`/playlists/${playlistId}/games`, {
+      data: { gameIds },
+    });
     return data;
   },
 
   delete: async (playlistId: string): Promise<{ success: boolean; message: string }> => {
     const { data } = await api.delete(`/playlists/${playlistId}`);
     return data;
-  }
+  },
 };
 
 export const platformsApi = {
   getAll: async (): Promise<Array<{ platform: string; count: number }>> => {
     const { data } = await api.get('/platforms');
     return data;
-  }
+  },
 };
 
 export const tagsApi = {
   getAll: async (): Promise<Array<{ name: string; count: number }>> => {
     const { data } = await api.get('/tags');
     return data;
-  }
+  },
 };
 
 export interface CommunityPlaylistsResponse {
@@ -191,10 +213,10 @@ export const communityPlaylistsApi = {
 
   download: async (downloadUrl: string): Promise<Playlist> => {
     const { data } = await api.post<Playlist>('/community-playlists/download', {
-      downloadUrl
+      downloadUrl,
     });
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -230,7 +252,7 @@ export const authApi = {
   getSetupStatus: async (): Promise<{ needsSetup: boolean; message: string }> => {
     const { data } = await api.get<{ needsSetup: boolean; message: string }>('/auth/setup-status');
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -240,7 +262,7 @@ export const authApi = {
 export const usersApi = {
   getAll: async (page = 1, limit = 50): Promise<UsersResponse> => {
     const { data } = await api.get<UsersResponse>('/users', {
-      params: { page, limit }
+      params: { page, limit },
     });
     return data;
   },
@@ -265,7 +287,10 @@ export const usersApi = {
     return data;
   },
 
-  changePassword: async (id: number, passwordData: ChangePasswordData): Promise<{ success: boolean; message: string }> => {
+  changePassword: async (
+    id: number,
+    passwordData: ChangePasswordData
+  ): Promise<{ success: boolean; message: string }> => {
     const { data } = await api.post(`/users/${id}/change-password`, passwordData);
     return data;
   },
@@ -276,7 +301,10 @@ export const usersApi = {
     return data;
   },
 
-  updateTheme: async (themeColor: string, surfaceColor: string): Promise<{ success: boolean; themeColor: string; surfaceColor: string }> => {
+  updateTheme: async (
+    themeColor: string,
+    surfaceColor: string
+  ): Promise<{ success: boolean; themeColor: string; surfaceColor: string }> => {
     const { data } = await api.patch('/users/me/theme', { themeColor, surfaceColor });
     return data;
   },
@@ -286,14 +314,17 @@ export const usersApi = {
     const settings = await usersApi.getAllSettings();
     return {
       mode: settings.theme_mode || 'dark',
-      primaryColor: settings.primary_color || 'blue'
+      primaryColor: settings.primary_color || 'blue',
     };
   },
 
-  updateThemeSettings: async (mode: string, primaryColor: string): Promise<{ mode: string; primaryColor: string }> => {
+  updateThemeSettings: async (
+    mode: string,
+    primaryColor: string
+  ): Promise<{ mode: string; primaryColor: string }> => {
     await usersApi.updateSettings({
       theme_mode: mode,
-      primary_color: primaryColor
+      primary_color: primaryColor,
     });
     return { mode, primaryColor };
   },
@@ -307,7 +338,7 @@ export const usersApi = {
   updateSettings: async (settings: Record<string, string>): Promise<Record<string, string>> => {
     const { data } = await api.patch('/users/me/settings', settings);
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -348,7 +379,7 @@ export const rolesApi = {
   delete: async (id: number): Promise<{ success: boolean; message: string }> => {
     const { data } = await api.delete(`/roles/${id}`);
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -358,38 +389,45 @@ export const rolesApi = {
 export const activitiesApi = {
   getAll: async (page = 1, limit = 50, filters?: ActivityFilters): Promise<ActivitiesResponse> => {
     const { data } = await api.get<ActivitiesResponse>('/activities', {
-      params: { page, limit, ...filters }
+      params: { page, limit, ...filters },
     });
     return data;
   },
 
-  getStats: async (timeRange: TimeRange = '24h', customRange?: { startDate?: string; endDate?: string }): Promise<ActivityStatsResponse> => {
+  getStats: async (
+    timeRange: TimeRange = '24h',
+    customRange?: { startDate?: string; endDate?: string }
+  ): Promise<ActivityStatsResponse> => {
     const { data } = await api.get<ActivityStatsResponse>('/activities/stats', {
-      params: { timeRange, ...customRange }
+      params: { timeRange, ...customRange },
     });
     return data;
   },
 
   getTrend: async (days = 7): Promise<ActivityTrendResponse> => {
     const { data } = await api.get<ActivityTrendResponse>('/activities/trend', {
-      params: { days }
+      params: { days },
     });
     return data;
   },
 
   getTopActions: async (limit = 10, timeRange: TimeRange = '24h'): Promise<TopActionsResponse> => {
     const { data } = await api.get<TopActionsResponse>('/activities/top-actions', {
-      params: { limit, timeRange }
+      params: { limit, timeRange },
     });
     return data;
   },
 
-  getBreakdown: async (groupBy: 'resource' | 'user' | 'ip', limit = 10, timeRange: TimeRange = '24h'): Promise<ActivityBreakdownResponse> => {
+  getBreakdown: async (
+    groupBy: 'resource' | 'user' | 'ip',
+    limit = 10,
+    timeRange: TimeRange = '24h'
+  ): Promise<ActivityBreakdownResponse> => {
     const { data } = await api.get<ActivityBreakdownResponse>('/activities/breakdown', {
-      params: { groupBy, limit, timeRange }
+      params: { groupBy, limit, timeRange },
     });
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -405,7 +443,7 @@ export const authSettingsApi = {
   update: async (settings: UpdateAuthSettingsData): Promise<AuthSettings> => {
     const { data } = await api.patch<AuthSettings>('/settings/auth', settings);
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -428,7 +466,10 @@ export const systemSettingsApi = {
     return data;
   },
 
-  updateCategory: async (category: string, settings: Record<string, unknown>): Promise<Record<string, unknown>> => {
+  updateCategory: async (
+    category: string,
+    settings: Record<string, unknown>
+  ): Promise<Record<string, unknown>> => {
     const { data } = await api.patch<Record<string, unknown>>(`/settings/${category}`, settings);
     return data;
   },
@@ -438,12 +479,21 @@ export const systemSettingsApi = {
     return data;
   },
 
-  updateSetting: async (category: string, key: string, value: unknown): Promise<{ value: unknown }> => {
+  updateSetting: async (
+    category: string,
+    key: string,
+    value: unknown
+  ): Promise<{ value: unknown }> => {
     const { data } = await api.patch<{ value: unknown }>(`/settings/${category}/${key}`, { value });
     return data;
   },
 
-  getCacheStats: async (): Promise<{ keyCount: number; categoryCount: number; hitRate: number; size: number }> => {
+  getCacheStats: async (): Promise<{
+    keyCount: number;
+    categoryCount: number;
+    hitRate: number;
+    size: number;
+  }> => {
     const { data } = await api.get('/settings/_cache/stats');
     return data;
   },
@@ -451,7 +501,7 @@ export const systemSettingsApi = {
   clearCache: async (category?: string): Promise<{ message: string }> => {
     const { data } = await api.post('/settings/_cache/clear', { category });
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -462,21 +512,21 @@ export const statisticsApi = {
   getStatistics: async () => {
     const { data } = await api.get('/statistics');
     return data;
-  }
+  },
 };
 
 export const playTrackingApi = {
   startSession: async (gameId: string, gameTitle: string): Promise<StartSessionResponse> => {
     const { data } = await api.post<StartSessionResponse>('/play/start', {
       gameId,
-      gameTitle
+      gameTitle,
     });
     return data;
   },
 
   endSession: async (sessionId: string): Promise<EndSessionResponse> => {
     const { data } = await api.post<EndSessionResponse>('/play/end', {
-      sessionId
+      sessionId,
     });
     return data;
   },
@@ -486,40 +536,46 @@ export const playTrackingApi = {
     return data;
   },
 
-  getGameStats: async (limit = 50, offset = 0): Promise<{ data: GameStats[]; limit: number; offset: number }> => {
+  getGameStats: async (
+    limit = 50,
+    offset = 0
+  ): Promise<{ data: GameStats[]; limit: number; offset: number }> => {
     const { data } = await api.get('/play/game-stats', {
-      params: { limit, offset }
+      params: { limit, offset },
     });
     return data;
   },
 
-  getHistory: async (limit = 50, offset = 0): Promise<{ data: PlaySession[]; limit: number; offset: number }> => {
+  getHistory: async (
+    limit = 50,
+    offset = 0
+  ): Promise<{ data: PlaySession[]; limit: number; offset: number }> => {
     const { data } = await api.get('/play/history', {
-      params: { limit, offset }
+      params: { limit, offset },
     });
     return data;
   },
 
   getTopGames: async (limit = 10): Promise<GameStats[]> => {
     const { data } = await api.get<GameStats[]>('/play/top-games', {
-      params: { limit }
+      params: { limit },
     });
     return data;
   },
 
   getActivityOverTime: async (days = 30): Promise<PlayActivityData[]> => {
     const { data } = await api.get<PlayActivityData[]>('/play/activity-over-time', {
-      params: { days }
+      params: { days },
     });
     return data;
   },
 
   getGamesDistribution: async (limit = 10): Promise<GameDistribution[]> => {
     const { data } = await api.get<GameDistribution[]>('/play/games-distribution', {
-      params: { limit }
+      params: { limit },
     });
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -567,7 +623,9 @@ export const userPlaylistsApi = {
   },
 
   removeGames: async (id: number, gameIds: string[]): Promise<PlaylistWithGames> => {
-    const { data } = await api.delete<PlaylistWithGames>(`/user-playlists/${id}/games`, { data: { gameIds } });
+    const { data } = await api.delete<PlaylistWithGames>(`/user-playlists/${id}/games`, {
+      data: { gameIds },
+    });
     return data;
   },
 
@@ -575,13 +633,16 @@ export const userPlaylistsApi = {
     await api.put(`/user-playlists/${id}/games/reorder`, { gameIdOrder });
   },
 
-  copyFlashpointPlaylist: async (flashpointPlaylistId: string, newTitle?: string): Promise<UserPlaylist> => {
+  copyFlashpointPlaylist: async (
+    flashpointPlaylistId: string,
+    newTitle?: string
+  ): Promise<UserPlaylist> => {
     const { data } = await api.post<UserPlaylist>('/user-playlists/copy-flashpoint', {
       flashpointPlaylistId,
-      newTitle
+      newTitle,
     });
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -591,7 +652,7 @@ export const userPlaylistsApi = {
 export const favoritesApi = {
   getAll: async (limit?: number, offset?: number): Promise<Favorite[]> => {
     const { data } = await api.get<Favorite[]>('/favorites', {
-      params: { limit, offset }
+      params: { limit, offset },
     });
     return data;
   },
@@ -601,9 +662,14 @@ export const favoritesApi = {
     return data.gameIds;
   },
 
-  getGames: async (limit?: number, offset?: number, sortBy?: 'title' | 'dateAdded', sortOrder?: 'asc' | 'desc'): Promise<FavoriteGame[]> => {
+  getGames: async (
+    limit?: number,
+    offset?: number,
+    sortBy?: 'title' | 'dateAdded',
+    sortOrder?: 'asc' | 'desc'
+  ): Promise<FavoriteGame[]> => {
     const { data } = await api.get<FavoriteGame[]>('/favorites/games', {
-      params: { limit, offset, sortBy, sortOrder }
+      params: { limit, offset, sortBy, sortOrder },
     });
     return data;
   },
@@ -634,7 +700,7 @@ export const favoritesApi = {
 
   batchRemove: async (gameIds: string[]): Promise<number> => {
     const { data } = await api.delete<BatchRemoveFavoritesResponse>('/favorites/batch', {
-      data: { gameIds }
+      data: { gameIds },
     });
     return data.removed;
   },
@@ -642,7 +708,7 @@ export const favoritesApi = {
   clearAll: async (): Promise<number> => {
     const { data } = await api.delete<ClearAllFavoritesResponse>('/favorites');
     return data.removed;
-  }
+  },
 };
 
 // ===================================
@@ -682,17 +748,17 @@ export const jobsApi = {
 
   getLogs: async (jobId: string, limit = 50, offset = 0): Promise<JobLogsResponse> => {
     const { data } = await api.get<JobLogsResponse>(`/jobs/${jobId}/logs`, {
-      params: { limit, offset }
+      params: { limit, offset },
     });
     return data;
   },
 
   getAllLogs: async (limit = 100, offset = 0): Promise<JobLogsResponse> => {
     const { data } = await api.get<JobLogsResponse>('/jobs/logs/all', {
-      params: { limit, offset }
+      params: { limit, offset },
     });
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -723,7 +789,7 @@ export const ruffleApi = {
   }> => {
     const { data } = await api.post('/ruffle/update');
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -733,7 +799,7 @@ export const githubApi = {
   getStarCount: async (): Promise<{ stars: number }> => {
     const { data } = await api.get<{ success: boolean; data: { stars: number } }>('/github/stars');
     return data.data;
-  }
+  },
 };
 
 // ===================================
@@ -759,7 +825,11 @@ export const updatesApi = {
    * Start metadata sync in background
    * Returns immediately with sync started status
    */
-  startMetadataSync: async (): Promise<{ success: boolean; message: string; status: MetadataSyncStatus }> => {
+  startMetadataSync: async (): Promise<{
+    success: boolean;
+    message: string;
+    status: MetadataSyncStatus;
+  }> => {
     const { data } = await api.post('/updates/metadata/sync');
     return data;
   },
@@ -771,7 +841,7 @@ export const updatesApi = {
   getMetadataSyncStatus: async (): Promise<MetadataSyncStatus> => {
     const { data } = await api.get<MetadataSyncStatus>('/updates/metadata/sync/status');
     return data;
-  }
+  },
 };
 
 // ===================================
@@ -787,7 +857,7 @@ function subscribeTokenRefresh(cb: (token: string) => void) {
 }
 
 function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach(cb => cb(token));
+  refreshSubscribers.forEach((cb) => cb(token));
   refreshSubscribers = [];
 }
 

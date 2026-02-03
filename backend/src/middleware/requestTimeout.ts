@@ -50,7 +50,7 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
           timeout: `${timeoutMs}ms`,
           elapsed: `${elapsed}ms`,
           ip: req.ip,
-          userAgent: req.get('user-agent')
+          userAgent: req.get('user-agent'),
         });
 
         res.status(408).json({
@@ -58,8 +58,8 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
             message: 'Request timeout',
             statusCode: 408,
             timeout: timeoutMs,
-            details: 'The server took too long to respond. Please try again.'
-          }
+            details: 'The server took too long to respond. Please try again.',
+          },
         });
 
         hasResponded = true;
@@ -71,17 +71,17 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
     const originalJson = res.json.bind(res);
     const originalEnd = res.end.bind(res);
 
-    res.send = function(body?: any) {
+    res.send = function (body?: any) {
       clearTimeoutAndLog();
       return originalSend(body);
     };
 
-    res.json = function(body?: any) {
+    res.json = function (body?: any) {
       clearTimeoutAndLog();
       return originalJson(body);
     };
 
-    res.end = function(chunk?: any, encoding?: any, callback?: any) {
+    res.end = function (chunk?: any, encoding?: any, callback?: any) {
       clearTimeoutAndLog();
       return originalEnd(chunk, encoding, callback);
     };
@@ -100,7 +100,7 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
             url: req.url,
             elapsed: `${elapsed}ms`,
             timeout: `${timeoutMs}ms`,
-            percentage: `${Math.round((elapsed / timeoutMs) * 100)}%`
+            percentage: `${Math.round((elapsed / timeoutMs) * 100)}%`,
           });
         }
       }
@@ -115,7 +115,7 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
         if (isTimedOut) {
           logger.info('[Request Aborted] Client closed connection after timeout', {
             method: req.method,
-            url: req.url
+            url: req.url,
           });
         }
       }
@@ -142,5 +142,5 @@ export const TimeoutConfig = {
   LONG: 120000,
 
   /** Extended timeout for batch operations (300s / 5 minutes) */
-  EXTENDED: 300000
+  EXTENDED: 300000,
 };

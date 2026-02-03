@@ -28,8 +28,8 @@ export function createPaginatedResponse<T>(
       total,
       page,
       limit,
-      totalPages
-    }
+      totalPages,
+    },
   };
 }
 
@@ -56,13 +56,10 @@ export function normalizePagination(
   normalizedPage = Math.max(1, normalizedPage || 1);
 
   // Ensure limit is within bounds
-  normalizedLimit = Math.min(
-    maxLimit,
-    Math.max(1, normalizedLimit || defaultLimit)
-  );
+  normalizedLimit = Math.min(maxLimit, Math.max(1, normalizedLimit || defaultLimit));
 
   return {
     page: normalizedPage,
-    limit: normalizedLimit
+    limit: normalizedLimit,
   };
 }

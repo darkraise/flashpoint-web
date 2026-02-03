@@ -1,21 +1,21 @@
-import { HeartOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToggleFavorite } from "@/hooks/useFavorites";
-import { toast } from "sonner";
-import { getErrorMessage } from "@/types/api-error";
+import { HeartOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToggleFavorite } from '@/hooks/useFavorites';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/types/api-error';
 
 interface RemoveFavoriteButtonProps {
   gameId: string;
-  size?: "sm" | "default" | "lg" | "icon";
+  size?: 'sm' | 'default' | 'lg' | 'icon';
   className?: string;
   showLabel?: boolean;
 }
 
 export function RemoveFavoriteButton({
   gameId,
-  size = "sm",
-  className = "",
-  showLabel = false
+  size = 'sm',
+  className = '',
+  showLabel = false,
 }: RemoveFavoriteButtonProps) {
   const toggleFavorite = useToggleFavorite();
 
@@ -25,11 +25,11 @@ export function RemoveFavoriteButton({
 
     toggleFavorite.mutate(gameId, {
       onSuccess: () => {
-        toast.success("Removed from favorites");
+        toast.success('Removed from favorites');
       },
       onError: (error: unknown) => {
-        toast.error(getErrorMessage(error) || "Failed to remove favorite");
-      }
+        toast.error(getErrorMessage(error) || 'Failed to remove favorite');
+      },
     });
   };
 
@@ -44,8 +44,8 @@ export function RemoveFavoriteButton({
       aria-label="Remove from Favorites"
     >
       <HeartOff
-        size={size === "sm" ? 14 : 16}
-        className={toggleFavorite.isPending ? "animate-pulse" : ""}
+        size={size === 'sm' ? 14 : 16}
+        className={toggleFavorite.isPending ? 'animate-pulse' : ''}
         aria-hidden="true"
       />
       {showLabel && <span className="ml-2">Remove</span>}

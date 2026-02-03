@@ -19,10 +19,7 @@ export function GamePlayerView() {
   const { data: launchData, isLoading: launchLoading, error: launchError } = useGameLaunchData(id!);
 
   // Track play session for authenticated users
-  usePlaySession(
-    game?.id || null,
-    game?.title || null
-  );
+  usePlaySession(game?.id || null, game?.title || null);
 
   // Auto-enter fullscreen for HTML5 games
   useEffect(() => {
@@ -38,19 +35,22 @@ export function GamePlayerView() {
   }, [id]);
 
   // Memoize player props to prevent unnecessary re-renders
-  const playerProps = useMemo(() => ({
-    title: game?.title || '',
-    platform: launchData?.platform || '',
-    contentUrl: launchData?.contentUrl,
-    launchCommand: launchData?.launchCommand,
-    canPlayInBrowser: launchData?.canPlayInBrowser || false,
-  }), [
-    game?.title,
-    launchData?.platform,
-    launchData?.contentUrl,
-    launchData?.launchCommand,
-    launchData?.canPlayInBrowser,
-  ]);
+  const playerProps = useMemo(
+    () => ({
+      title: game?.title || '',
+      platform: launchData?.platform || '',
+      contentUrl: launchData?.contentUrl,
+      launchCommand: launchData?.launchCommand,
+      canPlayInBrowser: launchData?.canPlayInBrowser || false,
+    }),
+    [
+      game?.title,
+      launchData?.platform,
+      launchData?.contentUrl,
+      launchData?.launchCommand,
+      launchData?.canPlayInBrowser,
+    ]
+  );
 
   if (gameLoading || launchLoading) {
     return (
@@ -99,7 +99,13 @@ export function GamePlayerView() {
       ) : null}
 
       {/* Game Player Card - adjusts styling based on fullscreen */}
-      <div className={isFullscreen ? 'w-full h-full' : 'bg-card rounded-lg overflow-hidden shadow-xl border border-border'}>
+      <div
+        className={
+          isFullscreen
+            ? 'w-full h-full'
+            : 'bg-card rounded-lg overflow-hidden shadow-xl border border-border'
+        }
+      >
         {/* Game Header - only shown in normal mode */}
         {!isFullscreen ? (
           <div className="px-6 py-4 border-b border-border">
@@ -169,7 +175,9 @@ export function GamePlayerView() {
                 <h2 className="text-lg font-semibold mb-2">Tags</h2>
                 <div className="flex flex-wrap gap-2">
                   {game.tagsStr.split(';').map((tag, i) => (
-                    <Badge key={i} variant="tag">{tag.trim()}</Badge>
+                    <Badge key={i} variant="tag">
+                      {tag.trim()}
+                    </Badge>
                   ))}
                 </div>
               </div>

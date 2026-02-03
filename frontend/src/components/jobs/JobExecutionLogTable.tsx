@@ -14,7 +14,7 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const toggleRow = (id: number) => {
-    setExpandedRows(prev => {
+    setExpandedRows((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -28,11 +28,23 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success':
-        return <Badge variant="default" className="bg-green-600 gap-1"><CheckCircle size={12} /> Success</Badge>;
+        return (
+          <Badge variant="default" className="bg-green-600 gap-1">
+            <CheckCircle size={12} /> Success
+          </Badge>
+        );
       case 'failed':
-        return <Badge variant="destructive" className="gap-1"><XCircle size={12} /> Failed</Badge>;
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <XCircle size={12} /> Failed
+          </Badge>
+        );
       case 'running':
-        return <Badge variant="default" className="gap-1"><Loader2 size={12} className="animate-spin" /> Running</Badge>;
+        return (
+          <Badge variant="default" className="gap-1">
+            <Loader2 size={12} className="animate-spin" /> Running
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -69,7 +81,11 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
                       onClick={() => toggleRow(log.id)}
                       className="hover:bg-accent p-1 rounded"
                     >
-                      {expandedRows.has(log.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      {expandedRows.has(log.id) ? (
+                        <ChevronDown size={16} />
+                      ) : (
+                        <ChevronRight size={16} />
+                      )}
                     </button>
                   ) : null}
                 </td>

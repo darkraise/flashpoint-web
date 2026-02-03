@@ -69,7 +69,7 @@ router.patch(
       // Validate request body
       if (typeof enabled !== 'boolean') {
         return res.status(400).json({
-          error: { message: 'Invalid request: enabled must be a boolean' }
+          error: { message: 'Invalid request: enabled must be a boolean' },
         });
       }
 
@@ -100,7 +100,7 @@ router.patch(
     } catch (error) {
       logger.error(`Failed to update job ${req.params.jobId}:`, error);
       res.status(500).json({
-        error: { message: error instanceof Error ? error.message : 'Failed to update job' }
+        error: { message: error instanceof Error ? error.message : 'Failed to update job' },
       });
     }
   }
@@ -123,7 +123,7 @@ router.post(
       logger.error(`Failed to start job ${req.params.jobId}:`, error);
       res.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to start job'
+        message: error instanceof Error ? error.message : 'Failed to start job',
       });
     }
   }
@@ -146,7 +146,7 @@ router.post(
       logger.error(`Failed to stop job ${req.params.jobId}:`, error);
       res.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : 'Failed to stop job'
+        message: error instanceof Error ? error.message : 'Failed to stop job',
       });
     }
   }
@@ -168,7 +168,7 @@ router.post(
       await JobScheduler.triggerJob(jobId, userId);
       res.json({
         success: true,
-        message: 'Job triggered successfully'
+        message: 'Job triggered successfully',
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to trigger job';

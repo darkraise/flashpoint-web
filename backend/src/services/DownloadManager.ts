@@ -99,7 +99,7 @@ export class DownloadManager {
         gameDataId,
         gameId: gameData.gameId,
         filename,
-        sourceCount: sources.length
+        sourceCount: sources.length,
       });
 
       // Collect errors from failed sources
@@ -112,7 +112,7 @@ export class DownloadManager {
         try {
           logger.info(`Attempting download from source ${i + 1}/${sources.length}`, {
             source: source.name,
-            gameDataId
+            gameDataId,
           });
 
           // Update progress
@@ -123,7 +123,7 @@ export class DownloadManager {
             filename,
             source: source.name,
             bytesDownloaded: 0,
-            totalBytes: 0
+            totalBytes: 0,
           });
 
           // Construct URL
@@ -131,27 +131,22 @@ export class DownloadManager {
           logger.debug('Download URL constructed', { url, source: source.name });
 
           // Download to temp file
-          await this.downloadFile(
-            url,
-            tempFilePath,
-            controller.signal,
-            (downloaded, total) => {
-              const percent = total > 0 ? Math.floor((downloaded / total) * 100) : 0;
-              onProgress?.(percent);
-              onDetails?.({
-                gameId: gameData.gameId,
-                gameDataId,
-                filename,
-                source: source.name,
-                bytesDownloaded: downloaded,
-                totalBytes: total
-              });
-            }
-          );
+          await this.downloadFile(url, tempFilePath, controller.signal, (downloaded, total) => {
+            const percent = total > 0 ? Math.floor((downloaded / total) * 100) : 0;
+            onProgress?.(percent);
+            onDetails?.({
+              gameId: gameData.gameId,
+              gameDataId,
+              filename,
+              source: source.name,
+              bytesDownloaded: downloaded,
+              totalBytes: total,
+            });
+          });
 
           logger.info('Download completed, validating hash', {
             gameDataId,
-            source: source.name
+            source: source.name,
           });
 
           // Update status to validating
@@ -161,7 +156,7 @@ export class DownloadManager {
             filename,
             source: source.name,
             bytesDownloaded: 0,
-            totalBytes: 0
+            totalBytes: 0,
           });
 
           // Validate hash
@@ -169,7 +164,7 @@ export class DownloadManager {
 
           logger.info('Hash validation successful, importing file', {
             gameDataId,
-            source: source.name
+            source: source.name,
           });
 
           // Import to final location
@@ -181,7 +176,7 @@ export class DownloadManager {
           logger.info('Download workflow completed successfully', {
             gameDataId,
             finalPath,
-            source: source.name
+            source: source.name,
           });
 
           // Success! Return final path
@@ -191,12 +186,12 @@ export class DownloadManager {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           logger.warn(`Download failed from source: ${source.name}`, {
             gameDataId,
-            error: errorMessage
+            error: errorMessage,
           });
 
           errors.push({
             source: source.name,
-            error: errorMessage
+            error: errorMessage,
           });
 
           // Clean up temp file for next attempt
@@ -213,9 +208,7 @@ export class DownloadManager {
       }
 
       // All sources failed
-      const errorSummary = errors
-        .map(e => `${e.source}: ${e.error}`)
-        .join('\n');
+      const errorSummary = errors.map((e) => `${e.source}: ${e.error}`).join('\n');
 
       throw new Error(
         `Failed to download game data from all ${sources.length} sources:\n${errorSummary}`
@@ -245,8 +238,8 @@ export class DownloadManager {
       timeout: this.DOWNLOAD_TIMEOUT_MS,
       signal: abortSignal as any,
       headers: {
-        'User-Agent': 'Flashpoint-WebApp/1.0'
-      }
+        'User-Agent': 'Flashpoint-WebApp/1.0',
+      },
     });
 
     const totalBytes = parseInt(response.headers['content-length'] || '0', 10);

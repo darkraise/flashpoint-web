@@ -26,7 +26,17 @@ interface GameListItemProps {
   breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
 }
 
-export function GameListItem({ game, showFavoriteButton = true, showRemoveButton = false, showFavoriteIndicator = false, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null, breadcrumbContext }: GameListItemProps) {
+export function GameListItem({
+  game,
+  showFavoriteButton = true,
+  showRemoveButton = false,
+  showFavoriteIndicator = false,
+  showAddToPlaylistButton = true,
+  favoriteGameIds,
+  isFavoritePage = false,
+  shareToken = null,
+  breadcrumbContext,
+}: GameListItemProps) {
   const [imageError, setImageError] = useState(false);
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
 
@@ -38,7 +48,11 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
 
   // Parse tags (limit to first 3 for list display)
   const tags = game.tagsStr
-    ? game.tagsStr.split(';').map(t => t.trim()).filter(Boolean).slice(0, 3)
+    ? game.tagsStr
+        .split(';')
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .slice(0, 3)
     : [];
 
   const isFavorited = favoriteGameIds?.has(game.id) ?? false;
@@ -51,7 +65,7 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
   // Handle navigation to game details with breadcrumb context
   const handleNavigateToDetails = () => {
     navigate(gameDetailUrl, {
-      state: breadcrumbContext ? { breadcrumbContext } : undefined
+      state: breadcrumbContext ? { breadcrumbContext } : undefined,
     });
   };
 
@@ -82,7 +96,10 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
           {/* Game Info */}
           <div className="flex-1 min-w-0 space-y-1">
             <div onClick={handleNavigateToDetails} className="cursor-pointer">
-              <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors" title={game.title}>
+              <h3
+                className="font-semibold text-sm truncate hover:text-primary transition-colors"
+                title={game.title}
+              >
                 {game.title}
               </h3>
             </div>
@@ -117,11 +134,7 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
 
             {/* Remove from Favorites Button (Favorites page only) */}
             {showRemoveButton && isFavoritePage ? (
-              <RemoveFavoriteButton
-                gameId={game.id}
-                size="sm"
-                className="h-9 w-9 p-0"
-              />
+              <RemoveFavoriteButton gameId={game.id} size="sm" className="h-9 w-9 p-0" />
             ) : null}
 
             {/* Add to Favorites Button (other pages, when not favorited) */}
@@ -144,7 +157,7 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
                   e.preventDefault();
                   e.stopPropagation();
                   if (!isAuthenticated) {
-                    toast.error("Please log in to add games to playlists");
+                    toast.error('Please log in to add games to playlists');
                     return;
                   }
                   setIsPlaylistModalOpen(true);
@@ -158,15 +171,8 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
             ) : null}
 
             {isPlayable ? (
-              <Button
-                size="sm"
-                asChild
-              >
-                <Link
-                  to={gamePlayUrl}
-                  title="Play Game"
-                  aria-label="Play Game"
-                >
+              <Button size="sm" asChild>
+                <Link to={gamePlayUrl} title="Play Game" aria-label="Play Game">
                   <Play size={18} />
                 </Link>
               </Button>

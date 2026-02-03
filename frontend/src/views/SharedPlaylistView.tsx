@@ -48,10 +48,7 @@ export function SharedPlaylistView() {
   });
 
   // Fetch shared playlist games
-  const {
-    data: games = [],
-    isLoading: isLoadingGames,
-  } = useQuery({
+  const { data: games = [], isLoading: isLoadingGames } = useQuery({
     queryKey: ['sharedPlaylistGames', shareToken],
     queryFn: () => sharedPlaylistsApi.getGames(shareToken!),
     enabled: !!shareToken && !!playlist,
@@ -140,12 +137,7 @@ export function SharedPlaylistView() {
               </>
             )}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyLink}
-            className="flex-shrink-0"
-          >
+          <Button variant="outline" size="sm" onClick={handleCopyLink} className="flex-shrink-0">
             <Copy className="h-4 w-4 mr-2" />
             Copy Link
           </Button>
@@ -206,10 +198,7 @@ export function SharedPlaylistView() {
         <div className="flex items-center gap-2">
           <ViewOptions />
           {isAuthenticated ? (
-            <Button
-              onClick={handleClone}
-              disabled={isCloning || clonePlaylist.isPending}
-            >
+            <Button onClick={handleClone} disabled={isCloning || clonePlaylist.isPending}>
               {isCloning || clonePlaylist.isPending ? 'Cloning...' : 'Clone to My Playlists'}
             </Button>
           ) : null}

@@ -10,7 +10,8 @@ import { z } from 'zod';
  * POST /mount/:gameId
  */
 export const mountGameSchema = z.object({
-  gameId: z.string()
+  gameId: z
+    .string()
     .min(1, 'Game ID is required')
     .max(255, 'Game ID is too long')
     .regex(/^[a-zA-Z0-9\-_]+$/, 'Game ID contains invalid characters'),
@@ -21,7 +22,8 @@ export const mountGameSchema = z.object({
  * DELETE /mount/:gameId
  */
 export const unmountGameSchema = z.object({
-  gameId: z.string()
+  gameId: z
+    .string()
     .min(1, 'Game ID is required')
     .max(255, 'Game ID is too long')
     .regex(/^[a-zA-Z0-9\-_]+$/, 'Game ID contains invalid characters'),
@@ -32,7 +34,8 @@ export const unmountGameSchema = z.object({
  * GET /{path}
  */
 export const filePathSchema = z.object({
-  path: z.string()
+  path: z
+    .string()
     .min(1, 'Path is required')
     .max(2048, 'Path is too long')
     // Block null bytes and obviously malicious patterns
@@ -54,7 +57,8 @@ export const filePathSchema = z.object({
 /**
  * Schema for hostname validation
  */
-export const hostnameSchema = z.string()
+export const hostnameSchema = z
+  .string()
   .min(1, 'Hostname is required')
   .max(253, 'Hostname is too long')
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9\-_.]*[a-zA-Z0-9]$/, {

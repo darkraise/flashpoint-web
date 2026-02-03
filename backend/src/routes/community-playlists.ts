@@ -13,7 +13,7 @@ router.get(
   '/',
   optionalAuth,
   logActivity('playlists.community.browse', 'community_playlists', (req, res) => ({
-    playlistCount: res.locals.playlistCount || 0
+    playlistCount: res.locals.playlistCount || 0,
   })),
   asyncHandler(async (req, res) => {
     const playlists = await communityPlaylistService.fetchCommunityPlaylists();
@@ -36,7 +36,7 @@ router.post(
     downloadUrl: req.body.downloadUrl,
     playlistTitle: res.locals.playlistTitle || null,
     playlistId: res.locals.playlistId || null,
-    gameCount: res.locals.gameCount || 0
+    gameCount: res.locals.gameCount || 0,
   })),
   asyncHandler(async (req, res) => {
     const { downloadUrl } = req.body;

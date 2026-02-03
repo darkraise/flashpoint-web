@@ -20,7 +20,10 @@ export class AuthService {
   /**
    * Login user with username/password
    */
-  async login(credentials: LoginCredentials, ipAddress: string): Promise<{ user: AuthUser; tokens: AuthTokens }> {
+  async login(
+    credentials: LoginCredentials,
+    ipAddress: string
+  ): Promise<{ user: AuthUser; tokens: AuthTokens }> {
     try {
       const { username, password } = credentials;
 
@@ -52,10 +55,10 @@ export class AuthService {
       await this.recordLoginAttempt(username, ipAddress, true);
 
       // Update last login
-      UserDatabaseService.run(
-        "UPDATE users SET last_login_at = ? WHERE id = ?",
-        [new Date().toISOString(), user.id]
-      );
+      UserDatabaseService.run('UPDATE users SET last_login_at = ? WHERE id = ?', [
+        new Date().toISOString(),
+        user.id,
+      ]);
 
       // Get user permissions
       const permissions = this.getUserPermissions(user.id);
@@ -71,7 +74,7 @@ export class AuthService {
         role: user.role_name,
         permissions,
         themeColor: user.theme_color || 'blue-500',
-        surfaceColor: user.surface_color || 'slate-700'
+        surfaceColor: user.surface_color || 'slate-700',
       };
 
       return { user: authUser, tokens };
@@ -79,7 +82,7 @@ export class AuthService {
       logger.error('[AuthService] Login error:', {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
-        username: credentials.username
+        username: credentials.username,
       });
       throw error;
     }
@@ -108,19 +111,17 @@ export class AuthService {
     }
 
     // Check if username exists
-    const existingUser = UserDatabaseService.get(
-      'SELECT id FROM users WHERE username = ?',
-      [data.username]
-    );
+    const existingUser = UserDatabaseService.get('SELECT id FROM users WHERE username = ?', [
+      data.username,
+    ]);
     if (existingUser) {
       throw new AppError(409, 'Username already exists');
     }
 
     // Check if email exists
-    const existingEmail = UserDatabaseService.get(
-      'SELECT id FROM users WHERE email = ?',
-      [data.email]
-    );
+    const existingEmail = UserDatabaseService.get('SELECT id FROM users WHERE email = ?', [
+      data.email,
+    ]);
     if (existingEmail) {
       throw new AppError(409, 'Email already exists');
     }
@@ -158,7 +159,9 @@ export class AuthService {
       [userId, defaultTheme, userId, defaultPrimaryColor]
     );
 
-    logger.info(`[AuthService] Created user ${data.username} with default theme: ${defaultTheme}, primary color: ${defaultPrimaryColor}`);
+    logger.info(
+      `[AuthService] Created user ${data.username} with default theme: ${defaultTheme}, primary color: ${defaultPrimaryColor}`
+    );
 
     // Get created user
     const user = UserDatabaseService.get(
@@ -182,7 +185,7 @@ export class AuthService {
       role: user.role_name,
       permissions,
       themeColor: user.theme_color || 'blue-500',
-      surfaceColor: user.surface_color || 'slate-700'
+      surfaceColor: user.surface_color || 'slate-700',
     };
 
     return { user: authUser, tokens };
@@ -192,10 +195,10 @@ export class AuthService {
    * Logout user (revoke refresh token)
    */
   async logout(refreshToken: string): Promise<void> {
-    UserDatabaseService.run(
-      "UPDATE refresh_tokens SET revoked_at = ? WHERE token = ?",
-      [new Date().toISOString(), refreshToken]
-    );
+    UserDatabaseService.run('UPDATE refresh_tokens SET revoked_at = ? WHERE token = ?', [
+      new Date().toISOString(),
+      refreshToken,
+    ]);
   }
 
   /**
@@ -204,7 +207,7 @@ export class AuthService {
    */
   async revokeAllUserTokens(userId: number): Promise<void> {
     UserDatabaseService.run(
-      "UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL",
+      'UPDATE refresh_tokens SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL',
       [new Date().toISOString(), userId]
     );
 
@@ -240,10 +243,10 @@ export class AuthService {
     }
 
     // Revoke the old refresh token (security best practice)
-    UserDatabaseService.run(
-      "UPDATE refresh_tokens SET revoked_at = ? WHERE token = ?",
-      [new Date().toISOString(), refreshToken]
-    );
+    UserDatabaseService.run('UPDATE refresh_tokens SET revoked_at = ? WHERE token = ?', [
+      new Date().toISOString(),
+      refreshToken,
+    ]);
 
     logger.debug(`[AuthService] Revoked old refresh token for user ${user.id}`);
 
@@ -278,7 +281,7 @@ export class AuthService {
         username: user.username,
         email: user.email,
         role: user.role_name,
-        permissions
+        permissions,
       };
     } catch (error) {
       throw new AppError(401, 'Invalid or expired token');
@@ -305,7 +308,7 @@ export class AuthService {
       [userId]
     );
 
-    const permissionNames = permissions.map(p => p.name);
+    const permissionNames = permissions.map((p) => p.name);
 
     // Store in cache
     PermissionCache.setUserPermissions(userId, permissionNames);
@@ -320,7 +323,7 @@ export class AuthService {
     const accessToken = generateAccessToken({
       userId: user.id,
       username: user.username,
-      role: user.role_name
+      role: user.role_name,
     });
 
     const refreshToken = generateRefreshToken();
@@ -335,7 +338,7 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      expiresIn: 3600 // 1 hour
+      expiresIn: 3600, // 1 hour
     };
   }
 
@@ -349,7 +352,10 @@ export class AuthService {
 
     // Validate and sanitize lockoutDuration to prevent SQL injection
     // Ensure it's a number between 1 and 1440 (24 hours)
-    const safeLockoutDuration = Math.min(Math.max(parseInt(String(lockoutDuration), 10) || 15, 1), 1440);
+    const safeLockoutDuration = Math.min(
+      Math.max(parseInt(String(lockoutDuration), 10) || 15, 1),
+      1440
+    );
 
     // Count failed attempts in lockout window - using parameterized query
     const failedAttempts = UserDatabaseService.get(
@@ -361,14 +367,21 @@ export class AuthService {
     );
 
     if (failedAttempts?.count >= maxAttempts) {
-      throw new AppError(429, `Too many login attempts. Please try again in ${safeLockoutDuration} minutes.`);
+      throw new AppError(
+        429,
+        `Too many login attempts. Please try again in ${safeLockoutDuration} minutes.`
+      );
     }
   }
 
   /**
    * Record login attempt
    */
-  private async recordLoginAttempt(username: string, ipAddress: string, success: boolean): Promise<void> {
+  private async recordLoginAttempt(
+    username: string,
+    ipAddress: string,
+    success: boolean
+  ): Promise<void> {
     UserDatabaseService.run(
       'INSERT INTO login_attempts (username, ip_address, success) VALUES (?, ?, ?)',
       [username, ipAddress, success ? 1 : 0]
@@ -389,10 +402,20 @@ export class AuthService {
 
       // Return settings with defaults if not found
       return {
-        guest_access_enabled: authSettings.guestAccessEnabled !== undefined ? (authSettings.guestAccessEnabled ? 1 : 0) : 1,
-        user_registration_enabled: authSettings.userRegistrationEnabled !== undefined ? (authSettings.userRegistrationEnabled ? 1 : 0) : 1,
+        guest_access_enabled:
+          authSettings.guestAccessEnabled !== undefined
+            ? authSettings.guestAccessEnabled
+              ? 1
+              : 0
+            : 1,
+        user_registration_enabled:
+          authSettings.userRegistrationEnabled !== undefined
+            ? authSettings.userRegistrationEnabled
+              ? 1
+              : 0
+            : 1,
         max_login_attempts: authSettings.maxLoginAttempts || 5,
-        lockout_duration_minutes: authSettings.lockoutDurationMinutes || 15
+        lockout_duration_minutes: authSettings.lockoutDurationMinutes || 15,
       };
     } catch (error) {
       logger.error('Failed to get auth settings, using defaults:', error);
@@ -401,7 +424,7 @@ export class AuthService {
         guest_access_enabled: 1,
         user_registration_enabled: 1,
         max_login_attempts: 5,
-        lockout_duration_minutes: 15
+        lockout_duration_minutes: 15,
       };
     }
   }

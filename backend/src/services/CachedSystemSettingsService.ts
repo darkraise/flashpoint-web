@@ -42,7 +42,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     if (value !== null) {
       this.cache.set(key, {
         value,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
 
@@ -64,7 +64,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
 
     this.categoryCache.set(category, {
       value,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     return value;
@@ -137,7 +137,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
       keyCount: this.cache.size,
       categoryCount: this.categoryCache.size,
       hitRate: 0, // Would need hit/miss tracking for accurate calculation
-      size: this.estimateCacheSize()
+      size: this.estimateCacheSize(),
     };
   }
 

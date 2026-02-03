@@ -54,7 +54,7 @@ export class GameFileService {
       this.infinityServerURL = 'http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/';
       this.externalFilePaths = [
         'http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs',
-        'http://infinity.unstable.life/Flashpoint/Legacy/htdocs/'
+        'http://infinity.unstable.life/Flashpoint/Legacy/htdocs/',
       ];
     }
   }
@@ -64,7 +64,9 @@ export class GameFileService {
    * @param urlPath The path like "www.example.com/path/file.swf"
    * @returns File buffer and content type
    */
-  async getGameFile(urlPath: string): Promise<{ data: Buffer; contentType: string; source: string }> {
+  async getGameFile(
+    urlPath: string
+  ): Promise<{ data: Buffer; contentType: string; source: string }> {
     logger.info(`[GameFileService] ========================================`);
     logger.info(`[GameFileService] Requested: ${urlPath}`);
 
@@ -96,7 +98,9 @@ export class GameFileService {
     // Try other external paths
     let attemptNum = 3;
     for (const externalPath of this.externalFilePaths) {
-      logger.info(`[GameFileService] [${attemptNum}/${3 + this.externalFilePaths.length}] Trying: ${externalPath}`);
+      logger.info(
+        `[GameFileService] [${attemptNum}/${3 + this.externalFilePaths.length}] Trying: ${externalPath}`
+      );
       const result = await this.tryExternalSource(externalPath, urlPath);
       if (result) {
         logger.info(`[GameFileService] ✓ Found in external source!`);
@@ -105,14 +109,18 @@ export class GameFileService {
       attemptNum++;
     }
 
-    logger.error(`[GameFileService] ✗ File not found in any source (tried ${2 + this.externalFilePaths.length} sources)`);
+    logger.error(
+      `[GameFileService] ✗ File not found in any source (tried ${2 + this.externalFilePaths.length} sources)`
+    );
     throw new Error('File not found in Game Server or any external source');
   }
 
   /**
    * Try to get file from the local Game Server
    */
-  private async tryGameServer(urlPath: string): Promise<{ data: Buffer; contentType: string } | null> {
+  private async tryGameServer(
+    urlPath: string
+  ): Promise<{ data: Buffer; contentType: string } | null> {
     return new Promise((resolve, reject) => {
       // Make proxy-style HTTP request
       const fullUrl = `http://${urlPath}`;
@@ -124,7 +132,7 @@ export class GameFileService {
         path: fullUrl,
         method: 'GET',
         headers: {
-          'Host': parsedUrl.hostname,
+          Host: parsedUrl.hostname,
           'User-Agent': 'Flashpoint-WebApp/1.0',
         },
         timeout: 10000,
@@ -163,7 +171,10 @@ export class GameFileService {
   /**
    * Try to download file from an external source
    */
-  private async tryExternalSource(baseUrl: string, urlPath: string): Promise<{ data: Buffer; contentType: string } | null> {
+  private async tryExternalSource(
+    baseUrl: string,
+    urlPath: string
+  ): Promise<{ data: Buffer; contentType: string } | null> {
     // Construct full URL
     // baseUrl might be: http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/
     // urlPath is: www.example.com/path/file.swf
@@ -209,7 +220,9 @@ export class GameFileService {
         } else if (error.code === 'ENOTFOUND') {
           logger.warn(`[GameFileService] ✗ DNS resolution failed`);
         } else if (error.response) {
-          logger.warn(`[GameFileService] ✗ HTTP ${error.response.status}: ${error.response.statusText}`);
+          logger.warn(
+            `[GameFileService] ✗ HTTP ${error.response.status}: ${error.response.statusText}`
+          );
         } else if (error.request) {
           logger.warn(`[GameFileService] ✗ No response received: ${error.message}`);
         } else {

@@ -1,16 +1,22 @@
-import { useState, useEffect } from "react";
-import { Palette, Check, Globe, Plus, Trash2 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { motion, Variants } from "framer-motion";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { systemSettingsApi } from "@/lib/api";
-import { useAuthStore } from "@/store/auth";
-import { useDialog } from "@/contexts/DialogContext";
-import { AppSettings } from "@/types/settings";
-import { useDomains, useAddDomain, useDeleteDomain, useSetDefaultDomain } from "@/hooks/useDomains";
+import { useState, useEffect } from 'react';
+import { Palette, Check, Globe, Plus, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { motion, Variants } from 'framer-motion';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { systemSettingsApi } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
+import { useDialog } from '@/contexts/DialogContext';
+import { AppSettings } from '@/types/settings';
+import { useDomains, useAddDomain, useDeleteDomain, useSetDefaultDomain } from '@/hooks/useDomains';
 
 interface AppSettingsTabProps {
   tabContentVariants: Variants;
@@ -20,13 +26,13 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
   const { user } = useAuthStore();
   const { showToast } = useDialog();
   const queryClient = useQueryClient();
-  const isAdmin = user?.permissions.includes("settings.update");
+  const isAdmin = user?.permissions.includes('settings.update');
 
   // Local state for site name input
-  const [siteNameInput, setSiteNameInput] = useState("");
+  const [siteNameInput, setSiteNameInput] = useState('');
 
   // Domain settings state
-  const [domainInput, setDomainInput] = useState("");
+  const [domainInput, setDomainInput] = useState('');
   const [domainError, setDomainError] = useState<string | null>(null);
   const { data: domains } = useDomains(!!isAdmin);
   const addDomainMutation = useAddDomain();
@@ -35,8 +41,8 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
 
   // Fetch app settings
   const { data: appSettings } = useQuery({
-    queryKey: ["systemSettings", "app"],
-    queryFn: async () => systemSettingsApi.getCategory("app") as unknown as AppSettings,
+    queryKey: ['systemSettings', 'app'],
+    queryFn: async () => systemSettingsApi.getCategory('app') as unknown as AppSettings,
     enabled: isAdmin,
   });
 
@@ -49,42 +55,33 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
 
   // Update system settings mutation
   const updateSystemSettings = useMutation({
-    mutationFn: ({
-      category,
-      settings,
-    }: {
-      category: string;
-      settings: Record<string, unknown>;
-    }) => systemSettingsApi.updateCategory(category, settings),
+    mutationFn: ({ category, settings }: { category: string; settings: Record<string, unknown> }) =>
+      systemSettingsApi.updateCategory(category, settings),
     onSuccess: (updatedSettings, variables) => {
       // Use response data instead of refetching
-      queryClient.setQueryData(
-        ["systemSettings", variables.category],
-        updatedSettings
-      );
+      queryClient.setQueryData(['systemSettings', variables.category], updatedSettings);
 
       // Invalidate public settings cache so header updates
       queryClient.invalidateQueries({
-        queryKey: ["system-settings", "public"],
+        queryKey: ['system-settings', 'public'],
       });
 
-      showToast("Settings updated successfully", "success");
+      showToast('Settings updated successfully', 'success');
     },
     onError: (error: any) => {
-      const message =
-        error?.response?.data?.error?.message || "Failed to update settings";
-      showToast(message, "error");
+      const message = error?.response?.data?.error?.message || 'Failed to update settings';
+      showToast(message, 'error');
     },
   });
 
   // Handler to save site name
   const handleSaveSiteName = () => {
-    if (siteNameInput.trim() === "") {
-      showToast("Site name cannot be empty", "error");
+    if (siteNameInput.trim() === '') {
+      showToast('Site name cannot be empty', 'error');
       return;
     }
     updateSystemSettings.mutate({
-      category: "app",
+      category: 'app',
       settings: { siteName: siteNameInput.trim() },
     });
   };
@@ -122,7 +119,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                   value={siteNameInput}
                   onChange={(e) => setSiteNameInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === 'Enter') {
                       handleSaveSiteName();
                     }
                   }}
@@ -133,7 +130,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                   onClick={handleSaveSiteName}
                   disabled={
                     updateSystemSettings.isPending ||
-                    siteNameInput.trim() === "" ||
+                    siteNameInput.trim() === '' ||
                     siteNameInput === appSettings?.siteName
                   }
                   size="icon"
@@ -151,8 +148,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                   Maintenance Mode
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Enable maintenance mode to prevent non-admin users from
-                  accessing the application.
+                  Enable maintenance mode to prevent non-admin users from accessing the application.
                 </p>
               </div>
               <Switch
@@ -160,7 +156,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                 checked={appSettings.maintenanceMode || false}
                 onCheckedChange={(checked: boolean) => {
                   updateSystemSettings.mutate({
-                    category: "app",
+                    category: 'app',
                     settings: { maintenanceMode: checked },
                   });
                 }}
@@ -177,10 +173,10 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                 Default theme mode for new users (light, dark, or system).
               </p>
               <Select
-                value={appSettings.defaultTheme || "dark"}
+                value={appSettings.defaultTheme || 'dark'}
                 onValueChange={(value: string) => {
                   updateSystemSettings.mutate({
-                    category: "app",
+                    category: 'app',
                     settings: { defaultTheme: value },
                   });
                 }}
@@ -202,14 +198,12 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
               <Label htmlFor="default-primary-color" className="text-base">
                 Default Primary Color
               </Label>
-              <p className="text-sm text-muted-foreground">
-                Default primary color for new users.
-              </p>
+              <p className="text-sm text-muted-foreground">Default primary color for new users.</p>
               <Select
-                value={appSettings.defaultPrimaryColor || "blue"}
+                value={appSettings.defaultPrimaryColor || 'blue'}
                 onValueChange={(value: string) => {
                   updateSystemSettings.mutate({
-                    category: "app",
+                    category: 'app',
                     settings: {
                       defaultPrimaryColor: value,
                     },
@@ -257,8 +251,8 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
             <h2 className="text-xl font-semibold">Domain Settings</h2>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            Configure custom domains for sharing playlists. The default domain
-            is used in share links for non-admin users.
+            Configure custom domains for sharing playlists. The default domain is used in share
+            links for non-admin users.
           </p>
 
           {/* Add Domain */}
@@ -267,7 +261,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
               <input
                 type="text"
                 className={`w-full px-3 py-2 bg-background border rounded-md focus:outline-none focus:ring-1 focus:ring-primary ${
-                  domainError ? "border-destructive" : "border-border"
+                  domainError ? 'border-destructive' : 'border-border'
                 }`}
                 value={domainInput}
                 onChange={(e) => {
@@ -275,14 +269,12 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                   setDomainError(null);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddDomain();
+                  if (e.key === 'Enter') handleAddDomain();
                 }}
                 placeholder="e.g., play.example.com"
                 disabled={addDomainMutation.isPending}
               />
-              {domainError ? (
-                <p className="text-xs text-destructive mt-1">{domainError}</p>
-              ) : null}
+              {domainError ? <p className="text-xs text-destructive mt-1">{domainError}</p> : null}
             </div>
             <Button
               onClick={handleAddDomain}
@@ -311,9 +303,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                       disabled={setDefaultDomainMutation.isPending}
                       className="accent-primary"
                     />
-                    <span className="text-sm font-mono truncate">
-                      {domain.hostname}
-                    </span>
+                    <span className="text-sm font-mono truncate">{domain.hostname}</span>
                     {domain.isDefault ? (
                       <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full whitespace-nowrap">
                         default
@@ -335,8 +325,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground italic">
-              No domains configured. Share links will use the current browser
-              URL.
+              No domains configured. Share links will use the current browser URL.
             </p>
           )}
         </div>
@@ -358,13 +347,13 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
       return;
     }
     if (domains?.some((d) => d.hostname.toLowerCase() === value.toLowerCase())) {
-      setDomainError("This domain already exists");
+      setDomainError('This domain already exists');
       return;
     }
 
     addDomainMutation.mutate(value, {
       onSuccess: () => {
-        setDomainInput("");
+        setDomainInput('');
         setDomainError(null);
       },
     });

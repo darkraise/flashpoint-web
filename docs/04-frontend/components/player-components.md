@@ -1,6 +1,7 @@
 # Player Components
 
-This document describes the game player components used to render Flash and HTML5 games.
+This document describes the game player components used to render Flash and
+HTML5 games.
 
 ## Component Overview
 
@@ -14,6 +15,7 @@ The player architecture consists of two main components:
 Universal game player component that handles Flash (Ruffle) and HTML5 games.
 
 ### Location
+
 `D:\Repositories\Personal\flashpoint-web\frontend\src\components\player\GamePlayer.tsx`
 
 ### Props
@@ -257,6 +259,7 @@ allow="
 Flash emulator component using Ruffle WebAssembly.
 
 ### Location
+
 `D:\Repositories\Personal\flashpoint-web\frontend\src\components\player\RufflePlayer.tsx`
 
 ### Props
@@ -313,7 +316,7 @@ useEffect(() => {
 
     try {
       // Wait for any previous cleanup
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       if (!mounted) return;
 
@@ -328,12 +331,14 @@ useEffect(() => {
           oldPlayer.remove();
         }
 
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
       // Load Ruffle script if not already loaded
       if (!(window as any).RufflePlayer) {
-        const existingScript = document.querySelector('script[src="/ruffle/ruffle.js"]');
+        const existingScript = document.querySelector(
+          'script[src="/ruffle/ruffle.js"]'
+        );
 
         if (!existingScript) {
           const script = document.createElement('script');
@@ -341,14 +346,15 @@ useEffect(() => {
 
           await new Promise<void>((resolve, reject) => {
             script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Failed to load Ruffle script'));
+            script.onerror = () =>
+              reject(new Error('Failed to load Ruffle script'));
             document.head.appendChild(script);
           });
         }
       }
 
       // Wait for Ruffle to initialize
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Create player
       const RufflePlayer = (window as any).RufflePlayer;
@@ -427,22 +433,22 @@ useEffect(() => {
 
 ```typescript
 player.config = {
-  autoplay: 'auto',              // Auto-start playback
-  backgroundColor: '#000000',     // Black background
-  letterbox: 'on',               // Letterbox for aspect ratio
-  unmuteOverlay: 'visible',      // Show unmute button if needed
-  contextMenu: true,             // Enable right-click menu
-  showSwfDownload: false,        // Hide download option
+  autoplay: 'auto', // Auto-start playback
+  backgroundColor: '#000000', // Black background
+  letterbox: 'on', // Letterbox for aspect ratio
+  unmuteOverlay: 'visible', // Show unmute button if needed
+  contextMenu: true, // Enable right-click menu
+  showSwfDownload: false, // Hide download option
   upgradeToHttps: window.location.protocol === 'https:',
   warnOnUnsupportedContent: true,
-  logLevel: 'error',             // Only log errors
-  publicPath: '/ruffle/',        // Path to Ruffle files
-  scale: 'showAll',              // Show all content, maintain aspect
-  forceScale: true,              // Prevent runtime scale changes
-  quality: 'high',               // High quality rendering
+  logLevel: 'error', // Only log errors
+  publicPath: '/ruffle/', // Path to Ruffle files
+  scale: 'showAll', // Show all content, maintain aspect
+  forceScale: true, // Prevent runtime scale changes
+  quality: 'high', // High quality rendering
   allowScriptAccess: 'sameDomain',
-  salign: '',                    // Center alignment
-  wmode: 'opaque',               // Opaque mode
+  salign: '', // Center alignment
+  wmode: 'opaque', // Opaque mode
 };
 ```
 
@@ -450,14 +456,16 @@ player.config = {
 
 Ruffle supports multiple scale modes (configured via `scale` option):
 
-- **showAll** (Default) - Show entire content, maintain aspect ratio, add letterboxing if needed
+- **showAll** (Default) - Show entire content, maintain aspect ratio, add
+  letterboxing if needed
 - **noscale** - No scaling, 1:1 pixel mapping
 - **exactfit** - Scale to fill container, ignore aspect ratio
 - **noborder** - Scale to fill, maintain aspect, crop if needed
 
 ### Cleanup Strategy
 
-The component implements a robust cleanup strategy to prevent memory leaks and stale instances:
+The component implements a robust cleanup strategy to prevent memory leaks and
+stale instances:
 
 1. **Mount Flag** - Track if component is mounted
 2. **Initialization Lock** - Prevent multiple simultaneous initializations

@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
-import { sanitizeAndValidatePath, validatePathInAllowedDirectories, sanitizeUrlPath } from './pathSecurity';
+import {
+  sanitizeAndValidatePath,
+  validatePathInAllowedDirectories,
+  sanitizeUrlPath,
+} from './pathSecurity';
 
 describe('pathSecurity', () => {
   describe('sanitizeAndValidatePath', () => {
@@ -53,10 +57,7 @@ describe('pathSecurity', () => {
   });
 
   describe('validatePathInAllowedDirectories', () => {
-    const allowedBases = [
-      path.resolve('/var/www/htdocs'),
-      path.resolve('/var/www/cgi-bin'),
-    ];
+    const allowedBases = [path.resolve('/var/www/htdocs'), path.resolve('/var/www/cgi-bin')];
 
     it('should allow paths in first base directory', () => {
       const result = validatePathInAllowedDirectories(allowedBases, 'files/game.swf');

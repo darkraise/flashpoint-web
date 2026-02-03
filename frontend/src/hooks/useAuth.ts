@@ -14,7 +14,7 @@ export function useLogin() {
     mutationFn: (credentials: LoginCredentials) => login(credentials),
     onError: (error) => {
       logger.error('Login error:', error);
-    }
+    },
   });
 }
 
@@ -33,7 +33,7 @@ export function useRegister() {
     },
     onError: (error) => {
       logger.error('Registration error:', error);
-    }
+    },
   });
 }
 
@@ -52,7 +52,7 @@ export function useLogout() {
     },
     onError: (error) => {
       logger.error('Logout error:', error);
-    }
+    },
   });
 }
 
@@ -65,6 +65,6 @@ export function useCurrentUser() {
     queryFn: () => authApi.getMe(),
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000 // 10 minutes (formerly cacheTime)
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });
 }

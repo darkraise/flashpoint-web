@@ -2,14 +2,21 @@ import { Gamepad2, Tv, User, Building2, Users, Globe, Tag, type LucideIcon } fro
 import type { GameFilters } from '@/types/game';
 
 export interface FilterConfig {
-  id: string;              // 'platform', 'series', etc.
-  label: string;           // 'Platform', 'Series', etc.
+  id: string; // 'platform', 'series', etc.
+  label: string; // 'Platform', 'Series', etc.
   icon: LucideIcon;
-  paramKey: keyof GameFilters;        // URL param key
-  optionsKey: 'platforms' | 'series' | 'developers' | 'publishers' | 'playModes' | 'languages' | 'tags';      // Key in filterOptions response
+  paramKey: keyof GameFilters; // URL param key
+  optionsKey:
+    | 'platforms'
+    | 'series'
+    | 'developers'
+    | 'publishers'
+    | 'playModes'
+    | 'languages'
+    | 'tags'; // Key in filterOptions response
   placeholder?: string;
   emptyMessage?: string;
-  badgeLabel: string;      // Plural form for badges ("Platforms", "Tags", etc.)
+  badgeLabel: string; // Plural form for badges ("Platforms", "Tags", etc.)
 }
 
 export const FILTER_CONFIGS: FilterConfig[] = [

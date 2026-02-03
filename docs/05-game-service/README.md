@@ -1,12 +1,15 @@
 # Game Service
 
-The Game Service is an independent Node.js service that provides game content delivery with intelligent fallback mechanisms for legacy web content and ZIP archive serving.
+The Game Service is an independent Node.js service that provides game content
+delivery with intelligent fallback mechanisms for legacy web content and ZIP
+archive serving.
 
 ## Overview
 
 The game-service runs two HTTP servers:
 
-1. **HTTP Proxy Server** (Port 22500) - Legacy web content serving with fallback chain
+1. **HTTP Proxy Server** (Port 22500) - Legacy web content serving with fallback
+   chain
 2. **GameZip Server** (Port 22501) - ZIP archive streaming
 
 ## Architecture
@@ -27,7 +30,8 @@ The game-service runs two HTTP servers:
 
 ## Key Features
 
-- **Multi-source fallback**: Local htdocs → Game data → ZIP archives → External CDN
+- **Multi-source fallback**: Local htdocs → Game data → ZIP archives → External
+  CDN
 - **Zero-extraction ZIP serving**: Files streamed directly from archives
 - **MIME type detection**: 199+ file types including legacy formats
 - **HTML polyfill injection**: Automatic compatibility fixes
@@ -74,29 +78,31 @@ curl -X POST http://localhost:22501/mount/game-123 \
 ## Service Ports
 
 | Port  | Service        | Purpose                          |
-|-------|----------------|----------------------------------|
+| ----- | -------------- | -------------------------------- |
 | 22500 | HTTP Proxy     | Legacy web content and fallbacks |
 | 22501 | GameZip Server | ZIP archive file serving         |
 
 ## Environment Variables
 
-| Variable                | Default                     | Description              |
-|-------------------------|------------------------------|--------------------------|
-| PROXY_PORT              | 22500                        | HTTP proxy server port   |
-| GAMEZIPSERVER_PORT      | 22501                        | GameZip server port      |
-| FLASHPOINT_PATH         | D:/Flashpoint                | Flashpoint installation  |
-| EXTERNAL_FALLBACK_URLS  | infinity.flashpointarchive   | CDN URLs (comma-separated)|
-| LOG_LEVEL               | info                         | Logging verbosity        |
+| Variable               | Default                    | Description                |
+| ---------------------- | -------------------------- | -------------------------- |
+| PROXY_PORT             | 22500                      | HTTP proxy server port     |
+| GAMEZIPSERVER_PORT     | 22501                      | GameZip server port        |
+| FLASHPOINT_PATH        | D:/Flashpoint              | Flashpoint installation    |
+| EXTERNAL_FALLBACK_URLS | infinity.flashpointarchive | CDN URLs (comma-separated) |
+| LOG_LEVEL              | info                       | Logging verbosity          |
 
 ## Request Flow
 
 ### HTTP Proxy (Port 22500)
+
 1. Try GameZip server (if ZIP mounted)
 2. Try local htdocs
 3. Try external CDN fallback
 4. Return 404 if not found
 
 ### GameZip Server (Port 22501)
+
 1. Mount ZIP via POST /mount/game-id
 2. Request file: GET /http://domain.com/path/file.swf
 3. Search mounted ZIPs for content
@@ -113,6 +119,7 @@ curl -X POST http://localhost:22501/mount/game-123 \
 ## Integration with Backend
 
 The backend delegates file serving to game-service:
+
 - Backend returns launch URLs pointing to proxy server
 - Frontend loads game content from game-service URLs
 - Game-service operates independently without backend communication
@@ -127,6 +134,7 @@ The backend delegates file serving to game-service:
 ## Troubleshooting
 
 ### Port Already in Use
+
 ```bash
 # Find process using port (Windows)
 netstat -ano | findstr :22500
@@ -136,12 +144,14 @@ PROXY_PORT=22510
 ```
 
 ### File Not Found
+
 1. Verify Flashpoint path is correct
 2. Check if file exists in htdocs directory
 3. Verify external fallback URLs are accessible
 4. Ensure ZIP is mounted via GameZip API
 
 ### CORS Errors
+
 - Verify `ALLOW_CROSS_DOMAIN=true` in `.env`
 - Check response headers: `curl -I <url>`
 - Ensure error responses include CORS headers
@@ -159,7 +169,8 @@ docker-compose up -d game-service
 docker-compose logs -f game-service
 ```
 
-Set `FLASHPOINT_HOST_PATH` environment variable to point to your Flashpoint installation.
+Set `FLASHPOINT_HOST_PATH` environment variable to point to your Flashpoint
+installation.
 
 ## Production Deployment
 

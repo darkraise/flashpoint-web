@@ -18,7 +18,7 @@ export function useGame(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['game', id],
     queryFn: () => gamesApi.getById(id),
-    enabled: !!id && (options?.enabled !== false)
+    enabled: !!id && options?.enabled !== false,
   });
 }
 
@@ -26,14 +26,14 @@ export function useRelatedGames(id: string, limit = 10) {
   return useQuery({
     queryKey: ['games', id, 'related', limit],
     queryFn: () => gamesApi.getRelated(id, limit),
-    enabled: !!id
+    enabled: !!id,
   });
 }
 
 export function useRandomGame(library?: string) {
   return useQuery({
     queryKey: ['games', 'random', library],
-    queryFn: () => gamesApi.getRandom(library)
+    queryFn: () => gamesApi.getRandom(library),
   });
 }
 
@@ -41,6 +41,6 @@ export function useGameLaunchData(id: string) {
   return useQuery({
     queryKey: ['game', id, 'launch'],
     queryFn: () => gamesApi.getLaunchData(id),
-    enabled: !!id
+    enabled: !!id,
   });
 }

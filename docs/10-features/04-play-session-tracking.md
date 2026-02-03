@@ -2,16 +2,20 @@
 
 ## Overview
 
-Play session tracking automatically monitors and records user gameplay sessions, providing statistics on games played, playtime, and engagement metrics through visualizations and dashboard displays.
+Play session tracking automatically monitors and records user gameplay sessions,
+providing statistics on games played, playtime, and engagement metrics through
+visualizations and dashboard displays.
 
 ## Architecture
 
 **Backend Components:**
+
 - `PlayTrackingService`: Core session tracking logic
 - Play tracking routes (routes/play-tracking.ts): REST API
 - Background jobs: Abandoned session cleanup
 
 **Frontend Components:**
+
 - `DashboardView`: Main statistics page
 - `UserStatsPanel`: Overview stats widget
 - `TopGamesChart`: Bar chart component
@@ -23,6 +27,7 @@ Play session tracking automatically monitors and records user gameplay sessions,
 ## Database Schema
 
 **user_game_plays table:**
+
 ```sql
 CREATE TABLE user_game_plays (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +43,7 @@ CREATE TABLE user_game_plays (
 ```
 
 **user_game_stats table (aggregated):**
+
 ```sql
 CREATE TABLE user_game_stats (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,6 +60,7 @@ CREATE TABLE user_game_stats (
 ```
 
 **user_stats table (overall stats):**
+
 ```sql
 CREATE TABLE user_stats (
   user_id INTEGER PRIMARY KEY,
@@ -70,17 +77,23 @@ CREATE TABLE user_stats (
 ## API Endpoints
 
 #### POST /api/play/start
+
 Start a new play session.
+
 - **Body:** `{ "gameId", "gameTitle" }`
 - **Response:** `{ "success": true, "sessionId": "uuid" }`
 
 #### POST /api/play/end
+
 End an active play session.
+
 - **Body:** `{ "sessionId" }`
 - **Response:** `{ "success": true }`
 
 #### GET /api/play/stats
+
 Get overall statistics for current user.
+
 - **Response:**
   ```json
   {
@@ -95,50 +108,64 @@ Get overall statistics for current user.
   ```
 
 #### GET /api/play/game-stats
+
 Get per-game statistics.
+
 - **Query:** `limit`, `offset`
 - **Response:** Array of game statistics with play counts and duration
 
 #### GET /api/play/history
+
 Get play session history.
+
 - **Query:** `limit`, `offset`
 - **Response:** Array of sessions with formatted duration
 
 #### GET /api/play/top-games
+
 Get top played games by playtime.
+
 - **Query:** `limit`
 - **Response:** Array of top games with playtime
 
 #### GET /api/play/activity-over-time
+
 Get daily play activity aggregated over time.
+
 - **Query:** `days` (max 365, default 30)
 - **Response:** Array with date, sessions count, and total playtime
 
 #### GET /api/play/games-distribution
+
 Get playtime distribution across games.
+
 - **Query:** `limit`
 - **Response:** Array with game titles, playtime, and percentage
 
 ## Session Lifecycle
 
 **1. Session Start:**
+
 - Generate unique session ID (UUID)
 - Create record in user_game_plays table
 - Set started_at to current timestamp
 - Leave ended_at and duration_seconds NULL
 
 **2. Active Session:**
+
 - Session remains "active" while user plays
 - ended_at is NULL
 - Frontend keeps sessionId in memory
 
 **3. Session End:**
+
 - Set ended_at to current timestamp
 - Calculate duration: ended_at - started_at
 - Update user_game_stats (aggregate data)
 - Update user_stats (overall stats)
 
 **4. Abandoned Session Cleanup:**
+
 - Background job runs every 6 hours
 - Find sessions older than 24 hours with NULL ended_at
 - Set ended_at to started_at + 24 hours
@@ -146,11 +173,13 @@ Get playtime distribution across games.
 
 ## Permissions
 
-Play session tracking requires no special permissions. All authenticated users can track their own sessions.
+Play session tracking requires no special permissions. All authenticated users
+can track their own sessions.
 
 ## Common Use Cases
 
 ### 1. Automatic Session Tracking
+
 ```typescript
 const { startSession, endSession } = usePlayTracking();
 
@@ -172,14 +201,16 @@ useEffect(() => {
 ```
 
 ### 2. View Dashboard Statistics
+
 ```typescript
 const { data: stats } = useQuery({
   queryKey: ['play-stats'],
-  queryFn: () => api.get('/play/stats').then(res => res.data)
+  queryFn: () => api.get('/play/stats').then((res) => res.data),
 });
 ```
 
 ### 3. Analyze Top Games
+
 ```typescript
 const { data: topGames } = useQuery({
   queryKey: ['top-games', limit],
@@ -192,6 +223,7 @@ const { data: topGames } = useQuery({
 ```
 
 ### 4. Track Playtime Trends
+
 ```typescript
 const [days, setDays] = useState(30);
 
@@ -221,24 +253,28 @@ const { data: activity } = useQuery({
 ## Troubleshooting
 
 **Sessions not ending:**
+
 - Check if endSession() is called on unmount
 - Verify sessionId is preserved correctly
 - Look for network errors in console
 - Check abandoned session cleanup job
 
 **Incorrect playtime:**
+
 - Verify duration calculation (ended_at - started_at)
 - Check for sessions with NULL ended_at
 - Ensure timestamps are in UTC
 - Validate aggregation queries
 
 **Missing statistics:**
+
 - Verify sessions are ending properly
 - Check if user_game_stats is updating
 - Ensure aggregate triggers are working
 - Look for database constraints violations
 
 **Charts not rendering:**
+
 - Check if data format matches chart expectations
 - Verify Recharts is installed
 - Inspect console for errors

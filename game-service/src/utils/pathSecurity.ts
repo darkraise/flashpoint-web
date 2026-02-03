@@ -100,9 +100,9 @@ export function sanitizeUrlPath(urlPath: string): string {
   // Note: We allow '..' because it will be handled by sanitizeAndValidatePath
   // But we check for obviously malicious patterns
   const dangerousPatterns = [
-    /\.\.\\/g,  // ..\ (Windows path traversal)
-    /\.\.%2[fF]/g,  // URL encoded ../
-    /\.\.%5[cC]/g,  // URL encoded ..\
+    /\.\.\\/g, // ..\ (Windows path traversal)
+    /\.\.%2[fF]/g, // URL encoded ../
+    /\.\.%5[cC]/g, // URL encoded ..\
   ];
 
   for (const pattern of dangerousPatterns) {

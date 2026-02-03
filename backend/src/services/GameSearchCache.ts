@@ -37,7 +37,7 @@ export class GameSearchCache {
     // Optional: Log evictions for monitoring
     dispose: (value, key) => {
       logger.debug(`[GameSearchCache] Evicted cache entry: ${key}`);
-    }
+    },
   });
 
   private static gameService = new GameService();
@@ -68,7 +68,7 @@ export class GameSearchCache {
       limit: query.limit,
       showBroken: query.showBroken,
       showExtreme: query.showExtreme,
-      fields: query.fields || 'detail'
+      fields: query.fields || 'detail',
     };
 
     return JSON.stringify(normalizedQuery);
@@ -79,7 +79,9 @@ export class GameSearchCache {
    * Checks cache first, falls back to database query if cache miss
    * If database fails, returns stale data from fallback cache
    */
-  static async searchGames(query: GameSearchQuery): Promise<PaginatedResult<Game> & { fromCache?: boolean; cacheAge?: number }> {
+  static async searchGames(
+    query: GameSearchQuery
+  ): Promise<PaginatedResult<Game> & { fromCache?: boolean; cacheAge?: number }> {
     const cacheKey = this.generateCacheKey(query);
 
     // Try to get from primary cache
@@ -105,7 +107,7 @@ export class GameSearchCache {
       if (!result || !result.data || !Array.isArray(result.data)) {
         logger.error('[GameSearchCache] Invalid result from database query', {
           result,
-          cacheKey: cacheKey.substring(0, 200)
+          cacheKey: cacheKey.substring(0, 200),
         });
         throw new Error('Invalid database query result');
       }
@@ -118,21 +120,21 @@ export class GameSearchCache {
     } catch (error) {
       // Database query failed - try fallback cache
       logger.warn('[GameSearchCache] Database query failed, attempting fallback cache', {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       const fallback = this.fallbackCache.get(cacheKey);
       if (fallback) {
         logger.info('[GameSearchCache] Serving stale data from fallback cache', {
           age: `${Math.round(fallback.age / 1000)}s`,
-          cachedAt: new Date(fallback.cachedAt).toISOString()
+          cachedAt: new Date(fallback.cachedAt).toISOString(),
         });
 
         // Return stale data with metadata
         return {
           ...fallback.data,
           fromCache: true,
-          cacheAge: fallback.age
+          cacheAge: fallback.age,
         };
       }
 
@@ -150,7 +152,9 @@ export class GameSearchCache {
   static clearCache(): void {
     const size = this.cache.size;
     this.cache.clear();
-    logger.info(`[GameSearchCache] Cleared primary cache (${size} entries), fallback cache preserved`);
+    logger.info(
+      `[GameSearchCache] Cleared primary cache (${size} entries), fallback cache preserved`
+    );
   }
 
   /**
@@ -163,7 +167,9 @@ export class GameSearchCache {
     this.cache.clear();
     this.fallbackCache.clear();
 
-    logger.info(`[GameSearchCache] Cleared all caches (primary: ${primarySize}, fallback: ${fallbackSize} entries)`);
+    logger.info(
+      `[GameSearchCache] Cleared all caches (primary: ${primarySize}, fallback: ${fallbackSize} entries)`
+    );
   }
 
   /**
@@ -177,9 +183,9 @@ export class GameSearchCache {
       primary: {
         size: this.cache.size,
         max: this.cache.max,
-        ttl: 1000 * 60 * 5 // 5 minutes
+        ttl: 1000 * 60 * 5, // 5 minutes
       },
-      fallback: this.fallbackCache.getStats()
+      fallback: this.fallbackCache.getStats(),
     };
   }
 
@@ -216,9 +222,23 @@ export class GameSearchCache {
       // Default home page - animations library
       { library: 'theatre', page: 1, limit: 50, sortBy: 'title', sortOrder: 'asc', fields: 'list' },
       // Recently added games
-      { library: 'arcade', page: 1, limit: 50, sortBy: 'dateAdded', sortOrder: 'desc', fields: 'list' },
+      {
+        library: 'arcade',
+        page: 1,
+        limit: 50,
+        sortBy: 'dateAdded',
+        sortOrder: 'desc',
+        fields: 'list',
+      },
       // Recently added animations
-      { library: 'theatre', page: 1, limit: 50, sortBy: 'dateAdded', sortOrder: 'desc', fields: 'list' },
+      {
+        library: 'theatre',
+        page: 1,
+        limit: 50,
+        sortBy: 'dateAdded',
+        sortOrder: 'desc',
+        fields: 'list',
+      },
     ];
 
     let successCount = 0;
@@ -234,7 +254,7 @@ export class GameSearchCache {
         fields: 'list',
         showBroken: false,
         showExtreme: false,
-        ...partialQuery
+        ...partialQuery,
       };
 
       try {
@@ -244,14 +264,14 @@ export class GameSearchCache {
 
         logger.debug(`[GameSearchCache] Pre-warmed query in ${queryDuration}ms`, {
           library: query.library,
-          sortBy: query.sortBy
+          sortBy: query.sortBy,
         });
 
         successCount++;
       } catch (error) {
         logger.warn('[GameSearchCache] Failed to pre-warm query', {
           query: partialQuery,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
         failCount++;
       }
@@ -261,7 +281,7 @@ export class GameSearchCache {
     logger.info(`[GameSearchCache] Cache pre-warming completed in ${totalDuration}ms`, {
       success: successCount,
       failed: failCount,
-      total: commonQueries.length
+      total: commonQueries.length,
     });
   }
 
@@ -279,7 +299,7 @@ export class GameSearchCache {
       sortOrder: 'asc',
       fields: 'list',
       showBroken: false,
-      showExtreme: false
+      showExtreme: false,
     };
     return this.has(defaultQuery);
   }

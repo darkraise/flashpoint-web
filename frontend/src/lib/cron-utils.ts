@@ -15,19 +15,37 @@ export function cronToReadable(cronExpression: string): string {
   if (cronExpression === '0 0 1 * *') return 'Monthly on the 1st at midnight';
 
   // Every N minutes
-  if (minute.startsWith('*/') && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+  if (
+    minute.startsWith('*/') &&
+    hour === '*' &&
+    dayOfMonth === '*' &&
+    month === '*' &&
+    dayOfWeek === '*'
+  ) {
     const mins = minute.substring(2);
     return `Every ${mins} minute${mins !== '1' ? 's' : ''}`;
   }
 
   // Every N hours
-  if (minute === '0' && hour.startsWith('*/') && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+  if (
+    minute === '0' &&
+    hour.startsWith('*/') &&
+    dayOfMonth === '*' &&
+    month === '*' &&
+    dayOfWeek === '*'
+  ) {
     const hrs = hour.substring(2);
     return `Every ${hrs} hour${hrs !== '1' ? 's' : ''}`;
   }
 
   // At specific time daily
-  if (!minute.includes('*') && !hour.includes('*') && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+  if (
+    !minute.includes('*') &&
+    !hour.includes('*') &&
+    dayOfMonth === '*' &&
+    month === '*' &&
+    dayOfWeek === '*'
+  ) {
     return `Daily at ${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
   }
 
@@ -57,14 +75,14 @@ export function isValidCron(cronExpression: string): boolean {
 
     // Handle ranges (N-M)
     if (part.includes('-')) {
-      const [start, end] = part.split('-').map(v => parseInt(v));
+      const [start, end] = part.split('-').map((v) => parseInt(v));
       return !isNaN(start) && !isNaN(end) && start >= min && end <= max && start <= end;
     }
 
     // Handle lists (N,M,O)
     if (part.includes(',')) {
-      const values = part.split(',').map(v => parseInt(v));
-      return values.every(v => !isNaN(v) && v >= min && v <= max);
+      const values = part.split(',').map((v) => parseInt(v));
+      return values.every((v) => !isNaN(v) && v >= min && v <= max);
     }
 
     // Handle single value

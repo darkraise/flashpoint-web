@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { usePermissions, useUpdateRolePermissions } from "../../hooks/useRoles";
-import { Role } from "../../types/auth";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getErrorMessage } from "@/types/api-error";
+import { useEffect, useState } from 'react';
+import { usePermissions, useUpdateRolePermissions } from '../../hooks/useRoles';
+import { Role } from '../../types/auth';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getErrorMessage } from '@/types/api-error';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 
 interface PermissionSelectorProps {
   role: Role;
@@ -21,17 +21,11 @@ interface PermissionSelectorProps {
   onSuccess: () => void;
 }
 
-export function PermissionSelector({
-  role,
-  onClose,
-  onSuccess,
-}: PermissionSelectorProps) {
+export function PermissionSelector({ role, onClose, onSuccess }: PermissionSelectorProps) {
   const { data: permissions } = usePermissions();
   const updatePermissionsMutation = useUpdateRolePermissions();
 
-  const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>(
-    [],
-  );
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (role) {
@@ -43,7 +37,7 @@ export function PermissionSelector({
     setSelectedPermissionIds((prev) =>
       prev.includes(permissionId)
         ? prev.filter((id) => id !== permissionId)
-        : [...prev, permissionId],
+        : [...prev, permissionId]
     );
   };
 
@@ -80,7 +74,7 @@ export function PermissionSelector({
         acc[permission.resource].push(permission);
         return acc;
       },
-      {} as Record<string, typeof permissions>,
+      {} as Record<string, typeof permissions>
     ) || {};
 
   return (
@@ -114,15 +108,13 @@ export function PermissionSelector({
 
         <DialogBody>
           {!permissions ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading permissions...
-            </div>
+            <div className="text-center py-8 text-muted-foreground">Loading permissions...</div>
           ) : null}
 
           {updatePermissionsMutation.isError ? (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
-                {getErrorMessage(updatePermissionsMutation.error) || "Failed to update permissions"}
+                {getErrorMessage(updatePermissionsMutation.error) || 'Failed to update permissions'}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -145,16 +137,12 @@ export function PermissionSelector({
                           className="flex items-start space-x-3 cursor-pointer hover:bg-accent p-2 rounded"
                         >
                           <Checkbox
-                            checked={selectedPermissionIds.includes(
-                              permission.id,
-                            )}
+                            checked={selectedPermissionIds.includes(permission.id)}
                             onCheckedChange={() => handleToggle(permission.id)}
                             className="mt-0.5"
                           />
                           <div className="flex-1">
-                            <div className="text-sm font-medium">
-                              {permission.name}
-                            </div>
+                            <div className="text-sm font-medium">{permission.name}</div>
                             <div className="text-xs text-muted-foreground">
                               {permission.description}
                             </div>
@@ -171,8 +159,7 @@ export function PermissionSelector({
 
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-4 sm:gap-0 items-center">
           <div className="text-sm text-muted-foreground">
-            {selectedPermissionIds.length} of {permissions?.length ?? 0}{" "}
-            permissions selected
+            {selectedPermissionIds.length} of {permissions?.length ?? 0} permissions selected
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={onClose}>
@@ -183,9 +170,7 @@ export function PermissionSelector({
               onClick={handleSubmit}
               disabled={updatePermissionsMutation.isPending || !permissions}
             >
-              {updatePermissionsMutation.isPending
-                ? "Saving..."
-                : "Save Permissions"}
+              {updatePermissionsMutation.isPending ? 'Saving...' : 'Save Permissions'}
             </Button>
           </div>
         </DialogFooter>

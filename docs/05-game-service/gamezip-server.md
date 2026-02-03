@@ -1,10 +1,12 @@
 # GameZip Server (Port 22501)
 
-The GameZip Server mounts ZIP archives in-memory and serves files directly using streaming, eliminating disk extraction needs.
+The GameZip Server mounts ZIP archives in-memory and serves files directly using
+streaming, eliminating disk extraction needs.
 
 ## Overview
 
-Mounts ZIP archives and serves files using `node-stream-zip` for streaming without extraction. This saves disk space and improves performance.
+Mounts ZIP archives and serves files using `node-stream-zip` for streaming
+without extraction. This saves disk space and improves performance.
 
 ## Architecture
 
@@ -34,11 +36,13 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
-{"success": true, "id": "game-123", "zipPath": "..."}
+{ "success": true, "id": "game-123", "zipPath": "..." }
 ```
 
 **Errors:**
+
 - `400`: Missing mount ID or zipPath
 - `500`: ZIP file not found or mount failed
 
@@ -49,8 +53,9 @@ DELETE /mount/:id HTTP/1.1
 ```
 
 **Response:**
+
 ```json
-{"success": true, "id": "game-123"}
+{ "success": true, "id": "game-123" }
 ```
 
 ### List Mounted ZIPs
@@ -60,6 +65,7 @@ GET /mounts HTTP/1.1
 ```
 
 **Response:**
+
 ```json
 {
   "mounts": [
@@ -86,6 +92,7 @@ GET /http://www.example.com/path/file.swf HTTP/1.1
 ```
 
 **Response:**
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/x-shockwave-flash
@@ -100,6 +107,7 @@ Access-Control-Allow-Origin: *
 ### URL Format Support
 
 GameZip supports three URL formats:
+
 1. **Proxy-style**: `GET http://domain.com/path`
 2. **Path-based**: `GET /http://domain.com/path`
 3. **Standard**: `GET /path` with Host header
@@ -107,6 +115,7 @@ GameZip supports three URL formats:
 ### Path Search Strategy
 
 For request `www.example.com/path/file.swf`, tries:
+
 1. `content/www.example.com/path/file.swf` (most common)
 2. `htdocs/www.example.com/path/file.swf` (standard)
 3. `www.example.com/path/file.swf` (no prefix)
@@ -134,6 +143,7 @@ async getFile(id: string, filePath: string): Promise<Buffer | null> {
 ```
 
 **Benefits:**
+
 - No disk extraction required
 - No temporary files created
 - Direct memory buffer access
@@ -146,6 +156,7 @@ Detected from file extensions with 199+ supported types.
 ## Response Headers
 
 ### Standard Headers
+
 ```http
 Content-Type: application/x-shockwave-flash
 Content-Length: 123456
@@ -155,6 +166,7 @@ Connection: keep-alive
 ```
 
 ### CORS Headers
+
 ```http
 Access-Control-Allow-Origin: *
 Access-Control-Allow-Methods: GET, POST, OPTIONS
@@ -164,12 +176,14 @@ Access-Control-Allow-Headers: *
 ## HTML Polyfill Injection
 
 HTML files are automatically processed to inject compatibility polyfills:
+
 - Unity WebGL support
 - General browser compatibility shims
 
 ## Integration with Backend
 
 **Workflow:**
+
 1. Backend mounts ZIP: `POST /mount/{game.id}`
 2. Backend returns launch config with gameZip URLs
 3. Frontend loads game from proxy server
@@ -179,16 +193,17 @@ HTML files are automatically processed to inject compatibility polyfills:
 ## Error Handling
 
 **Mount Errors:**
+
 - `ZIP file not found` - Invalid zip path
 - `ZIP already mounted` - Silent success (returns immediately)
 - `Corrupted ZIP` - File read error
 
 **File Access Errors:**
+
 - `File not in ZIP` - Returns 404
 - `No ZIPs mounted` - Returns 404
 
-**Graceful Degradation:**
-If GameZip fails, proxy server continues without it.
+**Graceful Degradation:** If GameZip fails, proxy server continues without it.
 
 ## Testing
 
@@ -214,22 +229,26 @@ curl -X DELETE http://localhost:22501/mount/test-game
 ## Troubleshooting
 
 ### Port Already in Use
+
 ```bash
 GAMEZIPSERVER_PORT=22502
 ```
 
 ### ZIP Mount Fails
+
 1. Verify path is absolute
 2. Check file permissions
 3. Ensure ZIP file exists
 
 ### File Not Found in ZIP
+
 1. List mounted ZIPs: `curl http://localhost:22501/mounts`
 2. Check if correct ZIP is mounted
 3. Verify file exists in ZIP (extract and check)
 4. Check ZIP structure (content/, htdocs/, or root?)
 
 ### Memory Issues
+
 1. Limit number of mounted ZIPs
 2. Implement auto-unmount for inactive ZIPs
 3. Add file size limits
@@ -238,20 +257,24 @@ GAMEZIPSERVER_PORT=22502
 ## Security
 
 ### Path Traversal Prevention
+
 File paths are normalized and validated to prevent directory traversal.
 
 ### Mount Access Control
+
 Only explicitly mounted ZIPs are accessible. No arbitrary ZIP path access.
 
 ## Performance
 
 ### Memory Usage
+
 - Small ZIP (~100 files): ~1MB RAM
 - Medium ZIP (~1,000 files): ~5MB RAM
 - Large ZIP (~10,000 files): ~50MB RAM
 - Each request loads file into memory
 
 ### Access Speed
+
 - Index lookup: O(1) hash table
 - File read: Random access, depends on position
 - Typical: Small files 2-5ms, medium 10-50ms, large 50-500ms

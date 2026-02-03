@@ -17,10 +17,7 @@ interface ApiErrorResponse {
  * @param defaultMessage - Default message if error message cannot be extracted
  * @returns The error message string
  */
-export function getApiErrorMessage(
-  error: unknown,
-  defaultMessage = 'An error occurred'
-): string {
+export function getApiErrorMessage(error: unknown, defaultMessage = 'An error occurred'): string {
   if (error && typeof error === 'object' && 'response' in error) {
     const apiError = error as ApiErrorResponse;
     return apiError.response?.data?.error?.message || defaultMessage;

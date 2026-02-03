@@ -16,28 +16,28 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
   roleId: z.number().int().positive(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
 });
 
 const updateUserSchema = z.object({
   email: z.string().email().optional(),
   roleId: z.number().int().positive().optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
 });
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(6),
-  newPassword: z.string().min(6)
+  newPassword: z.string().min(6),
 });
 
 const updateThemeSchema = z.object({
   themeColor: z.string().min(1),
-  surfaceColor: z.string().min(1).optional()
+  surfaceColor: z.string().min(1).optional(),
 });
 
 const updateThemeSettingsSchema = z.object({
   mode: z.enum(['light', 'dark', 'system']),
-  primaryColor: z.string().min(1)
+  primaryColor: z.string().min(1),
 });
 
 /**
@@ -97,7 +97,7 @@ router.post(
       email: data.email,
       password: data.password,
       roleId: data.roleId,
-      isActive: data.isActive ?? true
+      isActive: data.isActive ?? true,
     });
 
     res.status(201).json(user);
@@ -114,7 +114,7 @@ router.patch(
   requirePermission('users.update'),
   logActivity('users.update.profile', 'users', (req) => ({
     userId: req.params.id,
-    fieldsUpdated: Object.keys(req.body)
+    fieldsUpdated: Object.keys(req.body),
   })),
   asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id);
@@ -185,7 +185,7 @@ router.get(
     // Return in old format for compatibility
     res.json({
       themeColor: `${themeSettings.primaryColor}-500`,
-      surfaceColor: 'slate-700'
+      surfaceColor: 'slate-700',
     });
   })
 );
@@ -212,7 +212,7 @@ router.patch(
     res.json({
       success: true,
       themeColor: data.themeColor,
-      surfaceColor: data.surfaceColor || 'slate-700'
+      surfaceColor: data.surfaceColor || 'slate-700',
     });
   })
 );
@@ -245,11 +245,7 @@ router.patch(
     const userId = req.user!.id;
     const validated = updateThemeSettingsSchema.parse(req.body);
 
-    await userService.updateThemeSettings(
-      userId,
-      validated.mode,
-      validated.primaryColor
-    );
+    await userService.updateThemeSettings(userId, validated.mode, validated.primaryColor);
 
     const updated = await userService.getThemeSettings(userId);
     res.json(updated);

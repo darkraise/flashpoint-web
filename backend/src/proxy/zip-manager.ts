@@ -110,9 +110,9 @@ export class ZipManager {
   async findFile(relPath: string): Promise<{ data: Buffer; mountId: string } | null> {
     // Try with different prefixes (different ZIP structures)
     const pathsToTry = [
-      `content/${relPath}`,       // Most common: content/domain/path
-      `htdocs/${relPath}`,        // Standard: htdocs/domain/path
-      relPath,                     // No prefix: domain/path
+      `content/${relPath}`, // Most common: content/domain/path
+      `htdocs/${relPath}`, // Standard: htdocs/domain/path
+      relPath, // No prefix: domain/path
       `Legacy/htdocs/${relPath}`, // Full path: Legacy/htdocs/domain/path
     ];
 
@@ -176,7 +176,7 @@ export class ZipManager {
 
       if (pattern) {
         const regex = new RegExp(pattern, 'i');
-        files = files.filter(f => regex.test(f));
+        files = files.filter((f) => regex.test(f));
       }
 
       return files;
@@ -199,7 +199,7 @@ export class ZipManager {
   async unmountAll(): Promise<void> {
     logger.info(`[ZipManager] Unmounting all ZIPs (${this.mountedZips.size})...`);
 
-    const promises = Array.from(this.mountedZips.keys()).map(id => this.unmount(id));
+    const promises = Array.from(this.mountedZips.keys()).map((id) => this.unmount(id));
     await Promise.all(promises);
 
     logger.info(`[ZipManager] ✓ All ZIPs unmounted`);

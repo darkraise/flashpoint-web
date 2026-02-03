@@ -2,7 +2,9 @@
 
 ## Overview
 
-Game launch orchestrates multiple services: frontend requests launch data, backend mounts ZIPs, and frontend loads content directly from game-service into Ruffle or iframe.
+Game launch orchestrates multiple services: frontend requests launch data,
+backend mounts ZIPs, and frontend loads content directly from game-service into
+Ruffle or iframe.
 
 ## Architecture
 
@@ -102,6 +104,7 @@ sequenceDiagram
 ```
 
 **Launch Data Response**:
+
 ```typescript
 interface GameLaunchData {
   gameId: string;
@@ -152,6 +155,7 @@ sequenceDiagram
 ```
 
 **ZIP Manager Implementation**:
+
 ```typescript
 class ZipManager {
   private mounts: Map<string, StreamZip.StreamZipAsync> = new Map();
@@ -307,6 +311,7 @@ graph TB
 ```
 
 **Implementation**:
+
 ```typescript
 app.get('*', async (req, res) => {
   try {
@@ -319,15 +324,26 @@ app.get('*', async (req, res) => {
     const htdocsPath = join(config.htdocsPath, domain, path);
     if (fs.existsSync(htdocsPath)) {
       return res.sendFile(htdocsPath, {
-        headers: { 'Content-Type': getMimeType(htdocsPath), 'Access-Control-Allow-Origin': '*' }
+        headers: {
+          'Content-Type': getMimeType(htdocsPath),
+          'Access-Control-Allow-Origin': '*',
+        },
       });
     }
 
     // 2. Check game data directory
-    const gameDataPath = join(process.env.FLASHPOINT_PATH, 'Data', domain, path);
+    const gameDataPath = join(
+      process.env.FLASHPOINT_PATH,
+      'Data',
+      domain,
+      path
+    );
     if (fs.existsSync(gameDataPath)) {
       return res.sendFile(gameDataPath, {
-        headers: { 'Content-Type': getMimeType(gameDataPath), 'Access-Control-Allow-Origin': '*' }
+        headers: {
+          'Content-Type': getMimeType(gameDataPath),
+          'Access-Control-Allow-Origin': '*',
+        },
       });
     }
 
@@ -336,7 +352,7 @@ app.get('*', async (req, res) => {
     if (zipFile) {
       return res.send(zipFile).set({
         'Content-Type': getMimeType(path),
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
       });
     }
 
@@ -344,11 +360,13 @@ app.get('*', async (req, res) => {
     for (const cdnBase of process.env.EXTERNAL_FALLBACK_URLS.split(',')) {
       try {
         const cdnUrl = `${cdnBase}/${domain}${path}`;
-        const response = await axios.get(cdnUrl, { responseType: 'arraybuffer' });
+        const response = await axios.get(cdnUrl, {
+          responseType: 'arraybuffer',
+        });
         await cacheFile(htdocsPath, response.data);
         return res.send(response.data).set({
           'Content-Type': response.headers['content-type'],
-          'Access-Control-Allow-Origin': '*'
+          'Access-Control-Allow-Origin': '*',
         });
       } catch (cdnError) {
         continue;
@@ -381,7 +399,7 @@ function getMimeType(filePath: string): string {
     '.mp3': 'audio/mpeg',
     '.mp4': 'video/mp4',
     '.pdf': 'application/pdf',
-    '.zip': 'application/zip'
+    '.zip': 'application/zip',
   };
 
   return mimeTypes[ext] || 'application/octet-stream';
@@ -446,7 +464,8 @@ export const RufflePlayer: React.FC<{ gameUrl: string; gameTitle: string }> = ({
 2. Frontend: `GET /api/games/abc-123-def-456/launch`
 3. Backend queries database, finds `presentOnDisk = 1`
 4. Backend: `POST http://localhost:22501/mount` → Mounts ZIP
-5. Backend returns: `contentUrl: http://localhost:22500/http://example.com/games/mario.swf`
+5. Backend returns:
+   `contentUrl: http://localhost:22500/http://example.com/games/mario.swf`
 6. Frontend creates Ruffle player with this URL
 7. Ruffle: `GET http://localhost:22500/http://example.com/games/mario.swf`
 8. Proxy server checks htdocs → game data → mounted ZIPs → **Found in ZIP!**

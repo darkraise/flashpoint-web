@@ -65,10 +65,7 @@ describe('useGames', () => {
       };
 
       // First render
-      const { result: result1, unmount } = renderHook(
-        () => useGames(filters),
-        { wrapper }
-      );
+      const { result: result1, unmount } = renderHook(() => useGames(filters), { wrapper });
 
       await waitFor(() => {
         expect(result1.current.isSuccess).toBe(true);
@@ -78,10 +75,7 @@ describe('useGames', () => {
       unmount();
 
       // Second render with same filters should use cache
-      const { result: result2 } = renderHook(
-        () => useGames(filters),
-        { wrapper }
-      );
+      const { result: result2 } = renderHook(() => useGames(filters), { wrapper });
 
       // Should immediately have data from cache
       await waitFor(() => {
@@ -93,15 +87,9 @@ describe('useGames', () => {
       const filters1 = { search: 'test', page: 1, limit: 20 };
       const filters2 = { search: 'other', page: 1, limit: 20 };
 
-      const { result: result1 } = renderHook(
-        () => useGames(filters1),
-        { wrapper }
-      );
+      const { result: result1 } = renderHook(() => useGames(filters1), { wrapper });
 
-      const { result: result2 } = renderHook(
-        () => useGames(filters2),
-        { wrapper }
-      );
+      const { result: result2 } = renderHook(() => useGames(filters2), { wrapper });
 
       await waitFor(() => {
         expect(result1.current.isSuccess).toBe(true);
@@ -139,20 +127,14 @@ describe('useGames', () => {
     });
 
     it('should respect enabled option', () => {
-      const { result } = renderHook(
-        () => useGame('game-1', { enabled: false }),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useGame('game-1', { enabled: false }), { wrapper });
 
       expect(result.current.isPending).toBe(true);
       expect(result.current.fetchStatus).toBe('idle');
     });
 
     it('should enable fetch when enabled option is true', async () => {
-      const { result } = renderHook(
-        () => useGame('game-1', { enabled: true }),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useGame('game-1', { enabled: true }), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -166,10 +148,7 @@ describe('useGames', () => {
     it('should fetch related games with default limit', async () => {
       const gameId = 'game-1';
 
-      const { result } = renderHook(
-        () => useRelatedGames(gameId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useRelatedGames(gameId), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -182,10 +161,7 @@ describe('useGames', () => {
       const gameId = 'game-1';
       const customLimit = 5;
 
-      const { result } = renderHook(
-        () => useRelatedGames(gameId, customLimit),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useRelatedGames(gameId, customLimit), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -195,10 +171,7 @@ describe('useGames', () => {
     });
 
     it('should not fetch when ID is empty', () => {
-      const { result } = renderHook(
-        () => useRelatedGames(''),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useRelatedGames(''), { wrapper });
 
       expect(result.current.isPending).toBe(true);
       expect(result.current.fetchStatus).toBe('idle');

@@ -21,7 +21,7 @@ export function RoleGuard({
   permissions,
   requireAllPermissions = false,
   role,
-  fallback = null
+  fallback = null,
 }: RoleGuardProps) {
   const { hasPermission, hasAnyPermission, hasAllPermissions, hasRole } = useAuthStore();
 

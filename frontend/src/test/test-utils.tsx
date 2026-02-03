@@ -7,10 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
  * Custom render function that wraps components with necessary providers
  * Use this instead of @testing-library/react's render for components that need routing, query, or theme context
  */
-export function renderWithProviders(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) {
+export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -27,9 +24,7 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <BrowserRouter>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </BrowserRouter>
     );
   }
@@ -43,10 +38,7 @@ export function renderWithProviders(
 /**
  * Custom render for components that only need routing (no query client)
  */
-export function renderWithRouter(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) {
+export function renderWithRouter(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
   function Wrapper({ children }: { children: ReactNode }) {
     return <BrowserRouter>{children}</BrowserRouter>;
   }
@@ -57,10 +49,7 @@ export function renderWithRouter(
 /**
  * Custom render for components that only need query client (no routing)
  */
-export function renderWithQueryClient(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) {
+export function renderWithQueryClient(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -75,11 +64,7 @@ export function renderWithQueryClient(
   });
 
   function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   }
 
   return {

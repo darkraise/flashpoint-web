@@ -644,7 +644,6 @@ import {
   DoorClosed,
   Blinds,
   Fan,
-
   type LucideIcon,
 } from 'lucide-react';
 
@@ -2089,10 +2088,7 @@ export const ICON_CATEGORIES = {
       'fan',
     ] as const,
   },
-} as const satisfies Record<
-  string,
-  { label: string; icons: readonly PlaylistIconName[] }
->;
+} as const satisfies Record<string, { label: string; icons: readonly PlaylistIconName[] }>;
 
 /**
  * Get icon component by name with fallback
@@ -2105,9 +2101,7 @@ export const ICON_CATEGORIES = {
  * const Icon = getPlaylistIcon('music');
  * const FallbackIcon = getPlaylistIcon(null); // Returns ListVideo
  */
-export function getPlaylistIcon(
-  iconName: PlaylistIconName | null | undefined
-): LucideIcon {
+export function getPlaylistIcon(iconName: PlaylistIconName | null | undefined): LucideIcon {
   if (!iconName || !(iconName in PLAYLIST_ICONS)) {
     return ListVideo; // Default fallback
   }

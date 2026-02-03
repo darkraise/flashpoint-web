@@ -6,7 +6,8 @@
 
 `GET /api/playlists/shared/:shareToken` - No auth required
 
-Returns id, title, description, icon (base64), gameCount, createdAt, updatedAt, ownerUsername (if enabled).
+Returns id, title, description, icon (base64), gameCount, createdAt, updatedAt,
+ownerUsername (if enabled).
 
 Error: `404 Not Found` or `410 Gone` (if revoked).
 
@@ -14,17 +15,20 @@ Error: `404 Not Found` or `410 Gone` (if revoked).
 
 `GET /api/playlists/shared/:shareToken/games` - No auth required
 
-Returns array of game objects with id, title, platform, developer, publisher, releaseDate, thumbnail, launchCommand.
+Returns array of game objects with id, title, platform, developer, publisher,
+releaseDate, thumbnail, launchCommand.
 
 ### Validate Game in Shared Playlist
 
-`GET /api/playlists/shared/:shareToken/games/:gameId/validate` - No auth required
+`GET /api/playlists/shared/:shareToken/games/:gameId/validate` - No auth
+required
 
 Returns `{ "valid": true|false }`
 
 ### Generate Temporary Access Token
 
-`POST /api/playlists/shared/:shareToken/generate-access-token` - No auth required
+`POST /api/playlists/shared/:shareToken/generate-access-token` - No auth
+required
 
 Returns `{ "accessToken": "jwt...", "expiresIn": 3600, "playlistId": 42 }`
 
@@ -32,11 +36,13 @@ Token valid for 60 minutes.
 
 ### Clone Shared Playlist to User Account
 
-`POST /api/playlists/shared/:shareToken/clone` - Requires `playlists.create` permission
+`POST /api/playlists/shared/:shareToken/clone` - Requires `playlists.create`
+permission
 
 Body (optional): `{ "newTitle": "My Retro Games Collection" }`
 
-Returns `201 Created` with cloned playlist details. Original playlist not modified.
+Returns `201 Created` with cloned playlist details. Original playlist not
+modified.
 
 ## Community Playlists
 
@@ -44,7 +50,8 @@ Returns `201 Created` with cloned playlist details. Original playlist not modifi
 
 `GET /api/community-playlists` - Optional auth
 
-Returns categories array with name and playlists (fetched from official Flashpoint wiki). Cached 24 hours.
+Returns categories array with name and playlists (fetched from official
+Flashpoint wiki). Cached 24 hours.
 
 ```json
 {
@@ -74,7 +81,8 @@ Returns categories array with name and playlists (fetched from official Flashpoi
 
 Body: `{ "downloadUrl": "https://..." }`
 
-Returns `201 Created` with playlist details. Authenticated users save to account; anonymous users get in-memory response.
+Returns `201 Created` with playlist details. Authenticated users save to
+account; anonymous users get in-memory response.
 
 ## Game Downloads
 
@@ -92,7 +100,8 @@ Error: `409 Conflict` if already downloading or exists.
 
 `GET /api/games/:id/download/progress` - Requires `games.download` permission
 
-Server-sent events with events: `progress` (percent, status: downloading|validating|importing), `complete`, `error`.
+Server-sent events with events: `progress` (percent, status:
+downloading|validating|importing), `complete`, `error`.
 
 ```javascript
 const eventSource = new EventSource('/api/games/game-123/download/progress');
@@ -124,7 +133,8 @@ Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 
 ## Error Responses
 
-All follow format: `{ "error": "Type", "message": "...", "code": "CODE", "statusCode": 400 }`
+All follow format:
+`{ "error": "Type", "message": "...", "code": "CODE", "statusCode": 400 }`
 
 Common codes:
 

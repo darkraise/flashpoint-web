@@ -65,9 +65,8 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
   const renderFilters = (isMobile: boolean) => {
     const suffix = isMobile ? 'mobile' : 'desktop';
 
-    return FILTER_CONFIGS
-      .filter(config => showPlatformFilter || config.id !== 'platform')
-      .map(config => {
+    return FILTER_CONFIGS.filter((config) => showPlatformFilter || config.id !== 'platform').map(
+      (config) => {
         const handlers = createFilterHandlers(
           config.paramKey,
           config.id,
@@ -77,7 +76,8 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
         );
 
         const currentValue = filters[config.paramKey];
-        const selectedValues = typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
+        const selectedValues =
+          typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
         const options = filterOptions?.[config.optionsKey] || [];
 
         return (
@@ -96,7 +96,8 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
             compact={isMobile}
           />
         );
-      });
+      }
+    );
   };
 
   /**
@@ -104,11 +105,11 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
    * Eliminates 7 separate badge sections
    */
   const renderFilterBadges = () => {
-    return FILTER_CONFIGS
-      .filter(config => showPlatformFilter || config.id !== 'platform')
-      .map(config => {
+    return FILTER_CONFIGS.filter((config) => showPlatformFilter || config.id !== 'platform').map(
+      (config) => {
         const currentValue = filters[config.paramKey];
-        const selectedValues = typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
+        const selectedValues =
+          typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
         if (selectedValues.length === 0) return null;
 
         const handlers = createFilterHandlers(
@@ -136,7 +137,8 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
             ))}
           </div>
         );
-      });
+      }
+    );
   };
 
   return (
@@ -184,9 +186,7 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
         ) : null}
 
         {/* Filter Badges - Data-driven rendering */}
-        <div className="space-y-2">
-          {renderFilterBadges()}
-        </div>
+        <div className="space-y-2">{renderFilterBadges()}</div>
       </div>
     </fieldset>
   );

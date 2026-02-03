@@ -63,7 +63,7 @@ const GameCardComponent = function GameCard({
   // Handle navigation to game details (for clicking on image/footer area)
   const handleCardClick = () => {
     navigate(gameDetailUrl, {
-      state: breadcrumbContext ? { breadcrumbContext } : undefined
+      state: breadcrumbContext ? { breadcrumbContext } : undefined,
     });
   };
 

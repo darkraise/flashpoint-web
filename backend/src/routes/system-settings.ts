@@ -19,11 +19,12 @@ function updateJobScheduler(category: string, settings: Record<string, any>): vo
     if ('metadataSyncEnabled' in settings || 'metadataSyncSchedule' in settings) {
       const currentSettings = systemSettings.getCategory('jobs');
       const enabled = settings.metadataSyncEnabled ?? currentSettings.metadataSyncEnabled ?? false;
-      const cronSchedule = settings.metadataSyncSchedule ?? currentSettings.metadataSyncSchedule ?? '0 * * * *';
+      const cronSchedule =
+        settings.metadataSyncSchedule ?? currentSettings.metadataSyncSchedule ?? '0 * * * *';
 
       JobScheduler.updateJob('metadata-sync', {
         enabled,
-        cronSchedule
+        cronSchedule,
       });
     }
   }
@@ -44,7 +45,7 @@ router.get(
     } catch (error) {
       logger.error('Failed to get all settings:', error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve settings' }
+        error: { message: 'Failed to retrieve settings' },
       });
     }
   }
@@ -85,7 +86,7 @@ router.get('/public', async (req: Request, res: Response) => {
   } catch (error) {
     logger.error('Failed to get public settings:', error);
     res.status(500).json({
-      error: { message: 'Failed to retrieve public settings' }
+      error: { message: 'Failed to retrieve public settings' },
     });
   }
 });
@@ -107,7 +108,7 @@ router.get(
     } catch (error) {
       logger.error(`Failed to get ${req.params.category} settings:`, error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve settings' }
+        error: { message: 'Failed to retrieve settings' },
       });
     }
   }
@@ -132,8 +133,8 @@ router.patch(
         return res.status(400).json({
           error: {
             message: 'Invalid request body',
-            details: validation.error.errors
-          }
+            details: validation.error.errors,
+          },
         });
       }
 
@@ -155,12 +156,12 @@ router.patch(
       // Check if it's a validation error
       if (error instanceof Error && error.message.includes('must be')) {
         return res.status(400).json({
-          error: { message: error.message }
+          error: { message: error.message },
         });
       }
 
       res.status(500).json({
-        error: { message: 'Failed to update settings' }
+        error: { message: 'Failed to update settings' },
       });
     }
   }
@@ -181,7 +182,7 @@ router.get(
 
       if (value === null) {
         return res.status(404).json({
-          error: { message: `Setting '${fullKey}' not found` }
+          error: { message: `Setting '${fullKey}' not found` },
         });
       }
 
@@ -189,7 +190,7 @@ router.get(
     } catch (error) {
       logger.error(`Failed to get setting ${req.params.category}.${req.params.key}:`, error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve setting' }
+        error: { message: 'Failed to retrieve setting' },
       });
     }
   }
@@ -199,7 +200,7 @@ router.get(
 // UPDATE SINGLE SETTING (Admin Only)
 // ===================================
 const updateSettingSchema = z.object({
-  value: z.any()
+  value: z.any(),
 });
 
 router.patch(
@@ -217,8 +218,8 @@ router.patch(
         return res.status(400).json({
           error: {
             message: 'Invalid request body',
-            details: validation.error.errors
-          }
+            details: validation.error.errors,
+          },
         });
       }
 
@@ -237,12 +238,12 @@ router.patch(
       // Check if it's a validation error
       if (error instanceof Error && error.message.includes('must be')) {
         return res.status(400).json({
-          error: { message: error.message }
+          error: { message: error.message },
         });
       }
 
       res.status(500).json({
-        error: { message: 'Failed to update setting' }
+        error: { message: 'Failed to update setting' },
       });
     }
   }
@@ -262,7 +263,7 @@ router.get(
     } catch (error) {
       logger.error('Failed to get cache stats:', error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve cache statistics' }
+        error: { message: 'Failed to retrieve cache statistics' },
       });
     }
   }
@@ -290,7 +291,7 @@ router.post(
     } catch (error) {
       logger.error('Failed to clear cache:', error);
       res.status(500).json({
-        error: { message: 'Failed to clear cache' }
+        error: { message: 'Failed to clear cache' },
       });
     }
   }
@@ -314,14 +315,14 @@ router.get(
           totalSize: 'Total cached entries',
           ttl: {
             userPermissions: '5 minutes',
-            rolePermissions: '10 minutes'
-          }
-        }
+            rolePermissions: '10 minutes',
+          },
+        },
       });
     } catch (error) {
       logger.error('Failed to get permission cache stats:', error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve permission cache statistics' }
+        error: { message: 'Failed to retrieve permission cache statistics' },
       });
     }
   }
@@ -357,14 +358,15 @@ router.post(
       } else {
         res.status(400).json({
           error: {
-            message: 'Invalid request. Specify type: "user", "role", "users", "roles", or "all". For "user" or "role", provide an id.'
-          }
+            message:
+              'Invalid request. Specify type: "user", "role", "users", "roles", or "all". For "user" or "role", provide an id.',
+          },
         });
       }
     } catch (error) {
       logger.error('Failed to clear permission cache:', error);
       res.status(500).json({
-        error: { message: 'Failed to clear permission cache' }
+        error: { message: 'Failed to clear permission cache' },
       });
     }
   }

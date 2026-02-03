@@ -75,11 +75,13 @@ export class GameZipServer {
     // Health check endpoint
     if (method === 'GET' && url === '/health') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        status: 'healthy',
-        service: 'flashpoint-gamezip-server',
-        timestamp: new Date().toISOString()
-      }));
+      res.end(
+        JSON.stringify({
+          status: 'healthy',
+          service: 'flashpoint-gamezip-server',
+          timestamp: new Date().toISOString(),
+        })
+      );
       return;
     }
 
@@ -164,9 +166,11 @@ export class GameZipServer {
     // Validate ZIP path to prevent directory traversal
     // Ensure the ZIP file is within the allowed games directory
     try {
-      const flashpointPath = process.env.FLASHPOINT_PATH ||
+      const flashpointPath =
+        process.env.FLASHPOINT_PATH ||
         (process.env.NODE_ENV === 'production' ? '/data/flashpoint' : 'D:/Flashpoint');
-      const allowedGamesPath = process.env.FLASHPOINT_GAMES_PATH || path.join(flashpointPath, 'Data', 'Games');
+      const allowedGamesPath =
+        process.env.FLASHPOINT_GAMES_PATH || path.join(flashpointPath, 'Data', 'Games');
 
       const normalizedZipPath = path.normalize(zipPath);
       const resolvedZipPath = path.resolve(normalizedZipPath);
@@ -236,7 +240,10 @@ export class GameZipServer {
    * Handle GET /* - Serve file from mounted ZIPs
    * Supports proxy-style requests: GET http://domain.com/path HTTP/1.1
    */
-  private async handleFileRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  private async handleFileRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
     if (!req.url) {
       this.sendError(res, 400, 'Bad Request: No URL');
       return;
@@ -320,7 +327,9 @@ export class GameZipServer {
     }
 
     // Send file
-    logger.info(`[GameZipServer] ✓ Serving from ZIP ${result.mountId}: ${relPath} (${fileData.length} bytes)`);
+    logger.info(
+      `[GameZipServer] ✓ Serving from ZIP ${result.mountId}: ${relPath} (${fileData.length} bytes)`
+    );
 
     // CORS headers
     setCorsHeaders(res, this.settings);
@@ -341,7 +350,7 @@ export class GameZipServer {
   private readBody(req: http.IncomingMessage, maxSize: number = 1024 * 1024): Promise<string> {
     return new Promise((resolve, reject) => {
       let body = '';
-      req.on('data', chunk => {
+      req.on('data', (chunk) => {
         body += chunk.toString();
 
         // Check size limit (default 1MB)

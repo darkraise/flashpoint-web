@@ -9,6 +9,7 @@ User authentication, registration, and token management.
 Body: `{ "username": "string (3-50)", "password": "string (min 6)" }`
 
 Returns `200 OK` with user object and tokens:
+
 ```json
 {
   "user": {
@@ -26,17 +27,20 @@ Returns `200 OK` with user object and tokens:
 }
 ```
 
-Error: `401 Unauthorized` (invalid credentials) or `429 Too Many Requests` (account locked after failed attempts)
+Error: `401 Unauthorized` (invalid credentials) or `429 Too Many Requests`
+(account locked after failed attempts)
 
 ## Register
 
 `POST /api/auth/register` - No auth required
 
-Body: `{ "username": "string (3-50)", "email": "valid-email", "password": "string (min 6)" }`
+Body:
+`{ "username": "string (3-50)", "email": "valid-email", "password": "string (min 6)" }`
 
 Returns `201 Created` with user and tokens (same format as login).
 
-Error: `403 Forbidden` (registration disabled) or `409 Conflict` (username/email exists)
+Error: `403 Forbidden` (registration disabled) or `409 Conflict` (username/email
+exists)
 
 ## Refresh Token
 
@@ -74,7 +78,7 @@ Error: `401 Unauthorized`
 // Login
 const { data } = await api.post('/auth/login', {
   username: 'john_doe',
-  password: 'password123'
+  password: 'password123',
 });
 
 localStorage.setItem('accessToken', data.tokens.accessToken);
@@ -85,7 +89,7 @@ const response = await api.get('/api/games');
 
 // On 401 - refresh token
 const refreshed = await api.post('/auth/refresh', {
-  refreshToken: localStorage.getItem('refreshToken')
+  refreshToken: localStorage.getItem('refreshToken'),
 });
 
 localStorage.setItem('accessToken', refreshed.data.accessToken);
@@ -93,7 +97,7 @@ localStorage.setItem('refreshToken', refreshed.data.refreshToken);
 
 // Logout
 await api.post('/auth/logout', {
-  refreshToken: localStorage.getItem('refreshToken')
+  refreshToken: localStorage.getItem('refreshToken'),
 });
 
 localStorage.removeItem('accessToken');
@@ -136,8 +140,8 @@ Common permissions returned in login/me:
 ```javascript
 // Axios interceptor for automatic token refresh
 api.interceptors.response.use(
-  response => response,
-  async error => {
+  (response) => response,
+  async (error) => {
     if (error.response?.status === 401) {
       const refreshToken = localStorage.getItem('refreshToken');
       const { data } = await axios.post('/api/auth/refresh', { refreshToken });

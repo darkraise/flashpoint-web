@@ -1,26 +1,12 @@
-import { JobStatusEnriched } from "@/types/jobs";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import {
-  Square,
-  Zap,
-  Eye,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Settings,
-} from "lucide-react";
-import { JobScheduleDisplay } from "./JobScheduleDisplay";
-import { formatDuration } from "@/lib/cron-utils";
-import { formatDistanceToNow } from "date-fns";
+import { JobStatusEnriched } from '@/types/jobs';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Square, Zap, Eye, CheckCircle, XCircle, Loader2, Settings } from 'lucide-react';
+import { JobScheduleDisplay } from './JobScheduleDisplay';
+import { formatDuration } from '@/lib/cron-utils';
+import { formatDistanceToNow } from 'date-fns';
 
 interface JobCardProps {
   job: JobStatusEnriched;
@@ -45,13 +31,13 @@ export function JobCard({
     if (!job.lastExecution) return <Badge variant="outline">Never run</Badge>;
 
     const { status } = job.lastExecution;
-    if (status === "success") {
+    if (status === 'success') {
       return (
         <Badge variant="default" className="bg-green-600 gap-1">
           <CheckCircle size={12} /> Success
         </Badge>
       );
-    } else if (status === "failed") {
+    } else if (status === 'failed') {
       return (
         <Badge variant="destructive" className="gap-1">
           <XCircle size={12} /> Failed
@@ -79,9 +65,7 @@ export function JobCard({
             <Switch
               id={`job-enabled-${job.id}`}
               checked={job.enabled}
-              onCheckedChange={(checked: boolean) =>
-                onToggleEnabled(job.id, checked)
-              }
+              onCheckedChange={(checked: boolean) => onToggleEnabled(job.id, checked)}
               disabled={disabled || job.running}
             />
           </div>
@@ -102,9 +86,7 @@ export function JobCard({
 
         {/* Schedule */}
         <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
-            Schedule
-          </p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Schedule</p>
           <JobScheduleDisplay cronSchedule={job.cronSchedule} />
         </div>
 
@@ -135,79 +117,45 @@ export function JobCard({
               ) : null}
               {job.lastExecution.message ? (
                 <div className="mt-2 text-xs space-y-1">
-                  {job.lastExecution.message.includes("Games updated") ? (
+                  {job.lastExecution.message.includes('Games updated') ? (
                     // Parse metadata sync result
                     <div className="bg-muted/50 rounded p-2 space-y-0.5">
-                      {job.lastExecution.message.match(
-                        /Games updated: (\d+)/,
-                      ) ? (
+                      {job.lastExecution.message.match(/Games updated: (\d+)/) ? (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Games updated:
-                          </span>
+                          <span className="text-muted-foreground">Games updated:</span>
                           <span className="font-medium">
-                            {
-                              job.lastExecution.message.match(
-                                /Games updated: (\d+)/,
-                              )?.[1]
-                            }
+                            {job.lastExecution.message.match(/Games updated: (\d+)/)?.[1]}
                           </span>
                         </div>
                       ) : null}
-                      {job.lastExecution.message.match(
-                        /Tags updated: (\d+)/,
-                      ) ? (
+                      {job.lastExecution.message.match(/Tags updated: (\d+)/) ? (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Tags updated:
-                          </span>
+                          <span className="text-muted-foreground">Tags updated:</span>
                           <span className="font-medium">
-                            {
-                              job.lastExecution.message.match(
-                                /Tags updated: (\d+)/,
-                              )?.[1]
-                            }
+                            {job.lastExecution.message.match(/Tags updated: (\d+)/)?.[1]}
                           </span>
                         </div>
                       ) : null}
-                      {job.lastExecution.message.match(
-                        /Platforms updated: (\d+)/,
-                      ) ? (
+                      {job.lastExecution.message.match(/Platforms updated: (\d+)/) ? (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Platforms updated:
-                          </span>
+                          <span className="text-muted-foreground">Platforms updated:</span>
                           <span className="font-medium">
-                            {
-                              job.lastExecution.message.match(
-                                /Platforms updated: (\d+)/,
-                              )?.[1]
-                            }
+                            {job.lastExecution.message.match(/Platforms updated: (\d+)/)?.[1]}
                           </span>
                         </div>
                       ) : null}
-                      {job.lastExecution.message.match(
-                        /Games deleted: (\d+)/,
-                      ) ? (
+                      {job.lastExecution.message.match(/Games deleted: (\d+)/) ? (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Games deleted:
-                          </span>
+                          <span className="text-muted-foreground">Games deleted:</span>
                           <span className="font-medium">
-                            {
-                              job.lastExecution.message.match(
-                                /Games deleted: (\d+)/,
-                              )?.[1]
-                            }
+                            {job.lastExecution.message.match(/Games deleted: (\d+)/)?.[1]}
                           </span>
                         </div>
                       ) : null}
                     </div>
                   ) : (
                     // Display as plain text for other messages
-                    <p className="text-muted-foreground">
-                      {job.lastExecution.message}
-                    </p>
+                    <p className="text-muted-foreground">{job.lastExecution.message}</p>
                   )}
                 </div>
               ) : null}
@@ -220,9 +168,7 @@ export function JobCard({
         {/* Next Run */}
         {job.enabled && job.nextRunEstimate && !job.running ? (
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
-              Next Run
-            </p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Next Run</p>
             <p className="text-sm">
               {formatDistanceToNow(new Date(job.nextRunEstimate), {
                 addSuffix: true,
@@ -235,12 +181,7 @@ export function JobCard({
       {/* FOOTER: Action Buttons */}
       <CardFooter className="flex gap-2 pt-4 border-t flex-wrap flex-shrink-0">
         {job.running ? (
-          <Button
-            onClick={() => onStop(job.id)}
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-          >
+          <Button onClick={() => onStop(job.id)} variant="outline" size="sm" disabled={disabled}>
             <Square size={16} className="mr-1" />
             Stop
           </Button>

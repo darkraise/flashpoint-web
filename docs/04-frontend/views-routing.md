@@ -1,6 +1,7 @@
 # Views and Routing
 
-Complete documentation of all views, routes, and route protection in the Flashpoint Web frontend.
+Complete documentation of all views, routes, and route protection in the
+Flashpoint Web frontend.
 
 ## Route Structure
 
@@ -42,16 +43,17 @@ All routes use the `ProtectedRoute` component for authorization:
 ```typescript
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireAuth?: boolean;               // Default: true
-  requirePermission?: string;          // Single permission
-  requireAnyPermission?: string[];     // Any of these
-  requireAllPermissions?: string[];    // All of these
+  requireAuth?: boolean; // Default: true
+  requirePermission?: string; // Single permission
+  requireAnyPermission?: string[]; // Any of these
+  requireAllPermissions?: string[]; // All of these
 }
 ```
 
 ### Protection Levels
 
 **1. Public Routes** - `requireAuth={false}`
+
 ```typescript
 <Route path="/browse" element={
   <ProtectedRoute requireAuth={false}>
@@ -61,6 +63,7 @@ interface ProtectedRouteProps {
 ```
 
 **2. Authenticated Routes** - Default behavior
+
 ```typescript
 <Route path="/dashboard" element={
   <ProtectedRoute>
@@ -70,6 +73,7 @@ interface ProtectedRouteProps {
 ```
 
 **3. Permission-Based Routes**
+
 ```typescript
 <Route path="/games/:id/play" element={
   <ProtectedRoute requirePermission="games.play">
@@ -85,6 +89,7 @@ interface ProtectedRouteProps {
 Pre-filtered game browsing views.
 
 **Features:**
+
 - Platform-specific filtering
 - Grid/List view toggle
 - Pagination
@@ -95,6 +100,7 @@ Pre-filtered game browsing views.
 Main game browsing view with full filtering.
 
 **Features:**
+
 - Multi-filter sidebar (Platform, Tags, Play Mode, Library)
 - Search bar
 - Sort options
@@ -107,6 +113,7 @@ Main game browsing view with full filtering.
 Detailed game information page.
 
 **Features:**
+
 - Game metadata (title, developer, publisher, release date)
 - Screenshots and logos
 - Tags and categories
@@ -119,6 +126,7 @@ Detailed game information page.
 Full-screen game player.
 
 **Features:**
+
 - Flash/HTML5 game rendering
 - Fullscreen mode
 - Play session tracking
@@ -130,6 +138,7 @@ Full-screen game player.
 User statistics dashboard.
 
 **Features:**
+
 - Total games played
 - Total playtime
 - Top games chart
@@ -142,6 +151,7 @@ User statistics dashboard.
 User playlists management.
 
 **Features:**
+
 - Create new playlists
 - Browse community playlists
 - Delete playlists
@@ -152,6 +162,7 @@ User playlists management.
 Admin management views.
 
 **Features:**
+
 - User management (create, edit, delete, change password)
 - Role management with permission assignment
 - Activity logs with filtering

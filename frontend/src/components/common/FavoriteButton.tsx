@@ -1,16 +1,16 @@
-import { Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToggleFavorite } from "@/hooks/useFavorites";
-import { useAuthStore } from "@/store/auth";
-import { useFeatureFlags } from "@/hooks/useFeatureFlags";
-import { toast } from "sonner";
-import { getErrorMessage } from "@/types/api-error";
+import { Heart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToggleFavorite } from '@/hooks/useFavorites';
+import { useAuthStore } from '@/store/auth';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { toast } from 'sonner';
+import { getErrorMessage } from '@/types/api-error';
 
 interface FavoriteButtonProps {
   gameId: string;
   isFavorited: boolean; // Required: parent must provide this from useFavoriteGameIds()
-  size?: "sm" | "default" | "lg" | "icon";
-  variant?: "default" | "secondary" | "ghost" | "outline" | "destructive";
+  size?: 'sm' | 'default' | 'lg' | 'icon';
+  variant?: 'default' | 'secondary' | 'ghost' | 'outline' | 'destructive';
   className?: string;
   showOnHoverOnly?: boolean;
   showLabel?: boolean;
@@ -19,11 +19,11 @@ interface FavoriteButtonProps {
 export function FavoriteButton({
   gameId,
   isFavorited,
-  size = "sm",
+  size = 'sm',
   variant,
-  className = "",
+  className = '',
   showOnHoverOnly = false,
-  showLabel = false
+  showLabel = false,
 }: FavoriteButtonProps) {
   const { isAuthenticated } = useAuthStore();
   const { enableFavorites } = useFeatureFlags();
@@ -34,21 +34,17 @@ export function FavoriteButton({
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      toast.error("Please log in to add favorites");
+      toast.error('Please log in to add favorites');
       return;
     }
 
     toggleFavorite.mutate(gameId, {
       onSuccess: (newIsFavorited) => {
-        toast.success(
-          newIsFavorited
-            ? "Added to favorites"
-            : "Removed from favorites"
-        );
+        toast.success(newIsFavorited ? 'Added to favorites' : 'Removed from favorites');
       },
       onError: (error: unknown) => {
-        toast.error(getErrorMessage(error) || "Failed to toggle favorite");
-      }
+        toast.error(getErrorMessage(error) || 'Failed to toggle favorite');
+      },
     });
   };
 
@@ -56,12 +52,12 @@ export function FavoriteButton({
     return null;
   }
 
-  const buttonVariant = variant || (isFavorited ? "default" : "secondary");
+  const buttonVariant = variant || (isFavorited ? 'default' : 'secondary');
   const opacityClass = showOnHoverOnly
-    ? "opacity-0 group-hover:opacity-100"
+    ? 'opacity-0 group-hover:opacity-100'
     : isFavorited
-      ? "opacity-100"
-      : "opacity-0 group-hover:opacity-100";
+      ? 'opacity-100'
+      : 'opacity-0 group-hover:opacity-100';
 
   return (
     <Button
@@ -70,20 +66,16 @@ export function FavoriteButton({
       onClick={handleToggle}
       disabled={toggleFavorite.isPending}
       className={`backdrop-blur-sm transition-opacity ${opacityClass} ${className}`}
-      title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
-      aria-label={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
+      title={isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}
+      aria-label={isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}
     >
       <Heart
-        size={size === "sm" ? 14 : 16}
-        fill={isFavorited ? "currentColor" : "none"}
-        className={toggleFavorite.isPending ? "animate-pulse" : ""}
+        size={size === 'sm' ? 14 : 16}
+        fill={isFavorited ? 'currentColor' : 'none'}
+        className={toggleFavorite.isPending ? 'animate-pulse' : ''}
         aria-hidden="true"
       />
-      {showLabel ? (
-        <span className="ml-2">
-          {isFavorited ? "Favorited" : "Favorite"}
-        </span>
-      ) : null}
+      {showLabel ? <span className="ml-2">{isFavorited ? 'Favorited' : 'Favorite'}</span> : null}
     </Button>
   );
 }

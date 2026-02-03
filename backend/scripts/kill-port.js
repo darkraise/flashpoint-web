@@ -56,7 +56,6 @@ try {
   }
 
   console.log(`\n✅ Port ${port} should now be free!`);
-
 } catch (error) {
   if (error.status === 1 && error.stderr === '') {
     // findstr returns exit code 1 when nothing is found

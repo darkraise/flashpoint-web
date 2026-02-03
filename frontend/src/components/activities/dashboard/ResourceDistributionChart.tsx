@@ -111,7 +111,7 @@ export function ResourceDistributionChart({ autoRefresh = false }: ResourceDistr
     value: item.count,
     percentage: item.percentage,
     topAction: item.metadata.topAction,
-    color: COLORS[index % COLORS.length]
+    color: COLORS[index % COLORS.length],
   }));
 
   const totalActivities = data.meta.total;
@@ -182,7 +182,8 @@ export function ResourceDistributionChart({ autoRefresh = false }: ResourceDistr
         </ResponsiveContainer>
         <div className="text-center mt-4">
           <p className="text-muted-foreground text-sm">
-            Total Activities: <span className="font-semibold">{totalActivities.toLocaleString()}</span>
+            Total Activities:{' '}
+            <span className="font-semibold">{totalActivities.toLocaleString()}</span>
           </p>
         </div>
       </div>

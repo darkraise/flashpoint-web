@@ -25,13 +25,11 @@ function useAnalogousColors(): AnalogousColors {
     const calculateColors = () => {
       // Read --primary from root element
       const root = document.documentElement;
-      const primaryValue = getComputedStyle(root)
-        .getPropertyValue('--primary')
-        .trim();
+      const primaryValue = getComputedStyle(root).getPropertyValue('--primary').trim();
 
       if (primaryValue) {
         // Parse HSL values (format: "221.2 83.2% 53.3%")
-        const values = primaryValue.split(' ').map(v => parseFloat(v.replace('%', '')));
+        const values = primaryValue.split(' ').map((v) => parseFloat(v.replace('%', '')));
 
         if (values.length >= 3) {
           const [h, s, l] = values;

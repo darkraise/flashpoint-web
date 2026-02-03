@@ -15,17 +15,17 @@ const createRoleSchema = z.object({
   name: z.string().min(3).max(50),
   description: z.string().optional(),
   priority: z.number().int().default(0),
-  permissionIds: z.array(z.number().int().positive()).optional()
+  permissionIds: z.array(z.number().int().positive()).optional(),
 });
 
 const updateRoleSchema = z.object({
   name: z.string().min(3).max(50).optional(),
   description: z.string().optional(),
-  priority: z.number().int().optional()
+  priority: z.number().int().optional(),
 });
 
 const updatePermissionsSchema = z.object({
-  permissionIds: z.array(z.number().int().positive())
+  permissionIds: z.array(z.number().int().positive()),
 });
 
 /**
@@ -114,12 +114,7 @@ router.patch(
     const id = parseInt(req.params.id);
     const data = updateRoleSchema.parse(req.body);
 
-    const role = await roleService.updateRole(
-      id,
-      data.name,
-      data.description,
-      data.priority
-    );
+    const role = await roleService.updateRole(id, data.name, data.description, data.priority);
 
     res.json(role);
   })

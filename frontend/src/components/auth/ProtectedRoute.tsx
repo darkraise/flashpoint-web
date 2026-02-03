@@ -32,7 +32,14 @@ export function ProtectedRoute({
   allowSharedAccess = false, // NEW
 }: ProtectedRouteProps) {
   const location = useLocation();
-  const { isAuthenticated, isGuest, hasPermission, hasAnyPermission, hasAllPermissions: hasAll, hasRole } = useAuthStore();
+  const {
+    isAuthenticated,
+    isGuest,
+    hasPermission,
+    hasAnyPermission,
+    hasAllPermissions: hasAll,
+    hasRole,
+  } = useAuthStore();
   const featureFlags = useFeatureFlags();
 
   // Get gameId from route params if checking shared access
@@ -71,7 +78,7 @@ export function ProtectedRoute({
         to="/unauthorized"
         state={{
           requiredFeature: requireFeature,
-          fromPath: location.pathname
+          fromPath: location.pathname,
         }}
         replace
       />
@@ -85,7 +92,7 @@ export function ProtectedRoute({
         to="/unauthorized"
         state={{
           requiredPermission: requirePermission,
-          fromPath: location.pathname
+          fromPath: location.pathname,
         }}
         replace
       />
@@ -104,7 +111,7 @@ export function ProtectedRoute({
           to="/unauthorized"
           state={{
             requiredPermission: requirePermissions.join(', '),
-            fromPath: location.pathname
+            fromPath: location.pathname,
           }}
           replace
         />
@@ -119,7 +126,7 @@ export function ProtectedRoute({
         to="/unauthorized"
         state={{
           requiredPermission: `role:${requireRole}`,
-          fromPath: location.pathname
+          fromPath: location.pathname,
         }}
         replace
       />

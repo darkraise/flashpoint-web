@@ -348,10 +348,28 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 
 // Primary colors
 export type PrimaryColor =
-  | 'blue' | 'slate' | 'gray' | 'zinc' | 'neutral' | 'stone'
-  | 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green'
-  | 'emerald' | 'teal' | 'cyan' | 'sky' | 'indigo' | 'violet'
-  | 'purple' | 'fuchsia' | 'pink' | 'rose';
+  | 'blue'
+  | 'slate'
+  | 'gray'
+  | 'zinc'
+  | 'neutral'
+  | 'stone'
+  | 'red'
+  | 'orange'
+  | 'amber'
+  | 'yellow'
+  | 'lime'
+  | 'green'
+  | 'emerald'
+  | 'teal'
+  | 'cyan'
+  | 'sky'
+  | 'indigo'
+  | 'violet'
+  | 'purple'
+  | 'fuchsia'
+  | 'pink'
+  | 'rose';
 
 // Theme State (Zustand)
 interface ThemeState {

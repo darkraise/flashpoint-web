@@ -6,15 +6,22 @@ Search, browse, and retrieve game information.
 
 `GET /api/games` - No auth required
 
-Query params: `search` (title/developer/publisher), `platform`, `series`, `developers`, `publishers`, `playModes`, `languages`, `library` (arcade|theatre), `tags`, `yearFrom`, `yearTo`, `sortBy` (title|releaseDate|dateAdded|developer, default: title), `sortOrder` (asc|desc, default: asc), `page` (default: 1), `limit` (default: 50, max: 100), `showBroken` (default: false), `showExtreme` (default: false)
+Query params: `search` (title/developer/publisher), `platform`, `series`,
+`developers`, `publishers`, `playModes`, `languages`, `library`
+(arcade|theatre), `tags`, `yearFrom`, `yearTo`, `sortBy`
+(title|releaseDate|dateAdded|developer, default: title), `sortOrder` (asc|desc,
+default: asc), `page` (default: 1), `limit` (default: 50, max: 100),
+`showBroken` (default: false), `showExtreme` (default: false)
 
-Returns paginated array with standard game fields (id, title, developer, publisher, platformName, releaseDate, tags, description, etc.).
+Returns paginated array with standard game fields (id, title, developer,
+publisher, platformName, releaseDate, tags, description, etc.).
 
 ## Get Filter Options
 
 `GET /api/games/filter-options` - No auth required
 
-Returns platforms, developers, publishers, series, playModes, languages arrays with name/code and count.
+Returns platforms, developers, publishers, series, playModes, languages arrays
+with name/code and count.
 
 ## Get Random Game
 
@@ -30,7 +37,11 @@ Error: `404 Not Found` if no games match criteria
 
 `GET /api/games/:id` - No auth required
 
-Returns full game object with all fields: id, title, alternateTitles, developer, publisher, platformName, releaseDate, version, series, playMode, status, notes, language, library, tags, description, launchCommand, applicationPath, source, originalDescription, presentOnDisk, activeDataOnDisk, activeDataId, broken, extreme, playCount, archiveState.
+Returns full game object with all fields: id, title, alternateTitles, developer,
+publisher, platformName, releaseDate, version, series, playMode, status, notes,
+language, library, tags, description, launchCommand, applicationPath, source,
+originalDescription, presentOnDisk, activeDataOnDisk, activeDataId, broken,
+extreme, playCount, archiveState.
 
 Error: `404 Not Found`
 
@@ -38,7 +49,8 @@ Error: `404 Not Found`
 
 `GET /api/games/:id/launch` - No auth required
 
-Returns gameId, title, platform, launchCommand, contentUrl (proxied through game-service), applicationPath, playMode, canPlayInBrowser.
+Returns gameId, title, platform, launchCommand, contentUrl (proxied through
+game-service), applicationPath, playMode, canPlayInBrowser.
 
 ## Get Related Games
 
@@ -60,39 +72,39 @@ await api.get('/games', {
     yearTo: 2010,
     sortBy: 'releaseDate',
     sortOrder: 'desc',
-    limit: 50
-  }
+    limit: 50,
+  },
 });
 
 // Multiple platforms
 await api.get('/games', {
-  params: { platform: 'Flash,HTML5,Unity' }
+  params: { platform: 'Flash,HTML5,Unity' },
 });
 
 // Search by text
 await api.get('/games', {
-  params: { search: 'platformer', limit: 20 }
+  params: { search: 'platformer', limit: 20 },
 });
 ```
 
 ## Game Data Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string (uuid) | Unique game identifier |
-| title | string | Game name |
-| platformName | string | Platform (Flash, HTML5, etc.) |
-| library | string | "arcade" (games) or "theatre" (animations) |
-| developer | string | Developer name |
-| publisher | string | Publisher name |
-| releaseDate | string (YYYY-MM-DD) | Original release date |
-| tags | string | Semicolon-separated tags |
-| description | string | Full description |
-| launchCommand | string | File/URL to launch |
-| broken | boolean | Known to be broken |
-| extreme | boolean | Contains extreme content |
-| presentOnDisk | boolean | Files available locally |
-| canPlayInBrowser | boolean | Playable via web (Flash/HTML5) |
+| Field            | Type                | Description                                |
+| ---------------- | ------------------- | ------------------------------------------ |
+| id               | string (uuid)       | Unique game identifier                     |
+| title            | string              | Game name                                  |
+| platformName     | string              | Platform (Flash, HTML5, etc.)              |
+| library          | string              | "arcade" (games) or "theatre" (animations) |
+| developer        | string              | Developer name                             |
+| publisher        | string              | Publisher name                             |
+| releaseDate      | string (YYYY-MM-DD) | Original release date                      |
+| tags             | string              | Semicolon-separated tags                   |
+| description      | string              | Full description                           |
+| launchCommand    | string              | File/URL to launch                         |
+| broken           | boolean             | Known to be broken                         |
+| extreme          | boolean             | Contains extreme content                   |
+| presentOnDisk    | boolean             | Files available locally                    |
+| canPlayInBrowser | boolean             | Playable via web (Flash/HTML5)             |
 
 ## Best Practices
 

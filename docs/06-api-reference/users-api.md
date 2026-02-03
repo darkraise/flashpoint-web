@@ -8,7 +8,8 @@ Manage user accounts and settings.
 
 Query params: `page` (default: 1), `limit` (default: 50)
 
-Returns paginated array with id, username, email, roleId, roleName, isActive, createdAt, lastLoginAt.
+Returns paginated array with id, username, email, roleId, roleName, isActive,
+createdAt, lastLoginAt.
 
 ## Get User
 
@@ -22,7 +23,8 @@ Error: `404 Not Found`
 
 `POST /api/users` - Requires `users.create` permission
 
-Body: `{ "username": "string (3-50)", "email": "valid-email", "password": "string (min 6)", "roleId": integer, "isActive": boolean (optional) }`
+Body:
+`{ "username": "string (3-50)", "email": "valid-email", "password": "string (min 6)", "roleId": integer, "isActive": boolean (optional) }`
 
 Returns `201 Created` with new user.
 
@@ -32,7 +34,8 @@ Error: `409 Conflict` if username/email exists
 
 `PATCH /api/users/:id` - Requires `users.update` permission
 
-Body (all optional): `{ "email": "valid-email", "roleId": integer, "isActive": boolean }`
+Body (all optional):
+`{ "email": "valid-email", "roleId": integer, "isActive": boolean }`
 
 Error: `409 Conflict` if new email already exists
 
@@ -46,7 +49,8 @@ Error: `400 Bad Request` if last admin
 
 ## Change Password
 
-`POST /api/users/:id/change-password` - Users can change own, admins can change any (requires `users.update`)
+`POST /api/users/:id/change-password` - Users can change own, admins can change
+any (requires `users.update`)
 
 Body: `{ "currentPassword": "string", "newPassword": "string (min 6)" }`
 
@@ -57,6 +61,7 @@ Error: `401 Unauthorized` if current password incorrect
 `GET /api/users/me/settings` - Requires authentication
 
 Returns key-value pairs (stored as strings). Common keys:
+
 - theme_mode (light|dark|system)
 - primary_color (blue|green|red|purple|orange|pink)
 - game_view_mode (grid|list)

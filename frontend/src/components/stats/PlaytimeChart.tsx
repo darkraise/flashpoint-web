@@ -1,4 +1,13 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 import { usePlayActivityOverTime } from '../../hooks/usePlayTracking';
 import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
 import type { CustomTooltipProps } from '@/types/chart';
@@ -60,16 +69,18 @@ export function PlaytimeChart() {
       <div className="bg-card rounded-lg p-6 border border-border shadow-md">
         <h3 className="text-lg font-semibold mb-4">Play Activity (Last 30 Days)</h3>
         <div className="h-80 flex items-center justify-center">
-          <p className="text-muted-foreground">No play activity data yet. Start playing to see your activity!</p>
+          <p className="text-muted-foreground">
+            No play activity data yet. Start playing to see your activity!
+          </p>
         </div>
       </div>
     );
   }
 
-  const chartData = data.map(item => ({
+  const chartData = data.map((item) => ({
     date: formatDate(item.date),
     playtime: item.playtime,
-    sessions: item.sessions
+    sessions: item.sessions,
   }));
 
   return (
@@ -77,52 +88,48 @@ export function PlaytimeChart() {
       <h3 className="text-lg font-semibold mb-4">Play Activity (Last 30 Days)</h3>
       <div className="bg-accent rounded-lg p-4">
         <ResponsiveContainer width="100%" height={320}>
-        <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="colorPlaytime" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-            </linearGradient>
-            <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-          <XAxis
-            dataKey="date"
-            stroke="#9ca3af"
-            tick={{ fill: '#9ca3af', fontSize: 12 }}
-          />
-          <YAxis
-            stroke="#9ca3af"
-            tick={{ fill: '#9ca3af', fontSize: 12 }}
-            tickFormatter={(value: number) => formatPlaytime(value)}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend
-            wrapperStyle={{ paddingTop: '20px' }}
-            iconType="circle"
-            formatter={(value: string) => <span className="text-gray-300">{value}</span>}
-          />
-          <Area
-            type="monotone"
-            dataKey="playtime"
-            stroke="#3b82f6"
-            fillOpacity={1}
-            fill="url(#colorPlaytime)"
-            name="Playtime (seconds)"
-          />
-          <Area
-            type="monotone"
-            dataKey="sessions"
-            stroke="#10b981"
-            fillOpacity={1}
-            fill="url(#colorSessions)"
-            name="Sessions"
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+          <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorPlaytime" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <XAxis dataKey="date" stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+            <YAxis
+              stroke="#9ca3af"
+              tick={{ fill: '#9ca3af', fontSize: 12 }}
+              tickFormatter={(value: number) => formatPlaytime(value)}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{ paddingTop: '20px' }}
+              iconType="circle"
+              formatter={(value: string) => <span className="text-gray-300">{value}</span>}
+            />
+            <Area
+              type="monotone"
+              dataKey="playtime"
+              stroke="#3b82f6"
+              fillOpacity={1}
+              fill="url(#colorPlaytime)"
+              name="Playtime (seconds)"
+            />
+            <Area
+              type="monotone"
+              dataKey="sessions"
+              stroke="#10b981"
+              fillOpacity={1}
+              fill="url(#colorSessions)"
+              name="Sessions"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

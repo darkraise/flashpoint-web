@@ -18,7 +18,7 @@ router.get('/version', (req, res, next) => {
 
     res.json({
       currentVersion,
-      isInstalled
+      isInstalled,
     });
   } catch (error) {
     next(error);
@@ -29,18 +29,28 @@ router.get('/version', (req, res, next) => {
  * GET /api/ruffle/check-update
  * Check for Ruffle updates (admin only)
  */
-router.get('/check-update', authenticate, requirePermission('settings.update'), asyncHandler(async (req, res) => {
-  const updateInfo = await ruffleService.checkForUpdate();
-  res.json(updateInfo);
-}));
+router.get(
+  '/check-update',
+  authenticate,
+  requirePermission('settings.update'),
+  asyncHandler(async (req, res) => {
+    const updateInfo = await ruffleService.checkForUpdate();
+    res.json(updateInfo);
+  })
+);
 
 /**
  * POST /api/ruffle/update
  * Update Ruffle to latest version (admin only)
  */
-router.post('/update', authenticate, requirePermission('settings.update'), asyncHandler(async (req, res) => {
-  const result = await ruffleService.updateRuffle();
-  res.json(result);
-}));
+router.post(
+  '/update',
+  authenticate,
+  requirePermission('settings.update'),
+  asyncHandler(async (req, res) => {
+    const result = await ruffleService.updateRuffle();
+    res.json(result);
+  })
+);
 
 export default router;

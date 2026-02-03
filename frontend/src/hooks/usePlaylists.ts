@@ -4,7 +4,7 @@ import { playlistsApi } from '@/lib/api';
 export function usePlaylists() {
   return useQuery({
     queryKey: ['playlists'],
-    queryFn: () => playlistsApi.getAll()
+    queryFn: () => playlistsApi.getAll(),
   });
 }
 
@@ -12,7 +12,7 @@ export function usePlaylist(id: string) {
   return useQuery({
     queryKey: ['playlist', id],
     queryFn: () => playlistsApi.getById(id),
-    enabled: !!id
+    enabled: !!id,
   });
 }
 
@@ -20,12 +20,16 @@ export function useCreatePlaylist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { title: string; description?: string; author?: string; library?: string }) =>
-      playlistsApi.create(data),
+    mutationFn: (data: {
+      title: string;
+      description?: string;
+      author?: string;
+      library?: string;
+    }) => playlistsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
-    }
+    },
   });
 }
 
@@ -39,7 +43,7 @@ export function useAddGamesToPlaylist() {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', variables.playlistId] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
-    }
+    },
   });
 }
 
@@ -53,7 +57,7 @@ export function useRemoveGamesFromPlaylist() {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', variables.playlistId] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
-    }
+    },
   });
 }
 
@@ -65,7 +69,7 @@ export function useDeletePlaylist() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
-    }
+    },
   });
 }
 
@@ -80,13 +84,12 @@ export function useAddToFavorites() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (gameId: string) =>
-      playlistsApi.addGames(FAVORITES_PLAYLIST_ID, [gameId]),
+    mutationFn: (gameId: string) => playlistsApi.addGames(FAVORITES_PLAYLIST_ID, [gameId]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', FAVORITES_PLAYLIST_ID] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
-    }
+    },
   });
 }
 
@@ -94,12 +97,11 @@ export function useRemoveFromFavorites() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (gameId: string) =>
-      playlistsApi.removeGames(FAVORITES_PLAYLIST_ID, [gameId]),
+    mutationFn: (gameId: string) => playlistsApi.removeGames(FAVORITES_PLAYLIST_ID, [gameId]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', FAVORITES_PLAYLIST_ID] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
-    }
+    },
   });
 }

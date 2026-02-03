@@ -33,40 +33,22 @@ export function CelestialBackground() {
   return (
     <>
       {/* Nebula Layer 1: Primary color with slow drift */}
-      <div
-        className="celestial-nebula-1"
-        aria-hidden="true"
-      />
+      <div className="celestial-nebula-1" aria-hidden="true" />
 
       {/* Nebula Layer 2: Offset animation for depth */}
-      <div
-        className="celestial-nebula-2"
-        aria-hidden="true"
-      />
+      <div className="celestial-nebula-2" aria-hidden="true" />
 
       {/* Nebula Layer 3: Subtle accent layer */}
-      <div
-        className="celestial-nebula-3"
-        aria-hidden="true"
-      />
+      <div className="celestial-nebula-3" aria-hidden="true" />
 
       {/* Starfield Small Stars - Layer 1 (furthest) */}
-      <div
-        className={`celestial-stars-small ${isMobile ? 'mobile' : ''}`}
-        aria-hidden="true"
-      />
+      <div className={`celestial-stars-small ${isMobile ? 'mobile' : ''}`} aria-hidden="true" />
 
       {/* Starfield Medium Stars - Layer 2 (mid-depth) */}
-      <div
-        className={`celestial-stars-medium ${isMobile ? 'mobile' : ''}`}
-        aria-hidden="true"
-      />
+      <div className={`celestial-stars-medium ${isMobile ? 'mobile' : ''}`} aria-hidden="true" />
 
       {/* Starfield Large Stars - Layer 3 (closest) */}
-      <div
-        className={`celestial-stars-large ${isMobile ? 'mobile' : ''}`}
-        aria-hidden="true"
-      />
+      <div className={`celestial-stars-large ${isMobile ? 'mobile' : ''}`} aria-hidden="true" />
     </>
   );
 }

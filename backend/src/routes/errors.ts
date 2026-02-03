@@ -24,10 +24,10 @@ if (!fsSync.existsSync(LOG_DIR)) {
  */
 function getSeverityNumber(type: string): number {
   const severityMap: Record<string, number> = {
-    client_error: 17,   // ERROR
-    api_error: 17,      // ERROR
-    network_error: 13,  // WARN (may be transient)
-    route_error: 13,    // WARN
+    client_error: 17, // ERROR
+    api_error: 17, // ERROR
+    network_error: 13, // WARN (may be transient)
+    route_error: 13, // WARN
   };
   return severityMap[type] || 17;
 }
@@ -55,9 +55,9 @@ const clientErrorLogger = winston.createLogger({
       filename: ERROR_LOG_FILE,
       maxsize: 10485760, // 10MB
       maxFiles: 5,
-      tailable: true
-    })
-  ]
+      tailable: true,
+    }),
+  ],
 });
 
 logger.info(`[ClientErrors] Log file: ${ERROR_LOG_FILE}`);
@@ -98,7 +98,7 @@ async function logError(report: ErrorReport): Promise<void> {
       userAgent: report.userAgent,
       userId: report.userId,
       stack: report.stack,
-      context: report.context
+      context: report.context,
     });
   } catch (error) {
     logger.error('Failed to log client error:', error);
@@ -132,7 +132,7 @@ async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
               timestamp: logEntry.clientTimestamp || logEntry.timestamp,
               userAgent: logEntry.userAgent,
               userId: logEntry.userId,
-              context: logEntry.context
+              context: logEntry.context,
             });
           } catch (parseError) {
             logger.warn('Failed to parse error log line:', parseError);
@@ -143,7 +143,12 @@ async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
       return errors;
     } catch (readError) {
       // File doesn't exist yet - handle ENOENT error
-      if (readError && typeof readError === 'object' && 'code' in readError && readError.code === 'ENOENT') {
+      if (
+        readError &&
+        typeof readError === 'object' &&
+        'code' in readError &&
+        readError.code === 'ENOENT'
+      ) {
         return [];
       }
       throw readError;
@@ -169,8 +174,8 @@ router.post('/report', async (req: Request, res: Response) => {
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Missing required fields: type, message, url'
-        }
+          message: 'Missing required fields: type, message, url',
+        },
       });
     }
 
@@ -202,8 +207,8 @@ router.post('/report', async (req: Request, res: Response) => {
       success: false,
       error: {
         code: 'INTERNAL_ERROR',
-        message: 'Failed to log error report'
-      }
+        message: 'Failed to log error report',
+      },
     });
   }
 });
@@ -227,8 +232,8 @@ router.get(
         data: {
           errors,
           count: errors.length,
-          limit
-        }
+          limit,
+        },
       });
     } catch (error) {
       logger.error('Error in /errors/recent:', error);
@@ -236,8 +241,8 @@ router.get(
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: 'Failed to retrieve error reports'
-        }
+          message: 'Failed to retrieve error reports',
+        },
       });
     }
   }
@@ -263,11 +268,11 @@ router.get(
 
       const stats = {
         total: errors.length,
-        last24h: errors.filter(e => new Date(e.timestamp) >= last24h).length,
-        last7d: errors.filter(e => new Date(e.timestamp) >= last7d).length,
+        last24h: errors.filter((e) => new Date(e.timestamp) >= last24h).length,
+        last7d: errors.filter((e) => new Date(e.timestamp) >= last7d).length,
         byType: {} as Record<string, number>,
         topUrls: {} as Record<string, number>,
-        topMessages: {} as Record<string, number>
+        topMessages: {} as Record<string, number>,
       };
 
       // Group by type
@@ -293,7 +298,7 @@ router.get(
 
       res.json({
         success: true,
-        data: stats
+        data: stats,
       });
     } catch (error) {
       logger.error('Error in /errors/stats:', error);
@@ -301,8 +306,8 @@ router.get(
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: 'Failed to retrieve error statistics'
-        }
+          message: 'Failed to retrieve error statistics',
+        },
       });
     }
   }

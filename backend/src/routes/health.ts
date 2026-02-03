@@ -19,7 +19,7 @@ router.get('/', (req, res) => {
 
   res.status(isHealthy ? 200 : 503).json({
     status: isHealthy ? 'healthy' : 'unhealthy',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -43,7 +43,9 @@ router.get(
     try {
       if (DatabaseService.isConnected()) {
         // Test query to verify database is accessible
-        const result = DatabaseService.get('SELECT COUNT(*) as count FROM game', []) as { count: number } | null;
+        const result = DatabaseService.get('SELECT COUNT(*) as count FROM game', []) as {
+          count: number;
+        } | null;
         flashpointDbRecordCount = result?.count || 0;
         flashpointDbStatus = 'connected';
       }
@@ -60,7 +62,9 @@ router.get(
     try {
       if (UserDatabaseService.isConnected()) {
         // Test query to verify database is accessible
-        const result = UserDatabaseService.get('SELECT COUNT(*) as count FROM users', []) as { count: number } | null;
+        const result = UserDatabaseService.get('SELECT COUNT(*) as count FROM users', []) as {
+          count: number;
+        } | null;
         userCount = result?.count || 0;
         userDbStatus = 'connected';
       }
@@ -88,7 +92,7 @@ router.get(
       rss: formatBytes(memoryUsage.rss),
       heapUsed: formatBytes(memoryUsage.heapUsed),
       heapTotal: formatBytes(memoryUsage.heapTotal),
-      external: formatBytes(memoryUsage.external)
+      external: formatBytes(memoryUsage.external),
     };
 
     const healthCheckTime = Math.round(performance.now() - startTime);
@@ -101,20 +105,20 @@ router.get(
       timestamp: new Date().toISOString(),
       uptime: {
         seconds: uptimeSeconds,
-        formatted: uptimeFormatted
+        formatted: uptimeFormatted,
       },
       databases: {
         flashpoint: {
           status: flashpointDbStatus,
           path: config.flashpointDbPath,
           gameCount: flashpointDbRecordCount,
-          error: flashpointDbError
+          error: flashpointDbError,
         },
         user: {
           status: userDbStatus,
           userCount,
-          error: userDbError
-        }
+          error: userDbError,
+        },
       },
       caches: {
         permissions: permissionCacheStats,
@@ -122,23 +126,23 @@ router.get(
           size: gameSearchCacheStats.primary.size,
           max: gameSearchCacheStats.primary.max,
           ttl: '5 minutes',
-          hitRate: gameSearchCacheStats.primary.size > 0 ? 'active' : 'idle'
-        }
+          hitRate: gameSearchCacheStats.primary.size > 0 ? 'active' : 'idle',
+        },
       },
       memory: memoryFormatted,
       environment: {
         nodeEnv: config.nodeEnv,
         nodeVersion: process.version,
         platform: process.platform,
-        arch: process.arch
+        arch: process.arch,
       },
       services: {
         gameService: {
           proxyUrl: config.gameServerUrl || 'http://localhost:22500',
-          gameZipPort: config.gameServerHttpPort || 22501
-        }
+          gameZipPort: config.gameServerHttpPort || 22501,
+        },
       },
-      healthCheckDuration: `${healthCheckTime}ms`
+      healthCheckDuration: `${healthCheckTime}ms`,
     });
   })
 );

@@ -1,6 +1,7 @@
 # Color Palette
 
-22 color palettes with HSL values for light and dark modes. All colors meet WCAG 2.1 AA accessibility standards.
+22 color palettes with HSL values for light and dark modes. All colors meet WCAG
+2.1 AA accessibility standards.
 
 ## HSL Format
 
@@ -11,57 +12,58 @@ Colors stored as HSL without `hsl()` wrapper to support opacity modifiers:
 ```
 
 Usage:
+
 ```tsx
-bg-primary        /* hsl(221.2 83.2% 53.3%) */
-bg-primary/50     /* hsl(221.2 83.2% 53.3% / 0.5) */
-bg-primary/20     /* hsl(221.2 83.2% 53.3% / 0.2) */
+bg - primary; /* hsl(221.2 83.2% 53.3%) */
+bg - primary / 50; /* hsl(221.2 83.2% 53.3% / 0.5) */
+bg - primary / 20; /* hsl(221.2 83.2% 53.3% / 0.2) */
 ```
 
 ## Neutral Palettes
 
-| Palette | Light | Dark | Use Cases |
-|---------|-------|------|-----------|
-| **Slate** | `215.4 16.3% 46.9%` | `215.3 25% 56.9%` | Cool, modern |
-| **Gray** | `220 8.9% 46.1%` | `220 13% 69%` | True neutral |
-| **Zinc** | `240 3.8% 46.1%` | `240 5% 65%` | Warm, contemporary |
-| **Neutral** | `0 0% 45.1%` | `0 0% 65%` | Pure grayscale |
-| **Stone** | `25 5.3% 44.7%` | `33.3 5.5% 63.9%` | Beige-gray, warm |
+| Palette     | Light               | Dark              | Use Cases          |
+| ----------- | ------------------- | ----------------- | ------------------ |
+| **Slate**   | `215.4 16.3% 46.9%` | `215.3 25% 56.9%` | Cool, modern       |
+| **Gray**    | `220 8.9% 46.1%`    | `220 13% 69%`     | True neutral       |
+| **Zinc**    | `240 3.8% 46.1%`    | `240 5% 65%`      | Warm, contemporary |
+| **Neutral** | `0 0% 45.1%`        | `0 0% 65%`        | Pure grayscale     |
+| **Stone**   | `25 5.3% 44.7%`     | `33.3 5.5% 63.9%` | Beige-gray, warm   |
 
 ## Warm Palettes
 
-| Palette | Light | Dark | Use Cases |
-|---------|-------|------|-----------|
-| **Red** | `0 72.2% 50.6%` | `0 72.2% 60.6%` | Energy, attention |
-| **Orange** | `24.6 95% 53.1%` | `20.5 90.2% 58.2%` | Warm, friendly |
-| **Amber** | `37.7 92.1% 50.2%` | `32.1 94.6% 58%` | Golden, inviting |
-| **Yellow** | `45 93.4% 47.5%` | `47.9 95.8% 58.1%` | Cheerful, positive |
+| Palette    | Light              | Dark               | Use Cases          |
+| ---------- | ------------------ | ------------------ | ------------------ |
+| **Red**    | `0 72.2% 50.6%`    | `0 72.2% 60.6%`    | Energy, attention  |
+| **Orange** | `24.6 95% 53.1%`   | `20.5 90.2% 58.2%` | Warm, friendly     |
+| **Amber**  | `37.7 92.1% 50.2%` | `32.1 94.6% 58%`   | Golden, inviting   |
+| **Yellow** | `45 93.4% 47.5%`   | `47.9 95.8% 58.1%` | Cheerful, positive |
 
 ## Cool Palettes
 
-| Palette | Light | Dark | Use Cases |
-|---------|-------|------|-----------|
-| **Lime** | `84 81% 44.3%` | `82.7 85% 55.1%` | Fresh, lively |
-| **Green** | `142.1 70.6% 45.3%` | `142.1 76.2% 56.2%` | Success, growth |
-| **Emerald** | `160.1 84.1% 39.4%` | `160.1 84.1% 49.4%` | Rich, luxurious |
-| **Teal** | `173.4 80.4% 40%` | `172.5 66% 50.4%` | Professional, calm |
-| **Cyan** | `188.7 85.7% 53.3%` | `187.2 85.7% 53.3%` | Modern, refreshing |
-| **Sky** | `199.3 89.1% 48.2%` | `198.6 88.7% 58.4%` | Airy, open |
-| **Blue** | `221.2 83.2% 53.3%` | `217.2 91.2% 59.8%` | Professional (default) |
+| Palette     | Light               | Dark                | Use Cases              |
+| ----------- | ------------------- | ------------------- | ---------------------- |
+| **Lime**    | `84 81% 44.3%`      | `82.7 85% 55.1%`    | Fresh, lively          |
+| **Green**   | `142.1 70.6% 45.3%` | `142.1 76.2% 56.2%` | Success, growth        |
+| **Emerald** | `160.1 84.1% 39.4%` | `160.1 84.1% 49.4%` | Rich, luxurious        |
+| **Teal**    | `173.4 80.4% 40%`   | `172.5 66% 50.4%`   | Professional, calm     |
+| **Cyan**    | `188.7 85.7% 53.3%` | `187.2 85.7% 53.3%` | Modern, refreshing     |
+| **Sky**     | `199.3 89.1% 48.2%` | `198.6 88.7% 58.4%` | Airy, open             |
+| **Blue**    | `221.2 83.2% 53.3%` | `217.2 91.2% 59.8%` | Professional (default) |
 
 ## Violet/Purple Palettes
 
-| Palette | Light | Dark | Use Cases |
-|---------|-------|------|-----------|
-| **Indigo** | `238.7 83.5% 66.7%` | `239.4 84.1% 76.7%` | Deep, elegant |
-| **Violet** | `262.1 83.3% 57.8%` | `262.1 83.3% 67.8%` | Creative, unique |
-| **Purple** | `258.3 89.5% 58.4%` | `258.3 89.5% 68.4%` | Luxury, imagination |
-| **Fuchsia** | `292.2 84.1% 60.6%` | `292.2 84.1% 70.6%` | Bold, playful |
+| Palette     | Light               | Dark                | Use Cases           |
+| ----------- | ------------------- | ------------------- | ------------------- |
+| **Indigo**  | `238.7 83.5% 66.7%` | `239.4 84.1% 76.7%` | Deep, elegant       |
+| **Violet**  | `262.1 83.3% 57.8%` | `262.1 83.3% 67.8%` | Creative, unique    |
+| **Purple**  | `258.3 89.5% 58.4%` | `258.3 89.5% 68.4%` | Luxury, imagination |
+| **Fuchsia** | `292.2 84.1% 60.6%` | `292.2 84.1% 70.6%` | Bold, playful       |
 
 ## Pink/Rose Palettes
 
-| Palette | Light | Dark | Use Cases |
-|---------|-------|------|-----------|
-| **Pink** | `330.4 81.2% 60.4%` | `330.4 81.2% 70.4%` | Social, friendly |
+| Palette  | Light               | Dark                | Use Cases         |
+| -------- | ------------------- | ------------------- | ----------------- |
+| **Pink** | `330.4 81.2% 60.4%` | `330.4 81.2% 70.4%` | Social, friendly  |
 | **Rose** | `346.8 77.2% 49.8%` | `346.8 77.2% 59.8%` | Romantic, elegant |
 
 ## Semantic Color Roles
@@ -178,7 +180,7 @@ const { setMode } = useThemeStore();
 // Toggle for testing
 <button onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}>
   Toggle Theme
-</button>
+</button>;
 ```
 
 ### 4. Maintain Consistency

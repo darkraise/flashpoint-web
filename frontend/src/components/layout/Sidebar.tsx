@@ -1,5 +1,19 @@
 import { useLocation } from 'react-router-dom';
-import { List as ListIcon, ListVideo, Settings, Heart, Gamepad2, Film, Users, Shield, Activity, BarChart3, Clock, Home, LucideIcon } from 'lucide-react';
+import {
+  List as ListIcon,
+  ListVideo,
+  Settings,
+  Heart,
+  Gamepad2,
+  Film,
+  Users,
+  Shield,
+  Activity,
+  BarChart3,
+  Clock,
+  Home,
+  LucideIcon,
+} from 'lucide-react';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { RoleGuard } from '../common/RoleGuard';
@@ -50,7 +64,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
         setSidebarOpen(false);
       }
     },
-    minSwipeDistance: 50
+    minSwipeDistance: 50,
   });
 
   const gameNavItems: NavItem[] = [
@@ -64,13 +78,22 @@ export function Sidebar({ isOpen }: SidebarProps) {
   const libraryNavItems: NavItem[] = [
     enableFavorites && { path: '/favorites', icon: Heart, label: 'Favorites' },
     enablePlaylists && { path: '/playlists', icon: ListVideo, label: 'My Playlists' },
-    enablePlaylists && { path: '/flashpoint-playlists', icon: ListIcon, label: 'Flashpoint Playlists' },
+    enablePlaylists && {
+      path: '/flashpoint-playlists',
+      icon: ListIcon,
+      label: 'Flashpoint Playlists',
+    },
   ].filter(Boolean) as NavItem[];
 
   const managementNavItems: NavItem[] = [
     { path: '/users', icon: Users, label: 'Users', permission: 'users.read' },
     { path: '/roles', icon: Shield, label: 'Roles', permission: 'roles.read' },
-    enableStatistics && { path: '/activities', icon: Activity, label: 'Activity Logs', permission: 'activities.read' },
+    enableStatistics && {
+      path: '/activities',
+      icon: Activity,
+      label: 'Activity Logs',
+      permission: 'activities.read',
+    },
   ].filter(Boolean) as NavItem[];
 
   const bottomNavItems: NavItem[] = [
@@ -125,9 +148,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
         )}
         style={{
           width: effectiveCollapsed ? '4rem' : '16rem',
-          transition: isMobile
-            ? 'transform 300ms ease-out'
-            : 'width 500ms ease-out',
+          transition: isMobile ? 'transform 300ms ease-out' : 'width 500ms ease-out',
         }}
         aria-label="Main navigation"
       >
@@ -196,10 +217,19 @@ export function Sidebar({ isOpen }: SidebarProps) {
             {bottomNavItems.map((item) =>
               item.permission ? (
                 <RoleGuard key={item.path} permission={item.permission}>
-                  <SidebarItem {...item} collapsed={effectiveCollapsed} onClick={handleNavItemClick} />
+                  <SidebarItem
+                    {...item}
+                    collapsed={effectiveCollapsed}
+                    onClick={handleNavItemClick}
+                  />
                 </RoleGuard>
               ) : (
-                <SidebarItem key={item.path} {...item} collapsed={effectiveCollapsed} onClick={handleNavItemClick} />
+                <SidebarItem
+                  key={item.path}
+                  {...item}
+                  collapsed={effectiveCollapsed}
+                  onClick={handleNavItemClick}
+                />
               )
             )}
           </div>

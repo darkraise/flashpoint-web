@@ -219,7 +219,7 @@ export class FavoritesService {
         if (game) {
           return {
             ...game,
-            addedAt: fav.added_at
+            addedAt: fav.added_at,
           };
         }
         return null;

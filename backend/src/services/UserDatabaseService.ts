@@ -93,7 +93,7 @@ export class UserDatabaseService {
       ).all() as { name: string }[];
 
       // Filter out the migrations table itself to check for other tables
-      const otherTables = tables.filter(t => t.name !== 'migrations');
+      const otherTables = tables.filter((t) => t.name !== 'migrations');
 
       if (otherTables.length === 0) {
         // New database, no detection needed
@@ -113,7 +113,7 @@ export class UserDatabaseService {
 
       // Detect 001_complete_schema (check for users table)
       // This migration includes all schema, seed data, and indexes
-      if (otherTables.some(t => t.name === 'users')) {
+      if (otherTables.some((t) => t.name === 'users')) {
         markApplied('001_complete_schema', 'Detected existing schema and seed data');
       }
 
@@ -140,8 +140,9 @@ export class UserDatabaseService {
       const migrationDir = path.join(__dirname, '../migrations');
 
       // Get all migration files (*.sql files with numeric prefix)
-      const files = fs.readdirSync(migrationDir)
-        .filter(f => f.endsWith('.sql') && /^\d{3}_/.test(f))
+      const files = fs
+        .readdirSync(migrationDir)
+        .filter((f) => f.endsWith('.sql') && /^\d{3}_/.test(f))
         .sort(); // Alphabetical sort ensures correct order (001, 002, etc.)
 
       logger.info(`[UserDB] Found ${files.length} migration file(s)`);
@@ -151,9 +152,7 @@ export class UserDatabaseService {
         const migrationPath = path.join(migrationDir, file);
 
         // Check if migration has already been applied
-        const applied = this.db!.prepare(
-          'SELECT 1 FROM migrations WHERE name = ?'
-        ).get(name);
+        const applied = this.db!.prepare('SELECT 1 FROM migrations WHERE name = ?').get(name);
 
         if (!applied) {
           logger.info(`[UserDB] Running migration: ${name}`);
@@ -226,15 +225,19 @@ export class UserDatabaseService {
   static exec<T = any>(sql: string, params: any[] = []): T[] {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        return stmt.all(params) as T[];
-      } catch (error) {
-        logger.error('[UserDB] Query error:', { sql, params, error });
-        throw error;
-      }
-    }, sql, params);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          return stmt.all(params) as T[];
+        } catch (error) {
+          logger.error('[UserDB] Query error:', { sql, params, error });
+          throw error;
+        }
+      },
+      sql,
+      params
+    );
   }
 
   /**
@@ -243,16 +246,20 @@ export class UserDatabaseService {
   static get<T = any>(sql: string, params: any[] = []): T | undefined {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        const result = stmt.get(params);
-        return result as T | undefined;
-      } catch (error) {
-        logger.error('[UserDB] Get error:', { sql, params, error });
-        throw error;
-      }
-    }, sql, params);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          const result = stmt.get(params);
+          return result as T | undefined;
+        } catch (error) {
+          logger.error('[UserDB] Get error:', { sql, params, error });
+          throw error;
+        }
+      },
+      sql,
+      params
+    );
   }
 
   /**
@@ -268,19 +275,23 @@ export class UserDatabaseService {
   static run(sql: string, params: any[] = []): BetterSqlite3.RunResult {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        return stmt.run(params);
-      } catch (error) {
-        logger.error('[UserDB] Run error:', { sql, params });
-        logger.error('[UserDB] Error details:', error);
-        if (error instanceof Error) {
-          logger.error('[UserDB] Error stack:', error.stack);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          return stmt.run(params);
+        } catch (error) {
+          logger.error('[UserDB] Run error:', { sql, params });
+          logger.error('[UserDB] Error details:', error);
+          if (error instanceof Error) {
+            logger.error('[UserDB] Error stack:', error.stack);
+          }
+          throw error;
         }
-        throw error;
-      }
-    }, sql, params);
+      },
+      sql,
+      params
+    );
   }
 
   /**

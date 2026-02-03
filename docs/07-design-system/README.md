@@ -1,6 +1,8 @@
 # Design System Overview
 
-The Flashpoint Web design system provides a consistent, accessible, and beautiful UI framework built on Tailwind CSS, Shadcn UI components, and Lucide icons.
+The Flashpoint Web design system provides a consistent, accessible, and
+beautiful UI framework built on Tailwind CSS, Shadcn UI components, and Lucide
+icons.
 
 ## Technology Stack
 
@@ -93,6 +95,7 @@ function Example() {
 ## Color System
 
 11 semantic color roles:
+
 - **Primary** - Brand color (22 user-customizable options)
 - **Secondary** - Secondary actions
 - **Destructive** - Errors and destructive actions
@@ -107,11 +110,10 @@ function Example() {
 
 ## Component Categories
 
-**Layout:** Card, Sheet, Dialog, Scroll Area, Separator
-**Forms:** Input, Textarea, Select, Checkbox, Radio, Switch, Button
-**Data:** Table, Badge, Alert, Avatar, Skeleton
-**Navigation:** Dropdown Menu, Collapsible, Toggle, Toggle Group
-**Feedback:** Toast, Alert Dialog, Progress
+**Layout:** Card, Sheet, Dialog, Scroll Area, Separator **Forms:** Input,
+Textarea, Select, Checkbox, Radio, Switch, Button **Data:** Table, Badge, Alert,
+Avatar, Skeleton **Navigation:** Dropdown Menu, Collapsible, Toggle, Toggle
+Group **Feedback:** Toast, Alert Dialog, Progress
 
 ## Typography
 
@@ -123,6 +125,7 @@ function Example() {
 ## Spacing Scale
 
 Base unit: 4px (0.25rem)
+
 - Common values: 4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px
 
 ## Resources

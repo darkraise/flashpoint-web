@@ -17,9 +17,12 @@ router.use(requireFeature('enableStatistics'));
  * GET /api/statistics
  * Get overall Flashpoint archive statistics
  */
-router.get('/', asyncHandler(async (req, res) => {
-  const statistics = await statisticsService.getStatistics();
-  res.json(statistics);
-}));
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const statistics = await statisticsService.getStatistics();
+    res.json(statistics);
+  })
+);
 
 export default router;

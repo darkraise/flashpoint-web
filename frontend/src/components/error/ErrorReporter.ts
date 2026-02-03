@@ -7,20 +7,18 @@ import { useAuthStore } from '@/store/auth';
 const errorReportingApi = axios.create({
   baseURL: '/api',
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
 // Add auth token to error reporting requests
-errorReportingApi.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+errorReportingApi.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 
 const ERROR_QUEUE_KEY = 'flashpoint-error-queue';
 const MAX_QUEUE_SIZE = 10;

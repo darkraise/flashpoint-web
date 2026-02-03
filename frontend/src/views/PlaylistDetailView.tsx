@@ -32,7 +32,10 @@ export function PlaylistDetailView() {
     return (
       <div className="text-center py-12">
         <p className="text-red-400">Error loading playlist</p>
-        <Link to="/flashpoint-playlists" className="text-primary-500 hover:underline mt-4 inline-block">
+        <Link
+          to="/flashpoint-playlists"
+          className="text-primary-500 hover:underline mt-4 inline-block"
+        >
           Back to playlists
         </Link>
       </div>
@@ -74,9 +77,7 @@ export function PlaylistDetailView() {
           />
         </>
       ) : (
-        <div className="text-center py-12 text-gray-400">
-          No games in this playlist
-        </div>
+        <div className="text-center py-12 text-gray-400">No games in this playlist</div>
       )}
     </div>
   );

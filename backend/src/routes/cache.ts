@@ -24,13 +24,13 @@ router.get(
         size: gameSearchStats.primary.size,
         max: gameSearchStats.primary.max,
         ttl: gameSearchStats.primary.ttl,
-        hitRate: gameSearchStats.primary.size > 0 ? 'active' : 'idle'
+        hitRate: gameSearchStats.primary.size > 0 ? 'active' : 'idle',
       },
       permissions: {
         enabled: true,
         ttl: '5 minutes',
-        note: 'Permission cache size not exposed'
-      }
+        note: 'Permission cache size not exposed',
+      },
     });
   })
 );
@@ -68,7 +68,7 @@ router.post(
 
     res.json({
       message: 'Cache cleared successfully',
-      cleared: results
+      cleared: results,
     });
   })
 );

@@ -14,9 +14,7 @@ export const requirePermission = (...permissions: string[]) => {
     const userPermissions = req.user.permissions || [];
 
     // Check if user has any of the required permissions
-    const hasPermission = permissions.some(permission =>
-      userPermissions.includes(permission)
-    );
+    const hasPermission = permissions.some((permission) => userPermissions.includes(permission));
 
     if (!hasPermission) {
       return next(new AppError(403, 'Insufficient permissions'));

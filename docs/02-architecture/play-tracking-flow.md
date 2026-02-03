@@ -2,7 +2,8 @@
 
 ## Overview
 
-The play tracking system monitors user gameplay sessions, records statistics, and provides analytics.
+The play tracking system monitors user gameplay sessions, records statistics,
+and provides analytics.
 
 ## Architecture
 
@@ -81,6 +82,7 @@ sequenceDiagram
 ```
 
 **Database Schema**:
+
 ```sql
 CREATE TABLE user_game_plays (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,8 +102,12 @@ CREATE INDEX idx_user_game_plays_game_id ON user_game_plays(game_id);
 ```
 
 **Frontend Hook**:
+
 ```typescript
-export function usePlaySession(gameId: string | null, gameTitle: string | null) {
+export function usePlaySession(
+  gameId: string | null,
+  gameTitle: string | null
+) {
   const sessionIdRef = useRef<string | null>(null);
   const previousGameIdRef = useRef<string | null>(null);
   const hasStartedSessionRef = useRef(false);
@@ -115,7 +121,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
     },
     onError: (error) => {
       hasStartedSessionRef.current = false;
-    }
+    },
   });
 
   useEffect(() => {
@@ -147,7 +153,10 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
     };
   }, []);
 
-  return { sessionId: sessionIdRef.current, isTracking: !!sessionIdRef.current };
+  return {
+    sessionId: sessionIdRef.current,
+    isTracking: !!sessionIdRef.current,
+  };
 }
 ```
 
@@ -188,6 +197,7 @@ sequenceDiagram
 ```
 
 **Backend Service**:
+
 ```typescript
 async endPlaySession(sessionId: string): Promise<void> {
   const session = UserDatabaseService.get(
@@ -247,6 +257,7 @@ graph TB
 ```
 
 **Database Schema**:
+
 ```sql
 CREATE TABLE user_game_stats (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -263,6 +274,7 @@ CREATE TABLE user_game_stats (
 ```
 
 **Update Logic**:
+
 ```typescript
 private async updateGameStats(
   userId: number,
@@ -302,6 +314,7 @@ private async updateGameStats(
 ### Overall User Statistics
 
 **Database Schema**:
+
 ```sql
 CREATE TABLE user_stats (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -355,6 +368,7 @@ private async updateFlashpointGameStats(
 ## 4. Statistics Retrieval
 
 **API Endpoints**:
+
 ```http
 GET /api/play/stats
 GET /api/play/top-games?limit=10
@@ -363,6 +377,7 @@ GET /api/play/history?limit=50&offset=0
 ```
 
 **Response Examples**:
+
 ```json
 {
   "userId": 1,
@@ -376,7 +391,8 @@ GET /api/play/history?limit=50&offset=0
 
 ## 5. Abandoned Session Cleanup
 
-Runs every 6 hours. Sessions inactive for 24+ hours are marked as ended with 4-hour duration cap.
+Runs every 6 hours. Sessions inactive for 24+ hours are marked as ended with
+4-hour duration cap.
 
 ```mermaid
 sequenceDiagram
@@ -401,6 +417,7 @@ sequenceDiagram
 ```
 
 **Implementation**:
+
 ```typescript
 async cleanupAbandonedSessions(): Promise<void> {
   const abandoned = UserDatabaseService.all(
@@ -432,6 +449,7 @@ async cleanupAbandonedSessions(): Promise<void> {
 ```
 
 **Scheduler Setup**:
+
 ```typescript
 import { schedule } from 'node-cron';
 
@@ -445,6 +463,7 @@ schedule('0 */6 * * *', async () => {
 ## 6. Frontend Components
 
 **User Stats Panel**:
+
 ```typescript
 export const UserStatsPanel = () => {
   const { data: stats, isLoading } = useUserStats();
@@ -468,6 +487,7 @@ export const UserStatsPanel = () => {
 ## Performance Optimization
 
 **Database Indexing**:
+
 ```sql
 CREATE INDEX idx_user_game_plays_user_id ON user_game_plays(user_id);
 CREATE INDEX idx_user_game_plays_game_id ON user_game_plays(game_id);
@@ -478,11 +498,12 @@ CREATE INDEX idx_user_game_stats_playtime ON user_game_stats(user_id, total_play
 **Query Optimization**: Use JOINs instead of N+1 queries.
 
 **Frontend Caching**:
+
 ```typescript
 useQuery({
   queryKey: ['playStats'],
   queryFn: () => playTrackingApi.getStats(),
-  staleTime: 5 * 60 * 1000  // Cache for 5 minutes
+  staleTime: 5 * 60 * 1000, // Cache for 5 minutes
 });
 ```
 
@@ -492,4 +513,5 @@ useQuery({
 
 **Data Export**: Allow users to export play history as CSV.
 
-**Aggregation Verification**: Periodic verification job compares calculated stats with stored stats and recalculates on mismatch.
+**Aggregation Verification**: Periodic verification job compares calculated
+stats with stored stats and recalculates on mismatch.

@@ -22,7 +22,11 @@ function ActivityDashboardComponent() {
     localStorage.setItem('activityDashboardCollapsed', String(isCollapsed));
   }, [isCollapsed]);
 
-  const { data: stats, isLoading, isFetching } = useActivityStats(timeRange, undefined, autoRefresh);
+  const {
+    data: stats,
+    isLoading,
+    isFetching,
+  } = useActivityStats(timeRange, undefined, autoRefresh);
 
   const handleToggleAutoRefresh = () => {
     setAutoRefresh(!autoRefresh);
@@ -86,13 +90,12 @@ function ActivityDashboardComponent() {
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
-              <RefreshCw
-                size={16}
-                className={autoRefresh && isFetching ? 'animate-spin' : ''}
-              />
+              <RefreshCw size={16} className={autoRefresh && isFetching ? 'animate-spin' : ''} />
               <span className="text-sm">
                 Auto-refresh {autoRefresh ? 'ON' : 'OFF'}
-                {autoRefresh && isFetching ? <span className="ml-1 opacity-70">(updating...)</span> : null}
+                {autoRefresh && isFetching ? (
+                  <span className="ml-1 opacity-70">(updating...)</span>
+                ) : null}
               </span>
             </button>
           ) : null}
@@ -117,12 +120,7 @@ function ActivityDashboardComponent() {
           ) : null}
 
           {/* Stats Cards */}
-          {stats ? (
-            <ActivityStats
-              stats={stats.data}
-              timeRange={timeRange}
-            />
-          ) : null}
+          {stats ? <ActivityStats stats={stats.data} timeRange={timeRange} /> : null}
 
           {/* Activity Trend Chart */}
           <ActivityTrendChart autoRefresh={autoRefresh} />
