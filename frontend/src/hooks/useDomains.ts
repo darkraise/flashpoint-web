@@ -47,10 +47,9 @@ export function useDeleteDomain() {
 
   return useMutation({
     mutationFn: (id: number) => domainsApi.delete(id),
-    onSuccess: (_, deletedId) => {
-      queryClient.setQueryData<Domain[]>(DOMAINS_QUERY_KEY, (old = []) =>
-        old.filter((d) => d.id !== deletedId)
-      );
+    onSuccess: () => {
+      // Refetch instead of optimistic update — the backend may have auto-promoted a new default
+      queryClient.invalidateQueries({ queryKey: DOMAINS_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['system-settings', 'public'] });
       showToast('Domain deleted', 'success');
     },
@@ -98,9 +97,24 @@ export function useSetDefaultDomain() {
  * Falls back to window.location.origin if no hostname is provided.
  */
 export function buildShareUrl(hostname: string | null | undefined, shareToken: string): string {
+  const fallback = `${window.location.origin}/playlists/shared/${shareToken}`;
+
   if (!hostname) {
-    return `${window.location.origin}/playlists/shared/${shareToken}`;
+    return fallback;
   }
-  const protocol = window.location.protocol;
-  return `${protocol}//${hostname}/playlists/shared/${shareToken}`;
+
+  try {
+    const protocol = window.location.protocol;
+    const url = new URL(`${protocol}//${hostname}/playlists/shared/${shareToken}`);
+
+    // Only allow http/https to prevent javascript: or other protocol injection
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return fallback;
+    }
+
+    return url.toString();
+  } catch {
+    // Invalid hostname — fall back to current origin
+    return fallback;
+  }
 }

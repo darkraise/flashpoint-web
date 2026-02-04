@@ -56,6 +56,7 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
   // Sentinel value for "use current browser URL" option (Radix Select doesn't support empty string values)
   const CURRENT_URL_VALUE = '__current__';
   const [selectedDomain, setSelectedDomain] = useState<string>(CURRENT_URL_VALUE);
+  const [hasManuallySelected, setHasManuallySelected] = useState(false);
 
   const enableSharingMutation = useEnableSharing();
   const disableSharingMutation = useDisableSharing();
@@ -66,15 +67,17 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
   const { data: publicSettings } = usePublicSettings();
   const defaultDomain = publicSettings?.domains?.defaultDomain ?? null;
 
-  // Initialize selected domain from the default
+  // Initialize selected domain from the default only when first loaded (not after manual selection)
   useEffect(() => {
+    if (hasManuallySelected) return;
+
     if (isAdmin && domains) {
       const def = domains.find((d) => d.isDefault);
       setSelectedDomain(def?.hostname ?? CURRENT_URL_VALUE);
     } else {
       setSelectedDomain(defaultDomain ?? CURRENT_URL_VALUE);
     }
-  }, [isAdmin, domains, defaultDomain]);
+  }, [isAdmin, domains, defaultDomain, hasManuallySelected]);
 
   // Build the share URL locally
   const shareUrl = useMemo(() => {
@@ -101,6 +104,7 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
       setExpiresAt(playlist.shareExpiresAt ? new Date(playlist.shareExpiresAt) : undefined);
       setShowOwner(playlist.showOwner || false);
       setShareData(null);
+      setHasManuallySelected(false);
     }
   }, [isOpen, playlist]);
 
@@ -227,7 +231,13 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
               {isAdmin && domains && domains.length > 0 && shareData ? (
                 <div className="space-y-2">
                   <Label htmlFor="share-domain">Domain</Label>
-                  <Select value={selectedDomain} onValueChange={setSelectedDomain}>
+                  <Select
+                    value={selectedDomain}
+                    onValueChange={(value) => {
+                      setSelectedDomain(value);
+                      setHasManuallySelected(true);
+                    }}
+                  >
                     <SelectTrigger id="share-domain" className="w-full">
                       <SelectValue placeholder="Current URL" />
                     </SelectTrigger>

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import { config } from '../config';
 import { CachedSystemSettingsService } from '../services/CachedSystemSettingsService';
 import { DomainService } from '../services/DomainService';
 import { PermissionCache } from '../services/PermissionCache';
@@ -57,29 +58,32 @@ router.get(
 // ===================================
 router.get('/public', async (req: Request, res: Response) => {
   try {
-    const publicSettings = systemSettings.getPublicSettings();
+    const publicSettings: Record<
+      string,
+      Record<string, unknown>
+    > = systemSettings.getPublicSettings();
 
     // Add environment-based config values to public settings
     if (!publicSettings.app) {
       publicSettings.app = {};
     }
-    publicSettings.app.homeRecentHours = require('../config').config.homeRecentHours;
+    publicSettings.app.homeRecentHours = config.homeRecentHours;
 
     // Inject edition/version from config (auto-detected from version.txt, not stored in DB)
     if (!publicSettings.metadata) {
       publicSettings.metadata = {};
     }
-    publicSettings.metadata.flashpointEdition = require('../config').config.flashpointEdition;
-    publicSettings.metadata.flashpointVersion = require('../config').config.flashpointVersionString;
+    publicSettings.metadata.flashpointEdition = config.flashpointEdition;
+    publicSettings.metadata.flashpointVersion = config.flashpointVersionString;
 
     // Inject default domain from domains table
     try {
-      (publicSettings as any).domains = {
+      publicSettings.domains = {
         defaultDomain: domainService.getDefaultDomain(),
       };
-    } catch {
-      // DB table may not exist yet during first startup
-      (publicSettings as any).domains = { defaultDomain: null };
+    } catch (error) {
+      logger.debug('[PublicSettings] Failed to fetch default domain:', error);
+      publicSettings.domains = { defaultDomain: null };
     }
 
     res.json(publicSettings);

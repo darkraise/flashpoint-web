@@ -21,8 +21,10 @@ export class DomainService {
   private static instance: DomainService;
 
   private cachedDomains: Domain[] | null = null;
+  private cachedOrigins: Set<string> | null = null;
   private cacheTimestamp = 0;
   private readonly CACHE_TTL_MS = 60_000; // 60 seconds
+  private readonly MAX_DOMAINS = 50;
 
   private constructor() {}
 
@@ -39,6 +41,7 @@ export class DomainService {
 
   private invalidateCache(): void {
     this.cachedDomains = null;
+    this.cachedOrigins = null;
     this.cacheTimestamp = 0;
   }
 
@@ -114,6 +117,14 @@ export class DomainService {
   addDomain(hostname: string, createdBy: number): Domain {
     const validated = this.validateHostname(hostname);
 
+    // Enforce maximum domain limit
+    const count = this.db.prepare('SELECT COUNT(*) as count FROM domains').get() as {
+      count: number;
+    };
+    if (count.count >= this.MAX_DOMAINS) {
+      throw new AppError(400, `Maximum of ${this.MAX_DOMAINS} domains allowed`);
+    }
+
     // Check for duplicate
     const existing = this.db.prepare('SELECT id FROM domains WHERE hostname = ?').get(validated) as
       | { id: number }
@@ -148,7 +159,30 @@ export class DomainService {
       throw new AppError(404, 'Domain not found');
     }
 
-    this.db.prepare('DELETE FROM domains WHERE id = ?').run(id);
+    const transaction = this.db.transaction(() => {
+      // Read is_default inside the transaction to avoid race conditions
+      const current = this.db.prepare('SELECT is_default FROM domains WHERE id = ?').get(id) as
+        | { is_default: number }
+        | undefined;
+
+      this.db.prepare('DELETE FROM domains WHERE id = ?').run(id);
+
+      // If the deleted domain was the default, promote the next one
+      if (current?.is_default === 1) {
+        const next = this.db
+          .prepare('SELECT id FROM domains ORDER BY created_at ASC LIMIT 1')
+          .get() as { id: number } | undefined;
+
+        if (next) {
+          this.db.prepare('UPDATE domains SET is_default = 1 WHERE id = ?').run(next.id);
+          logger.info(
+            `[Domains] Auto-promoted domain (id: ${next.id}) as new default after deleting previous default`
+          );
+        }
+      }
+    });
+
+    transaction();
     this.invalidateCache();
     logger.info(`[Domains] Deleted domain "${existing.hostname}" (id: ${id})`);
   }
@@ -178,17 +212,24 @@ export class DomainService {
   }
 
   /**
-   * Get allowed origins for CORS (generates http:// and https:// variants)
+   * Get allowed origins for CORS (generates http:// and https:// variants).
+   * The result is cached alongside the domains cache to avoid rebuilding on every request.
    */
   getAllowedOrigins(): Set<string> {
     const domains = this.getAllDomains();
-    const origins = new Set<string>();
 
+    // Only reuse cached origins if they were built from the same domains array
+    if (this.cachedOrigins && domains === this.cachedDomains) {
+      return this.cachedOrigins;
+    }
+
+    const origins = new Set<string>();
     for (const domain of domains) {
       origins.add(`http://${domain.hostname}`);
       origins.add(`https://${domain.hostname}`);
     }
 
+    this.cachedOrigins = origins;
     return origins;
   }
 }

@@ -34,6 +34,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
   // Domain settings state
   const [domainInput, setDomainInput] = useState('');
   const [domainError, setDomainError] = useState<string | null>(null);
+  const [deletingDomainIds, setDeletingDomainIds] = useState<Set<number>>(new Set());
   const { data: domains } = useDomains(!!isAdmin);
   const addDomainMutation = useAddDomain();
   const deleteDomainMutation = useDeleteDomain();
@@ -313,8 +314,18 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => deleteDomainMutation.mutate(domain.id)}
-                    disabled={deleteDomainMutation.isPending}
+                    onClick={() => {
+                      setDeletingDomainIds((prev) => new Set(prev).add(domain.id));
+                      deleteDomainMutation.mutate(domain.id, {
+                        onSettled: () =>
+                          setDeletingDomainIds((prev) => {
+                            const next = new Set(prev);
+                            next.delete(domain.id);
+                            return next;
+                          }),
+                      });
+                    }}
+                    disabled={deletingDomainIds.has(domain.id)}
                     title="Delete domain"
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
                   >

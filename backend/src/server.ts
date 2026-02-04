@@ -55,8 +55,8 @@ async function startServer() {
         try {
           const allowed = domainService.getAllowedOrigins();
           if (allowed.has(origin)) return callback(null, true);
-        } catch {
-          // DB not ready during startup - fall through
+        } catch (error) {
+          logger.warn(`[CORS] Failed to check domains for origin "${origin}":`, error);
         }
 
         callback(new Error('Not allowed by CORS'));
