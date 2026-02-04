@@ -11,7 +11,7 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 const systemSettings = new CachedSystemSettingsService();
-const domainService = new DomainService();
+const domainService = DomainService.getInstance();
 
 // Helper function to update job scheduler when jobs settings change
 function updateJobScheduler(category: string, settings: Record<string, any>): void {

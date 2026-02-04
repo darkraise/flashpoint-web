@@ -39,8 +39,7 @@ async function startServer() {
     })
   );
 
-  // Single DomainService instance — reused by CORS and routes
-  const domainService = new DomainService();
+  const domainService = DomainService.getInstance();
 
   // CORS - dynamic origin to support configured domains
   app.use(

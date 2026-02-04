@@ -16,19 +16,29 @@ interface DomainRow {
   created_by: number | null;
 }
 
-// In-memory cache with TTL
-let cachedDomains: Domain[] | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL_MS = 60_000; // 60 seconds
-
 export class DomainService {
+  private static instance: DomainService;
+
+  private cachedDomains: Domain[] | null = null;
+  private cacheTimestamp = 0;
+  private readonly CACHE_TTL_MS = 60_000; // 60 seconds
+
+  private constructor() {}
+
+  static getInstance(): DomainService {
+    if (!DomainService.instance) {
+      DomainService.instance = new DomainService();
+    }
+    return DomainService.instance;
+  }
+
   private get db() {
     return UserDatabaseService.getDatabase();
   }
 
   private invalidateCache(): void {
-    cachedDomains = null;
-    cacheTimestamp = 0;
+    this.cachedDomains = null;
+    this.cacheTimestamp = 0;
   }
 
   private mapRow(row: DomainRow): Domain {
@@ -45,8 +55,8 @@ export class DomainService {
    */
   getAllDomains(): Domain[] {
     const now = Date.now();
-    if (cachedDomains && now - cacheTimestamp < CACHE_TTL_MS) {
-      return cachedDomains;
+    if (this.cachedDomains && now - this.cacheTimestamp < this.CACHE_TTL_MS) {
+      return this.cachedDomains;
     }
 
     const rows = this.db
@@ -55,9 +65,9 @@ export class DomainService {
       )
       .all() as DomainRow[];
 
-    cachedDomains = rows.map(this.mapRow);
-    cacheTimestamp = now;
-    return cachedDomains;
+    this.cachedDomains = rows.map(this.mapRow);
+    this.cacheTimestamp = now;
+    return this.cachedDomains;
   }
 
   /**

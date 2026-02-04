@@ -7,7 +7,7 @@ import { logActivity } from '../middleware/activityLogger';
 import { logger } from '../utils/logger';
 
 const router = Router();
-const domainService = new DomainService();
+const domainService = DomainService.getInstance();
 
 // ===================================
 // GET ALL DOMAINS
