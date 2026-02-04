@@ -72,13 +72,14 @@ Use Tailwind sizing classes:
 
 ## Common Icon Categories
 
-**User & Account:** User, UserCircle, Settings, LogIn, LogOut **Navigation:**
-Menu, X, ChevronLeft, ChevronRight, Home, Search **Actions:** Plus, Minus, Edit,
-Trash, Save, Download, Copy, Share **Media:** Play, Pause, Volume2, Maximize,
-Film, Image **Feedback:** Check, CheckCircle, X, XCircle, AlertCircle,
-AlertTriangle, Info, Loader2 **Social:** Heart, Star, ThumbsUp, Bell, Mail,
-Share2 **Gaming:** Gamepad2, Joystick, Trophy, Award, Target **Theme:** Sun,
-Moon, Monitor, Palette, Eye, Grid, List
+- **User & Account:** User, UserCircle, Settings, LogIn, LogOut
+- **Navigation:** Menu, X, ChevronLeft, ChevronRight, Home, Search
+- **Actions:** Plus, Minus, Edit, Trash, Save, Download, Copy, Share
+- **Media:** Play, Pause, Volume2, Maximize, Film, Image
+- **Feedback:** Check, CheckCircle, X, XCircle, AlertCircle, AlertTriangle, Info, Loader2
+- **Social:** Heart, Star, ThumbsUp, Bell, Mail, Share2
+- **Gaming:** Gamepad2, Joystick, Trophy, Award, Target
+- **Theme:** Sun, Moon, Monitor, Palette, Eye, Grid, List
 
 See [lucide.dev](https://lucide.dev) for all 358+ icons.
 
