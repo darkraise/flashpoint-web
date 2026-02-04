@@ -114,13 +114,6 @@ This is managed via the separate `/api/domains` endpoints (see
 
 ## Frontend Integration
 
-**Caching:** Settings cached 60 seconds (in-memory). Auto-invalidated on update.
-
-**Validation:** All updates validated against JSON schemas. Type, range, and
-enum validation enforced.
-
-**Frontend Integration:**
-
 ```typescript
 import { systemSettingsApi } from '@/lib/api';
 
