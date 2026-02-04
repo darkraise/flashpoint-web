@@ -14,9 +14,9 @@ Colors stored as HSL without `hsl()` wrapper to support opacity modifiers:
 Usage:
 
 ```tsx
-bg - primary; /* hsl(221.2 83.2% 53.3%) */
-bg - primary / 50; /* hsl(221.2 83.2% 53.3% / 0.5) */
-bg - primary / 20; /* hsl(221.2 83.2% 53.3% / 0.2) */
+bg-primary; /* hsl(221.2 83.2% 53.3%) */
+bg-primary/50; /* hsl(221.2 83.2% 53.3% / 0.5) */
+bg-primary/20; /* hsl(221.2 83.2% 53.3% / 0.2) */
 ```
 
 ## Neutral Palettes
