@@ -1,4 +1,5 @@
 import { UserDatabaseService } from './UserDatabaseService';
+import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
 export interface Domain {
@@ -86,22 +87,22 @@ export class DomainService {
     const trimmed = hostname.trim().toLowerCase();
 
     if (!trimmed) {
-      throw new Error('Hostname cannot be empty');
+      throw new AppError(400, 'Hostname cannot be empty');
     }
 
     // Reject protocol prefixes
     if (/^https?:\/\//i.test(trimmed)) {
-      throw new Error('Hostname must not include a protocol (http:// or https://)');
+      throw new AppError(400, 'Hostname must not include a protocol (http:// or https://)');
     }
 
     // Reject path, query, or fragment
     if (/[/?#]/.test(trimmed)) {
-      throw new Error('Hostname must not include a path, query string, or fragment');
+      throw new AppError(400, 'Hostname must not include a path, query string, or fragment');
     }
 
     // Basic hostname validation: allow alphanumeric, dots, hyphens, colons (for port)
     if (!/^[a-z0-9._-]+(:[0-9]+)?$/i.test(trimmed)) {
-      throw new Error('Invalid hostname format');
+      throw new AppError(400, 'Invalid hostname format');
     }
 
     return trimmed;
@@ -119,7 +120,7 @@ export class DomainService {
       | undefined;
 
     if (existing) {
-      throw new Error(`Domain "${validated}" already exists`);
+      throw new AppError(409, `Domain "${validated}" already exists`);
     }
 
     const stmt = this.db.prepare('INSERT INTO domains (hostname, created_by) VALUES (?, ?)');
@@ -138,31 +139,30 @@ export class DomainService {
   /**
    * Delete a domain by ID
    */
-  deleteDomain(id: number): boolean {
+  deleteDomain(id: number): void {
     const existing = this.db.prepare('SELECT hostname FROM domains WHERE id = ?').get(id) as
       | { hostname: string }
       | undefined;
 
     if (!existing) {
-      return false;
+      throw new AppError(404, 'Domain not found');
     }
 
     this.db.prepare('DELETE FROM domains WHERE id = ?').run(id);
     this.invalidateCache();
     logger.info(`[Domains] Deleted domain "${existing.hostname}" (id: ${id})`);
-    return true;
   }
 
   /**
    * Set a domain as the default (clears previous default in a transaction)
    */
-  setDefault(id: number): Domain | null {
+  setDefault(id: number): Domain {
     const existing = this.db
       .prepare('SELECT id, hostname, is_default, created_at FROM domains WHERE id = ?')
       .get(id) as DomainRow | undefined;
 
     if (!existing) {
-      return null;
+      throw new AppError(404, 'Domain not found');
     }
 
     const transaction = this.db.transaction(() => {

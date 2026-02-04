@@ -110,10 +110,11 @@ function Example() {
 
 ## Component Categories
 
-**Layout:** Card, Sheet, Dialog, Scroll Area, Separator **Forms:** Input,
-Textarea, Select, Checkbox, Radio, Switch, Button **Data:** Table, Badge, Alert,
-Avatar, Skeleton **Navigation:** Dropdown Menu, Collapsible, Toggle, Toggle
-Group **Feedback:** Toast, Alert Dialog, Progress
+- **Layout:** Card, Sheet, Dialog, Scroll Area, Separator
+- **Forms:** Input, Textarea, Select, Checkbox, Radio, Switch, Button
+- **Data:** Table, Badge, Alert, Avatar, Skeleton
+- **Navigation:** Dropdown Menu, Collapsible, Toggle, Toggle Group
+- **Feedback:** Toast, Alert Dialog, Progress
 
 ## Typography
 

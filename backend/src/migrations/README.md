@@ -2,21 +2,24 @@
 
 This directory contains SQL migration scripts for the user database (`user.db`).
 
-## Current Migration Strategy (Simplified)
+## Current Migration Strategy
 
-**Date:** 2026-01-30 **Status:** Consolidated into single migration file
+The database uses a **consolidated base schema plus incremental migrations**
+approach:
 
-All previous migrations have been consolidated into a single comprehensive
-migration file:
+- **`001_complete_schema.sql`** - Consolidated base schema with all core tables,
+  indexes, triggers, and seed data
+- **`002_domains.sql`** - Adds the `domains` table for configurable domain
+  settings
 
-- **`001_complete_schema.sql`** - Complete database schema with all tables,
-  indexes, triggers, seed data
+The base schema (`001`) was consolidated from 14+ earlier migrations on
+2026-01-30. New features added after that point are shipped as incremental
+migration files (`002`, `003`, etc.). All migrations are **idempotent** and safe
+to run multiple times.
 
-This migration is **idempotent** and safe to run multiple times.
+### What's Included in `001_complete_schema.sql`:
 
-### What's Included:
-
-✅ **All Tables** (15 total):
+**All Core Tables** (16 total):
 
 - Users & Authentication (users, roles, permissions, role_permissions,
   refresh_tokens)
@@ -25,25 +28,25 @@ This migration is **idempotent** and safe to run multiple times.
 - User Data (user_settings, user_playlists, user_playlist_games, user_favorites)
 - System (system_settings, job_execution_logs)
 
-✅ **All Indexes** (50+ optimized indexes):
+**All Indexes** (50+ optimized indexes):
 
 - Basic indexes for foreign keys and lookups
 - Composite indexes for complex queries
 - Partial indexes for conditional queries
 - Performance indexes for frequently-accessed patterns
 
-✅ **All Triggers**:
+**All Triggers**:
 
 - Auto-update playlist game_count
 
-✅ **All Seed Data**:
+**All Seed Data**:
 
 - Default roles (admin, user, guest)
 - Default permissions (18 permissions)
 - Role-permission mappings
 - System settings (35+ default settings)
 
-✅ **Playlist Sharing Features**:
+**Playlist Sharing Features**:
 
 - share_token, share_expires_at, show_owner columns
 - Unique indexes for secure sharing
@@ -53,24 +56,24 @@ This migration is **idempotent** and safe to run multiple times.
 Migrations are automatically executed on server startup by
 `UserDatabaseService.ts`:
 
-1. **Bootstrap** - Creates migration registry table (`migrations_applied`)
-2. **Schema Creation** - Runs `001_complete_schema.sql` if database doesn't
-   exist
-3. **Idempotent** - Safe to run multiple times (uses `IF NOT EXISTS` everywhere)
+1. **Bootstrap** - Creates migration registry table (`migrations`)
+2. **Detection** - Scans for `NNN_*.sql` files and checks the registry for
+   already-applied entries
+3. **Execution** - Runs pending migrations in version order
+4. **Idempotent** - Safe to run multiple times (uses `IF NOT EXISTS` everywhere)
 
 ### Migration Registry (`bootstrap.sql`)
 
-The migration system tracks applied migrations in the `migrations_applied`
-table:
+The migration system tracks applied migrations in the `migrations` table:
 
 ```sql
-CREATE TABLE IF NOT EXISTS migrations_applied (
+CREATE TABLE IF NOT EXISTS migrations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  version TEXT NOT NULL UNIQUE,
-  name TEXT NOT NULL,
-  checksum TEXT NOT NULL,
-  executed_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-  execution_time_ms INTEGER
+  name TEXT NOT NULL UNIQUE,
+  applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  checksum TEXT,
+  execution_time_ms INTEGER,
+  description TEXT
 );
 ```
 
@@ -106,15 +109,15 @@ For new columns, indexes, or seed data:
 
    ```bash
    cd backend/src/migrations
-   touch 002_your_migration_name.sql
+   touch 003_your_migration_name.sql
    ```
 
-   Current version: **001** (next available: **002**)
+   Current latest version: **002** (next available: **003**)
 
 2. **Write idempotent SQL** using defensive checks:
 
    ```sql
-   -- Migration 002: Description of changes
+   -- Migration 003: Description of changes
    -- Created: 2026-MM-DD
 
    -- Add new column (defensive)
@@ -127,14 +130,9 @@ For new columns, indexes, or seed data:
    INSERT OR IGNORE INTO system_settings (key, value, ...) VALUES (...);
    ```
 
-3. **Update `UserDatabaseService.ts`** to run the new migration:
-
-   ```typescript
-   // In runMigrations() method, after the 001 migration:
-
-   // Migration 002: Your description
-   await this.executeMigration('002_your_migration_name.sql');
-   ```
+3. **No code changes needed.** `UserDatabaseService.runMigrations()` auto-scans
+   the migrations directory for `NNN_*.sql` files, checks the `migrations`
+   registry table, and runs any that haven't been applied yet.
 
 4. **Test the migration**:
    - Backup `backend/user.db`
@@ -146,8 +144,8 @@ For new columns, indexes, or seed data:
 
 For breaking changes or complete restructuring:
 
-1. Create a new comprehensive migration (e.g., `002_schema_v2.sql`)
-2. Archive the old migration (`001_complete_schema.sql` → `archived/`)
+1. Create a new comprehensive migration (e.g., `003_schema_v2.sql`)
+2. Archive the old base migration (`001_complete_schema.sql` → `archived/`)
 3. Update documentation
 
 ## Migration Best Practices
@@ -176,7 +174,7 @@ For breaking changes or complete restructuring:
 
 ```sql
 -- ============================================================================
--- Migration 002: Add User Notification Preferences
+-- Migration 003: Add User Notification Preferences
 -- ============================================================================
 -- Created: 2026-MM-DD
 -- Purpose: Add email notification settings for users
@@ -276,14 +274,17 @@ If you see checksum warnings:
 
 - Migration file was modified after being applied
 - This is usually safe if changes are additive
-- Check `migrations_applied` table for recorded checksum
+- Check `migrations` table for recorded checksum
 
 ## Database Schema Overview
 
-After running `001_complete_schema.sql`, the database contains:
+After running all migrations, the database contains:
 
 ```
 user.db
+├── migrations               - Migration tracking (bootstrap.sql)
+│
+│ 001_complete_schema.sql:
 ├── users                    - User accounts
 ├── roles                    - RBAC roles (admin, user, guest)
 ├── permissions              - Available permissions
@@ -300,10 +301,13 @@ user.db
 ├── user_playlist_games      - Playlist-game relationships
 ├── user_favorites           - Favorited games
 ├── job_execution_logs       - Background job tracking
-└── migrations_applied       - Migration tracking (bootstrap.sql)
+│
+│ 002_domains.sql:
+└── domains                  - Configurable domains for sharing & CORS
 ```
 
-**Total:** 16 tables, 50+ indexes, 2 triggers, 35+ default settings
+**Total:** 17 tables (+1 registry), 50+ indexes, 2 triggers, 35+ default
+settings
 
 ## System Settings Categories
 
@@ -337,14 +341,14 @@ Previous migration strategy used 14+ separate files:
 - `003-013` - Incremental changes
 - `014_add_performance_indexes.sql` - Performance optimization
 
-**Consolidated into:** Single `001_complete_schema.sql` file
+**Consolidated into:** `001_complete_schema.sql` as the base schema. New
+features added after consolidation are shipped as incremental migrations
+(`002_domains`, etc.).
 
 **Benefits:**
 
-- ✅ Simpler deployment (one file vs many)
-- ✅ Guaranteed consistency (all-or-nothing)
-- ✅ Easier testing (single execution)
-- ✅ Clearer dependencies (everything in order)
-- ✅ Better documentation (complete picture in one place)
+- Simpler base deployment (one file covers all core tables)
+- Guaranteed consistency for the base schema (all-or-nothing)
+- Incremental migrations for new features (standard forward-only approach)
 
 **Archived migrations** preserved in `archived/` for reference.

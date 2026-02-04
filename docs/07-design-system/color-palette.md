@@ -11,12 +11,12 @@ Colors stored as HSL without `hsl()` wrapper to support opacity modifiers:
 --primary: 221.2 83.2% 53.3%;
 ```
 
-Usage:
+Usage in JSX:
 
 ```tsx
-bg-primary; /* hsl(221.2 83.2% 53.3%) */
-bg-primary/50; /* hsl(221.2 83.2% 53.3% / 0.5) */
-bg-primary/20; /* hsl(221.2 83.2% 53.3% / 0.2) */
+<div className="bg-primary" />      {/* hsl(221.2 83.2% 53.3%) */}
+<div className="bg-primary/50" />   {/* hsl(221.2 83.2% 53.3% / 0.5) */}
+<div className="bg-primary/20" />   {/* hsl(221.2 83.2% 53.3% / 0.2) */}
 ```
 
 ## Neutral Palettes
@@ -180,7 +180,7 @@ const { setMode } = useThemeStore();
 // Toggle for testing
 <button onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}>
   Toggle Theme
-</button>
+</button>;
 ```
 
 ### 4. Maintain Consistency
