@@ -7,6 +7,7 @@ import { logActivity } from '../middleware/activityLogger';
 import { logger } from '../utils/logger';
 
 const router = Router();
+const domainService = new DomainService();
 
 // ===================================
 // GET ALL DOMAINS
@@ -17,7 +18,6 @@ router.get(
   requirePermission('settings.read'),
   async (req: Request, res: Response) => {
     try {
-      const domainService = new DomainService();
       const domains = domainService.getAllDomains();
       res.json(domains);
     } catch (error) {
@@ -53,7 +53,6 @@ router.post(
         });
       }
 
-      const domainService = new DomainService();
       const domain = domainService.addDomain(validation.data.hostname, req.user!.id);
       res.status(201).json(domain);
     } catch (error) {
@@ -93,7 +92,6 @@ router.delete(
         });
       }
 
-      const domainService = new DomainService();
       const deleted = domainService.deleteDomain(id);
 
       if (!deleted) {
@@ -129,7 +127,6 @@ router.patch(
         });
       }
 
-      const domainService = new DomainService();
       const domain = domainService.setDefault(id);
 
       if (!domain) {

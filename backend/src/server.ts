@@ -39,6 +39,9 @@ async function startServer() {
     })
   );
 
+  // Single DomainService instance — reused by CORS and routes
+  const domainService = new DomainService();
+
   // CORS - dynamic origin to support configured domains
   app.use(
     cors({
@@ -51,7 +54,6 @@ async function startServer() {
 
         // Check domains from the database
         try {
-          const domainService = new DomainService();
           const allowed = domainService.getAllowedOrigins();
           if (allowed.has(origin)) return callback(null, true);
         } catch {

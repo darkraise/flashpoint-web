@@ -14,4 +14,5 @@ CREATE TABLE IF NOT EXISTS domains (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_domains_hostname ON domains(hostname);
+-- Enforce at most one default domain at the database level
+CREATE UNIQUE INDEX IF NOT EXISTS idx_domains_single_default ON domains(is_default) WHERE is_default = 1;
