@@ -180,7 +180,7 @@ const { setMode } = useThemeStore();
 // Toggle for testing
 <button onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')}>
   Toggle Theme
-</button>;
+</button>
 ```
 
 ### 4. Maintain Consistency
