@@ -14,7 +14,7 @@ export class AuthService {
 
   constructor() {
     this.systemSettings = new SystemSettingsService();
-    this.cachedSystemSettings = new CachedSystemSettingsService();
+    this.cachedSystemSettings = CachedSystemSettingsService.getInstance();
   }
 
   /**
@@ -386,11 +386,21 @@ export class AuthService {
       'INSERT INTO login_attempts (username, ip_address, success) VALUES (?, ?, ?)',
       [username, ipAddress, success ? 1 : 0]
     );
+    // Note: Cleanup of old attempts is handled by scheduled background job
+    // See server.ts loginAttemptsCleanupInterval
+  }
 
-    // Clean up old attempts (older than 24 hours)
-    UserDatabaseService.run(
+  /**
+   * Clean up old login attempts (older than 24 hours)
+   * Called by scheduled background job in server.ts
+   */
+  async cleanupOldLoginAttempts(): Promise<void> {
+    const result = UserDatabaseService.run(
       `DELETE FROM login_attempts WHERE attempted_at < datetime('now', '-24 hours')`
     );
+    if (result.changes > 0) {
+      logger.info(`[AuthService] Cleaned up ${result.changes} old login attempts`);
+    }
   }
 
   /**

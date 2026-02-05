@@ -1,10 +1,11 @@
 -- ============================================================================
 -- FLASHPOINT WEB - COMPLETE DATABASE SCHEMA
 -- ============================================================================
--- Version: 1.0.0
+-- Version: 1.1.0
 -- Created: 2026-01-30
+-- Updated: 2026-02-05
 -- Purpose: Single comprehensive migration containing all schema, seed data, and indexes
--- Consolidated from: 001, 002, 003, 004, 014
+-- Includes: Users, Roles, Permissions, Playlists, Favorites, Play Tracking, Settings, Domains
 --
 -- This migration is idempotent - safe to run multiple times
 -- Uses IF NOT EXISTS and INSERT OR IGNORE for all operations
@@ -226,6 +227,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
 
 CREATE INDEX IF NOT EXISTS idx_system_settings_key ON system_settings(key);
 CREATE INDEX IF NOT EXISTS idx_system_settings_category ON system_settings(category);
+CREATE INDEX IF NOT EXISTS idx_system_settings_is_public ON system_settings(is_public);
 
 -- ===================================
 -- USER PLAYLISTS TABLE
@@ -309,6 +311,23 @@ CREATE TABLE IF NOT EXISTS job_execution_logs (
 CREATE INDEX IF NOT EXISTS idx_job_logs_job_id ON job_execution_logs(job_id);
 CREATE INDEX IF NOT EXISTS idx_job_logs_status ON job_execution_logs(status);
 CREATE INDEX IF NOT EXISTS idx_job_logs_started_at ON job_execution_logs(started_at);
+
+-- ===================================
+-- DOMAINS TABLE
+-- ===================================
+-- Configurable domains for playlist sharing URLs and CORS management.
+-- Admins can add multiple domains, set a default for share links.
+CREATE TABLE IF NOT EXISTS domains (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  hostname TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  is_default BOOLEAN NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  created_by INTEGER,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Enforce at most one default domain at the database level
+CREATE UNIQUE INDEX IF NOT EXISTS idx_domains_single_default ON domains(is_default) WHERE is_default = 1;
 
 -- ============================================================================
 -- PART 2: TRIGGERS

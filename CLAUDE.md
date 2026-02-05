@@ -47,7 +47,7 @@ directory (100+ files). When handling requests:
 | ------------------------------- | ----------------------------------------------------------------------------------- |
 | How do I set up the project?    | `docs/08-development/setup-guide.md`                                                |
 | What commands are available?    | `docs/08-development/commands.md`                                                   |
-| How does authentication work?   | `docs/10-features/authentication-authorization.md`                                  |
+| How does authentication work?   | `docs/10-features/01-authentication-authorization.md`                               |
 | What are all the API endpoints? | `docs/06-api-reference/README.md`                                                   |
 | What's the database schema?     | `docs/12-reference/database-schema-reference.md`                                    |
 | How do components work?         | `docs/04-frontend/components/component-overview.md`                                 |
@@ -358,8 +358,8 @@ LOG_LEVEL=info
 > **Edition auto-detection:** The Flashpoint edition (Infinity or Ultimate) is
 > automatically detected from `{FLASHPOINT_PATH}/version.txt` on startup. No
 > environment variable is needed. The detected edition and version string are
-> stored in the `system_settings` table as `metadata.flashpoint_edition` and
-> `metadata.flashpoint_version`.
+> stored in the backend `config` object (not in the database). The frontend
+> receives edition/version via `/api/settings/public` (injected from `config`).
 
 See `backend/.env.example` for complete configuration options including rate
 limiting, SQLite optimization, and OpenTelemetry settings.

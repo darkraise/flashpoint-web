@@ -822,7 +822,27 @@ export interface MetadataSyncStatus {
   };
 }
 
+export interface MetadataUpdateInfo {
+  hasUpdates: boolean;
+  gamesUpdateAvailable: boolean;
+  tagsUpdateAvailable: boolean;
+  gamesUpdateCount?: number;
+  tagsUpdateCount?: number;
+  lastCheckedTime?: string;
+  lastUpdateTime?: string;
+  edition?: string;
+}
+
 export const updatesApi = {
+  /**
+   * Get metadata update info
+   * Returns info about available updates for games and tags
+   */
+  getMetadataInfo: async (): Promise<MetadataUpdateInfo> => {
+    const { data } = await api.get<MetadataUpdateInfo>('/updates/metadata');
+    return data;
+  },
+
   /**
    * Start metadata sync in background
    * Returns immediately with sync started status

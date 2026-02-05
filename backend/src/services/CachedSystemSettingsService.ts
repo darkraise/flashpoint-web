@@ -7,19 +7,45 @@ interface CacheEntry {
 }
 
 /**
- * Cached System Settings Service
- * Extends SystemSettingsService with in-memory caching for performance
+ * Cached System Settings Service (Singleton)
+ * Extends SystemSettingsService with in-memory caching for performance.
+ * Use getInstance() to get the singleton instance.
  */
 export class CachedSystemSettingsService extends SystemSettingsService {
+  private static instance: CachedSystemSettingsService | null = null;
+
   private cache: Map<string, CacheEntry> = new Map();
   private categoryCache: Map<string, CacheEntry> = new Map();
   private cacheTTL: number;
   private cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 
   /**
+   * Get the singleton instance
+   * @param cacheTTL Cache time-to-live in milliseconds (default: 60000 = 1 minute)
+   *                 Only used on first call, ignored on subsequent calls
+   */
+  static getInstance(cacheTTL: number = 60000): CachedSystemSettingsService {
+    if (!CachedSystemSettingsService.instance) {
+      CachedSystemSettingsService.instance = new CachedSystemSettingsService(cacheTTL);
+    }
+    return CachedSystemSettingsService.instance;
+  }
+
+  /**
+   * Reset the singleton instance (useful for testing)
+   */
+  static resetInstance(): void {
+    if (CachedSystemSettingsService.instance) {
+      CachedSystemSettingsService.instance.dispose();
+      CachedSystemSettingsService.instance = null;
+    }
+  }
+
+  /**
+   * Private constructor - use getInstance() instead
    * @param cacheTTL Cache time-to-live in milliseconds (default: 60000 = 1 minute)
    */
-  constructor(cacheTTL: number = 60000) {
+  private constructor(cacheTTL: number = 60000) {
     super();
     this.cacheTTL = cacheTTL;
 

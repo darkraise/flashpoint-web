@@ -203,4 +203,3 @@ interface PaginatedResult<T> {
 
 - [Backend API Documentation](../06-api-reference/README.md)
 - [Custom Hooks](./custom-hooks.md)
-- [Type Definitions](../06-api-reference/types.md)

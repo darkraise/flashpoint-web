@@ -7,10 +7,15 @@ import path from 'path';
 
 // Import GameSearchCache for cache invalidation
 // Using dynamic import to avoid circular dependency
-let GameSearchCache: any = null;
+// Type is defined here to maintain type safety while avoiding circular import
+interface GameSearchCacheType {
+  clearCache: () => void;
+}
+let GameSearchCache: GameSearchCacheType | null = null;
 try {
-  GameSearchCache = require('./GameSearchCache').GameSearchCache;
-} catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  GameSearchCache = require('./GameSearchCache').GameSearchCache as GameSearchCacheType;
+} catch {
   // GameSearchCache may not be available in all contexts
   logger.debug('GameSearchCache not available for cache invalidation');
 }
@@ -433,8 +438,13 @@ export class DatabaseService {
     }
   }
 
-  // Helper method to execute queries and return results as objects
-  static exec<T = any>(sql: string, params: any[] = []): T[] {
+  /**
+   * Execute queries and return results as objects.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example DatabaseService.exec<{ id: number; name: string }>('SELECT ...', [])
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static exec<T = any>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -452,8 +462,13 @@ export class DatabaseService {
     );
   }
 
-  // Helper method to get a single row
-  static get<T = any>(sql: string, params: any[] = []): T | undefined {
+  /**
+   * Get a single row from the database.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example DatabaseService.get<{ id: number }>('SELECT ...', [])
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static get<T = any>(sql: string, params: unknown[] = []): T | undefined {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -472,8 +487,13 @@ export class DatabaseService {
     );
   }
 
-  // Helper method to get all rows
-  static all<T = any>(sql: string, params: any[] = []): T[] {
+  /**
+   * Get all rows from the database.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example DatabaseService.all<{ id: number }>('SELECT ...', [])
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static all<T = any>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -491,8 +511,10 @@ export class DatabaseService {
     );
   }
 
-  // Helper method to run INSERT/UPDATE/DELETE queries (doesn't return rows)
-  static run(sql: string, params: any[] = []): void {
+  /**
+   * Run INSERT/UPDATE/DELETE queries (doesn't return rows).
+   */
+  static run(sql: string, params: unknown[] = []): void {
     const db = this.getDatabase();
 
     measureQueryPerformance(

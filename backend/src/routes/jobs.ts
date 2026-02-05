@@ -9,7 +9,7 @@ import { logger } from '../utils/logger';
 
 const router = Router();
 const executionService = new JobExecutionService();
-const systemSettings = new CachedSystemSettingsService();
+const systemSettings = CachedSystemSettingsService.getInstance();
 
 // ===================================
 // GET ALL JOBS WITH STATUS

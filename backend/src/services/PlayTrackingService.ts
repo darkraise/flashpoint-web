@@ -89,13 +89,14 @@ export class PlayTrackingService {
 
       const durationSeconds = session.duration_seconds || 0;
 
-      // OPTIMIZATION: Single UPDATE statement with inline duration calculation
+      // Use the duration value from the SELECT query to avoid race condition
+      // (time passes between SELECT and UPDATE, causing inconsistent values)
       UserDatabaseService.run(
         `UPDATE user_game_plays
          SET ended_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
-             duration_seconds = CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER)
+             duration_seconds = ?
          WHERE session_id = ?`,
-        [sessionId]
+        [durationSeconds, sessionId]
       );
 
       // Update aggregated stats

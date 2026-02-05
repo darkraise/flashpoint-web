@@ -17,6 +17,9 @@ import { config } from '../config';
  * since Flashpoint database is read-only and changes are rare)
  */
 export class GameSearchCache {
+  // In-flight request tracking for cache stampede prevention
+  private static inFlightRequests = new Map<string, Promise<PaginatedResult<Game>>>();
+
   private static cache = new LRUCache<string, PaginatedResult<Game>>({
     max: 1000, // Maximum 1000 cached search queries
     maxSize: 10000, // Maximum total items across all cached results (10k games)
@@ -75,9 +78,11 @@ export class GameSearchCache {
   }
 
   /**
-   * Search games with caching and graceful degradation
-   * Checks cache first, falls back to database query if cache miss
-   * If database fails, returns stale data from fallback cache
+   * Search games with caching, request coalescing, and graceful degradation
+   * - Checks cache first
+   * - Coalesces concurrent requests for the same query (cache stampede prevention)
+   * - Falls back to database query if cache miss
+   * - If database fails, returns stale data from fallback cache
    */
   static async searchGames(
     query: GameSearchQuery
@@ -92,9 +97,36 @@ export class GameSearchCache {
       return cached;
     }
 
+    // Check if request is already in-flight (cache stampede prevention)
+    const inFlight = this.inFlightRequests.get(cacheKey);
+    if (inFlight) {
+      logger.debug(`[GameSearchCache] Coalescing request for: ${cacheKey.substring(0, 100)}...`);
+      return inFlight;
+    }
+
     // Cache miss - query database
     logger.debug(`[GameSearchCache] Cache MISS: ${cacheKey.substring(0, 100)}...`);
     PerformanceMetrics.recordCacheMiss('gameSearch');
+
+    // Execute query and track the promise for coalescing
+    const queryPromise = this.executeQuery(query, cacheKey);
+    this.inFlightRequests.set(cacheKey, queryPromise);
+
+    try {
+      return await queryPromise;
+    } finally {
+      // Always clean up in-flight tracking
+      this.inFlightRequests.delete(cacheKey);
+    }
+  }
+
+  /**
+   * Execute the actual database query (separated for request coalescing)
+   */
+  private static async executeQuery(
+    query: GameSearchQuery,
+    cacheKey: string
+  ): Promise<PaginatedResult<Game> & { fromCache?: boolean; cacheAge?: number }> {
     const startTime = performance.now();
 
     try {

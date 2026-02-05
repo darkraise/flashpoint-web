@@ -7,6 +7,8 @@ import { authSettingsApi, ruffleApi, usersApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useDialog } from '@/contexts/DialogContext';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { UpdateAuthSettingsData } from '@/types/auth';
+import { AxiosError } from 'axios';
 import {
   Select,
   SelectContent,
@@ -50,13 +52,14 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
 
   // Update auth settings mutation
   const updateAuthSettings = useMutation({
-    mutationFn: (settings: Partial<any>) => authSettingsApi.update(settings),
+    mutationFn: (settings: UpdateAuthSettingsData) => authSettingsApi.update(settings),
     onSuccess: () => {
       refetchAuthSettings();
       showToast('Settings updated successfully', 'success');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.error?.message || 'Failed to update settings';
+    onError: (error: unknown) => {
+      const axiosError = error instanceof AxiosError ? error : null;
+      const message = axiosError?.response?.data?.error?.message || 'Failed to update settings';
       showToast(message, 'error');
     },
   });
@@ -68,8 +71,9 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
       refetchUserSettings();
       showToast('Settings updated successfully', 'success');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.error?.message || 'Failed to update settings';
+    onError: (error: unknown) => {
+      const axiosError = error instanceof AxiosError ? error : null;
+      const message = axiosError?.response?.data?.error?.message || 'Failed to update settings';
       showToast(message, 'error');
     },
   });

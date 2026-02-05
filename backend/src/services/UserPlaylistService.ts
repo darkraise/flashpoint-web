@@ -1,6 +1,7 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { GameService, Game } from './GameService';
 import { logger } from '../utils/logger';
+import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
 
 export interface UserPlaylist {
@@ -53,6 +54,9 @@ export interface ShareLinkData {
 export class UserPlaylistService {
   private userDb: typeof UserDatabaseService;
   private gameService: GameService;
+
+  // Maximum items allowed in batch operations
+  private static readonly MAX_BATCH_SIZE = 100;
 
   // Reusable SELECT columns with aliases for type consistency
   private static readonly PLAYLIST_COLUMNS = `
@@ -258,6 +262,14 @@ export class UserPlaylistService {
    * Add games to a playlist
    */
   addGamesToPlaylist(playlistId: number, userId: number, gameIds: string[]): boolean {
+    // Validate batch size
+    if (gameIds.length > UserPlaylistService.MAX_BATCH_SIZE) {
+      throw new AppError(
+        400,
+        `Maximum of ${UserPlaylistService.MAX_BATCH_SIZE} items per batch operation`
+      );
+    }
+
     const db = this.userDb.getDatabase();
 
     // Verify ownership
@@ -298,6 +310,14 @@ export class UserPlaylistService {
    * Remove games from playlist
    */
   removeGamesFromPlaylist(playlistId: number, userId: number, gameIds: string[]): boolean {
+    // Validate batch size
+    if (gameIds.length > UserPlaylistService.MAX_BATCH_SIZE) {
+      throw new AppError(
+        400,
+        `Maximum of ${UserPlaylistService.MAX_BATCH_SIZE} items per batch operation`
+      );
+    }
+
     const db = this.userDb.getDatabase();
 
     // Verify ownership
@@ -328,6 +348,14 @@ export class UserPlaylistService {
    * Reorder games in playlist
    */
   reorderGames(playlistId: number, userId: number, gameIdOrder: string[]): boolean {
+    // Validate batch size
+    if (gameIdOrder.length > UserPlaylistService.MAX_BATCH_SIZE) {
+      throw new AppError(
+        400,
+        `Maximum of ${UserPlaylistService.MAX_BATCH_SIZE} items per batch operation`
+      );
+    }
+
     const db = this.userDb.getDatabase();
 
     // Verify ownership

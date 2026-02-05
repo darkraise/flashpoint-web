@@ -18,6 +18,7 @@ import { PlaylistIcon } from '@/components/playlist/PlaylistIcon';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
+import { AxiosError } from 'axios';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,8 +73,9 @@ export function UserPlaylistDetailView() {
       await deletePlaylist.mutateAsync(playlistId);
       toast.success('Playlist deleted successfully');
       navigate('/playlists');
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error?.message || 'Failed to delete playlist');
+    } catch (error: unknown) {
+      const axiosError = error instanceof AxiosError ? error : null;
+      toast.error(axiosError?.response?.data?.error?.message || 'Failed to delete playlist');
     }
   };
 

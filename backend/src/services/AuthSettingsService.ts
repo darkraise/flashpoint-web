@@ -1,4 +1,5 @@
 import { CachedSystemSettingsService } from './CachedSystemSettingsService';
+import { UserDatabaseService } from './UserDatabaseService';
 import { AuthSettings } from '../types/auth';
 
 /**
@@ -10,8 +11,8 @@ export class AuthSettingsService {
   private systemSettings: CachedSystemSettingsService;
 
   constructor() {
-    // Use cached version for better performance (auth settings accessed frequently)
-    this.systemSettings = new CachedSystemSettingsService(60000); // 1 minute TTL
+    // Use cached singleton for better performance (auth settings accessed frequently)
+    this.systemSettings = CachedSystemSettingsService.getInstance();
   }
 
   /**
@@ -81,11 +82,14 @@ export class AuthSettingsService {
       LIMIT 1
     `;
 
-    const result = require('./UserDatabaseService').UserDatabaseService.get(query, []);
+    const result = UserDatabaseService.get<{ updated_at: string; updated_by: number | null }>(
+      query,
+      []
+    );
 
     return {
       updatedAt: result?.updated_at || new Date().toISOString(),
-      updatedBy: result?.updated_by,
+      updatedBy: result?.updated_by ?? undefined,
     };
   }
 }

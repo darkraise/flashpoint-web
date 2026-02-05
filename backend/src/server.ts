@@ -17,6 +17,7 @@ import { DatabaseService } from './services/DatabaseService';
 import { UserDatabaseService } from './services/UserDatabaseService';
 import { DomainService } from './services/DomainService';
 import { PlayTrackingService } from './services/PlayTrackingService';
+import { AuthService } from './services/AuthService';
 import { GameSearchCache } from './services/GameSearchCache';
 import { JobScheduler } from './services/JobScheduler';
 import { MetadataSyncJob } from './jobs/MetadataSyncJob';
@@ -24,6 +25,34 @@ import { RuffleUpdateJob } from './jobs/RuffleUpdateJob';
 import { CachedSystemSettingsService } from './services/CachedSystemSettingsService';
 import { PermissionCache } from './services/PermissionCache';
 import { RuffleService } from './services/RuffleService';
+
+/**
+ * Clean up old activity logs based on retention settings
+ * Default retention: 30 days (from storage.log_retention_days setting)
+ */
+async function cleanupActivityLogs(): Promise<void> {
+  try {
+    const systemSettings = CachedSystemSettingsService.getInstance();
+    const storageSettings = systemSettings.getCategory('storage');
+    const retentionDays =
+      typeof storageSettings.logRetentionDays === 'number' ? storageSettings.logRetentionDays : 30;
+
+    const result = UserDatabaseService.run(
+      `DELETE FROM activity_logs
+       WHERE created_at < datetime('now', '-' || ? || ' days')`,
+      [retentionDays]
+    );
+
+    if (result.changes > 0) {
+      logger.info(
+        `[ActivityLogs] Cleaned up ${result.changes} logs older than ${retentionDays} days`
+      );
+    }
+  } catch (error) {
+    logger.error('[ActivityLogs] Failed to cleanup old activity logs:', error);
+    throw error;
+  }
+}
 
 async function startServer() {
   const app: Express = express();
@@ -145,7 +174,7 @@ async function startServer() {
 
   // Initialize job scheduler
   try {
-    const systemSettings = new CachedSystemSettingsService();
+    const systemSettings = CachedSystemSettingsService.getInstance();
     const jobSettings = systemSettings.getCategory('jobs');
 
     // Register metadata sync job
@@ -194,14 +223,54 @@ async function startServer() {
   logger.info(`   Proxy Server: ${config.gameServerUrl || 'http://localhost:22500'}`);
   logger.info(`   GameZip Server: http://localhost:${config.gameServerHttpPort}`);
 
-  // Health check
-  app.get('/health', (req, res) => {
-    res.json({
-      status: 'ok',
+  // Health check with game-service connectivity verification
+  app.get('/health', async (req, res) => {
+    let gameServiceStatus: 'ok' | 'error' | 'unknown' = 'unknown';
+    let gameServiceError: string | undefined;
+
+    // Check game-service connectivity
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+      const gameServiceUrl = config.gameServerUrl || 'http://localhost:22500';
+      const response = await fetch(`${gameServiceUrl}/health`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        gameServiceStatus = 'ok';
+      } else {
+        gameServiceStatus = 'error';
+        gameServiceError = `HTTP ${response.status}`;
+      }
+    } catch (error) {
+      gameServiceStatus = 'error';
+      gameServiceError =
+        error instanceof Error
+          ? error.name === 'AbortError'
+            ? 'Connection timeout'
+            : error.message
+          : 'Unknown error';
+    }
+
+    const isHealthy = DatabaseService.isConnected() && gameServiceStatus === 'ok';
+
+    res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
       flashpointPath: config.flashpointPath,
-      databaseConnected: DatabaseService.isConnected(),
-      gameServiceUrl: config.gameServerUrl,
+      services: {
+        database: {
+          status: DatabaseService.isConnected() ? 'ok' : 'error',
+        },
+        gameService: {
+          status: gameServiceStatus,
+          url: config.gameServerUrl || 'http://localhost:22500',
+          error: gameServiceError,
+        },
+      },
     });
   });
 
@@ -241,7 +310,7 @@ async function startServer() {
 
   // Start cleanup scheduler for abandoned play sessions (every 6 hours)
   const playTrackingService = new PlayTrackingService();
-  const cleanupInterval = setInterval(
+  const playSessionCleanupInterval = setInterval(
     () => {
       playTrackingService.cleanupAbandonedSessions().catch((error) => {
         logger.error('Failed to cleanup abandoned sessions:', error);
@@ -250,9 +319,40 @@ async function startServer() {
     6 * 60 * 60 * 1000
   ); // 6 hours
 
-  // Run initial cleanup
+  // Run initial play session cleanup
   playTrackingService.cleanupAbandonedSessions().catch((error) => {
     logger.error('Failed to cleanup abandoned sessions:', error);
+  });
+
+  // Start cleanup scheduler for old login attempts (every 6 hours)
+  const authService = new AuthService();
+  const loginAttemptsCleanupInterval = setInterval(
+    () => {
+      authService.cleanupOldLoginAttempts().catch((error) => {
+        logger.error('Failed to cleanup old login attempts:', error);
+      });
+    },
+    6 * 60 * 60 * 1000
+  ); // 6 hours
+
+  // Run initial login attempts cleanup
+  authService.cleanupOldLoginAttempts().catch((error) => {
+    logger.error('Failed to cleanup old login attempts:', error);
+  });
+
+  // Start cleanup scheduler for old activity logs (daily)
+  const activityLogsCleanupInterval = setInterval(
+    () => {
+      cleanupActivityLogs().catch((error) => {
+        logger.error('Failed to cleanup old activity logs:', error);
+      });
+    },
+    24 * 60 * 60 * 1000
+  ); // 24 hours
+
+  // Run initial activity logs cleanup
+  cleanupActivityLogs().catch((error) => {
+    logger.error('Failed to cleanup old activity logs:', error);
   });
 
   // Graceful shutdown
@@ -265,8 +365,10 @@ async function startServer() {
     // Stop permission cache cleanup
     PermissionCache.stopCleanup();
 
-    // Stop play session cleanup
-    clearInterval(cleanupInterval);
+    // Stop cleanup intervals
+    clearInterval(playSessionCleanupInterval);
+    clearInterval(loginAttemptsCleanupInterval);
+    clearInterval(activityLogsCleanupInterval);
 
     // Close server
     server.close(() => {

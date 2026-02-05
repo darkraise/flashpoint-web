@@ -3,7 +3,7 @@ import { CachedSystemSettingsService } from '../services/CachedSystemSettingsSer
 import { logger } from '../utils/logger';
 
 // Singleton instance - shared across all requests
-const systemSettings = new CachedSystemSettingsService();
+const systemSettings = CachedSystemSettingsService.getInstance();
 
 // MINIMAL whitelist - only endpoints needed for admin to LOGIN
 // Everything else requires admin authentication

@@ -220,9 +220,12 @@ export class UserDatabaseService {
   }
 
   /**
-   * Execute a query and return all rows
+   * Execute a query and return all rows.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example UserDatabaseService.exec<{ id: number }>('SELECT ...', [])
    */
-  static exec<T = any>(sql: string, params: any[] = []): T[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static exec<T = any>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -241,9 +244,12 @@ export class UserDatabaseService {
   }
 
   /**
-   * Execute a query and return first row
+   * Execute a query and return first row.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example UserDatabaseService.get<{ id: number }>('SELECT ...', [])
    */
-  static get<T = any>(sql: string, params: any[] = []): T | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static get<T = any>(sql: string, params: unknown[] = []): T | undefined {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -263,16 +269,18 @@ export class UserDatabaseService {
   }
 
   /**
-   * Execute a query and return all rows (alias for exec)
+   * Execute a query and return all rows (alias for exec).
+   * @template T - Explicit type parameter recommended for type safety
    */
-  static all<T = any>(sql: string, params: any[] = []): T[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static all<T = any>(sql: string, params: unknown[] = []): T[] {
     return this.exec<T>(sql, params);
   }
 
   /**
-   * Execute an INSERT, UPDATE, or DELETE statement
+   * Execute an INSERT, UPDATE, or DELETE statement.
    */
-  static run(sql: string, params: any[] = []): BetterSqlite3.RunResult {
+  static run(sql: string, params: unknown[] = []): BetterSqlite3.RunResult {
     const db = this.getDatabase();
 
     return measureQueryPerformance(

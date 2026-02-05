@@ -12,7 +12,7 @@ import { logger } from '../utils/logger';
 import { CategorySettings } from '../types/settings';
 
 const router = Router();
-const systemSettings = new CachedSystemSettingsService();
+const systemSettings = CachedSystemSettingsService.getInstance();
 const domainService = DomainService.getInstance();
 
 // Helper function to update job scheduler when jobs settings change

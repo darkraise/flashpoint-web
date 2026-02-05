@@ -3,7 +3,7 @@ import { CachedSystemSettingsService } from '../services/CachedSystemSettingsSer
 import { AppError } from './errorHandler';
 import { logger } from '../utils/logger';
 
-const systemSettings = new CachedSystemSettingsService();
+const systemSettings = CachedSystemSettingsService.getInstance();
 
 /**
  * Middleware to check if a feature is enabled

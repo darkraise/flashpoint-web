@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { systemSettingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useDialog } from '@/contexts/DialogContext';
+import { AxiosError } from 'axios';
 
 interface FeaturesSettingsTabProps {
   tabContentVariants: Variants;
@@ -35,8 +36,9 @@ export function FeaturesSettingsTab({ tabContentVariants }: FeaturesSettingsTabP
 
       showToast('Settings updated successfully', 'success');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.error?.message || 'Failed to update settings';
+    onError: (error: unknown) => {
+      const axiosError = error instanceof AxiosError ? error : null;
+      const message = axiosError?.response?.data?.error?.message || 'Failed to update settings';
       showToast(message, 'error');
     },
   });
