@@ -5,7 +5,7 @@ import { GameFilters } from '@/types/game';
 export function useGames(filters: GameFilters) {
   return useQuery({
     queryKey: ['games', filters],
-    queryFn: () => gamesApi.search(filters),
+    queryFn: ({ signal }) => gamesApi.search(filters, signal),
     // OPTIMIZATION: Configure caching to reduce redundant API calls
     staleTime: 1000 * 60 * 5, // 5 minutes - game metadata rarely changes
     gcTime: 1000 * 60 * 30, // 30 minutes - keep in memory longer

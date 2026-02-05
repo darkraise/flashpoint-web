@@ -14,6 +14,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
   private cache: Map<string, CacheEntry> = new Map();
   private categoryCache: Map<string, CacheEntry> = new Map();
   private cacheTTL: number;
+  private cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 
   /**
    * @param cacheTTL Cache time-to-live in milliseconds (default: 60000 = 1 minute)
@@ -23,7 +24,19 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     this.cacheTTL = cacheTTL;
 
     // Start cache cleanup interval (every 5 minutes)
-    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    this.cleanupIntervalId = setInterval(() => this.cleanup(), 5 * 60 * 1000);
+  }
+
+  /**
+   * Stop the cleanup interval and release resources
+   * Call this when disposing the service instance
+   */
+  dispose(): void {
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = null;
+    }
+    this.clearCache();
   }
 
   /**

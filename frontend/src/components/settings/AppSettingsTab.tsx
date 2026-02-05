@@ -17,10 +17,38 @@ import { useAuthStore } from '@/store/auth';
 import { useDialog } from '@/contexts/DialogContext';
 import { AppSettings } from '@/types/settings';
 import { useDomains, useAddDomain, useDeleteDomain, useSetDefaultDomain } from '@/hooks/useDomains';
+import { PrimaryColor, colorPalette } from '@/store/theme';
+import { getErrorMessage } from '@/types/api-error';
 
 interface AppSettingsTabProps {
   tabContentVariants: Variants;
 }
+
+// Available primary colors for theme customization
+const PRIMARY_COLORS: PrimaryColor[] = [
+  'slate',
+  'gray',
+  'zinc',
+  'neutral',
+  'stone',
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'green',
+  'emerald',
+  'teal',
+  'cyan',
+  'sky',
+  'blue',
+  'indigo',
+  'violet',
+  'purple',
+  'fuchsia',
+  'pink',
+  'rose',
+];
 
 export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
   const { user } = useAuthStore();
@@ -69,8 +97,8 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
 
       showToast('Settings updated successfully', 'success');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.error?.message || 'Failed to update settings';
+    onError: (error: unknown) => {
+      const message = getErrorMessage(error) || 'Failed to update settings';
       showToast(message, 'error');
     },
   });
@@ -216,28 +244,11 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                   <SelectValue placeholder="Select default primary color" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  <SelectItem value="slate">Slate</SelectItem>
-                  <SelectItem value="gray">Gray</SelectItem>
-                  <SelectItem value="zinc">Zinc</SelectItem>
-                  <SelectItem value="neutral">Neutral</SelectItem>
-                  <SelectItem value="stone">Stone</SelectItem>
-                  <SelectItem value="red">Red</SelectItem>
-                  <SelectItem value="orange">Orange</SelectItem>
-                  <SelectItem value="amber">Amber</SelectItem>
-                  <SelectItem value="yellow">Yellow</SelectItem>
-                  <SelectItem value="lime">Lime</SelectItem>
-                  <SelectItem value="green">Green</SelectItem>
-                  <SelectItem value="emerald">Emerald</SelectItem>
-                  <SelectItem value="teal">Teal</SelectItem>
-                  <SelectItem value="cyan">Cyan</SelectItem>
-                  <SelectItem value="sky">Sky</SelectItem>
-                  <SelectItem value="blue">Blue</SelectItem>
-                  <SelectItem value="indigo">Indigo</SelectItem>
-                  <SelectItem value="violet">Violet</SelectItem>
-                  <SelectItem value="purple">Purple</SelectItem>
-                  <SelectItem value="fuchsia">Fuchsia</SelectItem>
-                  <SelectItem value="pink">Pink</SelectItem>
-                  <SelectItem value="rose">Rose</SelectItem>
+                  {PRIMARY_COLORS.map((color) => (
+                    <SelectItem key={color} value={color}>
+                      {colorPalette[color].label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -303,6 +314,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                       onChange={() => setDefaultDomainMutation.mutate(domain.id)}
                       disabled={setDefaultDomainMutation.isPending}
                       className="accent-primary"
+                      aria-label={`Set ${domain.hostname} as default domain`}
                     />
                     <span className="text-sm font-mono truncate">{domain.hostname}</span>
                     {domain.isDefault ? (

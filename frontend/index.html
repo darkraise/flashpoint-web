@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png" />
+    <link rel="apple-touch-icon" href="/images/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
@@ -20,6 +22,33 @@
       "
     />
     <title>Flashpoint Archive</title>
+    <!-- Blocking script to prevent FOUC (Flash of Unstyled Content) -->
+    <!-- Applies theme before first paint by reading from localStorage -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('flashpoint-theme-settings');
+          if (stored) {
+            var settings = JSON.parse(stored);
+            var mode = settings.state && settings.state.mode;
+            if (mode === 'dark') {
+              document.documentElement.classList.add('dark');
+            } else if (mode === 'light') {
+              document.documentElement.classList.add('light');
+            } else if (mode === 'system') {
+              var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+              document.documentElement.classList.add(prefersDark ? 'dark' : 'light');
+            }
+          } else {
+            // Default to dark mode if no preference set
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {
+          // Fallback to dark mode on error
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

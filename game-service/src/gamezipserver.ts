@@ -7,7 +7,7 @@ import { ConfigManager } from './config';
 import { getMimeType } from './mimeTypes';
 import { injectPolyfills } from './utils/htmlInjector';
 import { setCorsHeaders, setCorsHeadersWithMaxAge } from './utils/cors';
-import { sanitizeUrlPath } from './utils/pathSecurity';
+import { sanitizeUrlPath, sanitizeErrorMessage } from './utils/pathSecurity';
 import { validateGameId, validateHostname } from './validation/schemas';
 
 /**
@@ -26,7 +26,10 @@ export class GameZipServer {
       try {
         await this.handleRequest(req, res);
       } catch (error) {
-        logger.error('[GameZipServer] Unhandled error:', error);
+        // Sanitize error before logging to prevent path leakage (G-H4)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const safeMessage = sanitizeErrorMessage(errorMessage);
+        logger.error(`[GameZipServer] Unhandled error: ${safeMessage}`);
 
         if (!res.headersSent) {
           res.writeHead(500);
@@ -194,10 +197,14 @@ export class GameZipServer {
 
       res.setHeader('Content-Type', 'application/json');
       res.writeHead(200);
-      res.end(JSON.stringify({ success: true, id, zipPath }));
+      // Don't include full zipPath in response - only return the ID (G-H4)
+      res.end(JSON.stringify({ success: true, id }));
     } catch (error) {
-      logger.error(`[GameZipServer] Mount failed:`, error);
-      this.sendError(res, 500, error instanceof Error ? error.message : 'Mount failed');
+      // Sanitize error message to prevent path leakage (G-H4)
+      const errorMessage = error instanceof Error ? error.message : 'Mount failed';
+      const safeMessage = sanitizeErrorMessage(errorMessage);
+      logger.error(`[GameZipServer] Mount failed: ${safeMessage}`);
+      this.sendError(res, 500, 'Mount operation failed');
     }
   }
 

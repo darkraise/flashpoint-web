@@ -9,20 +9,24 @@ import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { JobScheduler } from '../services/JobScheduler';
 import { logger } from '../utils/logger';
+import { CategorySettings } from '../types/settings';
 
 const router = Router();
 const systemSettings = new CachedSystemSettingsService();
 const domainService = DomainService.getInstance();
 
 // Helper function to update job scheduler when jobs settings change
-function updateJobScheduler(category: string, settings: Record<string, any>): void {
+function updateJobScheduler(category: string, settings: CategorySettings): void {
   if (category === 'jobs') {
     // Update metadata sync job if its settings changed
     if ('metadataSyncEnabled' in settings || 'metadataSyncSchedule' in settings) {
       const currentSettings = systemSettings.getCategory('jobs');
-      const enabled = settings.metadataSyncEnabled ?? currentSettings.metadataSyncEnabled ?? false;
-      const cronSchedule =
-        settings.metadataSyncSchedule ?? currentSettings.metadataSyncSchedule ?? '0 * * * *';
+      const enabled = (settings.metadataSyncEnabled ??
+        currentSettings.metadataSyncEnabled ??
+        false) as boolean;
+      const cronSchedule = (settings.metadataSyncSchedule ??
+        currentSettings.metadataSyncSchedule ??
+        '0 * * * *') as string;
 
       JobScheduler.updateJob('metadata-sync', {
         enabled,
@@ -121,7 +125,9 @@ router.get(
 // ===================================
 // UPDATE CATEGORY SETTINGS (Admin Only)
 // ===================================
-const updateCategorySchema = z.record(z.any());
+const updateCategorySchema = z.record(
+  z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())])
+);
 
 router.patch(
   '/:category',
@@ -204,7 +210,7 @@ router.get(
 // UPDATE SINGLE SETTING (Admin Only)
 // ===================================
 const updateSettingSchema = z.object({
-  value: z.any(),
+  value: z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())]),
 });
 
 router.patch(

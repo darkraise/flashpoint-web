@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { logger } from '@/lib/logger';
 import { gamesApi } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 
 export interface DownloadProgress {
   percent: number;
@@ -16,7 +17,7 @@ export interface DownloadProgress {
 export function useDownload(gameId: string) {
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   /**
    * Start downloading a game.
@@ -34,36 +35,65 @@ export function useDownload(gameId: string) {
         // Start download on backend
         const result = await gamesApi.downloadGame(gameId, gameDataId);
 
-        // Connect to SSE endpoint for progress updates
-        const eventSource = new EventSource(`/api/games/${gameId}/download/progress`);
-        eventSourceRef.current = eventSource;
+        // Connect to SSE endpoint for progress updates with authentication
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
 
-        eventSource.onmessage = (event) => {
+        const token = useAuthStore.getState().accessToken;
+        const response = await fetch(`/api/games/${gameId}/download/progress`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          signal: abortController.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error('Failed to connect to download progress stream');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const processStream = async () => {
           try {
-            const data = JSON.parse(event.data) as DownloadProgress;
-            setProgress(data);
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
 
-            // If complete or error, close connection
-            if (data.status === 'complete' || data.status === 'error') {
-              eventSource.close();
-              setIsDownloading(false);
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.slice(6)) as DownloadProgress;
+                    setProgress(data);
+                    if (data.status === 'complete' || data.status === 'error') {
+                      reader.cancel();
+                      setIsDownloading(false);
+                      return;
+                    }
+                  } catch (parseError) {
+                    logger.error('Error parsing SSE data:', parseError);
+                  }
+                }
+              }
             }
           } catch (error) {
-            logger.error('Error parsing SSE data:', error);
+            if ((error as Error).name !== 'AbortError') {
+              logger.error('SSE stream error:', error);
+              setProgress({
+                percent: 0,
+                status: 'error',
+                details: 'Connection to server lost',
+                error: 'Connection error',
+              });
+            }
+            setIsDownloading(false);
           }
         };
 
-        eventSource.onerror = (error) => {
-          logger.error('SSE connection error:', error);
-          setProgress({
-            percent: 0,
-            status: 'error',
-            details: 'Connection to server lost',
-            error: 'Connection error',
-          });
-          eventSource.close();
-          setIsDownloading(false);
-        };
+        processStream();
 
         return result;
       } catch (error) {
@@ -85,10 +115,10 @@ export function useDownload(gameId: string) {
    */
   const cancelDownload = useCallback(async () => {
     try {
-      // Close SSE connection
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      // Abort SSE connection
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
 
       // Cancel on backend
@@ -118,8 +148,8 @@ export function useDownload(gameId: string) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, []);

@@ -1,12 +1,26 @@
 import path from 'path';
 import fs from 'fs/promises';
+import { createReadStream } from 'fs';
+import { Readable } from 'stream';
 import { logger } from './utils/logger';
 import { ConfigManager } from './config';
 import { getMimeType } from './mimeTypes';
-import { sanitizeAndValidatePath, sanitizeUrlPath } from './utils/pathSecurity';
-import axios from 'axios';
+import {
+  sanitizeAndValidatePath,
+  sanitizeUrlPath,
+  sanitizeErrorMessage,
+} from './utils/pathSecurity';
+import axios, { AxiosError } from 'axios';
 import zlib from 'zlib';
 import { promisify } from 'util';
+
+// HTTP request timeout constants (G-H2)
+const EXTERNAL_REQUEST_TIMEOUT_MS = 45000; // 45 seconds for external sources
+const EXTERNAL_REQUEST_MAX_REDIRECTS = 5;
+
+// Retry configuration for external requests
+const MAX_RETRIES = 3;
+const RETRY_BASE_DELAY_MS = 1000; // 1 second base delay
 
 const brotliDecompress = promisify(zlib.brotliDecompress);
 
@@ -16,8 +30,26 @@ const SCRIPT_EXTENSIONS = ['php', 'php5', 'phtml', 'pl'];
 // Index file extensions (in priority order)
 const INDEX_EXTENSIONS = ['html', 'htm', 'php', 'swf'];
 
+// Common subdomain prefixes used in Flashpoint content
+const COMMON_SUBDOMAINS = [
+  'www',
+  'core',
+  'api',
+  'cdn',
+  'static',
+  'assets',
+  'media',
+  'content',
+  'data',
+  'files',
+  'secure',
+  'download',
+];
+
 export interface LegacyFileResponse {
-  data: Buffer;
+  data?: Buffer;
+  stream?: Readable;
+  size?: number;
   contentType: string;
   source: string;
 }
@@ -215,27 +247,51 @@ export class LegacyServer {
    * @param isCGI Whether to execute as CGI script
    */
   private async serveFile(filePath: string, isCGI: boolean = false): Promise<LegacyFileResponse> {
-    // Read file
-    let data = await fs.readFile(filePath);
-
-    // Handle Brotli compression
-    if (this.settings.enableBrotli && filePath.endsWith('.br')) {
-      logger.debug(`[LegacyServer] Decompressing Brotli file: ${filePath}`);
-      data = await brotliDecompress(data);
-      filePath = filePath.substring(0, filePath.length - 3); // Remove .br extension
-    }
-
-    // Determine content type
+    // Determine content type first
     const ext = path.extname(filePath).substring(1).toLowerCase();
     const contentType = getMimeType(ext);
 
-    // TODO: Execute CGI scripts if enabled
-    if (isCGI && this.settings.enableCGI) {
-      logger.warn('[LegacyServer] CGI execution not yet implemented');
+    // HTML files need polyfill injection, so buffer them
+    // Brotli-compressed files also need buffering for decompression
+    const needsBuffering =
+      contentType.includes('text/html') ||
+      (this.settings.enableBrotli && filePath.endsWith('.br')) ||
+      isCGI;
+
+    if (needsBuffering) {
+      // Read entire file into memory
+      let data = await fs.readFile(filePath);
+
+      // Handle Brotli compression
+      if (this.settings.enableBrotli && filePath.endsWith('.br')) {
+        logger.debug(`[LegacyServer] Decompressing Brotli file: ${filePath}`);
+        data = await brotliDecompress(data);
+        filePath = filePath.substring(0, filePath.length - 3); // Remove .br extension
+      }
+
+      // TODO: Execute CGI scripts if enabled
+      if (isCGI && this.settings.enableCGI) {
+        logger.warn('[LegacyServer] CGI execution not yet implemented');
+      }
+
+      return {
+        data,
+        contentType,
+        source: 'local-htdocs',
+      };
     }
 
+    // Non-HTML, non-compressed files: stream for memory efficiency
+    const stat = await fs.stat(filePath);
+    const stream = createReadStream(filePath);
+
+    logger.debug(
+      `[LegacyServer] Streaming file: ${filePath} (${(stat.size / 1024 / 1024).toFixed(2)} MB)`
+    );
+
     return {
-      data,
+      stream,
+      size: stat.size,
       contentType,
       source: 'local-htdocs',
     };
@@ -278,7 +334,41 @@ export class LegacyServer {
   }
 
   /**
-   * Download from external source
+   * Check if an error is retryable (network/server errors, not client errors)
+   */
+  private isRetryableError(error: unknown): boolean {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+
+      // Don't retry client errors (4xx)
+      if (status && status >= 400 && status < 500) {
+        return false;
+      }
+
+      // Retry server errors (5xx)
+      if (status && status >= 500) {
+        return true;
+      }
+
+      // Retry on network errors
+      const retryableCodes = [
+        'ECONNRESET',
+        'ETIMEDOUT',
+        'ENOTFOUND',
+        'ECONNREFUSED',
+        'ENETUNREACH',
+      ];
+      if (error.code && retryableCodes.includes(error.code)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Download from external source with exponential backoff retry
+   * Implements timeout enforcement (G-H2) and safe error handling (G-H4)
    */
   private async tryExternalSource(
     baseUrl: string,
@@ -289,39 +379,113 @@ export class LegacyServer {
 
     logger.info(`[LegacyServer] Downloading: ${fullUrl}`);
 
-    try {
-      const response = await axios.get(fullUrl, {
-        responseType: 'arraybuffer',
-        timeout: 45000,
-        maxRedirects: 5,
-        validateStatus: (status) => status === 200,
-        headers: {
-          'User-Agent': 'Flashpoint-Proxy/1.0',
-        },
-      });
+    // Retry loop with exponential backoff
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      // Create abort controller for request timeout (G-H2)
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, EXTERNAL_REQUEST_TIMEOUT_MS);
 
-      const data = Buffer.from(response.data);
-      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      try {
+        const response = await axios.get(fullUrl, {
+          responseType: 'arraybuffer',
+          timeout: EXTERNAL_REQUEST_TIMEOUT_MS,
+          maxRedirects: EXTERNAL_REQUEST_MAX_REDIRECTS,
+          signal: abortController.signal,
+          validateStatus: (status) => status === 200,
+          headers: {
+            'User-Agent': 'Flashpoint-Proxy/1.0',
+          },
+          // Limit response size to prevent memory exhaustion (100MB max)
+          maxContentLength: 100 * 1024 * 1024,
+          maxBodyLength: 100 * 1024 * 1024,
+        });
 
-      logger.info(`[LegacyServer] ✓ Downloaded: ${data.length} bytes (${contentType})`);
+        const data = Buffer.from(response.data);
 
-      return { data, contentType };
-    } catch (error) {
-      // Log but don't throw - allow trying next source
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 404) {
-          logger.debug(`[LegacyServer] ✗ Not found (404)`);
-        } else if (error.response?.status === 403) {
-          logger.warn(`[LegacyServer] ✗ Forbidden (403)`);
-        } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-          logger.warn(`[LegacyServer] ✗ Timeout`);
-        } else {
-          logger.warn(`[LegacyServer] ✗ Error: ${error.message}`);
+        // Determine content type from file extension, not from response header (G-H5)
+        // This prevents MIME type spoofing from malicious external sources
+        const ext = path.extname(relPath).substring(1).toLowerCase();
+        const contentType = ext ? getMimeType(ext) : 'application/octet-stream';
+
+        // Log if server-provided content type differs (for debugging)
+        const serverContentType = response.headers['content-type'];
+        if (serverContentType && !serverContentType.includes(contentType.split('/')[1])) {
+          logger.debug(
+            `[LegacyServer] Content-Type override: server=${serverContentType}, using=${contentType}`
+          );
         }
-      }
 
-      return null;
+        logger.info(`[LegacyServer] ✓ Downloaded: ${data.length} bytes (${contentType})`);
+
+        return { data, contentType };
+      } catch (error) {
+        clearTimeout(timeoutId);
+
+        // Determine if we should retry
+        const isLastAttempt = attempt === MAX_RETRIES;
+        const shouldRetry = !isLastAttempt && this.isRetryableError(error);
+
+        // Log the error appropriately
+        if (axios.isAxiosError(error)) {
+          const axiosError = error as AxiosError;
+          if (axiosError.response?.status === 404) {
+            logger.debug(`[LegacyServer] ✗ Not found (404)`);
+          } else if (axiosError.response?.status === 403) {
+            logger.warn(`[LegacyServer] ✗ Forbidden (403)`);
+          } else if (
+            axiosError.code === 'ECONNABORTED' ||
+            axiosError.code === 'ETIMEDOUT' ||
+            axiosError.code === 'ERR_CANCELED'
+          ) {
+            if (shouldRetry) {
+              logger.warn(
+                `[LegacyServer] ✗ Request timeout after ${EXTERNAL_REQUEST_TIMEOUT_MS}ms (attempt ${attempt}/${MAX_RETRIES})`
+              );
+            } else {
+              logger.warn(
+                `[LegacyServer] ✗ Request timeout after ${EXTERNAL_REQUEST_TIMEOUT_MS}ms (final attempt)`
+              );
+            }
+          } else {
+            // Sanitize error message to prevent internal details leakage
+            const safeMessage = sanitizeErrorMessage(axiosError.message || 'Unknown error');
+            if (shouldRetry) {
+              logger.warn(
+                `[LegacyServer] ✗ Error: ${safeMessage} (attempt ${attempt}/${MAX_RETRIES})`
+              );
+            } else {
+              logger.warn(`[LegacyServer] ✗ Error: ${safeMessage} (final attempt)`);
+            }
+          }
+        } else if (error instanceof Error) {
+          const safeMessage = sanitizeErrorMessage(error.message);
+          if (shouldRetry) {
+            logger.warn(
+              `[LegacyServer] ✗ Error: ${safeMessage} (attempt ${attempt}/${MAX_RETRIES})`
+            );
+          } else {
+            logger.warn(`[LegacyServer] ✗ Error: ${safeMessage} (final attempt)`);
+          }
+        }
+
+        // Retry if applicable, otherwise return null
+        if (shouldRetry) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delayMs = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+          logger.info(`[LegacyServer] Retrying in ${delayMs}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          continue;
+        }
+
+        // No retry, return null to try next source
+        return null;
+      }
     }
+
+    // Should never reach here, but TypeScript needs it
+    return null;
   }
 
   /**
@@ -336,24 +500,8 @@ export class LegacyServer {
   private getHostnameVariations(hostname: string): string[] {
     const variations: string[] = [hostname];
 
-    // Common subdomain prefixes used in Flashpoint content
-    const subdomains = [
-      'www',
-      'core',
-      'api',
-      'cdn',
-      'static',
-      'assets',
-      'media',
-      'content',
-      'data',
-      'files',
-      'secure',
-      'download',
-    ];
-
     // Add subdomain variations
-    for (const subdomain of subdomains) {
+    for (const subdomain of COMMON_SUBDOMAINS) {
       variations.push(`${subdomain}.${hostname}`);
     }
 

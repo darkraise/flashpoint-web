@@ -8,6 +8,8 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getErrorMessage } from '@/types/api-error';
 import {
   Form,
   FormControl,
@@ -95,6 +97,14 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
         </DialogHeader>
 
         <DialogBody>
+          {createPlaylist.isError ? (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                {getErrorMessage(createPlaylist.error) || 'Failed to create playlist'}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField

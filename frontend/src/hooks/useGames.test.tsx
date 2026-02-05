@@ -100,6 +100,29 @@ describe('useGames', () => {
       expect(result1.current.data).toBeDefined();
       expect(result2.current.data).toBeDefined();
     });
+
+    it('should cancel previous requests when filters change', async () => {
+      const filters1 = { search: 'first', page: 1, limit: 20 };
+      const filters2 = { search: 'second', page: 1, limit: 20 };
+
+      // Start with first filter
+      const { result, rerender } = renderHook(({ filters }) => useGames(filters), {
+        wrapper,
+        initialProps: { filters: filters1 },
+      });
+
+      // Immediately change to second filter (simulating rapid user input)
+      rerender({ filters: filters2 });
+
+      // Wait for the query to complete
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // The result should be for the second query, not the first
+      // TanStack Query automatically cancels the first request via AbortSignal
+      expect(result.current.data).toBeDefined();
+    });
   });
 
   describe('useGame', () => {

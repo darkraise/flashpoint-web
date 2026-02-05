@@ -2,6 +2,7 @@ import http from 'http';
 import { logger } from './utils/logger';
 import { ConfigManager } from './config';
 import { ProxyRequestHandler } from './proxy-request-handler';
+import { sanitizeErrorMessage } from './utils/pathSecurity';
 
 export interface ProxyServerOptions {
   proxyPort?: number;
@@ -62,7 +63,10 @@ export async function createHTTPProxyServer(options: ProxyServerOptions): Promis
       // Handle proxy request
       await requestHandler.handleRequest(req, res);
     } catch (error) {
-      logger.error('[HTTPProxyServer] Unhandled error:', error);
+      // Sanitize error before logging to prevent path leakage (G-H4)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const safeMessage = sanitizeErrorMessage(errorMessage);
+      logger.error(`[HTTPProxyServer] Unhandled error: ${safeMessage}`);
 
       if (!res.headersSent) {
         res.writeHead(500);

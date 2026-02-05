@@ -61,7 +61,6 @@ import {
 } from '@/types/favorite';
 import { SystemSettings, PublicSettings } from '@/types/settings';
 import { JobStatusEnriched, JobLogsResponse } from '@/types/jobs';
-import { useAuthStore } from '@/store/auth';
 
 /**
  * Playlist with games array (returned from add/remove operations)
@@ -71,8 +70,11 @@ export interface PlaylistWithGames extends UserPlaylist {
 }
 
 export const gamesApi = {
-  search: async (filters: GameFilters): Promise<PaginatedResult<Game>> => {
-    const { data } = await api.get<PaginatedResult<Game>>('/games', { params: filters });
+  search: async (filters: GameFilters, signal?: AbortSignal): Promise<PaginatedResult<Game>> => {
+    const { data } = await api.get<PaginatedResult<Game>>('/games', {
+      params: filters,
+      signal,
+    });
     return data;
   },
 
@@ -843,132 +845,5 @@ export const updatesApi = {
     return data;
   },
 };
-
-// ===================================
-// Axios Interceptors
-// ===================================
-
-// Token refresh state management to prevent race conditions
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
-
-function subscribeTokenRefresh(cb: (token: string) => void) {
-  refreshSubscribers.push(cb);
-}
-
-function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
-  refreshSubscribers = [];
-}
-
-// Request interceptor - Add JWT token to requests
-api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor - Handle 401 errors and refresh tokens
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // Handle network errors (no response from server)
-    if (!error.response) {
-      const { toast } = await import('sonner');
-      toast.error('Network error. Please check your connection.');
-      return Promise.reject(error);
-    }
-
-    const status = error.response.status;
-
-    // Note: We do NOT handle 403 errors here. Following HTTP standards:
-    // - 401 = Authentication failure (invalid/expired token) - handled below
-    // - 403 = Authorization failure (valid token, insufficient permissions) - let calling code handle
-    // The backend follows these standards, so we should too.
-
-    // Handle 404 errors - show toast notification
-    if (status === 404) {
-      const { toast } = await import('sonner');
-      toast.error('Resource not found');
-    }
-
-    // Handle 500+ errors (server errors) - show toast notification
-    if (status >= 500) {
-      const { toast } = await import('sonner');
-      toast.error('Server error occurred. Please try again later.');
-    }
-
-    // If error is 401 and we haven't retried yet
-    if (status === 401 && !originalRequest._retry) {
-      // Don't retry the refresh endpoint itself (prevents infinite loop)
-      if (originalRequest.url?.includes('/auth/refresh')) {
-        const { toast } = await import('sonner');
-        toast.error('Session expired. Please login again.');
-        useAuthStore.getState().clearAuth();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
-      // If a token refresh is already in progress, wait for it
-      if (isRefreshing) {
-        return new Promise((resolve) => {
-          subscribeTokenRefresh((newToken) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            resolve(api(originalRequest));
-          });
-        });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const refreshToken = useAuthStore.getState().refreshToken;
-
-        if (!refreshToken) {
-          // No refresh token available, clear auth and redirect to login
-          const { toast } = await import('sonner');
-          toast.error('Session expired. Please login again.');
-          useAuthStore.getState().clearAuth();
-          window.location.href = '/login';
-          return Promise.reject(error);
-        }
-
-        // Try to refresh the token
-        const tokens = await authApi.refreshToken(refreshToken);
-
-        // Update the access token in the store
-        useAuthStore.getState().updateAccessToken(tokens.accessToken);
-
-        // Notify all waiting requests of the new token
-        onTokenRefreshed(tokens.accessToken);
-
-        // Update the authorization header and retry the original request
-        originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, clear auth and redirect to login
-        const { toast } = await import('sonner');
-        toast.error('Session expired. Please login again.');
-        useAuthStore.getState().clearAuth();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
 
 export default api;

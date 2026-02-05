@@ -64,7 +64,7 @@ interface UserFormProps {
 export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
-  const { data: roles } = useRoles();
+  const { data: roles, isLoading: rolesLoading, isError: rolesError } = useRoles();
 
   const isEditMode = !!user;
 
@@ -204,11 +204,25 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {roles?.map((role) => (
-                          <SelectItem key={role.id} value={role.id.toString()}>
-                            {role.name} - {role.description}
+                        {rolesLoading ? (
+                          <SelectItem value="loading" disabled>
+                            Loading roles...
                           </SelectItem>
-                        ))}
+                        ) : rolesError ? (
+                          <SelectItem value="error" disabled>
+                            Failed to load roles
+                          </SelectItem>
+                        ) : !roles || roles.length === 0 ? (
+                          <SelectItem value="empty" disabled>
+                            No roles available
+                          </SelectItem>
+                        ) : (
+                          roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id.toString()}>
+                              {role.name} - {role.description}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

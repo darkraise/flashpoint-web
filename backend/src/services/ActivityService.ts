@@ -142,7 +142,8 @@ export class ActivityService {
    */
   async cleanup(retentionDays: number = 90): Promise<number> {
     const result = UserDatabaseService.run(
-      `DELETE FROM activity_logs WHERE created_at < datetime('now', '-${retentionDays} days')`
+      `DELETE FROM activity_logs WHERE created_at < datetime('now', '-' || ? || ' days')`,
+      [retentionDays]
     );
 
     return result.changes;

@@ -128,7 +128,7 @@ export class FavoritesService {
       ORDER BY added_at DESC
     `;
 
-    const params: any[] = [userId];
+    const params: (number | string)[] = [userId];
 
     if (limit !== undefined) {
       // Validate limit is a positive integer
@@ -194,15 +194,19 @@ export class FavoritesService {
       query += ` ORDER BY added_at ${effectiveSortOrder.toUpperCase()}`;
     }
 
+    const params: (number | string)[] = [userId];
+
     if (limit !== undefined) {
-      query += ` LIMIT ${limit}`;
+      query += ` LIMIT ?`;
+      params.push(limit);
       if (offset !== undefined) {
-        query += ` OFFSET ${offset}`;
+        query += ` OFFSET ?`;
+        params.push(offset);
       }
     }
 
     const stmt = db.prepare(query);
-    const favorites = stmt.all(userId) as Array<{ game_id: string; added_at: string }>;
+    const favorites = stmt.all(...params) as Array<{ game_id: string; added_at: string }>;
 
     if (favorites.length === 0) {
       return [];

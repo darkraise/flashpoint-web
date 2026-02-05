@@ -8,6 +8,17 @@ import { logger } from '../utils/logger';
 const WIKI_BASE_URL = 'https://flashpointarchive.org';
 const PLAYLISTS_WIKI_URL = 'https://flashpointarchive.org/datahub/Playlists';
 
+/**
+ * Allowed domains for community playlist downloads (SSRF protection)
+ */
+const ALLOWED_DOWNLOAD_DOMAINS = [
+  'flashpointarchive.org',
+  'www.flashpointarchive.org',
+  'github.com',
+  'raw.githubusercontent.com',
+  'gist.githubusercontent.com',
+];
+
 export interface CommunityPlaylist {
   name: string;
   author: string;
@@ -78,11 +89,39 @@ export class CommunityPlaylistService {
   }
 
   /**
+   * Validate that a URL is from an allowed domain (SSRF protection)
+   */
+  private isAllowedDownloadUrl(url: string): boolean {
+    try {
+      const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname.toLowerCase();
+
+      // Check if hostname matches or is a subdomain of an allowed domain
+      return ALLOWED_DOWNLOAD_DOMAINS.some((domain) => {
+        const lowerDomain = domain.toLowerCase();
+        return hostname === lowerDomain || hostname.endsWith(`.${lowerDomain}`);
+      });
+    } catch {
+      // Invalid URL
+      return false;
+    }
+  }
+
+  /**
    * Download a specific playlist from the given URL and save it to disk
    */
   async downloadPlaylist(downloadUrl: string): Promise<DownloadResult> {
     try {
       logger.info(`[CommunityPlaylist] Downloading playlist from: ${downloadUrl}`);
+
+      // SSRF protection: validate URL is from allowed domain
+      if (!this.isAllowedDownloadUrl(downloadUrl)) {
+        logger.warn(`[CommunityPlaylist] Blocked download from untrusted domain: ${downloadUrl}`);
+        return {
+          success: false,
+          error: 'Download URL is not from a trusted source',
+        };
+      }
 
       // Fetch playlist JSON
       const response = await axios.get(downloadUrl, {

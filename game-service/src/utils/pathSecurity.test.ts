@@ -4,6 +4,8 @@ import {
   sanitizeAndValidatePath,
   validatePathInAllowedDirectories,
   sanitizeUrlPath,
+  hasDoubleEncoding,
+  sanitizeErrorMessage,
 } from './pathSecurity';
 
 describe('pathSecurity', () => {
@@ -118,6 +120,88 @@ describe('pathSecurity', () => {
     it('should allow normal .. in paths (will be validated by sanitizeAndValidatePath)', () => {
       const result = sanitizeUrlPath('/files/../other/game.swf');
       expect(result).toBe('/files/../other/game.swf');
+    });
+
+    it('should block double-encoded traversal (%252e%252e)', () => {
+      expect(() => {
+        sanitizeUrlPath('/path/%252e%252e/etc/passwd');
+      }).toThrow('Double encoding detected');
+    });
+
+    it('should block double-encoded forward slash (%252f)', () => {
+      expect(() => {
+        sanitizeUrlPath('/path/%252f..%252fetc/passwd');
+      }).toThrow('Double encoding detected');
+    });
+
+    it('should block URL encoded null bytes (%00)', () => {
+      expect(() => {
+        sanitizeUrlPath('/file.swf%00.txt');
+      }).toThrow('Dangerous pattern detected');
+    });
+
+    it('should block malformed URL encoding', () => {
+      expect(() => {
+        sanitizeUrlPath('/path/%GG/file.swf');
+      }).toThrow('Malformed URL encoding');
+    });
+  });
+
+  describe('hasDoubleEncoding', () => {
+    it('should detect double-encoded dot (%252e)', () => {
+      expect(hasDoubleEncoding('%252e%252e')).toBe(true);
+    });
+
+    it('should detect double-encoded forward slash (%252f)', () => {
+      expect(hasDoubleEncoding('%252f')).toBe(true);
+    });
+
+    it('should detect double-encoded backslash (%255c)', () => {
+      expect(hasDoubleEncoding('%255c')).toBe(true);
+    });
+
+    it('should detect double-encoded null byte (%2500)', () => {
+      expect(hasDoubleEncoding('%2500')).toBe(true);
+    });
+
+    it('should not flag single-encoded sequences', () => {
+      expect(hasDoubleEncoding('%2e%2e')).toBe(false);
+    });
+
+    it('should not flag normal paths', () => {
+      expect(hasDoubleEncoding('/path/to/file.swf')).toBe(false);
+    });
+  });
+
+  describe('sanitizeErrorMessage', () => {
+    it('should redact Windows paths', () => {
+      const result = sanitizeErrorMessage('File not found: C:\\Users\\admin\\secrets.txt');
+      expect(result).not.toContain('C:\\Users');
+      expect(result).toContain('[path]');
+    });
+
+    it('should redact Unix paths', () => {
+      const result = sanitizeErrorMessage('Cannot access /home/user/private/file.txt');
+      expect(result).not.toContain('/home/user');
+      expect(result).toContain('[path]');
+    });
+
+    it('should redact network paths', () => {
+      const result = sanitizeErrorMessage('Error accessing \\\\server\\share\\file.txt');
+      expect(result).not.toContain('\\\\server');
+      expect(result).toContain('[path]');
+    });
+
+    it('should preserve non-path content', () => {
+      const result = sanitizeErrorMessage('Connection timeout after 5000ms');
+      expect(result).toBe('Connection timeout after 5000ms');
+    });
+
+    it('should handle multiple paths in one message', () => {
+      const result = sanitizeErrorMessage('Copy from C:\\source\\file.txt to D:\\dest\\file.txt');
+      expect(result).not.toContain('C:\\source');
+      expect(result).not.toContain('D:\\dest');
+      expect(result.match(/\[path\]/g)?.length).toBe(2);
     });
   });
 });

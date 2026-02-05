@@ -6,9 +6,34 @@ import { requireFeature } from '../middleware/featureFlags';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logActivity } from '../middleware/activityLogger';
+import { z } from 'zod';
 
 const router = Router();
 const playTrackingService = new PlayTrackingService();
+
+// Validation schemas
+const startPlaySessionSchema = z.object({
+  gameId: z.string().min(1).max(36),
+  gameTitle: z.string().min(1).max(255),
+});
+
+const endPlaySessionSchema = z.object({
+  sessionId: z.string().uuid(),
+});
+
+// Pagination and limit constants
+const LIMITS = {
+  GAME_STATS_DEFAULT: 50,
+  GAME_STATS_MAX: 100,
+  HISTORY_DEFAULT: 50,
+  HISTORY_MAX: 100,
+  TOP_GAMES_DEFAULT: 10,
+  TOP_GAMES_MAX: 50,
+  ACTIVITY_DAYS_DEFAULT: 30,
+  ACTIVITY_DAYS_MAX: 365,
+  GAMES_DISTRIBUTION_DEFAULT: 10,
+  GAMES_DISTRIBUTION_MAX: 20,
+} as const;
 
 // Apply feature flag check to all routes in this router
 router.use(requireFeature('enableStatistics'));
@@ -29,11 +54,7 @@ router.post(
     gameId: req.body.gameId,
   })),
   asyncHandler(async (req: Request, res: Response) => {
-    const { gameId, gameTitle } = req.body;
-
-    if (!gameId || !gameTitle) {
-      throw new AppError(400, 'gameId and gameTitle are required');
-    }
+    const { gameId, gameTitle } = startPlaySessionSchema.parse(req.body);
 
     if (!req.user) {
       throw new AppError(401, 'Authentication required');
@@ -59,11 +80,7 @@ router.post(
   '/end',
   logActivity('play.end', 'games'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { sessionId } = req.body;
-
-    if (!sessionId) {
-      throw new AppError(400, 'sessionId is required');
-    }
+    const { sessionId } = endPlaySessionSchema.parse(req.body);
 
     await playTrackingService.endPlaySession(sessionId);
 
@@ -102,7 +119,10 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const limit = Math.min(
+      parseInt(req.query.limit as string) || LIMITS.GAME_STATS_DEFAULT,
+      LIMITS.GAME_STATS_MAX
+    );
     const offset = parseInt(req.query.offset as string) || 0;
 
     const stats = await playTrackingService.getUserGameStats(req.user.id, limit, offset);
@@ -126,7 +146,10 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const limit = Math.min(
+      parseInt(req.query.limit as string) || LIMITS.HISTORY_DEFAULT,
+      LIMITS.HISTORY_MAX
+    );
     const offset = parseInt(req.query.offset as string) || 0;
 
     const history = await playTrackingService.getUserPlayHistory(req.user.id, limit, offset);
@@ -150,7 +173,10 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const limit = Math.min(
+      parseInt(req.query.limit as string) || LIMITS.TOP_GAMES_DEFAULT,
+      LIMITS.TOP_GAMES_MAX
+    );
 
     const topGames = await playTrackingService.getTopGames(req.user.id, limit);
 
@@ -169,7 +195,10 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const days = Math.min(parseInt(req.query.days as string) || 30, 365);
+    const days = Math.min(
+      parseInt(req.query.days as string) || LIMITS.ACTIVITY_DAYS_DEFAULT,
+      LIMITS.ACTIVITY_DAYS_MAX
+    );
 
     const activity = await playTrackingService.getPlayActivityOverTime(req.user.id, days);
 
@@ -188,7 +217,10 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+    const limit = Math.min(
+      parseInt(req.query.limit as string) || LIMITS.GAMES_DISTRIBUTION_DEFAULT,
+      LIMITS.GAMES_DISTRIBUTION_MAX
+    );
 
     const distribution = await playTrackingService.getGamesDistribution(req.user.id, limit);
 

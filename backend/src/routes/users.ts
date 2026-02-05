@@ -40,6 +40,8 @@ const updateThemeSettingsSchema = z.object({
   primaryColor: z.string().min(1),
 });
 
+const updateUserSettingsSchema = z.record(z.string(), z.string());
+
 /**
  * GET /api/users
  * List all users with pagination
@@ -276,7 +278,7 @@ router.patch(
   logActivity('users.updateSettings', 'users'),
   asyncHandler(async (req, res) => {
     const userId = req.user!.id;
-    const settings = req.body as Record<string, string>;
+    const settings = updateUserSettingsSchema.parse(req.body);
 
     for (const [key, value] of Object.entries(settings)) {
       await userService.setUserSetting(userId, key, value);

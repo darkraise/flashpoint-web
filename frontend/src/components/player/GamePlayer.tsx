@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { logger } from '@/lib/logger';
 import { Play, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { RufflePlayer } from './RufflePlayer';
+import { PlayerErrorBoundary } from './PlayerErrorBoundary';
 
 export interface GamePlayerProps {
   /** Game title for display */
@@ -29,10 +30,12 @@ export interface GamePlayerProps {
 }
 
 /**
- * Reusable game player component that can render Flash (Ruffle) or HTML5 games.
+ * Internal game player component that can render Flash (Ruffle) or HTML5 games.
  * Can be embedded in pages or dialogs.
+ *
+ * Note: Use the default export (wrapped with PlayerErrorBoundary) instead of this component directly.
  */
-export function GamePlayer({
+function GamePlayerInternal({
   title,
   platform,
   contentUrl,
@@ -242,5 +245,27 @@ export function GamePlayer({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Game player component wrapped with error boundary for crash protection.
+ * This prevents errors in the Ruffle emulator or game content from taking down the entire app.
+ *
+ * @example
+ * ```tsx
+ * <GamePlayer
+ *   title="My Flash Game"
+ *   platform="Flash"
+ *   contentUrl="/game.swf"
+ *   canPlayInBrowser={true}
+ * />
+ * ```
+ */
+export function GamePlayer(props: GamePlayerProps) {
+  return (
+    <PlayerErrorBoundary>
+      <GamePlayerInternal {...props} />
+    </PlayerErrorBoundary>
   );
 }

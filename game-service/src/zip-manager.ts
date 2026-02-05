@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { LRUCache } from 'lru-cache';
 import { logger } from './utils/logger';
+import { sanitizeErrorMessage } from './utils/pathSecurity';
 
 interface MountedZip {
   id: string;
@@ -52,7 +53,9 @@ export class ZipManager {
     try {
       await fs.access(zipPath);
     } catch (error) {
-      throw new Error(`ZIP file not found: ${zipPath}`);
+      // Don't expose full path in error message (G-H4)
+      logger.error(`[ZipManager] ZIP file not found: ${zipPath}`);
+      throw new Error('ZIP file not found');
     }
 
     logger.info(`[ZipManager] Mounting ZIP: ${id} -> ${zipPath}`);
@@ -206,7 +209,10 @@ export class ZipManager {
 
       return files;
     } catch (error) {
-      logger.error(`[ZipManager] Error listing files in ${id}:`, error);
+      // Sanitize error message to prevent path leakage (G-H4)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const safeMessage = sanitizeErrorMessage(errorMessage);
+      logger.error(`[ZipManager] Error listing files in ${id}: ${safeMessage}`);
       return [];
     }
   }

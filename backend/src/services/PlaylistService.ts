@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { config } from '../config';
@@ -89,8 +90,8 @@ export class PlaylistService {
           const playlistId = playlist.id || path.basename(file, '.json');
 
           if (playlistId === id) {
-            // Fetch full game data for games in playlist
-            const games: Game[] = [];
+            // Extract game IDs from playlist
+            const gameIds: string[] = [];
 
             if (playlist.games && Array.isArray(playlist.games)) {
               for (const playlistGame of playlist.games) {
@@ -99,13 +100,14 @@ export class PlaylistService {
                   typeof playlistGame === 'string' ? playlistGame : playlistGame.gameId;
 
                 if (gameId) {
-                  const game = await this.gameService.getGameById(gameId);
-                  if (game) {
-                    games.push(game);
-                  }
+                  gameIds.push(gameId);
                 }
               }
             }
+
+            // Batch fetch all games at once (avoid N+1 query pattern)
+            // getGamesByIds returns games in the same order as input IDs
+            const games = await this.gameService.getGamesByIds(gameIds);
 
             return {
               id: playlistId,
@@ -275,11 +277,6 @@ export class PlaylistService {
   }
 
   private generateUUID(): string {
-    // Simple UUID v4 generator
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
+    return crypto.randomUUID();
   }
 }

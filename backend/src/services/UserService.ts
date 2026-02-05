@@ -1,6 +1,6 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { PermissionCache } from './PermissionCache';
-import { hashPassword } from '../utils/password';
+import { hashPassword, verifyPassword } from '../utils/password';
 import { AppError } from '../middleware/errorHandler';
 import { User, CreateUserData, UpdateUserData } from '../types/auth';
 import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../utils/pagination';
@@ -171,9 +171,8 @@ export class UserService {
       throw new AppError(404, 'User not found');
     }
 
-    // Verify current password
-    const bcrypt = require('bcrypt');
-    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    // Verify current password using centralized utility
+    const isValid = await verifyPassword(currentPassword, user.password_hash);
     if (!isValid) {
       throw new AppError(401, 'Current password is incorrect');
     }

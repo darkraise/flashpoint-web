@@ -52,6 +52,16 @@ const copyFlashpointPlaylistSchema = z.object({
   newTitle: z.string().optional(),
 });
 
+const enableSharingSchema = z.object({
+  expiresAt: z.string().datetime().nullable().optional(),
+  showOwner: z.boolean().optional(),
+});
+
+const updateShareSettingsSchema = z.object({
+  expiresAt: z.string().datetime().nullable().optional(),
+  showOwner: z.boolean().optional(),
+});
+
 /**
  * GET /api/user-playlists
  * Get all playlists for the authenticated user
@@ -408,7 +418,7 @@ router.post(
       throw new AppError(400, 'Invalid playlist ID');
     }
 
-    const { expiresAt, showOwner } = req.body;
+    const { expiresAt, showOwner } = enableSharingSchema.parse(req.body);
 
     const shareData = playlistService.enableSharing(playlistId, req.user.id, {
       expiresAt,
@@ -500,7 +510,7 @@ router.patch(
       throw new AppError(400, 'Invalid playlist ID');
     }
 
-    const { expiresAt, showOwner } = req.body;
+    const { expiresAt, showOwner } = updateShareSettingsSchema.parse(req.body);
 
     const shareData = playlistService.updateShareSettings(playlistId, req.user.id, {
       expiresAt,
