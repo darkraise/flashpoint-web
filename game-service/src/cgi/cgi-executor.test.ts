@@ -41,13 +41,32 @@ describe('CgiExecutor', () => {
 
   let executor: CgiExecutor;
 
+  // Store original env vars to restore after tests
+  const originalEnv: Record<string, string | undefined> = {};
+
   beforeEach(() => {
     vi.clearAllMocks();
     executor = new CgiExecutor(mockConfig);
+
+    // Save original sensitive env vars
+    originalEnv.JWT_SECRET = process.env.JWT_SECRET;
+    originalEnv.DATABASE_URL = process.env.DATABASE_URL;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+
+    // Restore original env vars (cleanup sensitive test data)
+    if (originalEnv.JWT_SECRET === undefined) {
+      delete process.env.JWT_SECRET;
+    } else {
+      process.env.JWT_SECRET = originalEnv.JWT_SECRET;
+    }
+    if (originalEnv.DATABASE_URL === undefined) {
+      delete process.env.DATABASE_URL;
+    } else {
+      process.env.DATABASE_URL = originalEnv.DATABASE_URL;
+    }
   });
 
   describe('validateBinary', () => {
@@ -210,10 +229,7 @@ describe('CgiExecutor', () => {
       // Verify sensitive variables are NOT passed
       expect(capturedEnv.JWT_SECRET).toBeUndefined();
       expect(capturedEnv.DATABASE_URL).toBeUndefined();
-
-      // Cleanup
-      delete process.env.JWT_SECRET;
-      delete process.env.DATABASE_URL;
+      // Cleanup handled by afterEach
     });
   });
 
@@ -374,6 +390,49 @@ describe('CgiExecutor', () => {
 
       expect(response.statusCode).toBe(404);
       expect(response.body.toString()).toBe('<h1>Not Found</h1>');
+    });
+
+    it('should parse CGI output with LF-only line endings', async () => {
+      const { spawn } = await import('child_process');
+
+      vi.mocked(spawn).mockImplementation(() => {
+        const mockProcess: any = {
+          stdin: { write: vi.fn(), end: vi.fn() },
+          stdout: {
+            on: vi.fn((event: string, callback: (data: Buffer) => void) => {
+              if (event === 'data') {
+                // Some PHP configurations use LF (\n) instead of CRLF (\r\n)
+                callback(
+                  Buffer.from(
+                    'Content-Type: text/html\nX-LF-Header: works\n\n<html>LF output</html>'
+                  )
+                );
+              }
+            }),
+          },
+          stderr: { on: vi.fn() },
+          on: vi.fn((event: string, callback: any) => {
+            if (event === 'close') {
+              setTimeout(() => callback(0, null), 10);
+            }
+          }),
+          kill: vi.fn(),
+        };
+        return mockProcess;
+      });
+
+      const request: CgiRequest = {
+        method: 'GET',
+        url: new URL('http://example.com/lftest.php'),
+        headers: {},
+      };
+
+      const response = await executor.execute('/var/www/htdocs/example.com/lftest.php', request);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['Content-Type']).toBe('text/html');
+      expect(response.headers['X-LF-Header']).toBe('works');
+      expect(response.body.toString()).toBe('<html>LF output</html>');
     });
   });
 

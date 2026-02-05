@@ -321,16 +321,29 @@ export class ProxyRequestHandler {
   }
 
   /**
-   * Collect request body with size limit
+   * Collect request body with size limit and timeout
    */
   private collectRequestBody(req: IncomingMessage): Promise<Buffer | undefined> {
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
       let totalSize = 0;
+      let completed = false;
+
+      // Timeout for body collection (30 seconds)
+      const timeoutHandle = setTimeout(() => {
+        if (!completed) {
+          completed = true;
+          req.destroy(new Error('Request body collection timed out'));
+          reject(new Error('Request body collection timed out'));
+        }
+      }, 30000);
 
       req.on('data', (chunk: Buffer) => {
+        if (completed) return;
         totalSize += chunk.length;
         if (totalSize > MAX_REQUEST_BODY_SIZE) {
+          completed = true;
+          clearTimeout(timeoutHandle);
           req.destroy(new Error('Request body too large'));
           reject(new Error('Request body too large'));
           return;
@@ -339,6 +352,9 @@ export class ProxyRequestHandler {
       });
 
       req.on('end', () => {
+        if (completed) return;
+        completed = true;
+        clearTimeout(timeoutHandle);
         if (chunks.length === 0) {
           resolve(undefined);
         } else {
@@ -347,17 +363,11 @@ export class ProxyRequestHandler {
       });
 
       req.on('error', (error) => {
+        if (completed) return;
+        completed = true;
+        clearTimeout(timeoutHandle);
         reject(error);
       });
-
-      // Timeout for body collection
-      setTimeout(() => {
-        if (chunks.length > 0 && totalSize > 0) {
-          resolve(Buffer.concat(chunks));
-        } else {
-          resolve(undefined);
-        }
-      }, 30000); // 30 second timeout
     });
   }
 }

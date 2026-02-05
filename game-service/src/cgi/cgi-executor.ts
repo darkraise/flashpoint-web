@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
 import { logger } from '../utils/logger';
@@ -121,6 +121,7 @@ export class CgiExecutor {
       let stderrSize = 0;
       let timedOut = false;
       let processExited = false;
+      let forceKillHandle: NodeJS.Timeout | null = null;
 
       // Set up timeout
       const timeoutHandle = setTimeout(() => {
@@ -129,7 +130,7 @@ export class CgiExecutor {
         proc.kill('SIGTERM');
 
         // Force kill after 5 seconds if still running
-        setTimeout(() => {
+        forceKillHandle = setTimeout(() => {
           if (!processExited) {
             proc.kill('SIGKILL');
           }
@@ -161,6 +162,9 @@ export class CgiExecutor {
       proc.on('close', (code, signal) => {
         processExited = true;
         clearTimeout(timeoutHandle);
+        if (forceKillHandle) {
+          clearTimeout(forceKillHandle);
+        }
 
         // Log stderr if present
         if (stderr.length > 0) {
@@ -200,6 +204,9 @@ export class CgiExecutor {
       proc.on('error', (error) => {
         processExited = true;
         clearTimeout(timeoutHandle);
+        if (forceKillHandle) {
+          clearTimeout(forceKillHandle);
+        }
         logger.error(`[CGI] Process error: ${error.message}`);
         reject(new Error(`Failed to execute CGI script: ${error.message}`));
       });
@@ -324,11 +331,22 @@ export class CgiExecutor {
    * Body content here...
    *
    * The Status header determines the HTTP response code.
+   * Note: Some PHP configurations may use \n instead of \r\n.
    */
   private parseCgiOutput(output: Buffer): CgiResponse {
     // Find the header/body separator (empty line)
+    // Try CRLF first (standard), then LF-only (some PHP configs)
     const outputStr = output.toString('binary');
-    const separatorIndex = outputStr.indexOf('\r\n\r\n');
+    let separatorIndex = outputStr.indexOf('\r\n\r\n');
+    let separatorLength = 4;
+    let lineEnding = '\r\n';
+
+    // Fallback to LF-only if CRLF not found
+    if (separatorIndex === -1) {
+      separatorIndex = outputStr.indexOf('\n\n');
+      separatorLength = 2;
+      lineEnding = '\n';
+    }
 
     if (separatorIndex === -1) {
       // No headers found, treat entire output as body
@@ -342,14 +360,14 @@ export class CgiExecutor {
 
     // Split headers and body
     const headerSection = outputStr.substring(0, separatorIndex);
-    const bodyStart = separatorIndex + 4; // Skip \r\n\r\n
+    const bodyStart = separatorIndex + separatorLength;
     const body = output.slice(bodyStart);
 
     // Parse headers
     const headers: Record<string, string> = {};
     let statusCode = 200;
 
-    const headerLines = headerSection.split('\r\n');
+    const headerLines = headerSection.split(lineEnding);
     for (const line of headerLines) {
       const colonIndex = line.indexOf(':');
       if (colonIndex === -1) continue;
