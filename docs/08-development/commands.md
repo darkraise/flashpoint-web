@@ -270,11 +270,12 @@ npm start
 
 ### Game Service (.env)
 
-| Variable                 | Required | Default | Notes                                 |
-| ------------------------ | -------- | ------- | ------------------------------------- |
-| `FLASHPOINT_PATH`        | Yes      | -       | All other paths derived automatically |
-| `LOG_LEVEL`              | No       | info    | error, warn, info, debug              |
-| `EXTERNAL_FALLBACK_URLS` | No       | -       | Comma-separated CDN URLs              |
+| Variable          | Required | Default | Notes                                 |
+| ----------------- | -------- | ------- | ------------------------------------- |
+| `FLASHPOINT_PATH` | Yes      | -       | All other paths derived automatically |
+| `LOG_LEVEL`       | No       | info    | error, warn, info, debug              |
+
+> **Note:** External fallback URLs are configured in `proxySettings.json`.
 
 ### Frontend
 

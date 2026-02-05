@@ -145,30 +145,21 @@ ALLOW_CROSS_DOMAIN=false  # Disable CORS
 
 ### External Sources
 
-#### EXTERNAL_FALLBACK_URLS
+External fallback URLs are configured via `proxySettings.json` in your Flashpoint
+installation directory (`{FLASHPOINT_PATH}/Server/proxySettings.json`), not via
+environment variables.
 
-Comma-separated list of external CDN URLs.
+The game service reads `externalFilePaths` and `infinityServerURL` from this file.
+If the file is missing, defaults to:
 
-```bash
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
-```
-
-**Default**: infinity.flashpointarchive.org **Type**: Comma-separated URLs
-**Required**: No
-
-**Use case**: Add backup CDNs
-
-**Format**:
-
-```bash
-EXTERNAL_FALLBACK_URLS=https://cdn1.example.com,https://cdn2.example.com,https://cdn3.example.com
-```
+- `https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/`
+- `https://infinity.unstable.life/Flashpoint/Legacy/htdocs/`
 
 **Notes**:
 
-- HTTP URLs auto-upgraded to HTTPS
-- Tried in order
-- First successful response used
+- HTTP URLs are auto-upgraded to HTTPS
+- URLs are tried in order
+- First successful response is used
 
 ### Logging
 
@@ -220,11 +211,11 @@ NODE_ENV=production   # Production optimizations
 NODE_ENV=test         # Testing mode
 ```
 
-### Advanced Features
+### CGI Support
 
 #### ENABLE_CGI
 
-Enable CGI script execution.
+Enable CGI script execution (PHP).
 
 ```bash
 ENABLE_CGI=false
@@ -232,23 +223,46 @@ ENABLE_CGI=false
 
 **Default**: false **Type**: Boolean **Required**: No
 
-**Use case**: Execute PHP/Perl scripts
+**Use case**: Execute PHP scripts for legacy Flashpoint games that require
+server-side processing.
 
-**Security warning**: Only enable in trusted environments
+**Security warning**: Only enable in trusted environments. CGI execution allows
+server-side code to run.
 
-#### ENABLE_HTACCESS
+When enabled, the game-service will execute PHP scripts using `php-cgi` for
+requests to `.php`, `.php5`, `.phtml`, and `.pl` files in the `htdocs` or
+`cgi-bin` directories.
 
-Enable .htaccess file parsing.
+#### CGI Configuration (via proxySettings.json)
 
-```bash
-ENABLE_HTACCESS=false
+Additional CGI settings can be configured in `proxySettings.json`:
+
+```json
+{
+  "phpCgiPath": "C:/php/php-cgi.exe",
+  "cgiTimeout": 30000,
+  "cgiMaxBodySize": 10485760,
+  "cgiMaxResponseSize": 52428800
+}
 ```
 
-**Default**: false **Type**: Boolean **Required**: No
+| Setting              | Default                                  | Description                            |
+| -------------------- | ---------------------------------------- | -------------------------------------- |
+| `phpCgiPath`         | `{FLASHPOINT_PATH}/Legacy/php-cgi.exe`   | Path to php-cgi executable             |
+| `cgiTimeout`         | `30000` (30 seconds)                     | Script execution timeout in ms         |
+| `cgiMaxBodySize`     | `10485760` (10MB)                        | Maximum request body size              |
+| `cgiMaxResponseSize` | `52428800` (50MB)                        | Maximum response size                  |
 
-**Use case**: Apache-style directory configuration
+#### CGI Security
 
-**Note**: Not yet implemented
+The CGI executor implements several security measures:
+
+1. **Path validation**: Scripts must be within `htdocs` or `cgi-bin` directories
+2. **REDIRECT_STATUS**: Set to prevent direct php-cgi execution attacks
+3. **Environment sanitization**: Sensitive environment variables (JWT_SECRET,
+   DATABASE_URL, etc.) are not passed to CGI scripts
+4. **Timeout enforcement**: Scripts are killed after the configured timeout
+5. **Size limits**: Both request body and response size are limited
 
 ## proxySettings.json
 
@@ -387,10 +401,9 @@ GAMEZIPSERVER_PORT=22501
 LOG_LEVEL=warn
 NODE_ENV=production
 ALLOW_CROSS_DOMAIN=true
-EXTERNAL_FALLBACK_URLS=https://cdn1.example.com,https://cdn2.example.com
 ```
 
-Optimized for production.
+Optimized for production. External fallback URLs are configured via `proxySettings.json`.
 
 ### Docker Configuration
 
@@ -652,7 +665,7 @@ ENV GAMEZIPSERVER_PORT=${GAMEZIPSERVER_PORT}
 **Debug steps**:
 
 1. Test URL manually: `curl https://infinity.flashpointarchive.org/...`
-2. Check EXTERNAL_FALLBACK_URLS format
+2. Check `externalFilePaths` in `proxySettings.json`
 3. Verify network connectivity
 4. Check firewall settings
 
@@ -674,10 +687,8 @@ PROXY_CHUNK_SIZE=65536   # Larger chunks, fewer CPU cycles
 
 ### Network Optimization
 
-```bash
-# More external sources for redundancy
-EXTERNAL_FALLBACK_URLS=https://cdn1.example.com,https://cdn2.example.com,https://cdn3.example.com
-```
+For external source redundancy, add multiple URLs to `externalFilePaths` in
+`proxySettings.json`.
 
 ### Logging Optimization
 
@@ -687,11 +698,14 @@ LOG_LEVEL=error  # Minimal logging overhead
 
 ## Security Best Practices
 
-1. **Disable CGI in production**:
+1. **Only enable CGI when necessary**:
 
    ```bash
-   ENABLE_CGI=false
+   ENABLE_CGI=false  # Default - disable unless games require PHP
    ```
+
+   If CGI is needed, ensure you're using the Flashpoint-bundled php-cgi binary
+   which is configured for safe operation.
 
 2. **Restrict CORS if internal**:
 
@@ -699,11 +713,8 @@ LOG_LEVEL=error  # Minimal logging overhead
    ALLOW_CROSS_DOMAIN=false  # Internal networks only
    ```
 
-3. **Use HTTPS for external URLs**:
-
-   ```bash
-   EXTERNAL_FALLBACK_URLS=https://cdn.example.com  # HTTPS only
-   ```
+3. **Use HTTPS for external URLs**: External URLs in `proxySettings.json` are
+   automatically upgraded from HTTP to HTTPS.
 
 4. **Minimal logging in production**:
 

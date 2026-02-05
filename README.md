@@ -122,7 +122,6 @@ FLASHPOINT_PATH=D:/Flashpoint
 
 # Optional
 LOG_LEVEL=info
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
 ```
 
 > **Note:** Frontend requires no `.env` file for local development - API calls

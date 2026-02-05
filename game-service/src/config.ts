@@ -32,7 +32,12 @@ export interface ServerSettings {
   allowCrossDomain: boolean;
   enableBrotli: boolean;
   enableCGI: boolean;
-  enableHtaccess: boolean;
+
+  // CGI settings
+  phpCgiPath: string;
+  cgiTimeout: number;
+  cgiMaxBodySize: number;
+  cgiMaxResponseSize: number;
 }
 
 export class ConfigManager {
@@ -76,7 +81,18 @@ export class ConfigManager {
         allowCrossDomain: true,
         enableBrotli: true,
         enableCGI: process.env.ENABLE_CGI === 'true',
-        enableHtaccess: process.env.ENABLE_HTACCESS === 'true',
+
+        // CGI settings
+        phpCgiPath:
+          proxySettings.phpCgiPath ||
+          path.join(
+            flashpointPath,
+            'Legacy',
+            process.platform === 'win32' ? 'php-cgi.exe' : 'php-cgi'
+          ),
+        cgiTimeout: proxySettings.cgiTimeout || 30000, // 30 seconds
+        cgiMaxBodySize: proxySettings.cgiMaxBodySize || 10 * 1024 * 1024, // 10MB
+        cgiMaxResponseSize: proxySettings.cgiMaxResponseSize || 50 * 1024 * 1024, // 50MB
       };
 
       logger.info('[ProxyConfig] Configuration loaded successfully');
@@ -109,7 +125,16 @@ export class ConfigManager {
         allowCrossDomain: true,
         enableBrotli: true,
         enableCGI: false,
-        enableHtaccess: false,
+
+        // CGI settings (defaults when proxySettings.json not available)
+        phpCgiPath: path.join(
+          flashpointPath,
+          'Legacy',
+          process.platform === 'win32' ? 'php-cgi.exe' : 'php-cgi'
+        ),
+        cgiTimeout: 30000,
+        cgiMaxBodySize: 10 * 1024 * 1024,
+        cgiMaxResponseSize: 50 * 1024 * 1024,
       };
 
       return this.settings;

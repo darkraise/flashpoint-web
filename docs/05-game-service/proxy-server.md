@@ -325,11 +325,13 @@ await createHTTPProxyServer({
   proxyPort: parseInt(process.env.PROXY_PORT || '22500'),
   legacyHTDOCSPath: config.htdocsPath,
   gameDataPath: config.gamesPath,
-  externalFilePaths: (process.env.EXTERNAL_FALLBACK_URLS || '').split(','),
   allowCrossDomain: process.env.ALLOW_CROSS_DOMAIN !== 'false',
   chunkSize: parseInt(process.env.PROXY_CHUNK_SIZE || '8192'),
 });
 ```
+
+> **Note:** External fallback URLs are loaded from `proxySettings.json` in the
+> Flashpoint directory, not from environment variables.
 
 ## Security
 

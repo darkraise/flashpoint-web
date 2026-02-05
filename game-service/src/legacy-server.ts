@@ -10,6 +10,7 @@ import {
   sanitizeUrlPath,
   sanitizeErrorMessage,
 } from './utils/pathSecurity';
+import { CgiExecutor, CgiRequest } from './cgi';
 import axios, { AxiosError } from 'axios';
 import zlib from 'zlib';
 import { promisify } from 'util';
@@ -52,17 +53,71 @@ export interface LegacyFileResponse {
   size?: number;
   contentType: string;
   source: string;
+  /** HTTP status code (default: 200) */
+  statusCode?: number;
+  /** Additional response headers from CGI */
+  headers?: Record<string, string>;
+}
+
+/**
+ * HTTP request context for CGI execution
+ */
+export interface HttpRequestContext {
+  method: string;
+  headers: Record<string, string>;
+  body?: Buffer;
 }
 
 export class LegacyServer {
   private settings = ConfigManager.getSettings();
+  private cgiExecutor: CgiExecutor | null = null;
+  private cgiValidated = false;
+
+  /**
+   * Initialize CGI executor if enabled
+   */
+  private async initCgiExecutor(): Promise<CgiExecutor | null> {
+    if (!this.settings.enableCGI) {
+      return null;
+    }
+
+    if (this.cgiExecutor && this.cgiValidated) {
+      return this.cgiExecutor;
+    }
+
+    this.cgiExecutor = new CgiExecutor({
+      phpCgiPath: this.settings.phpCgiPath,
+      documentRoot: this.settings.legacyHTDOCSPath,
+      cgiBinPath: this.settings.legacyCGIBINPath,
+      timeout: this.settings.cgiTimeout,
+      maxBodySize: this.settings.cgiMaxBodySize,
+      maxResponseSize: this.settings.cgiMaxResponseSize,
+    });
+
+    // Validate binary exists (only once)
+    if (!this.cgiValidated) {
+      const valid = await this.cgiExecutor.validateBinary();
+      if (!valid) {
+        logger.warn('[LegacyServer] CGI is enabled but php-cgi binary not found');
+        this.cgiExecutor = null;
+      }
+      this.cgiValidated = true;
+    }
+
+    return this.cgiExecutor;
+  }
 
   /**
    * Main file serving method - replicates ServeLegacy() from Go implementation
    * @param hostname The hostname from the request (e.g., "www.example.com")
    * @param urlPath The path from the request (e.g., "/path/file.swf")
+   * @param requestContext Optional HTTP request context for CGI execution
    */
-  async serveLegacy(hostname: string, urlPath: string): Promise<LegacyFileResponse> {
+  async serveLegacy(
+    hostname: string,
+    urlPath: string,
+    requestContext?: HttpRequestContext
+  ): Promise<LegacyFileResponse> {
     // Sanitize URL path to prevent null bytes and dangerous patterns
     try {
       urlPath = sanitizeUrlPath(urlPath);
@@ -95,7 +150,8 @@ export class LegacyServer {
 
         if (stats.isFile()) {
           logger.info(`[LegacyServer] ✓ Found file: ${candidate.path}`);
-          return await this.serveFile(candidate.path, candidate.type === 'cgi-bin');
+          const isCgiBin = candidate.type === 'cgi-bin' || candidate.type === 'cgi-bin-no-query';
+          return await this.serveFile(candidate.path, isCgiBin, requestContext);
         }
       } catch (error) {
         // File doesn't exist or path validation failed, continue to next candidate
@@ -245,8 +301,13 @@ export class LegacyServer {
    * Serve a file from disk
    * @param filePath Absolute path to file
    * @param isCGI Whether to execute as CGI script
+   * @param requestContext HTTP request context for CGI execution
    */
-  private async serveFile(filePath: string, isCGI: boolean = false): Promise<LegacyFileResponse> {
+  private async serveFile(
+    filePath: string,
+    isCGI: boolean = false,
+    requestContext?: HttpRequestContext
+  ): Promise<LegacyFileResponse> {
     // Determine content type first
     const ext = path.extname(filePath).substring(1).toLowerCase();
     const contentType = getMimeType(ext);
@@ -269,9 +330,9 @@ export class LegacyServer {
         filePath = filePath.substring(0, filePath.length - 3); // Remove .br extension
       }
 
-      // TODO: Execute CGI scripts if enabled
+      // Execute CGI scripts if enabled
       if (isCGI && this.settings.enableCGI) {
-        logger.warn('[LegacyServer] CGI execution not yet implemented');
+        return await this.executeCgiScript(filePath, requestContext);
       }
 
       return {
@@ -295,6 +356,76 @@ export class LegacyServer {
       contentType,
       source: 'local-htdocs',
     };
+  }
+
+  /**
+   * Execute a CGI script and return the response
+   * @param scriptPath Absolute path to the script file
+   * @param requestContext HTTP request context (method, headers, body)
+   */
+  private async executeCgiScript(
+    scriptPath: string,
+    requestContext?: HttpRequestContext
+  ): Promise<LegacyFileResponse> {
+    const executor = await this.initCgiExecutor();
+
+    if (!executor) {
+      logger.warn('[LegacyServer] CGI executor not available, serving script as static file');
+      const data = await fs.readFile(scriptPath);
+      return {
+        data,
+        contentType: 'text/plain',
+        source: 'local-htdocs',
+      };
+    }
+
+    // Build URL from the script path for CGI environment
+    // Extract the relative path from the script path
+    let relativePath = scriptPath;
+    if (scriptPath.startsWith(this.settings.legacyHTDOCSPath)) {
+      relativePath = scriptPath.substring(this.settings.legacyHTDOCSPath.length);
+    } else if (scriptPath.startsWith(this.settings.legacyCGIBINPath)) {
+      relativePath = scriptPath.substring(this.settings.legacyCGIBINPath.length);
+    }
+    // Normalize path separators for URL
+    relativePath = relativePath.replace(/\\/g, '/');
+    if (!relativePath.startsWith('/')) {
+      relativePath = '/' + relativePath;
+    }
+
+    // Build CgiRequest from HTTP context
+    const cgiRequest: CgiRequest = {
+      method: requestContext?.method || 'GET',
+      url: new URL(`http://localhost${relativePath}`),
+      headers: requestContext?.headers || {},
+      body: requestContext?.body,
+    };
+
+    try {
+      const response = await executor.execute(scriptPath, cgiRequest);
+
+      return {
+        data: response.body,
+        contentType:
+          response.headers['Content-Type'] || response.headers['content-type'] || 'text/html',
+        source: 'cgi-script',
+        statusCode: response.statusCode,
+        headers: response.headers,
+      };
+    } catch (error) {
+      logger.error(
+        `[LegacyServer] CGI execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+
+      // Return error response
+      const errorMessage = 'CGI script execution failed';
+      return {
+        data: Buffer.from(errorMessage),
+        contentType: 'text/plain',
+        source: 'cgi-error',
+        statusCode: 500,
+      };
+    }
   }
 
   /**

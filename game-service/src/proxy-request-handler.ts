@@ -3,10 +3,13 @@ import { URL } from 'url';
 import { Readable } from 'stream';
 import { logger } from './utils/logger';
 import { ConfigManager } from './config';
-import { LegacyServer } from './legacy-server';
+import { LegacyServer, HttpRequestContext, LegacyFileResponse } from './legacy-server';
 import { injectPolyfills } from './utils/htmlInjector';
 import { sanitizeErrorMessage, sanitizeUrlPath } from './utils/pathSecurity';
 import axios from 'axios';
+
+// Maximum request body size for CGI (10MB)
+const MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024;
 
 // Internal request timeout constants (G-H2)
 const GAMEZIP_REQUEST_TIMEOUT_MS = 5000; // 5 seconds for local GameZip server
@@ -92,14 +95,17 @@ export class ProxyRequestHandler {
         const gameZipResult = await this.tryGameZipServer(hostname, urlPath);
         if (gameZipResult) {
           logger.info(`[ProxyHandler] ✓ Served from GameZip`);
-          this.sendResponse(res, gameZipResult, 'gamezipserver');
+          this.sendResponse(res, { ...gameZipResult, source: 'gamezipserver' }, 'gamezipserver');
           return;
         }
       }
 
-      // Step 2: Try legacy file serving (local htdocs + external fallbacks)
+      // Step 2: Build request context for CGI support
+      const requestContext = await this.buildRequestContext(req);
+
+      // Step 3: Try legacy file serving (local htdocs + external fallbacks)
       logger.debug(`[ProxyHandler] Trying legacy server...`);
-      const legacyResult = await this.legacyServer.serveLegacy(hostname, urlPath);
+      const legacyResult = await this.legacyServer.serveLegacy(hostname, urlPath, requestContext);
 
       logger.info(`[ProxyHandler] ✓ Served from ${legacyResult.source}`);
       this.sendResponse(res, legacyResult, legacyResult.source);
@@ -167,12 +173,9 @@ export class ProxyRequestHandler {
   /**
    * Send successful response (supports both buffered and streamed responses)
    */
-  private sendResponse(
-    res: ServerResponse,
-    result: { data?: Buffer; stream?: Readable; size?: number; contentType: string },
-    source: string
-  ): void {
+  private sendResponse(res: ServerResponse, result: LegacyFileResponse, source: string): void {
     const contentType = result.contentType;
+    const statusCode = result.statusCode || 200;
 
     // CORS headers
     if (this.settings.allowCrossDomain) {
@@ -186,13 +189,25 @@ export class ProxyRequestHandler {
     res.setHeader('X-Source', source); // Debug header
     res.setHeader('Connection', 'keep-alive');
 
+    // Add CGI response headers if present
+    if (result.headers) {
+      for (const [key, value] of Object.entries(result.headers)) {
+        // Skip headers that we handle separately
+        const lowerKey = key.toLowerCase();
+        if (lowerKey === 'content-type' || lowerKey === 'content-length' || lowerKey === 'status') {
+          continue;
+        }
+        res.setHeader(key, value);
+      }
+    }
+
     if (result.stream) {
       // Streaming response for large non-HTML files
       res.setHeader('Content-Type', contentType);
       if (result.size !== undefined) {
         res.setHeader('Content-Length', result.size);
       }
-      res.writeHead(200);
+      res.writeHead(statusCode);
 
       // Set up streaming timeout (G-H2)
       // This prevents hung connections from consuming resources indefinitely
@@ -234,7 +249,7 @@ export class ProxyRequestHandler {
 
       res.setHeader('Content-Type', contentType);
       res.setHeader('Content-Length', fileData.length);
-      res.writeHead(200);
+      res.writeHead(statusCode);
       res.end(fileData);
     } else {
       // Should never happen, but handle gracefully
@@ -275,5 +290,74 @@ export class ProxyRequestHandler {
 
     res.writeHead(204);
     res.end();
+  }
+
+  /**
+   * Build HTTP request context for CGI execution
+   * Collects method, headers, and body from the incoming request
+   */
+  private async buildRequestContext(req: IncomingMessage): Promise<HttpRequestContext> {
+    // Convert IncomingHttpHeaders to Record<string, string>
+    const headers: Record<string, string> = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (typeof value === 'string') {
+        headers[key] = value;
+      } else if (Array.isArray(value)) {
+        headers[key] = value.join(', ');
+      }
+    }
+
+    // Collect request body for POST/PUT requests
+    let body: Buffer | undefined;
+    if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+      body = await this.collectRequestBody(req);
+    }
+
+    return {
+      method: req.method || 'GET',
+      headers,
+      body,
+    };
+  }
+
+  /**
+   * Collect request body with size limit
+   */
+  private collectRequestBody(req: IncomingMessage): Promise<Buffer | undefined> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      let totalSize = 0;
+
+      req.on('data', (chunk: Buffer) => {
+        totalSize += chunk.length;
+        if (totalSize > MAX_REQUEST_BODY_SIZE) {
+          req.destroy(new Error('Request body too large'));
+          reject(new Error('Request body too large'));
+          return;
+        }
+        chunks.push(chunk);
+      });
+
+      req.on('end', () => {
+        if (chunks.length === 0) {
+          resolve(undefined);
+        } else {
+          resolve(Buffer.concat(chunks));
+        }
+      });
+
+      req.on('error', (error) => {
+        reject(error);
+      });
+
+      // Timeout for body collection
+      setTimeout(() => {
+        if (chunks.length > 0 && totalSize > 0) {
+          resolve(Buffer.concat(chunks));
+        } else {
+          resolve(undefined);
+        }
+      }, 30000); // 30 second timeout
+    });
   }
 }

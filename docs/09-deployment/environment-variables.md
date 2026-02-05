@@ -74,16 +74,12 @@ Location: `game-service/.env`
 
 **Proxy:**
 
-| Variable                 | Default   | Description                       |
-| ------------------------ | --------- | --------------------------------- |
-| `PROXY_CHUNK_SIZE`       | 8192      | File streaming chunk size (bytes) |
-| `EXTERNAL_FALLBACK_URLS` | See below | Comma-separated CDN fallback URLs |
+| Variable           | Default | Description                       |
+| ------------------ | ------- | --------------------------------- |
+| `PROXY_CHUNK_SIZE` | 8192    | File streaming chunk size (bytes) |
 
-Default fallback URLs:
-
-```
-http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
-```
+> **Note:** External fallback URLs are configured via `proxySettings.json` in
+> the Flashpoint directory, not via environment variables.
 
 ## Frontend Variables
 

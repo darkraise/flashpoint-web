@@ -356,8 +356,8 @@ app.get('*', async (req, res) => {
       });
     }
 
-    // 4. Fallback to CDN
-    for (const cdnBase of process.env.EXTERNAL_FALLBACK_URLS.split(',')) {
+    // 4. Fallback to CDN (URLs loaded from proxySettings.json)
+    for (const cdnBase of settings.externalFilePaths) {
       try {
         const cdnUrl = `${cdnBase}/${domain}${path}`;
         const response = await axios.get(cdnUrl, {

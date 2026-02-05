@@ -85,7 +85,6 @@ Edit `game-service/.env`:
 ```bash
 FLASHPOINT_PATH=D:/Flashpoint
 LOG_LEVEL=info
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
 ```
 
 ### 5. Verify Setup
@@ -252,11 +251,10 @@ See [Common Pitfalls](./common-pitfalls.md) for more issues.
 
 ### Game Service (.env)
 
-| Variable                 | Required | Default |
-| ------------------------ | -------- | ------- |
-| `FLASHPOINT_PATH`        | Yes      | -       |
-| `LOG_LEVEL`              | No       | info    |
-| `EXTERNAL_FALLBACK_URLS` | No       | -       |
+| Variable          | Required | Default |
+| ----------------- | -------- | ------- |
+| `FLASHPOINT_PATH` | Yes      | -       |
+| `LOG_LEVEL`       | No       | info    |
 
 ### Frontend
 

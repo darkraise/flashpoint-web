@@ -96,6 +96,9 @@ npm run build
 # TypeScript type checking across all services
 npm run typecheck
 
+# Verify build (typecheck + build) - use this before committing
+npm run typecheck && npm run build
+
 # Clean all build artifacts and dependencies
 npm run clean
 ```
@@ -169,23 +172,22 @@ npm run typecheck
 ### Docker
 
 ```bash
-# Build all services
-docker-compose build
-
-# Start all services in background
+# Production: Uses pre-built images from registry (docker-compose.yml)
 docker-compose up -d
+
+# Development: Build images locally (docker-compose.dev.yml)
+docker-compose -f docker-compose.dev.yml build
+docker-compose -f docker-compose.dev.yml up -d
+
+# Verify Docker build (builds all images locally)
+JWT_SECRET=test FLASHPOINT_HOST_PATH=/tmp docker-compose -f docker-compose.dev.yml build
 
 # View logs
 docker-compose logs -f
 docker-compose logs -f backend
-docker-compose logs -f game-service
-docker-compose logs -f frontend
 
 # Stop all services
 docker-compose down
-
-# Rebuild and restart
-docker-compose up -d --build
 ```
 
 Set `FLASHPOINT_HOST_PATH` environment variable to point to your Flashpoint
@@ -372,7 +374,6 @@ FLASHPOINT_PATH=D:/Flashpoint
 
 # Optional
 LOG_LEVEL=info
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
 ```
 
 > **Note:** All paths (htdocs, games) are automatically derived from

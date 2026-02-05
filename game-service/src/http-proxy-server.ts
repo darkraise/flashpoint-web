@@ -8,7 +8,6 @@ export interface ProxyServerOptions {
   proxyPort?: number;
   legacyHTDOCSPath: string;
   gameDataPath?: string;
-  externalFilePaths?: string[];
   allowCrossDomain?: boolean;
   chunkSize?: number;
 }

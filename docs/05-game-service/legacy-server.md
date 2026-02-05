@@ -223,10 +223,11 @@ Typically only 1-3 paths checked before finding file.
 ```bash
 FLASHPOINT_PATH=D:/Flashpoint
 # Note: HTDOCS path derived as $FLASHPOINT_PATH/Legacy/htdocs
-EXTERNAL_FALLBACK_URLS=https://infinity.flashpointarchive.org/...,https://backup.example.com/...
 ```
 
 ### proxySettings.json
+
+External fallback URLs are configured here (not via environment variables):
 
 ```json
 {

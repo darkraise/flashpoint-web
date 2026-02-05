@@ -88,9 +88,11 @@ curl -X POST http://localhost:22501/mount/game-123 \
 | ---------------------- | -------------------------- | -------------------------- |
 | PROXY_PORT             | 22500                      | HTTP proxy server port     |
 | GAMEZIPSERVER_PORT     | 22501                      | GameZip server port        |
-| FLASHPOINT_PATH        | D:/Flashpoint              | Flashpoint installation    |
-| EXTERNAL_FALLBACK_URLS | infinity.flashpointarchive | CDN URLs (comma-separated) |
-| LOG_LEVEL              | info                       | Logging verbosity          |
+| FLASHPOINT_PATH | D:/Flashpoint | Flashpoint installation |
+| LOG_LEVEL       | info          | Logging verbosity       |
+
+> **Note:** External fallback URLs are configured via `proxySettings.json` in
+> the Flashpoint installation directory.
 
 ## Request Flow
 

@@ -22,16 +22,10 @@ async function main() {
     const flashpointGamesPath = path.join(flashpointPath, 'Data', 'Games');
     const proxyPort = parseInt(process.env.PROXY_PORT || '22500', 10);
     const gameZipPort = parseInt(process.env.GAMEZIPSERVER_PORT || '22501', 10);
-    const externalFallbackUrls = (
-      process.env.EXTERNAL_FALLBACK_URLS ||
-      'http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,' +
-        'http://infinity.unstable.life/Flashpoint/Legacy/htdocs/'
-    ).split(',');
 
     logger.info(`📁 Flashpoint path: ${flashpointPath}`);
     logger.info(`📂 HTDOCS path: ${flashpointHtdocsPath}`);
     logger.info(`🎮 Games path: ${flashpointGamesPath}`);
-    logger.info(`🌍 External fallback URLs: ${externalFallbackUrls.length}`);
     logger.info('');
 
     // Start HTTP Proxy Server (port 22500)
@@ -41,7 +35,6 @@ async function main() {
         proxyPort,
         legacyHTDOCSPath: flashpointHtdocsPath,
         gameDataPath: flashpointGamesPath,
-        externalFilePaths: externalFallbackUrls,
         allowCrossDomain: true,
         chunkSize: parseInt(process.env.PROXY_CHUNK_SIZE || '8192', 10),
       });

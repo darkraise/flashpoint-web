@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth';
 import { useSharedAccessStore } from '@/store/sharedAccess';
 import type { AuthTokens } from '@/types/auth';
@@ -94,7 +95,6 @@ apiClient.interceptors.response.use(
 
     // Handle network errors (no response from server)
     if (!error.response) {
-      const { toast } = await import('sonner');
       toast.error('Network error. Please check your connection.');
       return Promise.reject(error);
     }
@@ -103,13 +103,11 @@ apiClient.interceptors.response.use(
 
     // Handle 404 errors - show toast notification
     if (status === 404) {
-      const { toast } = await import('sonner');
       toast.error('Resource not found');
     }
 
     // Handle 500+ errors (server errors) - show toast notification
     if (status >= 500) {
-      const { toast } = await import('sonner');
       toast.error('Server error occurred. Please try again later.');
     }
 
@@ -123,7 +121,6 @@ apiClient.interceptors.response.use(
         originalRequest.headers?.Authorization?.startsWith('SharedAccess ')
       ) {
         useSharedAccessStore.getState().clearToken();
-        const { toast } = await import('sonner');
         toast.error('Your shared access has expired. Return to the playlist to continue browsing.');
         // Don't redirect to login for shared access - let the UI handle it
         return Promise.reject(error);
@@ -131,7 +128,6 @@ apiClient.interceptors.response.use(
 
       // Don't retry the refresh endpoint itself (prevents infinite loop)
       if (originalRequest.url?.includes('/auth/refresh')) {
-        const { toast } = await import('sonner');
         toast.error('Session expired. Please login again.');
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
@@ -156,7 +152,6 @@ apiClient.interceptors.response.use(
 
         if (!refreshToken) {
           // No refresh token available, clear auth and redirect to login
-          const { toast } = await import('sonner');
           toast.error('Session expired. Please login again.');
           useAuthStore.getState().clearAuth();
           window.location.href = '/login';
@@ -177,7 +172,6 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         // Refresh failed, clear auth and redirect to login
-        const { toast } = await import('sonner');
         toast.error('Session expired. Please login again.');
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';

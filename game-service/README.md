@@ -60,9 +60,6 @@ FLASHPOINT_PATH=D:/Flashpoint
 FLASHPOINT_HTDOCS_PATH=D:/Flashpoint/Legacy/htdocs
 FLASHPOINT_GAMES_PATH=D:/Flashpoint/Data/Games
 
-# External Fallback URLs
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,http://infinity.unstable.life/Flashpoint/Legacy/htdocs/
-
 # Logging
 LOG_LEVEL=info
 NODE_ENV=development
