@@ -1,10 +1,14 @@
 # ZIP Manager
 
-The ZIP Manager provides zero-extraction ZIP archive access using node-stream-zip, enabling efficient game file serving without disk space overhead.
+The ZIP Manager provides zero-extraction ZIP archive access using
+node-stream-zip, enabling efficient game file serving without disk space
+overhead.
 
 ## Overview
 
-The ZIP Manager mounts ZIP archives in-memory and provides streaming access to files without extracting them to disk. This approach is ideal for serving game content from compressed archives while conserving disk space.
+The ZIP Manager mounts ZIP archives in-memory and provides streaming access to
+files without extracting them to disk. This approach is ideal for serving game
+content from compressed archives while conserving disk space.
 
 ## Architecture
 
@@ -43,10 +47,10 @@ The ZIP Manager mounts ZIP archives in-memory and provides streaming access to f
 
 ```typescript
 interface MountedZip {
-  id: string;                      // Unique mount identifier (e.g., "game-123")
-  zipPath: string;                 // Absolute path to ZIP file
-  zip: StreamZip.StreamZipAsync;  // node-stream-zip instance
-  mountTime: Date;                 // When ZIP was mounted
+  id: string; // Unique mount identifier (e.g., "game-123")
+  zipPath: string; // Absolute path to ZIP file
+  zip: StreamZip.StreamZipAsync; // node-stream-zip instance
+  mountTime: Date; // When ZIP was mounted
 }
 ```
 
@@ -56,14 +60,16 @@ interface MountedZip {
 export class ZipManager {
   private mountedZips: Map<string, MountedZip> = new Map();
 
-  async mount(id: string, zipPath: string): Promise<void>
-  async unmount(id: string): Promise<boolean>
-  async getFile(id: string, filePath: string): Promise<Buffer | null>
-  async findFile(relPath: string): Promise<{data: Buffer, mountId: string} | null>
-  async listFiles(id: string, pattern?: string): Promise<string[]>
-  isMounted(id: string): boolean
-  getMountedZips(): Array<{id, zipPath, mountTime, fileCount}>
-  async unmountAll(): Promise<void>
+  async mount(id: string, zipPath: string): Promise<void>;
+  async unmount(id: string): Promise<boolean>;
+  async getFile(id: string, filePath: string): Promise<Buffer | null>;
+  async findFile(
+    relPath: string
+  ): Promise<{ data: Buffer; mountId: string } | null>;
+  async listFiles(id: string, pattern?: string): Promise<string[]>;
+  isMounted(id: string): boolean;
+  getMountedZips(): Array<{ id; zipPath; mountTime; fileCount }>;
+  async unmountAll(): Promise<void>;
 }
 ```
 
@@ -115,8 +121,14 @@ await zipManager.mount('game-123', 'D:/Flashpoint/Data/Games/Flash/G/game.zip');
 await zipManager.mount('custom-archive', 'D:/Custom/archive.zip');
 
 // Mount multiple ZIPs
-await zipManager.mount('game-456', 'D:/Flashpoint/Data/Games/Flash/A/another.zip');
-await zipManager.mount('game-789', 'D:/Flashpoint/Data/Games/Unity/U/unity-game.zip');
+await zipManager.mount(
+  'game-456',
+  'D:/Flashpoint/Data/Games/Flash/A/another.zip'
+);
+await zipManager.mount(
+  'game-789',
+  'D:/Flashpoint/Data/Games/Unity/U/unity-game.zip'
+);
 ```
 
 ### Duplicate Mount Handling
@@ -128,7 +140,8 @@ await zipManager.mount('game-123', 'path/to/game.zip');
 await zipManager.mount('game-123', 'path/to/game.zip'); // Silent success, no-op
 ```
 
-**Rationale**: Idempotent operations simplify backend logic - no need to check mount status before mounting.
+**Rationale**: Idempotent operations simplify backend logic - no need to check
+mount status before mounting.
 
 ## Unmounting ZIPs
 
@@ -235,7 +248,10 @@ async getFile(id: string, filePath: string): Promise<Buffer | null> {
 
 ```typescript
 // Get specific file
-const data = await zipManager.getFile('game-123', 'content/www.example.com/game.swf');
+const data = await zipManager.getFile(
+  'game-123',
+  'content/www.example.com/game.swf'
+);
 if (data) {
   console.log(`Read ${data.length} bytes`);
 }
@@ -285,6 +301,7 @@ async findFile(relPath: string): Promise<{data: Buffer, mountId: string} | null>
 Different ZIPs may have different internal structures:
 
 **Type 1: Content prefix**
+
 ```
 game.zip
   └── content/
@@ -293,6 +310,7 @@ game.zip
 ```
 
 **Type 2: Htdocs prefix**
+
 ```
 game.zip
   └── htdocs/
@@ -301,6 +319,7 @@ game.zip
 ```
 
 **Type 3: No prefix**
+
 ```
 game.zip
   └── www.example.com/
@@ -308,6 +327,7 @@ game.zip
 ```
 
 **Type 4: Full path**
+
 ```
 game.zip
   └── Legacy/
@@ -321,10 +341,12 @@ The findFile() method tries all variations automatically.
 ### Search Performance
 
 **Complexity**: O(m × p) where:
+
 - m = number of mounted ZIPs
 - p = number of path variations (4)
 
 **Typical case**:
+
 - 10 ZIPs mounted
 - 4 path variations
 - First match on average: 2nd variation
@@ -332,6 +354,7 @@ The findFile() method tries all variations automatically.
 - Time: <10ms
 
 **Worst case**:
+
 - 100 ZIPs mounted
 - File not found
 - Total attempts: 400
@@ -379,24 +402,30 @@ const swfFiles = await zipManager.listFiles('game-123', '\\.swf$');
 console.log(`SWF files: ${swfFiles.length}`);
 
 // List files in specific directory
-const contentFiles = await zipManager.listFiles('game-123', '^content/www\\.example\\.com/');
+const contentFiles = await zipManager.listFiles(
+  'game-123',
+  '^content/www\\.example\\.com/'
+);
 console.log(`Content files: ${contentFiles.length}`);
 ```
 
 ### Performance Considerations
 
 **entries() Cost**:
+
 - First call: Loads ZIP index (~10-100ms)
 - Cached internally by node-stream-zip
 - Subsequent calls: O(1) hash table access
 
 **Memory Usage**:
+
 - Small ZIP (100 files): ~1MB for index
 - Medium ZIP (1,000 files): ~5MB
 - Large ZIP (10,000 files): ~50MB
 - Very large ZIP (100,000 files): ~500MB
 
-**Recommendation**: Don't list files on every request, use sparingly for debugging.
+**Recommendation**: Don't list files on every request, use sparingly for
+debugging.
 
 ## Mount Status
 
@@ -450,6 +479,7 @@ for (const mount of mounts) {
 ### Streaming (Current Approach)
 
 **Process**:
+
 1. Open ZIP file handle
 2. Read central directory index
 3. Locate file entry
@@ -459,12 +489,14 @@ for (const mount of mounts) {
 7. Return Buffer
 
 **Advantages**:
+
 - No disk space used for extraction
 - Fast for small files (<1MB)
 - No cleanup required
 - Multiple files accessed independently
 
 **Disadvantages**:
+
 - Each access requires decompression
 - CPU overhead for deflate
 - Memory spike for large files
@@ -473,17 +505,20 @@ for (const mount of mounts) {
 ### Extraction (Alternative)
 
 **Process**:
+
 1. Extract entire ZIP to disk
 2. Read files from extracted directory
 3. Cleanup on unmount
 
 **Advantages**:
+
 - Fast sequential access
 - No decompression overhead
 - Better for large files
 - OS filesystem cache benefits
 
 **Disadvantages**:
+
 - Requires disk space (2x ZIP size)
 - Extraction time on mount
 - Cleanup complexity
@@ -492,12 +527,14 @@ for (const mount of mounts) {
 ### When to Use Each
 
 **Streaming** (recommended for):
+
 - Many small files
 - Random access patterns
 - Limited disk space
 - Short-lived access
 
 **Extraction** (recommended for):
+
 - Few large files
 - Sequential access patterns
 - Abundant disk space
@@ -508,16 +545,19 @@ for (const mount of mounts) {
 ### Memory Usage Breakdown
 
 **Per mounted ZIP**:
+
 - ZIP handle: ~1KB
 - File index: ~5KB per 100 files
 - Example: 1,000 files = ~50KB
 
 **Per file access**:
+
 - File buffer: File size in memory
 - Decompression buffer: ~2x file size temporarily
 - Example: 1MB file = ~3MB peak memory
 
 **Total with 10 ZIPs (10,000 files each), 5 concurrent requests (1MB each)**:
+
 - ZIP indexes: 10 × 500KB = 5MB
 - File buffers: 5 × 1MB = 5MB
 - Decompression: 5 × 1MB = 5MB
@@ -528,6 +568,7 @@ for (const mount of mounts) {
 **Current implementation**: No limits
 
 **Recommended limits** (future):
+
 ```typescript
 const MAX_MOUNTED_ZIPS = 100;
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -550,18 +591,21 @@ console.log(`External: ${(usage.external / 1024 / 1024).toFixed(2)} MB`);
 ### Mount Errors
 
 **ZIP file not found**:
+
 ```typescript
 await zipManager.mount('game-123', '/invalid/path.zip');
 // Throws: Error: ZIP file not found: /invalid/path.zip
 ```
 
 **ZIP corrupted**:
+
 ```typescript
 await zipManager.mount('game-123', 'corrupted.zip');
 // Throws: Error from node-stream-zip
 ```
 
 **Permission denied**:
+
 ```typescript
 await zipManager.mount('game-123', 'no-permission.zip');
 // Throws: EACCES: permission denied
@@ -570,12 +614,14 @@ await zipManager.mount('game-123', 'no-permission.zip');
 ### File Access Errors
 
 **File not in ZIP**:
+
 ```typescript
 const data = await zipManager.getFile('game-123', 'missing.swf');
 // Returns: null (not an error)
 ```
 
 **ZIP not mounted**:
+
 ```typescript
 const data = await zipManager.getFile('not-mounted', 'file.swf');
 // Returns: null (not an error)
@@ -584,12 +630,14 @@ const data = await zipManager.getFile('not-mounted', 'file.swf');
 ### Unmount Errors
 
 **ZIP not mounted**:
+
 ```typescript
 const success = await zipManager.unmount('not-mounted');
 // Returns: false (not an error)
 ```
 
 **Unmount failed**:
+
 ```typescript
 const success = await zipManager.unmount('game-123');
 // Returns: false, logs error
@@ -678,18 +726,21 @@ describe('ZipManager', () => {
 Typical performance on modern SSD:
 
 **Mount time**:
+
 - Small ZIP (<100 files): 10-50ms
 - Medium ZIP (<1,000 files): 50-200ms
 - Large ZIP (<10,000 files): 200-1000ms
 - Very large ZIP (>10,000 files): 1-5 seconds
 
 **File access time**:
+
 - Small file (<100KB): 2-5ms
 - Medium file (<1MB): 5-20ms
 - Large file (<10MB): 20-100ms
 - Very large file (>10MB): 100-500ms
 
 **Memory usage**:
+
 - Per ZIP: 50KB - 500KB (index)
 - Per file: File size + decompression overhead
 

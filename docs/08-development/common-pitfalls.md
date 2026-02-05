@@ -5,12 +5,15 @@ Known issues and solutions for Flashpoint Web development.
 ## Environment Setup Issues
 
 ### Flashpoint Path Not Found
+
 **Symptom:**
+
 ```
 Error: ENOENT: no such file or directory, open 'D:/Flashpoint/Data/flashpoint.sqlite'
 ```
 
 **Solution:**
+
 ```bash
 # Verify installation exists
 ls D:/Flashpoint/Data/flashpoint.sqlite    # Linux/Mac
@@ -30,13 +33,16 @@ ls $FLASHPOINT_PATH/Data/flashpoint.sqlite
 ---
 
 ### Node Version Mismatch
+
 **Symptom:**
+
 ```
 Error: The engine "node" is incompatible with this module
 Expected version ">=20.0.0". Got "18.12.0"
 ```
 
 **Solution:**
+
 ```bash
 node --version  # Check current version
 
@@ -50,12 +56,15 @@ nvm use 20
 ---
 
 ### Dependencies Won't Install
+
 **Symptom:**
+
 ```
 npm ERR! ERESOLVE unable to resolve dependency tree
 ```
 
 **Solution:**
+
 ```bash
 npm cache clean --force
 npm run clean                    # Remove all node_modules
@@ -68,12 +77,15 @@ npm run install:all -- --legacy-peer-deps  # If still fails
 ## Database Issues
 
 ### Database Locked Error
+
 **Symptom:**
+
 ```
 SqliteError: database is locked
 ```
 
 **Solution:**
+
 ```bash
 # Close Flashpoint Launcher (it locks flashpoint.sqlite)
 # Check for open processes
@@ -88,6 +100,7 @@ npm run dev
 ```
 
 **Prevention:**
+
 ```typescript
 class DatabaseService {
   private static instance: DatabaseService;
@@ -113,12 +126,15 @@ class DatabaseService {
 ---
 
 ### Migration Fails
+
 **Symptom:**
+
 ```
 Error: Migration failed: table users already exists
 ```
 
 **Solution:**
+
 ```bash
 # Check current schema
 sqlite3 backend/user.db ".schema"
@@ -135,16 +151,20 @@ npm run dev
 ---
 
 ### Read-Only Database Error
+
 **Symptom:**
+
 ```
 Error: attempt to write a readonly database
 ```
 
 **Causes:**
+
 - Writing to flashpoint.sqlite (read-only, managed by Flashpoint Launcher)
 - Incorrect permissions on user.db
 
 **Solution:**
+
 ```bash
 # NEVER write to flashpoint.sqlite
 
@@ -164,12 +184,15 @@ userDb.createUser(...);  # ✓ Correct
 ## Port Conflicts
 
 ### Port Already in Use
+
 **Symptom:**
+
 ```
 Error: listen EADDRINUSE: address already in use :::3100
 ```
 
 **Solution:**
+
 ```bash
 # Find process using port
 lsof -i :3100              # Linux/Mac
@@ -191,12 +214,15 @@ PORT=3002
 ## Authentication Issues
 
 ### JWT Token Expired
+
 **Symptom:**
+
 ```
 401 Unauthorized: Token expired
 ```
 
 **Solution:**
+
 ```typescript
 api.interceptors.response.use(
   (response) => response,
@@ -206,7 +232,7 @@ api.interceptors.response.use(
 
       try {
         const { data } = await api.post('/api/auth/refresh', {
-          refreshToken: localStorage.getItem('refreshToken')
+          refreshToken: localStorage.getItem('refreshToken'),
         });
         localStorage.setItem('accessToken', data.accessToken);
         error.config.headers['Authorization'] = `Bearer ${data.accessToken}`;
@@ -224,12 +250,15 @@ api.interceptors.response.use(
 ---
 
 ### CORS Errors
+
 **Symptom:**
+
 ```
 Access to XMLHttpRequest blocked by CORS policy
 ```
 
 **Solution:**
+
 ```typescript
 // Backend
 import cors from 'cors';
@@ -251,10 +280,13 @@ const { data } = await api.get('/api/games');  # ✓ Has auth headers
 ## Game Service Issues
 
 ### Game Files Not Loading
+
 **Symptom:**
+
 - Blank game screen or 404 errors
 
 **Solution:**
+
 ```bash
 # Verify game-service is running
 curl http://localhost:22500/health
@@ -273,12 +305,15 @@ curl http://localhost:22500/file.swf
 ---
 
 ### Ruffle Not Loading
+
 **Symptom:**
+
 ```
 Error: Ruffle is not defined
 ```
 
 **Solution:**
+
 ```bash
 # Verify files exist
 ls frontend/public/ruffle/
@@ -301,12 +336,15 @@ npm run copy-ruffle
 ## Frontend Build Issues
 
 ### Build Fails with Type Errors
+
 **Symptom:**
+
 ```
 ERROR: Type error: Property 'xyz' does not exist on type 'ABC'
 ```
 
 **Solution:**
+
 ```bash
 cd frontend
 
@@ -322,10 +360,13 @@ npm run typecheck
 ---
 
 ### Vite HMR Not Working
+
 **Symptom:**
+
 - Changes not reflecting in browser, manual refresh needed
 
 **Solution:**
+
 ```bash
 # Verify dev server running
 curl http://localhost:5173
@@ -346,10 +387,13 @@ sudo sysctl -p
 ---
 
 ### Tailwind Styles Not Applied
+
 **Symptom:**
+
 - Tailwind classes not working
 
 **Solution:**
+
 ```bash
 # Verify tailwind.config.js includes all source files
 # content should match './src/**/*.{js,ts,jsx,tsx}'
@@ -372,10 +416,13 @@ npm run dev
 ## Performance Issues
 
 ### Slow Database Queries
+
 **Symptom:**
+
 - API responses taking >1s
 
 **Solution:**
+
 ```sql
 -- Add indexes
 CREATE INDEX idx_game_platform ON game(platform);
@@ -392,10 +439,13 @@ SELECT * FROM game WHERE title LIKE '%mario%'; # Full scan
 ---
 
 ### Frontend Memory Leaks
+
 **Symptom:**
+
 - High memory usage, slow interactions
 
 **Solutions:**
+
 ```tsx
 // 1. Virtualize long lists
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -418,16 +468,16 @@ const GamePlayer = lazy(() => import('./GamePlayer'));
 
 ## Quick Reference: Error Messages
 
-| Error | Service | Quick Fix |
-|-------|---------|----------|
-| `ENOENT: no such file` | Backend | Check FLASHPOINT_PATH in .env |
-| `EADDRINUSE` | Any | Kill process or change port |
-| `database is locked` | Backend | Close Flashpoint Launcher |
-| `Token expired` | Backend | Implement token refresh |
-| `CORS policy` | Frontend | Check DOMAIN in backend .env |
-| `Ruffle is not defined` | Frontend | Run `npm run copy-ruffle` |
-| `Module not found` | Any | Run `npm install` |
-| `Type error` | Frontend/Backend | Run `npm run typecheck` |
+| Error                   | Service          | Quick Fix                     |
+| ----------------------- | ---------------- | ----------------------------- |
+| `ENOENT: no such file`  | Backend          | Check FLASHPOINT_PATH in .env |
+| `EADDRINUSE`            | Any              | Kill process or change port   |
+| `database is locked`    | Backend          | Close Flashpoint Launcher     |
+| `Token expired`         | Backend          | Implement token refresh       |
+| `CORS policy`           | Frontend         | Check DOMAIN in backend .env  |
+| `Ruffle is not defined` | Frontend         | Run `npm run copy-ruffle`     |
+| `Module not found`      | Any              | Run `npm install`             |
+| `Type error`            | Frontend/Backend | Run `npm run typecheck`       |
 
 ---
 

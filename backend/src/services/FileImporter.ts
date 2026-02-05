@@ -40,7 +40,7 @@ export class FileImporter {
       logger.info('Starting file import', {
         gameId,
         tempFile: tempFilePath,
-        size: stats.size
+        size: stats.size,
       });
 
       // Get destination directory
@@ -63,13 +63,15 @@ export class FileImporter {
       logger.info('File copied successfully', {
         gameId,
         finalPath,
-        size: stats.size
+        size: stats.size,
       });
 
       // Verify copy succeeded
       const finalStats = await fs.promises.stat(finalPath);
       if (finalStats.size !== stats.size) {
-        throw new Error(`File copy verification failed: size mismatch (expected ${stats.size}, got ${finalStats.size})`);
+        throw new Error(
+          `File copy verification failed: size mismatch (expected ${stats.size}, got ${finalStats.size})`
+        );
       }
 
       // Delete temporary file
@@ -77,7 +79,7 @@ export class FileImporter {
 
       logger.info('File import completed successfully', {
         gameId,
-        finalPath
+        finalPath,
       });
 
       return finalPath;
@@ -85,7 +87,7 @@ export class FileImporter {
       logger.error('File import failed', {
         gameId,
         tempFilePath,
-        error
+        error,
       });
 
       // Re-throw with more context
@@ -117,7 +119,7 @@ export class FileImporter {
     } catch (error) {
       logger.warn('Failed to delete temporary file', {
         tempFilePath,
-        error
+        error,
       });
       // Don't throw - cleanup is best-effort
     }

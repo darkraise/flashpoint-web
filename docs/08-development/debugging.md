@@ -5,7 +5,9 @@ Debugging Flashpoint Web across all services.
 ## Development Tools
 
 ### VS Code Debug Configuration
+
 Create `.vscode/launch.json`:
+
 ```json
 {
   "version": "0.2.0",
@@ -31,6 +33,7 @@ Create `.vscode/launch.json`:
 ```
 
 ### Recommended VS Code Extensions
+
 - ESLint, Prettier, TypeScript Language Features
 - Debugger for Chrome, REST Client
 - SQLite Viewer, GitLens
@@ -40,6 +43,7 @@ Create `.vscode/launch.json`:
 ## Backend Debugging
 
 ### Start with Debugger
+
 ```bash
 # Method 1: VS Code - F5 or select "Backend: Debug"
 
@@ -53,6 +57,7 @@ npm run dev -- --inspect
 ```
 
 ### Logging
+
 ```typescript
 // src/utils/logger.ts
 import winston from 'winston';
@@ -71,16 +76,18 @@ export LOG_LEVEL=debug npm run dev
 ```
 
 **Logging best practices:**
+
 ```typescript
 logger.info('User login', { username, ip: req.ip });
 logger.error('Operation failed', { error, context: additionalData });
 ```
 
 ### Database Debugging
+
 ```typescript
 // Enable SQL logging
 const db = new Database(dbPath, {
-  verbose: (sql: string) => logger.debug('SQL', { sql })
+  verbose: (sql: string) => logger.debug('SQL', { sql }),
 });
 
 // Inspect query results
@@ -89,6 +96,7 @@ logger.debug('Query result', { sql: stmt.source, result });
 ```
 
 ### Testing Requests
+
 ```bash
 # GET request
 curl http://localhost:3100/api/games
@@ -110,10 +118,12 @@ curl -v http://localhost:3100/api/games
 ## Frontend Debugging
 
 ### React DevTools
+
 - Install "React Developer Tools" extension for Chrome/Firefox
 - Inspect component tree, props, state, hooks in DevTools
 
 ### React Query DevTools
+
 ```tsx
 // App.tsx
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -129,6 +139,7 @@ export default function App() {
 ```
 
 ### API Call Debugging
+
 ```typescript
 // lib/api.ts
 api.interceptors.request.use((config) => {
@@ -149,6 +160,7 @@ api.interceptors.response.use(
 ```
 
 ### Component Debugging
+
 ```tsx
 export function GameCard({ game }: GameCardProps) {
   console.log('GameCard render', { game });
@@ -163,7 +175,9 @@ export function GameCard({ game }: GameCardProps) {
 ```
 
 ### Performance Profiling
+
 Use Chrome DevTools:
+
 1. Open DevTools > Performance
 2. Click Record
 3. Interact with application
@@ -175,11 +189,13 @@ Use Chrome DevTools:
 ## Database Debugging
 
 ### SQLite Browser
+
 - DB Browser for SQLite (free): https://sqlitebrowser.org/
 - SQLiteStudio or TablePlus for GUI inspection
 - VS Code: SQLite Viewer extension
 
 ### Query Testing
+
 ```bash
 # Open database
 sqlite3 backend/user.db
@@ -197,12 +213,14 @@ SELECT * FROM play_sessions WHERE user_id = 'abc';
 ```
 
 ### Performance Analysis
+
 ```sql
 EXPLAIN QUERY PLAN
 SELECT * FROM game WHERE platform = 'Flash' AND library = 'arcade';
 ```
 
 ### Database Locks
+
 ```bash
 # Check for locks
 lsof backend/user.db           # Linux/Mac
@@ -224,11 +242,13 @@ try {
 ## Game Service Debugging
 
 ### Enable Debug Logging
+
 ```bash
 LOG_LEVEL=debug npm run dev
 ```
 
 ### Test Proxy
+
 ```bash
 # Test proxy server
 curl http://localhost:22500/health
@@ -245,6 +265,7 @@ curl http://localhost:22501/health
 ## Common Issues
 
 ### Port Already in Use
+
 ```bash
 # Find process
 lsof -i :3100              # Linux/Mac
@@ -256,6 +277,7 @@ taskkill /PID <PID> /F     # Windows
 ```
 
 ### CORS Errors
+
 ```bash
 # Check CORS headers in response
 curl -v http://localhost:3100/api/games | grep Access-Control
@@ -269,6 +291,7 @@ app.use(cors({
 ```
 
 ### Build Errors
+
 ```bash
 npm run typecheck           # Check types
 npm run build               # Build all

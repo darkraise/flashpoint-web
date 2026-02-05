@@ -12,7 +12,7 @@ export function useUsers(page = 1, limit = 50) {
     queryKey: ['users', page, limit],
     queryFn: () => usersApi.getAll(page, limit),
     staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000 // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
@@ -25,7 +25,7 @@ export function useUser(id: number) {
     queryFn: () => usersApi.getById(id),
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000
+    gcTime: 5 * 60 * 1000,
   });
 }
 
@@ -51,7 +51,7 @@ export function useCreateUser() {
     onError: (err: unknown) => {
       const message = getErrorMessage(err) || 'Failed to create user';
       showToast(message, 'error');
-    }
+    },
   });
 }
 
@@ -78,7 +78,7 @@ export function useUpdateUser() {
     onError: (err: unknown) => {
       const message = getErrorMessage(err) || 'Failed to update user';
       showToast(message, 'error');
-    }
+    },
   });
 }
 
@@ -121,7 +121,7 @@ export function useDeleteUser() {
       queryClient.invalidateQueries({ queryKey: ['users'], exact: false });
 
       showToast('User deleted successfully', 'success');
-    }
+    },
   });
 }
 
@@ -141,6 +141,6 @@ export function useChangePassword() {
     onError: (err: unknown) => {
       const message = getErrorMessage(err) || 'Failed to change password';
       showToast(message, 'error');
-    }
+    },
   });
 }

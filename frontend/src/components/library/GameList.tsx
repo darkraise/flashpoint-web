@@ -13,15 +13,19 @@ interface GameListProps {
   breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
 }
 
-export function GameList({ games, showFavoriteButton = true, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null, breadcrumbContext }: GameListProps) {
+export function GameList({
+  games,
+  showFavoriteButton = true,
+  showAddToPlaylistButton = true,
+  favoriteGameIds,
+  isFavoritePage = false,
+  shareToken = null,
+  breadcrumbContext,
+}: GameListProps) {
   const listColumns = useUIStore((state) => state.listColumns);
 
   if (games.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-400">
-        No games found
-      </div>
-    );
+    return <div className="text-center py-12 text-gray-400">No games found</div>;
   }
 
   // Dynamic grid classes based on column count
@@ -29,7 +33,7 @@ export function GameList({ games, showFavoriteButton = true, showAddToPlaylistBu
     1: 'grid grid-cols-1 gap-3',
     2: 'grid grid-cols-1 md:grid-cols-2 gap-3',
     3: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3',
-    4: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
+    4: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3',
   };
 
   return (

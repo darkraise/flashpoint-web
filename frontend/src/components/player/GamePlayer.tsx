@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { logger } from '@/lib/logger';
 import { Play, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { RufflePlayer } from './RufflePlayer';
+import { PlayerErrorBoundary } from './PlayerErrorBoundary';
 
 export interface GamePlayerProps {
   /** Game title for display */
@@ -29,10 +30,12 @@ export interface GamePlayerProps {
 }
 
 /**
- * Reusable game player component that can render Flash (Ruffle) or HTML5 games.
+ * Internal game player component that can render Flash (Ruffle) or HTML5 games.
  * Can be embedded in pages or dialogs.
+ *
+ * Note: Use the default export (wrapped with PlayerErrorBoundary) instead of this component directly.
  */
-export function GamePlayer({
+function GamePlayerInternal({
   title,
   platform,
   contentUrl,
@@ -98,7 +101,8 @@ export function GamePlayer({
     if (isWebPlatform && !launchCommand) {
       // Missing content data
       reason = 'This game is missing content data and cannot be played.';
-      details = 'This game entry is incomplete. Try launching it from the Flashpoint Launcher instead.';
+      details =
+        'This game entry is incomplete. Try launching it from the Flashpoint Launcher instead.';
     } else {
       // Not a web platform
       reason = `The ${platform} platform requires the Flashpoint Launcher.`;
@@ -106,7 +110,9 @@ export function GamePlayer({
     }
 
     return (
-      <div className={`flex items-center justify-center bg-card border border-border rounded-lg p-8 ${className}`}>
+      <div
+        className={`flex items-center justify-center bg-card border border-border rounded-lg p-8 ${className}`}
+      >
         <div className="text-center">
           <AlertCircle size={48} className="text-yellow-500 mx-auto mb-4" />
           <h3 className="text-xl font-bold mb-2">Cannot Play in Browser</h3>
@@ -122,9 +128,7 @@ export function GamePlayer({
     );
   }
 
-  const containerClasses = isFullscreen
-    ? 'fixed inset-0 z-50 bg-black'
-    : className;
+  const containerClasses = isFullscreen ? 'fixed inset-0 z-50 bg-black' : className;
 
   // Special handling for aspect-video containers - use flex layout
   const isAspectVideo = height === 'aspect-video';
@@ -132,7 +136,7 @@ export function GamePlayer({
   return (
     <div className={`${containerClasses} ${isAspectVideo ? 'flex flex-col' : ''}`}>
       {/* Player Controls */}
-      {showControls && (
+      {showControls ? (
         <div className="flex items-center justify-between bg-card/90 backdrop-blur-sm px-4 py-3 flex-shrink-0 border-b border-border">
           <div className="flex items-center gap-3">
             <Play size={18} className="text-primary" />
@@ -145,7 +149,7 @@ export function GamePlayer({
               </span>
             </div>
           </div>
-          {allowFullscreen && (
+          {allowFullscreen ? (
             <button
               onClick={toggleFullscreen}
               className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg transition-colors"
@@ -163,19 +167,21 @@ export function GamePlayer({
                 </>
               )}
             </button>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       {/* Game Player Container */}
       <div
         className={`bg-black relative ${isAspectVideo ? 'flex-1 min-h-0' : ''}`}
-        style={isAspectVideo ? {} : {
-          height: isFullscreen
-            ? showControls ? 'calc(100vh - 64px)' : '100vh'
-            : height,
-          minHeight: isFullscreen ? 'auto' : '600px'
-        }}
+        style={
+          isAspectVideo
+            ? {}
+            : {
+                height: isFullscreen ? (showControls ? 'calc(100vh - 64px)' : '100vh') : height,
+                minHeight: isFullscreen ? 'auto' : '600px',
+              }
+        }
       >
         {platform === 'Flash' && contentUrl ? (
           <RufflePlayer
@@ -208,7 +214,7 @@ export function GamePlayer({
                 setIframeError('Failed to load HTML5 game');
               }}
             />
-            {iframeError && (
+            {iframeError ? (
               <div className="absolute inset-0 flex items-center justify-center bg-background/90 z-10">
                 <div className="text-center max-w-md p-6">
                   <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
@@ -224,7 +230,7 @@ export function GamePlayer({
                   </p>
                 </div>
               </div>
-            )}
+            ) : null}
           </>
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -239,5 +245,27 @@ export function GamePlayer({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Game player component wrapped with error boundary for crash protection.
+ * This prevents errors in the Ruffle emulator or game content from taking down the entire app.
+ *
+ * @example
+ * ```tsx
+ * <GamePlayer
+ *   title="My Flash Game"
+ *   platform="Flash"
+ *   contentUrl="/game.swf"
+ *   canPlayInBrowser={true}
+ * />
+ * ```
+ */
+export function GamePlayer(props: GamePlayerProps) {
+  return (
+    <PlayerErrorBoundary>
+      <GamePlayerInternal {...props} />
+    </PlayerErrorBoundary>
   );
 }

@@ -29,9 +29,15 @@ import {
 } from '@/components/ui/dialog';
 
 const roleSchema = z.object({
-  name: z.string().min(3, 'Name must be at least 3 characters').max(50, 'Name must be at most 50 characters'),
+  name: z
+    .string()
+    .min(3, 'Name must be at least 3 characters')
+    .max(50, 'Name must be at most 50 characters'),
   description: z.string().optional(),
-  priority: z.number().min(0, 'Priority must be at least 0').max(100, 'Priority must be at most 100'),
+  priority: z
+    .number()
+    .min(0, 'Priority must be at least 0')
+    .max(100, 'Priority must be at most 100'),
   permissionIds: z.array(z.number()).optional(),
 });
 
@@ -56,7 +62,7 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
       name: role?.name || '',
       description: role?.description || '',
       priority: role?.priority || 0,
-      permissionIds: role?.permissions?.map(p => p.id) || [],
+      permissionIds: role?.permissions?.map((p) => p.id) || [],
     },
   });
 
@@ -66,7 +72,7 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
         name: role.name,
         description: role.description,
         priority: role.priority,
-        permissionIds: role.permissions?.map(p => p.id) || [],
+        permissionIds: role.permissions?.map((p) => p.id) || [],
       });
     }
   }, [role, form]);
@@ -102,19 +108,17 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
     <Dialog open={true} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {isEditMode ? 'Edit Role' : 'Create New Role'}
-          </DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Role' : 'Create New Role'}</DialogTitle>
         </DialogHeader>
 
         <DialogBody>
-          {mutation.isError && (
+          {mutation.isError ? (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 {getErrorMessage(mutation.error) || 'Operation failed'}
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -125,10 +129,7 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="e.g. moderator"
-                        {...field}
-                      />
+                      <Input placeholder="e.g. moderator" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -177,7 +178,7 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                 )}
               />
 
-              {!isEditMode && permissions && permissions.length > 0 && (
+              {!isEditMode && permissions && permissions.length > 0 ? (
                 <FormField
                   control={form.control}
                   name="permissionIds"
@@ -211,7 +212,7 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                                               field.value?.filter(
                                                 (value) => value !== permission.id
                                               )
-                                            )
+                                            );
                                       }}
                                     />
                                   </FormControl>
@@ -219,14 +220,14 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                                     <FormLabel className="text-sm font-normal cursor-pointer">
                                       {permission.name}
                                     </FormLabel>
-                                    {permission.description && (
+                                    {permission.description ? (
                                       <FormDescription className="text-xs">
                                         {permission.description}
                                       </FormDescription>
-                                    )}
+                                    ) : null}
                                   </div>
                                 </FormItem>
-                              )
+                              );
                             }}
                           />
                         ))}
@@ -235,28 +236,22 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                     </FormItem>
                   )}
                 />
-              )}
+              ) : null}
 
-              {isEditMode && (
+              {isEditMode ? (
                 <Alert className="border-blue-500 bg-blue-500/10 text-blue-400">
                   <AlertDescription>
-                    Permissions can be managed separately from role details. Use the permissions management page to update role permissions.
+                    Permissions can be managed separately from role details. Use the permissions
+                    management page to update role permissions.
                   </AlertDescription>
                 </Alert>
-              )}
+              ) : null}
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={onClose}
-                >
+                <Button type="button" variant="secondary" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={mutation.isPending}
-                >
+                <Button type="submit" disabled={mutation.isPending}>
                   {mutation.isPending ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
                 </Button>
               </DialogFooter>

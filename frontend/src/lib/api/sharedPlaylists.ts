@@ -14,9 +14,7 @@ export const sharedPlaylistsApi = {
    * @param shareToken UUID v4 share token
    */
   getByToken: async (shareToken: string): Promise<SharedPlaylist> => {
-    const { data } = await apiClient.get<SharedPlaylist>(
-      `/playlists/shared/${shareToken}`
-    );
+    const { data } = await apiClient.get<SharedPlaylist>(`/playlists/shared/${shareToken}`);
     return data;
   },
 
@@ -25,9 +23,7 @@ export const sharedPlaylistsApi = {
    * @param shareToken UUID v4 share token
    */
   getGames: async (shareToken: string): Promise<Game[]> => {
-    const { data } = await apiClient.get<Game[]>(
-      `/playlists/shared/${shareToken}/games`
-    );
+    const { data } = await apiClient.get<Game[]>(`/playlists/shared/${shareToken}/games`);
     return data;
   },
 
@@ -36,14 +32,10 @@ export const sharedPlaylistsApi = {
    * @param shareToken UUID v4 share token
    * @param newTitle Optional custom title for the cloned playlist
    */
-  clonePlaylist: async (
-    shareToken: string,
-    newTitle?: string
-  ): Promise<UserPlaylist> => {
-    const { data } = await apiClient.post<UserPlaylist>(
-      `/playlists/shared/${shareToken}/clone`,
-      { newTitle }
-    );
+  clonePlaylist: async (shareToken: string, newTitle?: string): Promise<UserPlaylist> => {
+    const { data } = await apiClient.post<UserPlaylist>(`/playlists/shared/${shareToken}/clone`, {
+      newTitle,
+    });
     return data;
   },
 
@@ -70,14 +62,14 @@ export const sharedPlaylistsApi = {
    * @param shareToken UUID v4 share token
    * @returns Access token, expiry time, and playlist ID
    */
-  generateAccessToken: async (shareToken: string): Promise<{
+  generateAccessToken: async (
+    shareToken: string
+  ): Promise<{
     accessToken: string;
     expiresIn: number;
     playlistId: number;
   }> => {
-    const { data } = await apiClient.post(
-      `/playlists/shared/${shareToken}/generate-access-token`
-    );
+    const { data } = await apiClient.post(`/playlists/shared/${shareToken}/generate-access-token`);
     return data;
   },
 };

@@ -39,7 +39,7 @@ export const logActivity = (
             resourceId,
             details,
             ipAddress: req.ip,
-            userAgent: req.headers['user-agent']
+            userAgent: req.headers['user-agent'],
           });
         } catch (error) {
           // Log error but don't fail request

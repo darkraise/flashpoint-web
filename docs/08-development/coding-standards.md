@@ -5,9 +5,12 @@ Coding standards and best practices for Flashpoint Web development.
 ## TypeScript Standards
 
 ### Strict Mode
-All services use TypeScript strict mode with `noUnusedLocals`, `noUnusedParameters`, and `noFallthroughCasesInSwitch` enabled.
+
+All services use TypeScript strict mode with `noUnusedLocals`,
+`noUnusedParameters`, and `noFallthroughCasesInSwitch` enabled.
 
 ### Type Annotations
+
 - Use explicit return types for public functions
 - Use type inference for obvious cases (const count = 0)
 - Prefer interfaces over type aliases for object shapes
@@ -16,18 +19,22 @@ All services use TypeScript strict mode with `noUnusedLocals`, `noUnusedParamete
 - Prefer union types over enums (unless you need reverse mapping)
 
 ### Example:
+
 ```typescript
 // Good
 export function getGameById(id: string): Game | null {
-  return games.find(g => g.id === id) ?? null;
+  return games.find((g) => g.id === id) ?? null;
 }
 
 // Good - interfaces for objects, unions for types
-interface User { id: string; name: string; }
+interface User {
+  id: string;
+  name: string;
+}
 type Status = 'active' | 'inactive';
 
 // Avoid
-export function getGameById(id: string) { }  // implicit return type
+export function getGameById(id: string) {} // implicit return type
 ```
 
 ---
@@ -35,11 +42,15 @@ export function getGameById(id: string) { }  // implicit return type
 ## Naming Conventions
 
 ### Files
-- **Backend**: Services `PascalCase.ts`, routes `kebab-case.ts`, middleware/utils `camelCase.ts`
-- **Frontend**: Components `PascalCase.tsx`, hooks `useXxxx.ts`, stores/utils `camelCase.ts`
+
+- **Backend**: Services `PascalCase.ts`, routes `kebab-case.ts`,
+  middleware/utils `camelCase.ts`
+- **Frontend**: Components `PascalCase.tsx`, hooks `useXxxx.ts`, stores/utils
+  `camelCase.ts`
 - **Game Service**: All files `kebab-case.ts`
 
 ### Variables & Functions
+
 - Variables/functions: `camelCase`
 - Constants: `SCREAMING_SNAKE_CASE`
 - Private properties: prefix with underscore `_cache`
@@ -55,6 +66,7 @@ export function getGameById(id: string) { }  // implicit return type
 ## Code Organization
 
 ### Import Order
+
 1. Node.js built-in modules
 2. External packages (alphabetical)
 3. Internal modules with `@` alias (alphabetical)
@@ -62,9 +74,12 @@ export function getGameById(id: string) { }  // implicit return type
 5. Type imports (separate)
 
 ### Exports
-- Prefer named exports (except React components where default export is acceptable)
+
+- Prefer named exports (except React components where default export is
+  acceptable)
 
 ### File Structure
+
 Services: imports → types/interfaces → constants → class → helper functions
 
 React components: imports → types → constants → component → helper components
@@ -74,6 +89,7 @@ React components: imports → types → constants → component → helper compo
 ## ESLint Rules
 
 ### Backend (.eslintrc.json)
+
 ```json
 {
   "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
@@ -83,6 +99,7 @@ React components: imports → types → constants → component → helper compo
 ```
 
 ### Frontend (.eslintrc.json)
+
 ```json
 {
   "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
@@ -98,7 +115,9 @@ Run with `npm run lint` or auto-fix with `npm run lint -- --fix`
 ## Comment Standards
 
 ### Documentation Comments
+
 Use JSDoc for public APIs:
+
 ```typescript
 /**
  * Retrieves a game by its ID from the database.
@@ -111,6 +130,7 @@ export async function getGameById(id: string): Promise<Game | null> {
 ```
 
 ### Inline Comments
+
 - Explain "why", not "what"
 - Use TODO, FIXME, HACK prefixes for issues
 - Avoid obvious comments
@@ -120,6 +140,7 @@ export async function getGameById(id: string): Promise<Game | null> {
 ## Error Handling
 
 ### Backend
+
 ```typescript
 // Use try-catch for async operations
 try {
@@ -134,6 +155,7 @@ try {
 ```
 
 ### Frontend
+
 ```typescript
 // React Query error handling
 const { data, error, isError } = useQuery({ queryKey: ['games'], queryFn: fetchGames });
@@ -145,26 +167,29 @@ if (isError) return <div>Failed: {error.message}</div>;
 ## Backend Standards
 
 ### Database
+
 - Use prepared statements to prevent SQL injection
 - Use transactions for multi-step operations
 - Never write to flashpoint.sqlite (read-only)
 - Use UserDatabaseService for writes to user.db
 
 ### Service Layer
+
 ```typescript
 export class GameService {
   // Simple queries return null for not found
-  public getGameById(id: string): Game | null { }
+  public getGameById(id: string): Game | null {}
 
   // List queries return empty arrays
-  public searchGames(query: GameQuery): Game[] { }
+  public searchGames(query: GameQuery): Game[] {}
 
   // Mutations throw errors on failure
-  public async updateGame(id: string, updates: Partial<Game>): Promise<Game> { }
+  public async updateGame(id: string, updates: Partial<Game>): Promise<Game> {}
 }
 ```
 
 ### Routes
+
 - Validate input with Zod
 - Return consistent response structure
 - Use 404 for not found, 400 for validation, 500 for server errors
@@ -175,23 +200,28 @@ export class GameService {
 ## Frontend Standards
 
 ### React Components
+
 - Prefer function components
 - Extract custom hooks for reusable logic
 - Destructure props in function signature
-- Use appropriate state management (React Query for server state, Zustand for UI state)
+- Use appropriate state management (React Query for server state, Zustand for UI
+  state)
 
 ### API Calls
+
 **CRITICAL**: Use authenticated axios instance from `frontend/src/lib/api.ts`
+
 ```typescript
 // CORRECT - authenticated
 import { api } from '@/lib/api';
 const { data } = await api.get('/api/games');
 
 // WRONG - no authentication
-const response = await fetch('/api/games');  // ❌ Bypasses auth!
+const response = await fetch('/api/games'); // ❌ Bypasses auth!
 ```
 
 ### Styling
+
 - Group related Tailwind classes
 - Use `clsx` for conditional classes
 - Extract common styles to constants
@@ -201,6 +231,7 @@ const response = await fetch('/api/games');  // ❌ Bypasses auth!
 ## Git Commit Standards
 
 ### Format
+
 ```
 <type>(<scope>): <subject>
 
@@ -210,6 +241,7 @@ const response = await fetch('/api/games');  // ❌ Bypasses auth!
 ```
 
 ### Types
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation
@@ -219,6 +251,7 @@ const response = await fetch('/api/games');  // ❌ Bypasses auth!
 - `chore`: Maintenance
 
 ### Examples
+
 ```
 feat(backend): add game favoriting functionality
 fix(frontend): resolve infinite scroll pagination bug
@@ -226,6 +259,7 @@ docs(development): add coding standards documentation
 ```
 
 ### Branches
+
 - `feature/<description>`
 - `bugfix/<description>`
 - `docs/<description>`

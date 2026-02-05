@@ -3,19 +3,19 @@ import { CachedSystemSettingsService } from '../services/CachedSystemSettingsSer
 import { logger } from '../utils/logger';
 
 // Singleton instance - shared across all requests
-const systemSettings = new CachedSystemSettingsService();
+const systemSettings = CachedSystemSettingsService.getInstance();
 
 // MINIMAL whitelist - only endpoints needed for admin to LOGIN
 // Everything else requires admin authentication
 const MINIMAL_PUBLIC_PATHS = [
-  '/health',                    // Health checks for monitoring
-  '/api/auth/login',            // Admin needs to login
-  '/api/auth/register',         // Initial admin setup (first user)
-  '/api/auth/setup-status',     // Check if system needs initial setup
-  '/api/auth/refresh',          // Token refresh
-  '/api/settings/public',       // UI needs public settings
-  '/proxy',                     // Game images, logos, screenshots, and game files
-  '/api/playlists/shared',      // Anonymous shared playlist access (bypasses guest access settings)
+  '/health', // Health checks for monitoring
+  '/api/auth/login', // Admin needs to login
+  '/api/auth/register', // Initial admin setup (first user)
+  '/api/auth/setup-status', // Check if system needs initial setup
+  '/api/auth/refresh', // Token refresh
+  '/api/settings/public', // UI needs public settings
+  '/proxy', // Game images, logos, screenshots, and game files
+  '/api/playlists/shared', // Anonymous shared playlist access (bypasses guest access settings)
 ];
 
 /**
@@ -36,12 +36,16 @@ const MINIMAL_PUBLIC_PATHS = [
  * 3. If enabled: only allow admins through, block everyone else
  * 4. If disabled: allow everyone (normal operation)
  */
-export async function maintenanceMode(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+export async function maintenanceMode(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void | Response> {
   try {
     // Step 1: Check if path is in minimal public whitelist
     // These paths must work for admin to LOGIN during maintenance
-    const isPublicPath = MINIMAL_PUBLIC_PATHS.some(path =>
-      req.path === path || req.path.startsWith(path + '/')
+    const isPublicPath = MINIMAL_PUBLIC_PATHS.some(
+      (path) => req.path === path || req.path.startsWith(path + '/')
     );
 
     if (isPublicPath) {
@@ -73,27 +77,20 @@ export async function maintenanceMode(req: Request, res: Response, next: NextFun
     if (isAdmin) {
       // Admin user - ALLOW EVERYTHING (all endpoints, all features)
       // user is guaranteed to exist if isAdmin is true
-      logger.info(
-        `[Maintenance] Admin ${user!.username} accessing ${req.method} ${req.path}`
-      );
+      logger.info(`[Maintenance] Admin ${user!.username} accessing ${req.method} ${req.path}`);
       return next();
     }
 
     // Step 4: Non-admin user or guest - BLOCK EVERYTHING
     const userInfo = user ? `user ${user.username}` : 'unauthenticated user';
-    logger.warn(
-      `[Maintenance] Blocked ${req.method} ${req.path} from ${userInfo} (IP: ${req.ip})`
-    );
+    logger.warn(`[Maintenance] Blocked ${req.method} ${req.path} from ${userInfo} (IP: ${req.ip})`);
 
-    return res.status(503)
-      .set('Retry-After', '3600')
-      .json({
-        error: 'Service Unavailable',
-        message: 'The application is currently undergoing maintenance. Please try again later.',
-        maintenanceMode: true,
-        retryAfter: 3600,
-      });
-
+    return res.status(503).set('Retry-After', '3600').json({
+      error: 'Service Unavailable',
+      message: 'The application is currently undergoing maintenance. Please try again later.',
+      maintenanceMode: true,
+      retryAfter: 3600,
+    });
   } catch (error) {
     logger.error('[Maintenance] Critical error in maintenance middleware:', error);
 

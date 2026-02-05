@@ -1,6 +1,8 @@
 # Architecture Documentation
 
-This directory contains comprehensive architecture documentation for Flashpoint Web, detailing the system design, service communication patterns, and data flows.
+This directory contains comprehensive architecture documentation for Flashpoint
+Web, detailing the system design, service communication patterns, and data
+flows.
 
 ## Documentation Structure
 
@@ -9,6 +11,7 @@ This directory contains comprehensive architecture documentation for Flashpoint 
 **Deep dive into the complete system architecture**
 
 Topics covered:
+
 - Three-service architecture overview (Frontend, Backend, Game Service)
 - Technology stack and rationale
 - Service responsibilities and boundaries
@@ -20,13 +23,15 @@ Topics covered:
 - Error handling strategies
 - Monitoring and logging
 
-**When to read**: Start here for a high-level understanding of the entire system.
+**When to read**: Start here for a high-level understanding of the entire
+system.
 
 ### 2. [Service Communication](./service-communication.md)
 
 **Inter-service communication patterns and protocols**
 
 Topics covered:
+
 - Frontend ↔ Backend communication (REST API)
 - Backend ↔ Game Service communication (internal APIs)
 - Frontend ↔ Game Service communication (direct file loading)
@@ -39,13 +44,15 @@ Topics covered:
 - Performance optimization
 - WebSocket (future considerations)
 
-**When to read**: When you need to understand how services communicate or add new API endpoints.
+**When to read**: When you need to understand how services communicate or add
+new API endpoints.
 
 ### 3. [Data Flow Diagrams](./data-flow-diagrams.md)
 
 **Complete request/response flows with Mermaid diagrams**
 
 Topics covered:
+
 - Game browse and search flow
 - Game detail view flow
 - Filter options loading
@@ -56,13 +63,15 @@ Topics covered:
 - Sort order changes
 - Cache management (stale-while-revalidate)
 
-**When to read**: When debugging data flow issues or understanding user journeys through the system.
+**When to read**: When debugging data flow issues or understanding user journeys
+through the system.
 
 ### 4. [Authentication Flow](./authentication-flow.md)
 
 **Complete authentication and authorization flow**
 
 Topics covered:
+
 - User registration flow
 - User login flow
 - Protected request flow
@@ -75,13 +84,15 @@ Topics covered:
 - Security best practices
 - Common authentication issues
 
-**When to read**: When implementing authentication features or troubleshooting auth issues.
+**When to read**: When implementing authentication features or troubleshooting
+auth issues.
 
 ### 5. [Game Launch Flow](./game-launch-flow.md)
 
 **Detailed game playing flow from click to play**
 
 Topics covered:
+
 - Game launch request flow
 - ZIP mounting flow
 - Game content loading (Flash and HTML5)
@@ -92,13 +103,15 @@ Topics covered:
 - Error handling
 - Performance optimization
 
-**When to read**: When debugging game loading issues or understanding how games are served.
+**When to read**: When debugging game loading issues or understanding how games
+are served.
 
 ### 6. [Play Tracking Flow](./play-tracking-flow.md)
 
 **Session tracking and statistics aggregation**
 
 Topics covered:
+
 - Session start flow
 - Session end flow
 - Statistics aggregation (per-game and per-user)
@@ -108,15 +121,18 @@ Topics covered:
 - Database schema and indexing
 - Privacy and data management
 
-**When to read**: When implementing analytics features or understanding play session tracking.
+**When to read**: When implementing analytics features or understanding play
+session tracking.
 
 ## Architecture Diagrams
 
-All architecture documents include Mermaid diagrams for visual representation. These diagrams are rendered automatically in GitHub and most Markdown viewers.
+All architecture documents include Mermaid diagrams for visual representation.
+These diagrams are rendered automatically in GitHub and most Markdown viewers.
 
 ### Key Diagram Types
 
 **System Diagrams**: Show the overall architecture and service relationships
+
 ```mermaid
 graph TB
     Frontend --> Backend
@@ -124,6 +140,7 @@ graph TB
 ```
 
 **Sequence Diagrams**: Show step-by-step interactions between components
+
 ```mermaid
 sequenceDiagram
     User->>Frontend: Click button
@@ -132,6 +149,7 @@ sequenceDiagram
 ```
 
 **Flow Diagrams**: Show decision trees and process flows
+
 ```mermaid
 graph LR
     Start --> Decision{Condition?}
@@ -151,11 +169,13 @@ Business logic lives in service classes, routes are thin controllers.
 
 ### 2. Repository Pattern (Implicit)
 
-Database access is abstracted through `DatabaseService` and `UserDatabaseService`.
+Database access is abstracted through `DatabaseService` and
+`UserDatabaseService`.
 
 ### 3. Middleware Pipeline
 
 Express middleware chains handle cross-cutting concerns:
+
 - Authentication (JWT verification)
 - Authorization (RBAC)
 - Logging (activity tracking)
@@ -165,12 +185,14 @@ Express middleware chains handle cross-cutting concerns:
 ### 4. State Management
 
 **Frontend**:
+
 - Server state: TanStack Query
 - UI state: Zustand
 - URL state: React Router
 - Form state: React Hook Form
 
 **Backend**:
+
 - Stateless (JWT for session)
 - Database as source of truth
 
@@ -388,9 +410,11 @@ Express middleware chains handle cross-cutting concerns:
 
 ## Related Documentation
 
-- [Overview Documentation](../01-overview/): High-level overview and getting started
+- [Overview Documentation](../01-overview/): High-level overview and getting
+  started
 - [API Reference](../03-api/): Detailed API endpoint documentation (if exists)
-- [Development Guide](../04-development/): Development setup and workflows (if exists)
+- [Development Guide](../04-development/): Development setup and workflows (if
+  exists)
 - [Deployment Guide](../05-deployment/): Production deployment (if exists)
 
 ## Contributing

@@ -2,7 +2,8 @@
 
 ## Overview
 
-Flashpoint Web uses HTTP-based communication between three services. Frontend communicates with backend, which proxies game file requests to game-service.
+Flashpoint Web uses HTTP-based communication between three services. Frontend
+communicates with backend, which proxies game file requests to game-service.
 
 ## Communication Architecture
 
@@ -49,10 +50,11 @@ graph TB
 **Protocol**: HTTP/1.1 with JSON, JWT Bearer authentication
 
 **API Client Configuration**:
+
 ```typescript
 const api = axios.create({
   baseURL: '/api',
-  headers: { 'Content-Type': 'application/json' }
+  headers: { 'Content-Type': 'application/json' },
 });
 
 // Request interceptor adds JWT
@@ -116,6 +118,7 @@ PATCH /api/users/me/settings {theme_mode, primary_color}
 ```
 
 **Error Response Format**:
+
 ```json
 {
   "error": "Error message description",
@@ -127,11 +130,13 @@ PATCH /api/users/me/settings {theme_mode, primary_color}
 ## Backend ↔ Game Service Communication
 
 Backend does NOT directly proxy game files. Instead:
+
 1. Returns launch URLs pointing to game service
 2. Frontend loads content directly from game service
 3. Backend mounts ZIPs when needed via internal API
 
 **Mount Game ZIP**:
+
 ```http
 POST http://localhost:22501/mount
 { "gameId": "uuid", "zipPath": "D:/Flashpoint/Data/Games/A/uuid.zip" }
@@ -139,6 +144,7 @@ Response: { "success": true, "mountPoint": "/gamedata/uuid" }
 ```
 
 **Unmount Game ZIP**:
+
 ```http
 POST http://localhost:22501/unmount
 { "gameId": "uuid" }
@@ -170,6 +176,7 @@ sequenceDiagram
 **Request**: `GET /http://example.com/path/game.swf`
 
 **Fallback Chain**:
+
 1. Local htdocs: `D:/Flashpoint/Legacy/htdocs/example.com/path/game.swf`
 2. Game data directory
 3. Mounted ZIPs (via zip-manager)
@@ -177,6 +184,7 @@ sequenceDiagram
 5. Cache downloaded content locally
 
 **Response Headers**:
+
 ```
 Content-Type: application/x-shockwave-flash
 Access-Control-Allow-Origin: *
@@ -204,14 +212,14 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:3100',
-        changeOrigin: true
+        changeOrigin: true,
       },
       '/proxy': {
         target: 'http://localhost:22500',
-        changeOrigin: true
-      }
-    }
-  }
+        changeOrigin: true,
+      },
+    },
+  },
 });
 ```
 
@@ -229,8 +237,8 @@ await queryClient.invalidateQueries({ queryKey: ['playStats'] });
 useQuery({
   queryKey: ['games'],
   queryFn: fetchGames,
-  staleTime: 5 * 60 * 1000,      // 5 minutes
-  cacheTime: 10 * 60 * 1000      // 10 minutes
+  staleTime: 5 * 60 * 1000, // 5 minutes
+  cacheTime: 10 * 60 * 1000, // 10 minutes
 });
 ```
 
@@ -245,7 +253,7 @@ const mutation = useMutation({
 
     queryClient.setQueryData(['playlist', playlistId], (old) => ({
       ...old,
-      games: [...old.games, gameId]
+      games: [...old.games, gameId],
     }));
 
     return { previous };
@@ -255,45 +263,49 @@ const mutation = useMutation({
   },
   onSettled: () => {
     queryClient.invalidateQueries(['playlist', playlistId]);
-  }
+  },
 });
 ```
 
 ## Rate Limiting
 
 **Backend**:
+
 ```typescript
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many requests'
+  message: 'Too many requests',
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  skipSuccessfulRequests: true
+  skipSuccessfulRequests: true,
 });
 
 app.use('/api/', limiter);
 app.post('/api/auth/login', authLimiter, loginHandler);
 ```
 
-**Frontend**: TanStack Query deduplication prevents duplicate concurrent requests.
+**Frontend**: TanStack Query deduplication prevents duplicate concurrent
+requests.
 
 ## Error Handling
 
 **Frontend**:
+
 ```typescript
 useQuery({
   queryKey: ['games'],
   queryFn: fetchGames,
   retry: 3,
-  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
+  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 });
 ```
 
 **Backend**:
+
 ```typescript
 router.get('/:id', async (req, res, next) => {
   try {
@@ -317,37 +329,45 @@ app.use((err, req, res, next) => {
 ## Performance Optimization
 
 **Response Compression**:
+
 ```typescript
 import compression from 'compression';
 app.use(compression());
 ```
 
-**Connection Pooling**: BetterSqlite3 uses single connection (optimized for SQLite).
+**Connection Pooling**: BetterSqlite3 uses single connection (optimized for
+SQLite).
 
 ## Security Considerations
 
 **CORS Configuration**:
+
 ```typescript
 // Backend
-app.use(cors({
-  origin: process.env.DOMAIN || 'http://localhost:5173',
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: process.env.DOMAIN || 'http://localhost:5173',
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Game Service (wide open for cross-domain content)
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'HEAD', 'OPTIONS']
-}));
+app.use(
+  cors({
+    origin: '*',
+    methods: ['GET', 'HEAD', 'OPTIONS'],
+  })
+);
 ```
 
 **Request Validation**:
+
 ```typescript
 const searchQuerySchema = z.object({
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(50)
+  limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
 const query = searchQuerySchema.parse(req.query);
@@ -366,14 +386,18 @@ const game = DatabaseService.get(`SELECT * FROM game WHERE id = '${gameId}'`);
 ## Monitoring
 
 **Request Logging**:
+
 ```typescript
 import morgan from 'morgan';
-app.use(morgan('combined', {
-  stream: { write: (message) => logger.info(message.trim()) }
-}));
+app.use(
+  morgan('combined', {
+    stream: { write: (message) => logger.info(message.trim()) },
+  })
+);
 ```
 
 **Activity Tracking**:
+
 ```typescript
 export const logActivity = (action: string, targetType: string) => {
   return async (req, res, next) => {
@@ -382,7 +406,7 @@ export const logActivity = (action: string, targetType: string) => {
       action,
       targetType,
       targetId: req.params.id,
-      ipAddress: req.ip
+      ipAddress: req.ip,
     });
     next();
   };

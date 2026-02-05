@@ -13,10 +13,10 @@ Route wrapper component that handles authorization and route protection.
 ```typescript
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireAuth?: boolean;               // Default: true
-  requirePermission?: string;          // Single permission
-  requireAnyPermission?: string[];     // Any of these permissions
-  requireAllPermissions?: string[];    // All of these permissions
+  requireAuth?: boolean; // Default: true
+  requirePermission?: string; // Single permission
+  requireAnyPermission?: string[]; // Any of these permissions
+  requireAllPermissions?: string[]; // All of these permissions
 }
 ```
 
@@ -118,9 +118,9 @@ Component wrapper that conditionally renders based on permissions.
 ```typescript
 interface RoleGuardProps {
   children: React.ReactNode;
-  permission?: string;          // Single permission
-  permissions?: string[];       // Any of these
-  requireAll?: boolean;         // Require all permissions
+  permission?: string; // Single permission
+  permissions?: string[]; // Any of these
+  requireAll?: boolean; // Require all permissions
 }
 ```
 

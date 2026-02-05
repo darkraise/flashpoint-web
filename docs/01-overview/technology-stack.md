@@ -1,45 +1,46 @@
 # Technology Stack
 
-Modern, production-ready technologies chosen for performance, developer experience, and ecosystem maturity.
+Modern, production-ready technologies chosen for performance, developer
+experience, and ecosystem maturity.
 
 ## Stack Overview
 
 ### Backend Technologies
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Node.js | 20+ | JavaScript runtime |
-| Express | 4.18 | Web framework |
-| TypeScript | 5.4 | Type-safe JavaScript |
-| BetterSqlite3 | 12.6 | SQLite database driver |
-| JWT | 9.0 | Authentication tokens |
-| bcrypt | 6.0 | Password hashing |
-| Winston | 3.11 | Logging |
+| Technology    | Version | Purpose                |
+| ------------- | ------- | ---------------------- |
+| Node.js       | 20+     | JavaScript runtime     |
+| Express       | 4.18    | Web framework          |
+| TypeScript    | 5.4     | Type-safe JavaScript   |
+| BetterSqlite3 | 12.6    | SQLite database driver |
+| JWT           | 9.0     | Authentication tokens  |
+| bcrypt        | 6.0     | Password hashing       |
+| Winston       | 3.11    | Logging                |
 
 ### Frontend Technologies
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| React | 18.3 | UI library |
-| TypeScript | 5.4 | Type-safe JavaScript |
-| Vite | 5.2 | Build tool and dev server |
-| React Router | 6.22 | Client-side routing |
-| TanStack Query | 5.28 | Server state management |
-| Zustand | 4.5 | Client state management |
-| Tailwind CSS | 3.4 | Utility-first CSS |
-| Shadcn UI | Latest | Component library |
-| Ruffle | 0.2.0 | Flash emulator |
+| Technology     | Version | Purpose                   |
+| -------------- | ------- | ------------------------- |
+| React          | 18.3    | UI library                |
+| TypeScript     | 5.4     | Type-safe JavaScript      |
+| Vite           | 5.2     | Build tool and dev server |
+| React Router   | 6.22    | Client-side routing       |
+| TanStack Query | 5.28    | Server state management   |
+| Zustand        | 4.5     | Client state management   |
+| Tailwind CSS   | 3.4     | Utility-first CSS         |
+| Shadcn UI      | Latest  | Component library         |
+| Ruffle         | 0.2.0   | Flash emulator            |
 
 ### Game Service Technologies
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Node.js | 20+ | JavaScript runtime |
-| Express | 4.18 | HTTP server |
-| TypeScript | 5.3 | Type safety |
-| node-stream-zip | 1.15 | ZIP archive streaming |
-| Axios | 1.6 | HTTP client |
-| Winston | 3.11 | Logging |
+| Technology      | Version | Purpose               |
+| --------------- | ------- | --------------------- |
+| Node.js         | 20+     | JavaScript runtime    |
+| Express         | 4.18    | HTTP server           |
+| TypeScript      | 5.3     | Type safety           |
+| node-stream-zip | 1.15    | ZIP archive streaming |
+| Axios           | 1.6     | HTTP client           |
+| Winston         | 3.11    | Logging               |
 
 ---
 
@@ -50,12 +51,14 @@ Modern, production-ready technologies chosen for performance, developer experien
 JavaScript runtime built on Chrome's V8 engine.
 
 **Why chosen:**
+
 - Same language as frontend (JavaScript/TypeScript)
 - Excellent async I/O for concurrent requests
 - Large npm ecosystem
 - Great performance
 
 **Use cases:**
+
 - REST API server
 - Database operations
 - File watching (hot-reload)
@@ -66,16 +69,18 @@ JavaScript runtime built on Chrome's V8 engine.
 Minimal and flexible web application framework.
 
 **Why chosen:**
+
 - Mature and battle-tested
 - Perfect middleware pattern
 - Large ecosystem
 - Fast routing
 
 **Key middleware:**
+
 ```typescript
 app.use(cors({ origin: process.env.DOMAIN }));
-app.use(helmet());                          // Security headers
-app.use(compression());                     // Response compression
+app.use(helmet()); // Security headers
+app.use(compression()); // Response compression
 app.use('/api/auth', rateLimit({ max: 5 })); // Rate limiting
 ```
 
@@ -84,6 +89,7 @@ app.use('/api/auth', rateLimit({ max: 5 })); // Rate limiting
 Typed superset of JavaScript.
 
 **Why chosen:**
+
 - Type safety catches errors at compile time
 - Excellent IDE support
 - Code quality enforcement
@@ -94,12 +100,14 @@ Typed superset of JavaScript.
 Fastest SQLite3 library for Node.js.
 
 **Why chosen over alternatives:**
+
 - Synchronous API (simpler than async wrappers)
 - 2-3x faster than async alternatives
 - Fewer race conditions
 - Perfect for SQLite workloads
 
 **Use:**
+
 ```typescript
 // Read-only connection to flashpoint.sqlite
 const fpDb = new Database(config.flashpointDbPath, { readonly: true });
@@ -108,7 +116,9 @@ const fpDb = new Database(config.flashpointDbPath, { readonly: true });
 const userDb = new Database(USER_DB_PATH);
 
 // Prepared statement
-const stmt = fpDb.prepare('SELECT * FROM game WHERE title LIKE ? AND platform = ?');
+const stmt = fpDb.prepare(
+  'SELECT * FROM game WHERE title LIKE ? AND platform = ?'
+);
 const games = stmt.all(`%${search}%`, platform);
 ```
 
@@ -116,7 +126,8 @@ const games = stmt.all(`%${search}%`, platform);
 
 **JWT**: Stateless authentication, works across instances, mobile-friendly.
 
-**bcrypt**: Designed for passwords, slow by design (resistant to brute-force), automatic salt generation.
+**bcrypt**: Designed for passwords, slow by design (resistant to brute-force),
+automatic salt generation.
 
 ---
 
@@ -127,12 +138,14 @@ const games = stmt.all(`%${search}%`, platform);
 JavaScript library for building user interfaces.
 
 **Why chosen:**
+
 - Component model - reusable, composable UI
 - Largest React library ecosystem
 - Virtual DOM for performance
 - Excellent tooling
 
 **React 18 features:**
+
 - Automatic batching
 - Concurrent rendering
 - Transitions for smooth updates
@@ -142,6 +155,7 @@ JavaScript library for building user interfaces.
 Next-generation frontend build tool.
 
 **Why chosen over alternatives:**
+
 - Instant HMR via native ES modules
 - Fast production builds (esbuild)
 - Simple configuration
@@ -152,12 +166,14 @@ Next-generation frontend build tool.
 Powerful data synchronization library.
 
 **Why chosen:**
+
 - Smart cache management
 - Background refetching
 - Built-in loading/error states
 - Excellent DevTools
 
 **Usage:**
+
 ```typescript
 function useGames(filters: GameFilters) {
   return useQuery({
@@ -174,6 +190,7 @@ function useGames(filters: GameFilters) {
 Small, fast state management library.
 
 **Why chosen:**
+
 - Minimal boilerplate
 - Optimized re-renders
 - TypeScript-first
@@ -181,6 +198,7 @@ Small, fast state management library.
 - Only 1KB gzipped
 
 **Usage:**
+
 ```typescript
 const useAuthStore = create<AuthState>((set) => ({
   user: null,
@@ -201,6 +219,7 @@ const useAuthStore = create<AuthState>((set) => ({
 Utility-first CSS framework.
 
 **Why chosen:**
+
 - Build UIs without custom CSS
 - Consistent design system
 - Automatic CSS purging
@@ -212,6 +231,7 @@ Utility-first CSS framework.
 Re-usable components built with Radix UI and Tailwind.
 
 **Why chosen:**
+
 - Copy components to your project
 - Built on accessible Radix primitives
 - Pre-designed component system
@@ -223,6 +243,7 @@ Re-usable components built with Radix UI and Tailwind.
 Flash Player emulator written in Rust, compiled to WebAssembly.
 
 **Why needed:**
+
 - Adobe Flash reached EOL
 - Runs in modern browsers
 - Sandboxed WebAssembly execution
@@ -237,12 +258,14 @@ Flash Player emulator written in Rust, compiled to WebAssembly.
 Zero-dependency ZIP file streaming library.
 
 **Why chosen:**
+
 - Streaming (no extraction required)
 - Memory efficient random access
 - Fast direct reads
 - Simple API
 
 **Usage:**
+
 ```typescript
 const zip = new StreamZip.async({ file: '/path/to/game.zip' });
 const entry = await zip.entry(filePath);
@@ -273,6 +296,7 @@ Unit testing framework with Vite integration.
 ### Decision Criteria
 
 For each technology, evaluated:
+
 1. Performance
 2. Developer experience
 3. Ecosystem
@@ -286,35 +310,35 @@ For each technology, evaluated:
 
 #### React vs Vue vs Svelte
 
-| Criteria | React | Vue | Svelte |
-|----------|-------|-----|--------|
-| Ecosystem | Excellent | Good | Growing |
-| TypeScript | Excellent | Good | Good |
-| Community | Largest | Large | Smaller |
-| Bundle Size | Larger | Medium | Smallest |
-| **Decision** | **✓ Chosen** | ✗ | ✗ |
+| Criteria     | React        | Vue    | Svelte   |
+| ------------ | ------------ | ------ | -------- |
+| Ecosystem    | Excellent    | Good   | Growing  |
+| TypeScript   | Excellent    | Good   | Good     |
+| Community    | Largest      | Large  | Smaller  |
+| Bundle Size  | Larger       | Medium | Smallest |
+| **Decision** | **✓ Chosen** | ✗      | ✗        |
 
 **Reason**: Largest ecosystem (Shadcn UI, TanStack Query)
 
 #### TanStack Query vs Redux Toolkit Query vs SWR
 
-| Criteria | TanStack | RTK Query | SWR |
-|----------|----------|-----------|-----|
-| Features | Most | Many | Fewer |
-| TypeScript | Excellent | Good | Good |
-| Boilerplate | Low | Medium | Lowest |
-| **Decision** | **✓ Chosen** | ✗ | ✗ |
+| Criteria     | TanStack     | RTK Query | SWR    |
+| ------------ | ------------ | --------- | ------ |
+| Features     | Most         | Many      | Fewer  |
+| TypeScript   | Excellent    | Good      | Good   |
+| Boilerplate  | Low          | Medium    | Lowest |
+| **Decision** | **✓ Chosen** | ✗         | ✗      |
 
 **Reason**: Best balance of features and DX
 
 #### SQLite vs PostgreSQL vs MongoDB
 
-| Criteria | SQLite | PostgreSQL | MongoDB |
-|----------|--------|------------|---------|
-| Setup | Embedded | Server | Server |
-| Flashpoint | Native | Migration | Migration |
-| Complexity | Lowest | Medium | Medium |
-| **Decision** | **✓ Chosen** | ✗ | ✗ |
+| Criteria     | SQLite       | PostgreSQL | MongoDB   |
+| ------------ | ------------ | ---------- | --------- |
+| Setup        | Embedded     | Server     | Server    |
+| Flashpoint   | Native       | Migration  | Migration |
+| Complexity   | Lowest       | Medium     | Medium    |
+| **Decision** | **✓ Chosen** | ✗          | ✗         |
 
 **Reason**: Flashpoint compatibility, self-hosted simplicity
 
@@ -323,6 +347,7 @@ For each technology, evaluated:
 ## Package Dependencies
 
 ### Backend Production
+
 ```json
 {
   "axios": "^1.13.2",
@@ -335,6 +360,7 @@ For each technology, evaluated:
 ```
 
 ### Frontend Production
+
 ```json
 {
   "@ruffle-rs/ruffle": "^0.2.0-nightly",
@@ -353,6 +379,7 @@ For each technology, evaluated:
 ### Bundle Sizes
 
 **Frontend (Production Build):**
+
 - Main bundle: ~150 KB (gzipped)
 - React vendor: ~130 KB (gzipped)
 - Shadcn UI: ~50 KB (gzipped)
@@ -362,16 +389,19 @@ For each technology, evaluated:
 ### Runtime Performance
 
 **Backend API:**
+
 - Average response: <50ms
 - Game search: <100ms
 - Database queries: <10ms (indexed)
 
 **Frontend:**
+
 - First contentful paint: <1s
 - Time to interactive: <2s
 - Game grid render: <100ms (virtualized)
 
 **Game Service:**
+
 - File streaming: Wire speed
 - ZIP file access: <50ms
 - CDN fallback: 200-500ms (network dependent)
@@ -381,12 +411,14 @@ For each technology, evaluated:
 ## Browser Support
 
 **Required features:**
+
 - ES2020 support
 - WebAssembly (for Ruffle)
 - CSS Grid and Flexbox
 - localStorage
 
 **Targeted browsers:**
+
 - Chrome/Edge: Last 2 versions
 - Firefox: Last 2 versions
 - Safari: Last 2 versions
@@ -395,7 +427,8 @@ For each technology, evaluated:
 
 ## Related Documentation
 
-- [Architecture Overview](../02-architecture/system-architecture.md) - System design
+- [Architecture Overview](../02-architecture/system-architecture.md) - System
+  design
 - [Backend Guide](../03-backend/README.md) - Backend details
 - [Frontend Guide](../04-frontend/README.md) - Frontend details
 - [Deployment Guide](../09-deployment/README.md) - Production deployment

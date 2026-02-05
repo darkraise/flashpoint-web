@@ -1,6 +1,7 @@
 # Contributing to Flashpoint Web
 
-Thank you for your interest in contributing to Flashpoint Web! This document provides guidelines and instructions for contributing to this project.
+Thank you for your interest in contributing to Flashpoint Web! This document
+provides guidelines and instructions for contributing to this project.
 
 ## Table of Contents
 
@@ -19,7 +20,8 @@ Thank you for your interest in contributing to Flashpoint Web! This document pro
 
 ### Our Pledge
 
-We are committed to providing a welcoming and inspiring community for all. By participating in this project, you agree to:
+We are committed to providing a welcoming and inspiring community for all. By
+participating in this project, you agree to:
 
 - Be respectful and inclusive
 - Accept constructive criticism gracefully
@@ -90,14 +92,17 @@ cd ../frontend && npm test
 cd ../game-service && npm test
 ```
 
-For detailed setup instructions, see [Setup Guide](docs/08-development/setup-guide.md).
+For detailed setup instructions, see
+[Setup Guide](docs/08-development/setup-guide.md).
 
 ## How to Contribute
 
 ### Reporting Bugs
 
 Before reporting a bug:
-1. Search [existing issues](https://github.com/OWNER/flashpoint-web/issues) to avoid duplicates
+
+1. Search [existing issues](https://github.com/OWNER/flashpoint-web/issues) to
+   avoid duplicates
 2. Use the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md)
 3. Include:
    - Clear description of the issue
@@ -125,6 +130,7 @@ Before reporting a bug:
 ### First-Time Contributors
 
 Look for issues labeled:
+
 - `good first issue` - Simple issues for newcomers
 - `help wanted` - Issues where we need community help
 - `documentation` - Documentation improvements
@@ -134,12 +140,14 @@ Look for issues labeled:
 ### Before Submitting
 
 1. **Sync with upstream**:
+
    ```bash
    git fetch upstream
    git rebase upstream/master
    ```
 
 2. **Run all checks**:
+
    ```bash
    npm run typecheck
    npm run format:check
@@ -161,6 +169,7 @@ Look for issues labeled:
 ### Branch Naming
 
 Use descriptive branch names:
+
 ```
 feature/add-playlist-export
 fix/game-search-pagination
@@ -285,16 +294,16 @@ footer (optional)
 
 ### Types
 
-| Type | Description |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation changes |
-| `style` | Code style changes (formatting, semicolons) |
-| `refactor` | Code refactoring |
-| `test` | Adding or updating tests |
-| `chore` | Maintenance tasks |
-| `perf` | Performance improvements |
+| Type       | Description                                 |
+| ---------- | ------------------------------------------- |
+| `feat`     | New feature                                 |
+| `fix`      | Bug fix                                     |
+| `docs`     | Documentation changes                       |
+| `style`    | Code style changes (formatting, semicolons) |
+| `refactor` | Code refactoring                            |
+| `test`     | Adding or updating tests                    |
+| `chore`    | Maintenance tasks                           |
+| `perf`     | Performance improvements                    |
 
 ### Examples
 
@@ -376,6 +385,7 @@ describe('GameService', () => {
 ### When to Update Docs
 
 Update documentation when you:
+
 - Add new features
 - Change API endpoints
 - Modify configuration options
@@ -453,6 +463,7 @@ flashpoint-web/
 ## Recognition
 
 Contributors are recognized in:
+
 - GitHub contributors list
 - Release notes for significant contributions
 - README acknowledgments section
@@ -461,16 +472,17 @@ Contributors are recognized in:
 
 ## Quick Reference
 
-| Task | Command |
-|------|---------|
-| Install dependencies | `npm run install:all` |
-| Start dev servers | `npm run dev` |
-| Type check | `npm run typecheck` |
-| Format code | `npm run format` |
-| Run backend tests | `cd backend && npm test` |
-| Run frontend tests | `cd frontend && npm test` |
-| Build all | `npm run build` |
+| Task                 | Command                   |
+| -------------------- | ------------------------- |
+| Install dependencies | `npm run install:all`     |
+| Start dev servers    | `npm run dev`             |
+| Type check           | `npm run typecheck`       |
+| Format code          | `npm run format`          |
+| Run backend tests    | `cd backend && npm test`  |
+| Run frontend tests   | `cd frontend && npm test` |
+| Build all            | `npm run build`           |
 
 ---
 
-Thank you for contributing to Flashpoint Web! Your efforts help preserve gaming history for future generations.
+Thank you for contributing to Flashpoint Web! Your efforts help preserve gaming
+history for future generations.

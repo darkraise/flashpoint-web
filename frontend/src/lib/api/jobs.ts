@@ -26,10 +26,7 @@ export const jobsApi = {
   /**
    * Update job configuration
    */
-  update: async (
-    jobId: string,
-    updates: { enabled: boolean }
-  ): Promise<JobStatusEnriched> => {
+  update: async (jobId: string, updates: { enabled: boolean }): Promise<JobStatusEnriched> => {
     const { data } = await apiClient.patch<JobStatusEnriched>(`/jobs/${jobId}`, updates);
     return data;
   },

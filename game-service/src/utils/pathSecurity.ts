@@ -7,6 +7,54 @@ import { logger } from './logger';
  */
 
 /**
+ * Check if a URL path has been double-encoded (indicates potential attack)
+ * Double encoding: %252e%252e = %2e%2e (after first decode) = .. (after second decode)
+ *
+ * @param urlPath - The URL path to check
+ * @returns true if double encoding is detected
+ */
+export function hasDoubleEncoding(urlPath: string): boolean {
+  // Check for double-encoded sequences that would decode to dangerous patterns
+  // %25 is the encoding for '%', so %252e = %2e, %252f = %2f, etc.
+  // Double-encoding is a technique to bypass security filters that only decode once.
+  const doubleEncodedPatterns = [
+    /%25(?:2[eEfF]|5[cC])/gi, // %252e (%2e = .), %252f (%2f = /), %255c (%5c = \)
+    /%25(?:00)/gi, // %2500 = double-encoded null byte
+  ];
+
+  for (const pattern of doubleEncodedPatterns) {
+    if (pattern.test(urlPath)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Sanitize an error message to prevent path leakage
+ * Removes or redacts internal file system paths from error messages
+ *
+ * @param message - The error message to sanitize
+ * @returns Sanitized error message safe for client response
+ */
+export function sanitizeErrorMessage(message: string): string {
+  // Remove Windows absolute paths (e.g., C:\Users\..., D:\Flashpoint\...)
+  let sanitized = message.replace(/[A-Za-z]:\\[^:\s'"]+/g, '[path]');
+
+  // Remove Unix absolute paths (e.g., /home/user/..., /data/flashpoint/...)
+  sanitized = sanitized.replace(/\/(?:home|data|usr|var|tmp|opt|etc)[^\s'"]+/gi, '[path]');
+
+  // Remove network paths (e.g., \\server\share\...)
+  sanitized = sanitized.replace(/\\\\[^\s'"]+/g, '[path]');
+
+  // Remove any remaining paths that look like file paths with extensions
+  sanitized = sanitized.replace(/[^\s'"]+\.[a-zA-Z]{2,4}(?:\s|$|["'])/g, '[file] ');
+
+  return sanitized;
+}
+
+/**
  * Sanitize and validate a file path to prevent directory traversal
  *
  * @param basePath - The base directory that the file must be within
@@ -85,6 +133,10 @@ export function validatePathInAllowedDirectories(
 /**
  * Sanitize a URL path component to prevent null bytes and other dangerous characters
  *
+ * IMPORTANT: This function should be called BEFORE any URL decoding to catch
+ * double-encoded attacks. The http module already decodes URLs once, so we
+ * check for patterns that would become dangerous after a second decode.
+ *
  * @param urlPath - The URL path to sanitize
  * @returns The sanitized path
  * @throws Error if dangerous characters are detected
@@ -92,24 +144,52 @@ export function validatePathInAllowedDirectories(
 export function sanitizeUrlPath(urlPath: string): string {
   // Check for null bytes (can be used to bypass file extension checks)
   if (urlPath.includes('\0')) {
-    logger.warn(`[Security] Null byte detected in URL path: ${urlPath}`);
+    logger.warn(`[Security] Null byte detected in URL path`);
     throw new Error('Invalid path: Null byte detected');
+  }
+
+  // Check for double-encoding attacks (G-H1)
+  // Double-encoding can bypass security checks if the URL is decoded twice
+  if (hasDoubleEncoding(urlPath)) {
+    logger.warn(`[Security] Double-encoded path detected (potential attack)`);
+    throw new Error('Invalid path: Double encoding detected');
   }
 
   // Check for other dangerous patterns
   // Note: We allow '..' because it will be handled by sanitizeAndValidatePath
   // But we check for obviously malicious patterns
   const dangerousPatterns = [
-    /\.\.\\/g,  // ..\ (Windows path traversal)
-    /\.\.%2[fF]/g,  // URL encoded ../
-    /\.\.%5[cC]/g,  // URL encoded ..\
+    /\.\.\\/g, // ..\ (Windows path traversal)
+    /\.\.%2[fF]/g, // URL encoded ../
+    /\.\.%5[cC]/g, // URL encoded ..\
+    /%00/g, // URL encoded null byte
   ];
 
   for (const pattern of dangerousPatterns) {
     if (pattern.test(urlPath)) {
-      logger.warn(`[Security] Dangerous pattern detected in URL path: ${urlPath}`);
+      logger.warn(`[Security] Dangerous pattern detected in URL path`);
       throw new Error('Invalid path: Dangerous pattern detected');
     }
+  }
+
+  // Decode URL once and check for traversal patterns after decoding
+  // This catches cases where traversal sequences are single-encoded
+  try {
+    const decoded = decodeURIComponent(urlPath);
+
+    // After decoding, check for null bytes that were encoded
+    if (decoded.includes('\0')) {
+      logger.warn(`[Security] Encoded null byte detected in URL path`);
+      throw new Error('Invalid path: Null byte detected');
+    }
+  } catch (error) {
+    // decodeURIComponent can throw on malformed sequences
+    // This is acceptable - malformed URLs should be rejected
+    if (error instanceof URIError) {
+      logger.warn(`[Security] Malformed URL encoding detected`);
+      throw new Error('Invalid path: Malformed URL encoding');
+    }
+    throw error;
   }
 
   return urlPath;

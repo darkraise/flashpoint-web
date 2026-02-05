@@ -42,7 +42,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
           isAuthenticated: true,
-          isGuest: false
+          isGuest: false,
         });
 
         // Load theme settings from server after successful login (not guest)
@@ -61,14 +61,14 @@ export const useAuthStore = create<AuthState>()(
           username: 'Guest',
           email: 'guest@flashpoint.local',
           role: 'guest',
-          permissions: ['games.read', 'playlists.read', 'games.play']
+          permissions: ['games.read', 'playlists.read', 'games.play'],
         };
         set({
           user: guestUser,
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
-          isGuest: true
+          isGuest: true,
         });
       },
 
@@ -78,7 +78,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           isAuthenticated: false,
-          isGuest: false
+          isGuest: false,
         });
       },
 
@@ -109,14 +109,14 @@ export const useAuthStore = create<AuthState>()(
       hasAnyPermission: (permissions: string[]) => {
         const { user } = get();
         if (!user) return false;
-        return permissions.some(permission => user.permissions.includes(permission));
+        return permissions.some((permission) => user.permissions.includes(permission));
       },
 
       hasAllPermissions: (permissions: string[]) => {
         const { user } = get();
         if (!user) return false;
-        return permissions.every(permission => user.permissions.includes(permission));
-      }
+        return permissions.every((permission) => user.permissions.includes(permission));
+      },
     }),
     {
       name: 'flashpoint-auth',
@@ -155,8 +155,8 @@ export const useAuthStore = create<AuthState>()(
         removeItem: (name) => {
           localStorage.removeItem(name);
           sessionStorage.removeItem(name);
-        }
-      }))
+        },
+      })),
     }
   )
 );

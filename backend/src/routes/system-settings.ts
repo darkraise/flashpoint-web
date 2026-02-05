@@ -1,28 +1,36 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import { config } from '../config';
 import { CachedSystemSettingsService } from '../services/CachedSystemSettingsService';
+import { DomainService } from '../services/DomainService';
 import { PermissionCache } from '../services/PermissionCache';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { JobScheduler } from '../services/JobScheduler';
 import { logger } from '../utils/logger';
+import { CategorySettings } from '../types/settings';
 
 const router = Router();
-const systemSettings = new CachedSystemSettingsService();
+const systemSettings = CachedSystemSettingsService.getInstance();
+const domainService = DomainService.getInstance();
 
 // Helper function to update job scheduler when jobs settings change
-function updateJobScheduler(category: string, settings: Record<string, any>): void {
+function updateJobScheduler(category: string, settings: CategorySettings): void {
   if (category === 'jobs') {
     // Update metadata sync job if its settings changed
     if ('metadataSyncEnabled' in settings || 'metadataSyncSchedule' in settings) {
       const currentSettings = systemSettings.getCategory('jobs');
-      const enabled = settings.metadataSyncEnabled ?? currentSettings.metadataSyncEnabled ?? false;
-      const cronSchedule = settings.metadataSyncSchedule ?? currentSettings.metadataSyncSchedule ?? '0 * * * *';
+      const enabled = (settings.metadataSyncEnabled ??
+        currentSettings.metadataSyncEnabled ??
+        false) as boolean;
+      const cronSchedule = (settings.metadataSyncSchedule ??
+        currentSettings.metadataSyncSchedule ??
+        '0 * * * *') as string;
 
       JobScheduler.updateJob('metadata-sync', {
         enabled,
-        cronSchedule
+        cronSchedule,
       });
     }
   }
@@ -43,7 +51,7 @@ router.get(
     } catch (error) {
       logger.error('Failed to get all settings:', error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve settings' }
+        error: { message: 'Failed to retrieve settings' },
       });
     }
   }
@@ -54,26 +62,39 @@ router.get(
 // ===================================
 router.get('/public', async (req: Request, res: Response) => {
   try {
-    const publicSettings = systemSettings.getPublicSettings();
+    const publicSettings: Record<
+      string,
+      Record<string, unknown>
+    > = systemSettings.getPublicSettings();
 
     // Add environment-based config values to public settings
     if (!publicSettings.app) {
       publicSettings.app = {};
     }
-    publicSettings.app.homeRecentHours = require('../config').config.homeRecentHours;
+    publicSettings.app.homeRecentHours = config.homeRecentHours;
 
     // Inject edition/version from config (auto-detected from version.txt, not stored in DB)
     if (!publicSettings.metadata) {
       publicSettings.metadata = {};
     }
-    publicSettings.metadata.flashpointEdition = require('../config').config.flashpointEdition;
-    publicSettings.metadata.flashpointVersion = require('../config').config.flashpointVersionString;
+    publicSettings.metadata.flashpointEdition = config.flashpointEdition;
+    publicSettings.metadata.flashpointVersion = config.flashpointVersionString;
+
+    // Inject default domain from domains table
+    try {
+      publicSettings.domains = {
+        defaultDomain: domainService.getDefaultDomain(),
+      };
+    } catch (error) {
+      logger.debug('[PublicSettings] Failed to fetch default domain:', error);
+      publicSettings.domains = { defaultDomain: null };
+    }
 
     res.json(publicSettings);
   } catch (error) {
     logger.error('Failed to get public settings:', error);
     res.status(500).json({
-      error: { message: 'Failed to retrieve public settings' }
+      error: { message: 'Failed to retrieve public settings' },
     });
   }
 });
@@ -95,7 +116,7 @@ router.get(
     } catch (error) {
       logger.error(`Failed to get ${req.params.category} settings:`, error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve settings' }
+        error: { message: 'Failed to retrieve settings' },
       });
     }
   }
@@ -104,7 +125,9 @@ router.get(
 // ===================================
 // UPDATE CATEGORY SETTINGS (Admin Only)
 // ===================================
-const updateCategorySchema = z.record(z.any());
+const updateCategorySchema = z.record(
+  z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())])
+);
 
 router.patch(
   '/:category',
@@ -120,8 +143,8 @@ router.patch(
         return res.status(400).json({
           error: {
             message: 'Invalid request body',
-            details: validation.error.errors
-          }
+            details: validation.error.errors,
+          },
         });
       }
 
@@ -143,12 +166,12 @@ router.patch(
       // Check if it's a validation error
       if (error instanceof Error && error.message.includes('must be')) {
         return res.status(400).json({
-          error: { message: error.message }
+          error: { message: error.message },
         });
       }
 
       res.status(500).json({
-        error: { message: 'Failed to update settings' }
+        error: { message: 'Failed to update settings' },
       });
     }
   }
@@ -169,7 +192,7 @@ router.get(
 
       if (value === null) {
         return res.status(404).json({
-          error: { message: `Setting '${fullKey}' not found` }
+          error: { message: `Setting '${fullKey}' not found` },
         });
       }
 
@@ -177,7 +200,7 @@ router.get(
     } catch (error) {
       logger.error(`Failed to get setting ${req.params.category}.${req.params.key}:`, error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve setting' }
+        error: { message: 'Failed to retrieve setting' },
       });
     }
   }
@@ -187,7 +210,7 @@ router.get(
 // UPDATE SINGLE SETTING (Admin Only)
 // ===================================
 const updateSettingSchema = z.object({
-  value: z.any()
+  value: z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())]),
 });
 
 router.patch(
@@ -205,8 +228,8 @@ router.patch(
         return res.status(400).json({
           error: {
             message: 'Invalid request body',
-            details: validation.error.errors
-          }
+            details: validation.error.errors,
+          },
         });
       }
 
@@ -225,12 +248,12 @@ router.patch(
       // Check if it's a validation error
       if (error instanceof Error && error.message.includes('must be')) {
         return res.status(400).json({
-          error: { message: error.message }
+          error: { message: error.message },
         });
       }
 
       res.status(500).json({
-        error: { message: 'Failed to update setting' }
+        error: { message: 'Failed to update setting' },
       });
     }
   }
@@ -250,7 +273,7 @@ router.get(
     } catch (error) {
       logger.error('Failed to get cache stats:', error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve cache statistics' }
+        error: { message: 'Failed to retrieve cache statistics' },
       });
     }
   }
@@ -278,7 +301,7 @@ router.post(
     } catch (error) {
       logger.error('Failed to clear cache:', error);
       res.status(500).json({
-        error: { message: 'Failed to clear cache' }
+        error: { message: 'Failed to clear cache' },
       });
     }
   }
@@ -302,14 +325,14 @@ router.get(
           totalSize: 'Total cached entries',
           ttl: {
             userPermissions: '5 minutes',
-            rolePermissions: '10 minutes'
-          }
-        }
+            rolePermissions: '10 minutes',
+          },
+        },
       });
     } catch (error) {
       logger.error('Failed to get permission cache stats:', error);
       res.status(500).json({
-        error: { message: 'Failed to retrieve permission cache statistics' }
+        error: { message: 'Failed to retrieve permission cache statistics' },
       });
     }
   }
@@ -345,14 +368,15 @@ router.post(
       } else {
         res.status(400).json({
           error: {
-            message: 'Invalid request. Specify type: "user", "role", "users", "roles", or "all". For "user" or "role", provide an id.'
-          }
+            message:
+              'Invalid request. Specify type: "user", "role", "users", "roles", or "all". For "user" or "role", provide an id.',
+          },
         });
       }
     } catch (error) {
       logger.error('Failed to clear permission cache:', error);
       res.status(500).json({
-        error: { message: 'Failed to clear permission cache' }
+        error: { message: 'Failed to clear permission cache' },
       });
     }
   }

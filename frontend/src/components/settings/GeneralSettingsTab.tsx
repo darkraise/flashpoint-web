@@ -1,81 +1,80 @@
-import { Shield, Calendar } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { motion, Variants } from "framer-motion";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { authSettingsApi, ruffleApi, usersApi } from "@/lib/api";
-import { useAuthStore } from "@/store/auth";
-import { useDialog } from "@/contexts/DialogContext";
-import { usePublicSettings } from "@/hooks/usePublicSettings";
+import { Shield, Calendar } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { motion, Variants } from 'framer-motion';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { authSettingsApi, ruffleApi, usersApi } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
+import { useDialog } from '@/contexts/DialogContext';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { UpdateAuthSettingsData } from '@/types/auth';
+import { AxiosError } from 'axios';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 interface GeneralSettingsTabProps {
   tabContentVariants: Variants;
 }
 
-export function GeneralSettingsTab({
-  tabContentVariants,
-}: GeneralSettingsTabProps) {
+export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabProps) {
   const { user } = useAuthStore();
   const { showToast } = useDialog();
-  const isAdmin = user?.permissions.includes("settings.update");
+  const isAdmin = user?.permissions.includes('settings.update');
 
   // Public settings (cached, no extra request) for edition/version
   const { data: publicSettings } = usePublicSettings();
 
   // Fetch auth settings
   const { data: authSettings, refetch: refetchAuthSettings } = useQuery({
-    queryKey: ["authSettings"],
+    queryKey: ['authSettings'],
     queryFn: () => authSettingsApi.get(),
     enabled: isAdmin,
   });
 
   // Fetch Ruffle version (public - accessible to all users)
   const { data: ruffleVersion, isLoading: isLoadingRuffleVersion } = useQuery({
-    queryKey: ["ruffleVersion"],
+    queryKey: ['ruffleVersion'],
     queryFn: () => ruffleApi.getVersion(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Fetch user settings (for date/time format preferences)
   const { data: userSettings, refetch: refetchUserSettings } = useQuery({
-    queryKey: ["userSettings"],
+    queryKey: ['userSettings'],
     queryFn: () => usersApi.getAllSettings(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Update auth settings mutation
   const updateAuthSettings = useMutation({
-    mutationFn: (settings: Partial<any>) => authSettingsApi.update(settings),
+    mutationFn: (settings: UpdateAuthSettingsData) => authSettingsApi.update(settings),
     onSuccess: () => {
       refetchAuthSettings();
-      showToast("Settings updated successfully", "success");
+      showToast('Settings updated successfully', 'success');
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.error?.message || "Failed to update settings";
-      showToast(message, "error");
+    onError: (error: unknown) => {
+      const axiosError = error instanceof AxiosError ? error : null;
+      const message = axiosError?.response?.data?.error?.message || 'Failed to update settings';
+      showToast(message, 'error');
     },
   });
 
   // Update user settings mutation (for date/time format preferences)
   const updateUserSettings = useMutation({
-    mutationFn: (settings: Record<string, string>) =>
-      usersApi.updateSettings(settings),
+    mutationFn: (settings: Record<string, string>) => usersApi.updateSettings(settings),
     onSuccess: () => {
       refetchUserSettings();
-      showToast("Settings updated successfully", "success");
+      showToast('Settings updated successfully', 'success');
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.error?.message || "Failed to update settings";
-      showToast(message, "error");
+    onError: (error: unknown) => {
+      const axiosError = error instanceof AxiosError ? error : null;
+      const message = axiosError?.response?.data?.error?.message || 'Failed to update settings';
+      showToast(message, 'error');
     },
   });
 
@@ -97,7 +96,7 @@ export function GeneralSettingsTab({
             <span className="font-medium">
               {publicSettings?.metadata?.flashpointVersion
                 ? String(publicSettings.metadata.flashpointVersion)
-                : "Unknown"}
+                : 'Unknown'}
             </span>
           </div>
           <div className="flex justify-between">
@@ -105,7 +104,7 @@ export function GeneralSettingsTab({
             <span className="font-medium capitalize">
               {publicSettings?.metadata?.flashpointEdition
                 ? String(publicSettings.metadata.flashpointEdition)
-                : "Unknown"}
+                : 'Unknown'}
             </span>
           </div>
           <div className="flex justify-between">
@@ -116,15 +115,15 @@ export function GeneralSettingsTab({
             <span className="text-muted-foreground">Ruffle Emulator:</span>
             <span className="font-medium">
               {isLoadingRuffleVersion
-                ? "Loading..."
-                : ruffleVersion?.currentVersion || "Not installed"}
+                ? 'Loading...'
+                : ruffleVersion?.currentVersion || 'Not installed'}
             </span>
           </div>
         </div>
       </div>
 
       {/* Date & Time Format Settings - Available to all authenticated users */}
-      {userSettings && (
+      {userSettings ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <Calendar size={24} className="text-primary" />
@@ -139,7 +138,7 @@ export function GeneralSettingsTab({
                 Choose how dates are displayed throughout the application
               </p>
               <Select
-                value={userSettings.date_format || "MM/dd/yyyy"}
+                value={userSettings.date_format || 'MM/dd/yyyy'}
                 onValueChange={(value: string) => {
                   updateUserSettings.mutate({ date_format: value });
                 }}
@@ -168,7 +167,7 @@ export function GeneralSettingsTab({
                 Choose how times are displayed throughout the application
               </p>
               <Select
-                value={userSettings.time_format || "hh:mm a"}
+                value={userSettings.time_format || 'hh:mm a'}
                 onValueChange={(value: string) => {
                   updateUserSettings.mutate({ time_format: value });
                 }}
@@ -187,17 +186,17 @@ export function GeneralSettingsTab({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Authentication Settings (Admin Only) */}
-      {isAdmin && (
+      {isAdmin ? (
         <div className="bg-card rounded-lg p-6 border border-border shadow-md">
           <div className="flex items-center gap-2 mb-4">
             <Shield size={24} className="text-primary" />
             <h2 className="text-xl font-semibold">Authentication Settings</h2>
           </div>
 
-          {authSettings && (
+          {authSettings ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -205,8 +204,8 @@ export function GeneralSettingsTab({
                     Allow User Registration
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    When enabled, anonymous users can create their own accounts.
-                    When disabled, only administrators can create users.
+                    When enabled, anonymous users can create their own accounts. When disabled, only
+                    administrators can create users.
                   </p>
                 </div>
                 <Switch
@@ -227,9 +226,8 @@ export function GeneralSettingsTab({
                     Allow Guest Access
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    When enabled, users can browse games without logging in.
-                    When disabled, authentication is required to access the
-                    application.
+                    When enabled, users can browse games without logging in. When disabled,
+                    authentication is required to access the application.
                   </p>
                 </div>
                 <Switch
@@ -244,9 +242,9 @@ export function GeneralSettingsTab({
                 />
               </div>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </motion.div>
   );
 }

@@ -1,14 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 import { logger } from '@/lib/logger';
-import { Menu, User, LogOut } from "lucide-react";
-import { useUIStore } from "@/store/ui";
-import { useAuthStore } from "@/store/auth";
-import { useAuth } from "@/contexts/AuthContext";
-import { usePublicSettings } from "@/hooks/usePublicSettings";
-import { SearchBar } from "../search/SearchBar";
-import { ThemePicker } from "../theme/ThemePicker";
-import { GitHubButton } from "../github/GitHubButton";
-import { Button } from "@/components/ui/button";
+import { Menu, User, LogOut } from 'lucide-react';
+import { useUIStore } from '@/store/ui';
+import { useAuthStore } from '@/store/auth';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { SearchBar } from '../search/SearchBar';
+import { ThemePicker } from '../theme/ThemePicker';
+import { GitHubButton } from '../github/GitHubButton';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +16,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 interface HeaderProps {
   hideSidebarToggle?: boolean;
@@ -27,9 +27,7 @@ interface HeaderProps {
 
 export function Header({ hideSidebarToggle = false, hideSearch = false }: HeaderProps) {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
-  const toggleSidebarCollapsed = useUIStore(
-    (state) => state.toggleSidebarCollapsed,
-  );
+  const toggleSidebarCollapsed = useUIStore((state) => state.toggleSidebarCollapsed);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const { isAuthenticated, isGuest, user } = useAuthStore();
   const { logout } = useAuth();
@@ -37,10 +35,10 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
 
   // Get site name from settings or use default
   // Public settings are grouped by category: { app: { siteName: "..." }, auth: { ... } }
-  const siteName = publicSettings?.app?.siteName || "Flashpoint Archive";
+  const siteName = publicSettings?.app?.siteName || 'Flashpoint Archive';
 
   // On mobile, always show site name. On desktop, hide when sidebar is collapsed.
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
   const effectiveCollapsed = isMobile ? false : sidebarCollapsed;
 
   // Handle menu button click - different behavior for mobile vs desktop
@@ -58,7 +56,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
     try {
       await logout();
     } catch (error) {
-      logger.error("Logout error:", error);
+      logger.error('Logout error:', error);
     }
   };
 
@@ -67,9 +65,9 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
   };
 
   const getRoleBadgeVariant = (role: string) => {
-    if (role === "admin") return "default";
-    if (role === "user") return "secondary";
-    return "outline";
+    if (role === 'admin') return 'default';
+    if (role === 'user') return 'secondary';
+    return 'outline';
   };
 
   return (
@@ -91,42 +89,36 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
               <div
                 className="overflow-hidden hidden sm:block"
                 style={{
-                  maxWidth: effectiveCollapsed ? 0 : "24rem",
+                  maxWidth: effectiveCollapsed ? 0 : '24rem',
                   opacity: effectiveCollapsed ? 0 : 1,
                   transition: isMobile
                     ? undefined
-                    : "max-width 500ms ease-out, opacity 500ms ease-out",
+                    : 'max-width 500ms ease-out, opacity 500ms ease-out',
                 }}
               >
-                <span className="text-xl font-bold whitespace-nowrap ml-2">
-                  {siteName}
-                </span>
+                <span className="text-xl font-bold whitespace-nowrap ml-2">{siteName}</span>
               </div>
             </Link>
 
-            {!hideSidebarToggle && (
+            {!hideSidebarToggle ? (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleMenuClick}
                 aria-label="Toggle sidebar"
-                title={
-                  window.innerWidth < 1024
-                    ? "Toggle sidebar"
-                    : "Toggle sidebar width"
-                }
+                title={window.innerWidth < 1024 ? 'Toggle sidebar' : 'Toggle sidebar width'}
               >
                 <Menu size={20} />
               </Button>
-            )}
+            ) : null}
           </div>
 
           {/* Center: Search Bar (Desktop only) */}
-          {!hideSearch && (
+          {!hideSearch ? (
             <div className="flex-1 max-w-2xl mx-auto hidden md:block">
               <SearchBar />
             </div>
-          )}
+          ) : null}
 
           {/* Right: GitHub, Theme Settings & User Menu */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -143,9 +135,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted">
                       <User size={16} className="text-muted-foreground" />
-                      <span className="text-sm hidden sm:block">
-                        {user.username}
-                      </span>
+                      <span className="text-sm hidden sm:block">{user.username}</span>
                       <Badge variant="outline" className="text-xs">
                         {user.role}
                       </Badge>
@@ -155,25 +145,16 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
                     </Button>
                   </div>
                 ) : (
-                  /* Authenticated User - Full menu with logout */
-                  <DropdownMenu>
+                  /* Authenticated User - Full menu with logout */ <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center gap-2"
-                      >
+                      <Button variant="ghost" className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
                           <AvatarFallback className="text-xs">
                             {getUserInitials(user.username)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm hidden sm:block">
-                          {user.username}
-                        </span>
-                        <Badge
-                          variant={getRoleBadgeVariant(user.role)}
-                          className="text-xs"
-                        >
+                        <span className="text-sm hidden sm:block">{user.username}</span>
+                        <Badge variant={getRoleBadgeVariant(user.role)} className="text-xs">
                           {user.role}
                         </Badge>
                       </Button>
@@ -182,9 +163,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
                       <DropdownMenuLabel>
                         <div>
                           <p className="text-sm font-medium">{user.username}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {user.email}
-                          </p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
@@ -211,11 +190,11 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
       </div>
 
       {/* Mobile Search Bar (below main header) */}
-      {!hideSearch && (
+      {!hideSearch ? (
         <div className="md:hidden px-4 pb-3">
           <SearchBar />
         </div>
-      )}
+      ) : null}
     </header>
   );
 }

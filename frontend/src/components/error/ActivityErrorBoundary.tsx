@@ -44,7 +44,7 @@ export class ActivityErrorBoundary extends Component<Props, State> {
                 <p className="text-sm text-muted-foreground mb-4">
                   An error occurred while loading the activity logs. Please try refreshing the page.
                 </p>
-                {this.state.error && (
+                {this.state.error ? (
                   <details className="text-xs text-muted-foreground mb-4">
                     <summary className="cursor-pointer hover:text-foreground">
                       Error details
@@ -53,7 +53,7 @@ export class ActivityErrorBoundary extends Component<Props, State> {
                       {this.state.error.toString()}
                     </pre>
                   </details>
-                )}
+                ) : null}
                 <button
                   onClick={this.handleReset}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"

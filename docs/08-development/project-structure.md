@@ -74,6 +74,7 @@ backend/
 ```
 
 **Patterns:**
+
 - Services: `PascalCase.ts` (e.g., `GameService.ts`)
 - Routes: `kebab-case.ts` (e.g., `play-tracking.ts`)
 - Middleware/Utils: `camelCase.ts`
@@ -152,6 +153,7 @@ frontend/
 ```
 
 **Patterns:**
+
 - Components: `PascalCase.tsx`
 - Hooks: `useXxxx.ts`
 - Stores: `camelCase.ts`
@@ -222,6 +224,7 @@ docs/
 ## Configuration Files
 
 ### Root
+
 - `package.json` - Monorepo scripts
 - `package-lock.json` - Dependency lock
 - `docker-compose.yml` - Docker services
@@ -229,12 +232,14 @@ docs/
 - `README.md` - Project overview
 
 ### Backend
+
 - `tsconfig.json` - TypeScript config
 - `.eslintrc.json` - ESLint rules
 - `vitest.config.ts` - Test config
 - `.env.example` - Environment template
 
 ### Frontend
+
 - `tsconfig.json` - TypeScript config (app)
 - `tsconfig.node.json` - TypeScript config (Vite)
 - `vite.config.ts` - Vite bundler
@@ -243,6 +248,7 @@ docs/
 - `.eslintrc.json` - ESLint rules
 
 ### Game Service
+
 - `tsconfig.json` - TypeScript config
 - `.env.example` - Environment template
 
@@ -251,6 +257,7 @@ docs/
 ## Data Directories
 
 ### Flashpoint Installation (FLASHPOINT_PATH)
+
 ```
 D:/Flashpoint/
 ├── Data/
@@ -265,6 +272,7 @@ D:/Flashpoint/
 ```
 
 ### Application Data
+
 ```
 backend/
 ├── user.db                      # User database
@@ -296,17 +304,20 @@ import { api } from '@/lib/api';
 ## Build Output
 
 ### Backend (dist/)
+
 - server.js - Entry point
 - Compiled JavaScript files
 - Type declarations (.d.ts)
 - Source maps (.js.map)
 
 ### Frontend (dist/)
+
 - index.html - Entry point
 - assets/ - Minified JS, CSS, hashed bundles
 - ruffle/ - Ruffle emulator files
 
 ### Game Service (dist/)
+
 - index.js - Entry point
 - Compiled JavaScript files
 

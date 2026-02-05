@@ -2,9 +2,14 @@
 
 ## Overview
 
-This document outlines the recommended database indexes for optimal query performance on the Flashpoint database (`flashpoint.sqlite`). Without these indexes, queries on large datasets (500K+ games) can take 5-10 seconds instead of <100ms.
+This document outlines the recommended database indexes for optimal query
+performance on the Flashpoint database (`flashpoint.sqlite`). Without these
+indexes, queries on large datasets (500K+ games) can take 5-10 seconds instead
+of <100ms.
 
-**IMPORTANT**: These indexes need to be added to the **Flashpoint database** (`flashpoint.sqlite`), not the user database (`user.db`). This must be coordinated with the Flashpoint Archive maintainers.
+**IMPORTANT**: These indexes need to be added to the **Flashpoint database**
+(`flashpoint.sqlite`), not the user database (`user.db`). This must be
+coordinated with the Flashpoint Archive maintainers.
 
 ---
 
@@ -12,14 +17,17 @@ This document outlines the recommended database indexes for optimal query perfor
 
 ### Game Table Indexes
 
-The `game` table is the primary performance bottleneck. The following indexes are recommended based on common query patterns in `GameService.ts`:
+The `game` table is the primary performance bottleneck. The following indexes
+are recommended based on common query patterns in `GameService.ts`:
 
 #### 1. Platform Name Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_platform ON game(platformName);
 ```
 
 **Used by:**
+
 - Platform filtering in game search
 - Web-playable game counts (Flash, HTML5)
 - Platform-specific browsing
@@ -29,11 +37,13 @@ CREATE INDEX IF NOT EXISTS idx_game_platform ON game(platformName);
 ---
 
 #### 2. Series Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_series ON game(series);
 ```
 
 **Used by:**
+
 - Series filtering in advanced search
 - "Games in this series" feature
 
@@ -42,11 +52,13 @@ CREATE INDEX IF NOT EXISTS idx_game_series ON game(series);
 ---
 
 #### 3. Developer Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_developer ON game(developer);
 ```
 
 **Used by:**
+
 - Developer filtering
 - "More games by this developer" queries
 
@@ -55,11 +67,13 @@ CREATE INDEX IF NOT EXISTS idx_game_developer ON game(developer);
 ---
 
 #### 4. Publisher Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_publisher ON game(publisher);
 ```
 
 **Used by:**
+
 - Publisher filtering
 - Publisher-specific game lists
 
@@ -68,11 +82,13 @@ CREATE INDEX IF NOT EXISTS idx_game_publisher ON game(publisher);
 ---
 
 #### 5. Play Mode Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_playmode ON game(playMode);
 ```
 
 **Used by:**
+
 - Single-player vs multiplayer filtering
 - Play mode statistics
 
@@ -81,11 +97,13 @@ CREATE INDEX IF NOT EXISTS idx_game_playmode ON game(playMode);
 ---
 
 #### 6. Language Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_language ON game(language);
 ```
 
 **Used by:**
+
 - Language filtering
 - Localization statistics
 
@@ -94,11 +112,13 @@ CREATE INDEX IF NOT EXISTS idx_game_language ON game(language);
 ---
 
 #### 7. Release Date Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_releasedate ON game(releaseDate);
 ```
 
 **Used by:**
+
 - Date range filtering
 - "New releases" queries
 - Decade browsing
@@ -108,11 +128,13 @@ CREATE INDEX IF NOT EXISTS idx_game_releasedate ON game(releaseDate);
 ---
 
 #### 8. Library Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_library ON game(library);
 ```
 
 **Used by:**
+
 - Separating games ('arcade') from animations ('theatre')
 - Library-specific statistics
 - Used in Statistics endpoint
@@ -122,11 +144,13 @@ CREATE INDEX IF NOT EXISTS idx_game_library ON game(library);
 ---
 
 #### 9. Composite Index: Platform + Library
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_platform_library ON game(platformName, library);
 ```
 
 **Used by:**
+
 - Web-playable games counting (Flash/HTML5 + arcade)
 - Platform statistics per library
 
@@ -137,11 +161,13 @@ CREATE INDEX IF NOT EXISTS idx_game_platform_library ON game(platformName, libra
 ### Tag Table Indexes
 
 #### 10. Game Tags Junction Index
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_game_tags_gameid ON game_tags_tag(gameId);
 ```
 
 **Used by:**
+
 - Fetching all tags for a specific game
 - Tag-based filtering
 
@@ -152,12 +178,14 @@ CREATE INDEX IF NOT EXISTS idx_game_tags_gameid ON game_tags_tag(gameId);
 ## Performance Measurements
 
 ### Without Indexes
+
 - **Search with platform filter:** ~5,000ms
 - **Developer-specific search:** ~8,000ms
 - **Statistics endpoint:** ~12,000ms
 - **Web-playable games count:** ~3,000ms
 
 ### With Indexes
+
 - **Search with platform filter:** ~50ms (99% faster)
 - **Developer-specific search:** ~80ms (99% faster)
 - **Statistics endpoint:** ~150ms (98.75% faster)
@@ -197,11 +225,13 @@ SELECT * FROM game WHERE platformName = 'Flash' AND library = 'arcade';
 ```
 
 **Expected output (with indexes):**
+
 ```
 SEARCH TABLE game USING INDEX idx_game_platform_library (platformName=? AND library=?)
 ```
 
 **Bad output (without indexes):**
+
 ```
 SCAN TABLE game
 ```
@@ -211,11 +241,13 @@ SCAN TABLE game
 ## Index Maintenance
 
 ### Size Impact
+
 - Each index adds ~5-10% to database size
 - 10 indexes on 500K games ≈ +50-100MB
 - **Worth it**: Query speed improvements far outweigh size increase
 
 ### Updates
+
 - Indexes are automatically maintained by SQLite
 - Inserts/updates/deletes are slightly slower
 - Flashpoint database is primarily read-only, so minimal impact
@@ -225,6 +257,7 @@ SCAN TABLE game
 ## Coordination with Flashpoint Archive
 
 **Action Items:**
+
 1. Submit pull request to Flashpoint Launcher repository
 2. Include this documentation and SQL script
 3. Request index addition in next database release
@@ -242,7 +275,8 @@ While waiting for database-level indexes, the application implements:
 3. **Pagination** - Limit result sets to 50-100 records
 4. **Query Optimization** - Use WHERE clauses efficiently
 
-However, **database indexes provide the most significant performance improvement** and should be prioritized.
+However, **database indexes provide the most significant performance
+improvement** and should be prioritized.
 
 ---
 
@@ -254,5 +288,5 @@ However, **database indexes provide the most significant performance improvement
 
 ---
 
-**Last Updated:** 2026-01-27
-**Status:** Awaiting Flashpoint Archive coordination
+**Last Updated:** 2026-01-27 **Status:** Awaiting Flashpoint Archive
+coordination

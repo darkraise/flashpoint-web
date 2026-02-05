@@ -101,7 +101,7 @@ const PlaylistCardComponent = function PlaylistCard({
         {/* COLUMN 3: Action Buttons */}
         <div className="flex flex-col gap-2 flex-shrink-0">
           {/* Menu Button (always visible) */}
-          {showActions && (onEdit || onDelete || onShare) && (
+          {showActions && (onEdit || onDelete || onShare) ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.preventDefault()}>
                 <Button
@@ -114,19 +114,19 @@ const PlaylistCardComponent = function PlaylistCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {onEdit && (
+                {onEdit ? (
                   <DropdownMenuItem onClick={handleEdit}>
                     <Edit size={16} className="mr-2" />
                     Edit
                   </DropdownMenuItem>
-                )}
-                {onShare && (
+                ) : null}
+                {onShare ? (
                   <DropdownMenuItem onClick={handleShare}>
                     <Share2 size={16} className="mr-2" />
                     Share
                   </DropdownMenuItem>
-                )}
-                {onDelete && (
+                ) : null}
+                {onDelete ? (
                   <DropdownMenuItem
                     onClick={handleDelete}
                     className="text-destructive focus:text-destructive"
@@ -134,10 +134,10 @@ const PlaylistCardComponent = function PlaylistCard({
                     <Trash2 size={16} className="mr-2" />
                     Delete
                   </DropdownMenuItem>
-                )}
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+          ) : null}
 
           {/* Share Indicator Button (icon only) */}
           {playlist.isPublic && playlist.shareToken ? (

@@ -26,30 +26,40 @@ router.use(requireFeature('enablePlaylists'));
 const createPlaylistSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().optional(),
-  icon: z.string().optional()
+  icon: z.string().optional(),
 });
 
 const updatePlaylistSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
-  icon: z.string().optional()
+  icon: z.string().optional(),
 });
 
 const addGamesSchema = z.object({
-  gameIds: z.array(z.string()).min(1)
+  gameIds: z.array(z.string()).min(1),
 });
 
 const removeGamesSchema = z.object({
-  gameIds: z.array(z.string()).min(1)
+  gameIds: z.array(z.string()).min(1),
 });
 
 const reorderGamesSchema = z.object({
-  gameIdOrder: z.array(z.string()).min(1)
+  gameIdOrder: z.array(z.string()).min(1),
 });
 
 const copyFlashpointPlaylistSchema = z.object({
   flashpointPlaylistId: z.string(),
-  newTitle: z.string().optional()
+  newTitle: z.string().optional(),
+});
+
+const enableSharingSchema = z.object({
+  expiresAt: z.string().datetime().nullable().optional(),
+  showOwner: z.boolean().optional(),
+});
+
+const updateShareSettingsSchema = z.object({
+  expiresAt: z.string().datetime().nullable().optional(),
+  showOwner: z.boolean().optional(),
 });
 
 /**
@@ -61,7 +71,7 @@ router.get(
   authenticate,
   requirePermission('playlists.read'),
   logActivity('playlists.view.list', 'user_playlists', (req, res) => ({
-    playlistCount: res.locals.playlistCount || 0
+    playlistCount: res.locals.playlistCount || 0,
   })),
   asyncHandler(async (req, res) => {
     if (!req.user) {
@@ -106,7 +116,7 @@ router.get(
   logActivity('playlists.view.detail', 'user_playlists', (req, res) => ({
     playlistId: req.params.id,
     playlistTitle: res.locals.playlistTitle || null,
-    gameCount: res.locals.gameCount || 0
+    gameCount: res.locals.gameCount || 0,
   })),
   asyncHandler(async (req, res) => {
     if (!req.user) {
@@ -185,7 +195,7 @@ router.patch(
   requirePermission('playlists.update'),
   logActivity('playlists.update.metadata', 'user_playlists', (req, _res) => ({
     playlistId: req.params.id,
-    fieldsUpdated: Object.keys(req.body)
+    fieldsUpdated: Object.keys(req.body),
   })),
   asyncHandler(async (req, res) => {
     if (!req.user) {
@@ -248,7 +258,7 @@ router.post(
   requirePermission('playlists.update'),
   logActivity('playlists.games.add', 'user_playlist_games', (req) => ({
     playlistId: req.params.id,
-    gamesAdded: req.body.gameIds?.length || 0
+    gamesAdded: req.body.gameIds?.length || 0,
   })),
   asyncHandler(async (req, res) => {
     if (!req.user) {
@@ -273,7 +283,7 @@ router.post(
 
     res.json({
       ...updatedPlaylist,
-      games
+      games,
     });
   })
 );
@@ -289,7 +299,7 @@ router.delete(
   requirePermission('playlists.update'),
   logActivity('playlists.games.remove', 'user_playlist_games', (req) => ({
     playlistId: req.params.id,
-    gamesRemoved: req.body.gameIds?.length || 0
+    gamesRemoved: req.body.gameIds?.length || 0,
   })),
   asyncHandler(async (req, res) => {
     if (!req.user) {
@@ -314,7 +324,7 @@ router.delete(
 
     res.json({
       ...updatedPlaylist,
-      games
+      games,
     });
   })
 );
@@ -330,7 +340,7 @@ router.put(
   requirePermission('playlists.update'),
   logActivity('playlists.games.reorder', 'user_playlist_games', (req) => ({
     playlistId: req.params.id,
-    gameCount: req.body.gameIdOrder?.length || 0
+    gameCount: req.body.gameIdOrder?.length || 0,
   })),
   asyncHandler(async (req, res) => {
     if (!req.user) {
@@ -355,7 +365,7 @@ router.put(
 
     res.json({
       ...updatedPlaylist,
-      games
+      games,
     });
   })
 );
@@ -408,11 +418,11 @@ router.post(
       throw new AppError(400, 'Invalid playlist ID');
     }
 
-    const { expiresAt, showOwner } = req.body;
+    const { expiresAt, showOwner } = enableSharingSchema.parse(req.body);
 
     const shareData = playlistService.enableSharing(playlistId, req.user.id, {
       expiresAt,
-      showOwner
+      showOwner,
     });
 
     if (!shareData) {
@@ -500,11 +510,11 @@ router.patch(
       throw new AppError(400, 'Invalid playlist ID');
     }
 
-    const { expiresAt, showOwner } = req.body;
+    const { expiresAt, showOwner } = updateShareSettingsSchema.parse(req.body);
 
     const shareData = playlistService.updateShareSettings(playlistId, req.user.id, {
       expiresAt,
-      showOwner
+      showOwner,
     });
 
     if (!shareData) {

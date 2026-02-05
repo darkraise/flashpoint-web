@@ -2,7 +2,8 @@
 
 ## Overview
 
-Flashpoint Web uses JWT-based authentication with role-based access control (RBAC).
+Flashpoint Web uses JWT-based authentication with role-based access control
+(RBAC).
 
 ## Authentication Architecture
 
@@ -95,16 +96,19 @@ sequenceDiagram
 ```
 
 **Password Validation Schema**:
+
 ```typescript
-const registerSchema = z.object({
-  username: z.string().min(3).max(50),
-  email: z.string().email(),
-  password: z.string().min(6),
-  confirmPassword: z.string()
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"]
-});
+const registerSchema = z
+  .object({
+    username: z.string().min(3).max(50),
+    email: z.string().email(),
+    password: z.string().min(6),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 ```
 
 ## 2. User Login Flow
@@ -150,6 +154,7 @@ sequenceDiagram
 ```
 
 **JWT Token Structure**:
+
 ```typescript
 // Access Token
 {
@@ -213,6 +218,7 @@ sequenceDiagram
 ```
 
 **Authentication Middleware**:
+
 ```typescript
 export const authenticate = async (req, res, next) => {
   try {
@@ -230,7 +236,7 @@ export const authenticate = async (req, res, next) => {
       username: user.username,
       email: user.email,
       role: user.roleName,
-      permissions: user.permissions
+      permissions: user.permissions,
     };
 
     next();
@@ -241,6 +247,7 @@ export const authenticate = async (req, res, next) => {
 ```
 
 **RBAC Middleware**:
+
 ```typescript
 export const requirePermission = (permission: string) => {
   return (req, res, next) => {
@@ -293,6 +300,7 @@ sequenceDiagram
 ```
 
 **Axios Response Interceptor**:
+
 ```typescript
 api.interceptors.response.use(
   (response) => response,
@@ -369,6 +377,7 @@ graph TB
 ```
 
 **Database Schema**:
+
 ```sql
 CREATE TABLE roles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -395,12 +404,14 @@ CREATE TABLE role_permissions (
 ```
 
 **Default Roles**:
+
 - `admin`: Full system access
 - `moderator`: Content management and user support
 - `user`: Standard user features (games, playlists)
 - `guest`: Read-only access (if enabled)
 
 **Common Permissions**:
+
 ```
 games.read, games.play
 playlists.read, playlists.create, playlists.update, playlists.delete
@@ -410,6 +421,7 @@ settings.update
 ```
 
 **Frontend Permission Checks**:
+
 ```typescript
 export const ProtectedRoute = ({ children, requiredPermission }) => {
   const { isAuthenticated, hasPermission } = useAuthStore();
@@ -433,7 +445,8 @@ export const ProtectedRoute = ({ children, requiredPermission }) => {
 
 ## 7. Guest Mode
 
-When `auth.guest_access_enabled` is true in system settings, unauthenticated users can browse games with limited permissions.
+When `auth.guest_access_enabled` is true in system settings, unauthenticated
+users can browse games with limited permissions.
 
 ```typescript
 // Frontend
@@ -441,7 +454,7 @@ const guestUser: User = {
   id: 0,
   username: 'Guest',
   role: 'guest',
-  permissions: ['games.read', 'games.play']
+  permissions: ['games.read', 'games.play'],
 };
 
 // Backend
@@ -457,7 +470,12 @@ export const optionalAuth = async (req, res, next) => {
     if (!settings.guestAccessEnabled) {
       throw new AppError(401, 'Authentication required');
     }
-    req.user = { id: 0, username: 'guest', role: 'guest', permissions: ['games.read'] };
+    req.user = {
+      id: 0,
+      username: 'guest',
+      role: 'guest',
+      permissions: ['games.read'],
+    };
   }
 
   next();
@@ -469,6 +487,7 @@ export const optionalAuth = async (req, res, next) => {
 **Password Security**: Bcrypt with 10 rounds
 
 **JWT Security**:
+
 - Short-lived access tokens (15 minutes)
 - Long-lived refresh tokens (7 days)
 - Signed with random 256-bit JWT_SECRET
@@ -482,10 +501,10 @@ export const optionalAuth = async (req, res, next) => {
 
 ## Troubleshooting
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| 401 on valid requests | Token expired | Automatic refresh in Axios interceptor |
-| Infinite refresh loop | Refresh token also expired | Force logout and redirect to login |
-| 403 despite logged in | Missing permission | Check user role and permissions in database |
-| Guest access not working | Setting disabled | Verify `auth.guest_access_enabled` in system_settings |
-| Admin gets 503 in maintenance | Unauthenticated request | Use authenticated `api` client, not raw `fetch()` |
+| Issue                         | Cause                      | Solution                                              |
+| ----------------------------- | -------------------------- | ----------------------------------------------------- |
+| 401 on valid requests         | Token expired              | Automatic refresh in Axios interceptor                |
+| Infinite refresh loop         | Refresh token also expired | Force logout and redirect to login                    |
+| 403 despite logged in         | Missing permission         | Check user role and permissions in database           |
+| Guest access not working      | Setting disabled           | Verify `auth.guest_access_enabled` in system_settings |
+| Admin gets 503 in maintenance | Unauthenticated request    | Use authenticated `api` client, not raw `fetch()`     |

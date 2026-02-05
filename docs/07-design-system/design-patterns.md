@@ -18,9 +18,7 @@ Common UI patterns and best practices for Flashpoint Web.
     </div>
   </header>
 
-  <main className="container mx-auto px-4 py-8">
-    {children}
-  </main>
+  <main className="container mx-auto px-4 py-8">{children}</main>
 </div>
 ```
 
@@ -65,7 +63,7 @@ const [open, setOpen] = useState(false);
       <SidebarContent />
     </div>
   </aside>
-</>
+</>;
 ```
 
 ## Card Patterns
@@ -75,8 +73,14 @@ const [open, setOpen] = useState(false);
 ```tsx
 <Card className="group cursor-pointer overflow-hidden hover:shadow-lg transition-all">
   <div className="relative aspect-video overflow-hidden">
-    <img src={thumbnail} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-    <Badge variant="platform" className="absolute top-2 right-2">{platform}</Badge>
+    <img
+      src={thumbnail}
+      alt={title}
+      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+    />
+    <Badge variant="platform" className="absolute top-2 right-2">
+      {platform}
+    </Badge>
   </div>
 
   <CardHeader>
@@ -89,7 +93,10 @@ const [open, setOpen] = useState(false);
       <Calendar className="h-3 w-3" />
       <span>{releaseDate}</span>
     </div>
-    <Button size="sm"><Play className="mr-2 h-4 w-4" />Play</Button>
+    <Button size="sm">
+      <Play className="mr-2 h-4 w-4" />
+      Play
+    </Button>
   </CardFooter>
 </Card>
 ```
@@ -130,7 +137,12 @@ const [isLoading, setIsLoading] = useState(false);
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" type="password" placeholder="Enter password" required />
+        <Input
+          id="password"
+          type="password"
+          placeholder="Enter password"
+          required
+        />
       </div>
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -138,7 +150,7 @@ const [isLoading, setIsLoading] = useState(false);
       </Button>
     </form>
   </CardContent>
-</Card>
+</Card>;
 ```
 
 ### Filter Form
@@ -148,7 +160,9 @@ const [isLoading, setIsLoading] = useState(false);
   <CardHeader>
     <CardTitle className="flex items-center justify-between">
       Filters
-      <Button variant="ghost" size="sm">Reset</Button>
+      <Button variant="ghost" size="sm">
+        Reset
+      </Button>
     </CardTitle>
   </CardHeader>
   <CardContent className="space-y-6">
@@ -184,16 +198,24 @@ const [isLoading, setIsLoading] = useState(false);
 
 ```tsx
 <div className="space-y-2">
-  {items.map(item => (
-    <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors cursor-pointer">
+  {items.map((item) => (
+    <div
+      key={item.id}
+      className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent transition-colors cursor-pointer"
+    >
       <div className="flex items-center gap-3">
-        <Avatar><AvatarImage src={item.avatar} /><AvatarFallback>{item.initials}</AvatarFallback></Avatar>
+        <Avatar>
+          <AvatarImage src={item.avatar} />
+          <AvatarFallback>{item.initials}</AvatarFallback>
+        </Avatar>
         <div>
           <p className="font-medium">{item.title}</p>
           <p className="text-sm text-muted-foreground">{item.subtitle}</p>
         </div>
       </div>
-      <Button variant="ghost" size="sm"><ChevronRight className="h-4 w-4" /></Button>
+      <Button variant="ghost" size="sm">
+        <ChevronRight className="h-4 w-4" />
+      </Button>
     </div>
   ))}
 </div>
@@ -207,7 +229,10 @@ const [isLoading, setIsLoading] = useState(false);
     <CardTitle>Games Library</CardTitle>
     <div className="flex items-center gap-2">
       <Input placeholder="Search..." className="w-64" />
-      <Button><Plus className="mr-2 h-4 w-4" />Add Game</Button>
+      <Button>
+        <Plus className="mr-2 h-4 w-4" />
+        Add Game
+      </Button>
     </div>
   </CardHeader>
   <CardContent>
@@ -220,19 +245,29 @@ const [isLoading, setIsLoading] = useState(false);
         </TableRow>
       </TableHeader>
       <TableBody>
-        {games.map(game => (
+        {games.map((game) => (
           <TableRow key={game.id}>
             <TableCell className="font-medium">{game.title}</TableCell>
-            <TableCell><Badge variant="platform">{game.platform}</Badge></TableCell>
+            <TableCell>
+              <Badge variant="platform">{game.platform}</Badge>
+            </TableCell>
             <TableCell className="text-right">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem><Play className="mr-2 h-4 w-4" />Play</DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Play className="mr-2 h-4 w-4" />
+                    Play
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive"><Trash className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive">
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </TableCell>
@@ -251,16 +286,24 @@ const [isLoading, setIsLoading] = useState(false);
 ```tsx
 <AlertDialog>
   <AlertDialogTrigger asChild>
-    <Button variant="destructive"><Trash className="mr-2 h-4 w-4" />Delete</Button>
+    <Button variant="destructive">
+      <Trash className="mr-2 h-4 w-4" />
+      Delete
+    </Button>
   </AlertDialogTrigger>
   <AlertDialogContent>
     <AlertDialogHeader>
       <AlertDialogTitle>Delete {gameName}?</AlertDialogTitle>
-      <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+      <AlertDialogDescription>
+        This action cannot be undone.
+      </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogCancel>Cancel</AlertDialogCancel>
-      <AlertDialogAction onClick={onConfirm} className="bg-destructive text-destructive-foreground">
+      <AlertDialogAction
+        onClick={onConfirm}
+        className="bg-destructive text-destructive-foreground"
+      >
         Delete
       </AlertDialogAction>
     </AlertDialogFooter>
@@ -275,21 +318,31 @@ const [open, setOpen] = useState(false);
 
 <Dialog open={open} onOpenChange={setOpen}>
   <DialogTrigger asChild>
-    <Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit</Button>
+    <Button variant="outline">
+      <Edit className="mr-2 h-4 w-4" />
+      Edit
+    </Button>
   </DialogTrigger>
   <DialogContent className="sm:max-w-[600px]">
     <DialogHeader>
       <DialogTitle>Edit Game</DialogTitle>
     </DialogHeader>
-    <form className="space-y-4">
-      {/* Form fields */}
-    </form>
+    <form className="space-y-4">{/* Form fields */}</form>
     <DialogFooter>
-      <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-      <Button onClick={() => { onSave(); setOpen(false); }}>Save</Button>
+      <Button variant="outline" onClick={() => setOpen(false)}>
+        Cancel
+      </Button>
+      <Button
+        onClick={() => {
+          onSave();
+          setOpen(false);
+        }}
+      >
+        Save
+      </Button>
     </DialogFooter>
   </DialogContent>
-</Dialog>
+</Dialog>;
 ```
 
 ## Loading States
@@ -322,7 +375,9 @@ const [open, setOpen] = useState(false);
     <Search className="h-10 w-10 text-muted-foreground" />
   </div>
   <h3 className="text-2xl font-semibold mb-2">No games found</h3>
-  <p className="text-muted-foreground max-w-md mb-6">Try adjusting your search or filters.</p>
+  <p className="text-muted-foreground max-w-md mb-6">
+    Try adjusting your search or filters.
+  </p>
   <Button>
     <RotateCw className="mr-2 h-4 w-4" />
     Reset Filters
@@ -336,8 +391,14 @@ const [open, setOpen] = useState(false);
 
 ```tsx
 toast.success('Game added to favorites!');
-toast.error('Failed to load game', { action: { label: 'Retry', onClick: () => retryLoad() } });
-toast.promise(saveGame(), { loading: 'Saving...', success: 'Saved!', error: 'Failed' });
+toast.error('Failed to load game', {
+  action: { label: 'Retry', onClick: () => retryLoad() },
+});
+toast.promise(saveGame(), {
+  loading: 'Saving...',
+  success: 'Saved!',
+  error: 'Failed',
+});
 ```
 
 ### Alert

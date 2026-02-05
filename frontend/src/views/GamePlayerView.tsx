@@ -19,10 +19,7 @@ export function GamePlayerView() {
   const { data: launchData, isLoading: launchLoading, error: launchError } = useGameLaunchData(id!);
 
   // Track play session for authenticated users
-  usePlaySession(
-    game?.id || null,
-    game?.title || null
-  );
+  usePlaySession(game?.id || null, game?.title || null);
 
   // Auto-enter fullscreen for HTML5 games
   useEffect(() => {
@@ -38,19 +35,22 @@ export function GamePlayerView() {
   }, [id]);
 
   // Memoize player props to prevent unnecessary re-renders
-  const playerProps = useMemo(() => ({
-    title: game?.title || '',
-    platform: launchData?.platform || '',
-    contentUrl: launchData?.contentUrl,
-    launchCommand: launchData?.launchCommand,
-    canPlayInBrowser: launchData?.canPlayInBrowser || false,
-  }), [
-    game?.title,
-    launchData?.platform,
-    launchData?.contentUrl,
-    launchData?.launchCommand,
-    launchData?.canPlayInBrowser,
-  ]);
+  const playerProps = useMemo(
+    () => ({
+      title: game?.title || '',
+      platform: launchData?.platform || '',
+      contentUrl: launchData?.contentUrl,
+      launchCommand: launchData?.launchCommand,
+      canPlayInBrowser: launchData?.canPlayInBrowser || false,
+    }),
+    [
+      game?.title,
+      launchData?.platform,
+      launchData?.contentUrl,
+      launchData?.launchCommand,
+      launchData?.canPlayInBrowser,
+    ]
+  );
 
   if (gameLoading || launchLoading) {
     return (
@@ -88,7 +88,7 @@ export function GamePlayerView() {
   return (
     <div className={isFullscreen ? 'fixed inset-0 z-50 bg-black' : 'max-w-6xl mx-auto space-y-6'}>
       {/* Back button - only shown in normal mode */}
-      {!isFullscreen && (
+      {!isFullscreen ? (
         <button
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -96,22 +96,28 @@ export function GamePlayerView() {
           <ArrowLeft size={20} />
           Back
         </button>
-      )}
+      ) : null}
 
       {/* Game Player Card - adjusts styling based on fullscreen */}
-      <div className={isFullscreen ? 'w-full h-full' : 'bg-card rounded-lg overflow-hidden shadow-xl border border-border'}>
+      <div
+        className={
+          isFullscreen
+            ? 'w-full h-full'
+            : 'bg-card rounded-lg overflow-hidden shadow-xl border border-border'
+        }
+      >
         {/* Game Header - only shown in normal mode */}
-        {!isFullscreen && (
+        {!isFullscreen ? (
           <div className="px-6 py-4 border-b border-border">
             <div className="flex items-start gap-4">
               {/* Game Logo */}
-              {getGameLogoUrl(game.id) && !logoError && (
+              {getGameLogoUrl(game.id) && !logoError ? (
                 <div className="flex-shrink-0 w-16 h-16 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-1.5 relative">
-                  {logoLoading && (
+                  {logoLoading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
                       <Loader2 size={16} className="text-muted-foreground animate-spin" />
                     </div>
-                  )}
+                  ) : null}
                   <img
                     src={getGameLogoUrl(game.id)}
                     alt={`${game.title} logo`}
@@ -123,17 +129,17 @@ export function GamePlayerView() {
                     }}
                   />
                 </div>
-              )}
+              ) : null}
 
               <div className="flex-1">
                 <h1 className="text-2xl font-bold mb-1">{game.title}</h1>
-                {game.developer && (
+                {game.developer ? (
                   <p className="text-muted-foreground text-sm">by {game.developer}</p>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Game Player Container - ALWAYS VISIBLE, persists in both modes */}
         <div className={isFullscreen ? 'w-full h-screen' : 'aspect-video bg-black'}>
@@ -150,40 +156,42 @@ export function GamePlayerView() {
         </div>
 
         {/* Game Info Below Player - only shown in normal mode */}
-        {!isFullscreen && (
+        {!isFullscreen ? (
           <div className="px-6 py-6 space-y-6">
             {/* Game Info Grid */}
             <GameInfoGrid game={game} launchData={launchData} />
 
             {/* Description */}
-            {game.originalDescription && (
+            {game.originalDescription ? (
               <div>
                 <h2 className="text-lg font-semibold mb-2">Description</h2>
                 <p className="leading-relaxed">{game.originalDescription}</p>
               </div>
-            )}
+            ) : null}
 
             {/* Tags */}
-            {game.tagsStr && (
+            {game.tagsStr ? (
               <div>
                 <h2 className="text-lg font-semibold mb-2">Tags</h2>
                 <div className="flex flex-wrap gap-2">
                   {game.tagsStr.split(';').map((tag, i) => (
-                    <Badge key={i} variant="tag">{tag.trim()}</Badge>
+                    <Badge key={i} variant="tag">
+                      {tag.trim()}
+                    </Badge>
                   ))}
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Notes */}
-            {game.notes && (
+            {game.notes ? (
               <div className="bg-muted/50 rounded p-4">
                 <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
                 <p className="text-sm">{game.notes}</p>
               </div>
-            )}
+            ) : null}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

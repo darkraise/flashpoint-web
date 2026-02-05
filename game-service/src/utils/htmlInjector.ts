@@ -82,10 +82,10 @@ function needsUnityPolyfills(html: string): boolean {
     /createUnityInstance/i,
     /unityFramework\.js/i,
     /Build\/.*\.loader\.js/i,
-    /UnityEngine/i
+    /UnityEngine/i,
   ];
 
-  return unityIndicators.some(pattern => pattern.test(html));
+  return unityIndicators.some((pattern) => pattern.test(html));
 }
 
 /**
@@ -122,17 +122,28 @@ export function injectPolyfills(html: Buffer | string): Buffer {
   if (headMatch) {
     const headOpenTag = headMatch[0];
     const insertPosition = htmlString.indexOf(headOpenTag) + headOpenTag.length;
-    htmlString = htmlString.slice(0, insertPosition) + polyfillsToInject + htmlString.slice(insertPosition);
+    htmlString =
+      htmlString.slice(0, insertPosition) + polyfillsToInject + htmlString.slice(insertPosition);
   } else {
     // No <head> tag, try to inject after <html>
     const htmlMatch = htmlString.match(/<html[^>]*>/i);
     if (htmlMatch) {
       const htmlOpenTag = htmlMatch[0];
       const insertPosition = htmlString.indexOf(htmlOpenTag) + htmlOpenTag.length;
-      htmlString = htmlString.slice(0, insertPosition) + '<head>' + polyfillsToInject + '</head>' + htmlString.slice(insertPosition);
+      htmlString =
+        htmlString.slice(0, insertPosition) +
+        '<head>' +
+        polyfillsToInject +
+        '</head>' +
+        htmlString.slice(insertPosition);
     } else {
       // No <html> or <head> tag, prepend to entire content
-      htmlString = '<!DOCTYPE html><html><head>' + polyfillsToInject + '</head><body>' + htmlString + '</body></html>';
+      htmlString =
+        '<!DOCTYPE html><html><head>' +
+        polyfillsToInject +
+        '</head><body>' +
+        htmlString +
+        '</body></html>';
     }
   }
 

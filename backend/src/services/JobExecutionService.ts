@@ -41,10 +41,9 @@ export class JobExecutionService {
     const completedAt = new Date().toISOString();
 
     // Calculate duration
-    const log = UserDatabaseService.get(
-      'SELECT started_at FROM job_execution_logs WHERE id = ?',
-      [id]
-    ) as { started_at: string } | null;
+    const log = UserDatabaseService.get('SELECT started_at FROM job_execution_logs WHERE id = ?', [
+      id,
+    ]) as { started_at: string } | null;
 
     if (!log) {
       logger.error(`[JobExecution] Cannot complete: log ${id} not found`);
@@ -84,7 +83,7 @@ export class JobExecutionService {
 
     return {
       data: logs.map(this.mapToJobExecutionLog),
-      total: total.count
+      total: total.count,
     };
   }
 
@@ -106,7 +105,7 @@ export class JobExecutionService {
 
     return {
       data: logs.map(this.mapToJobExecutionLog),
-      total: total.count
+      total: total.count,
     };
   }
 
@@ -133,10 +132,9 @@ export class JobExecutionService {
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
     const cutoffISO = cutoffDate.toISOString();
 
-    const result = UserDatabaseService.run(
-      'DELETE FROM job_execution_logs WHERE started_at < ?',
-      [cutoffISO]
-    );
+    const result = UserDatabaseService.run('DELETE FROM job_execution_logs WHERE started_at < ?', [
+      cutoffISO,
+    ]);
 
     logger.info(`[JobExecution] Cleaned up ${result.changes} old logs`);
     return result.changes;
@@ -153,7 +151,7 @@ export class JobExecutionService {
       durationSeconds: row.duration_seconds,
       message: row.message,
       errorDetails: row.error_details,
-      triggeredBy: row.triggered_by
+      triggeredBy: row.triggered_by,
     };
   }
 }

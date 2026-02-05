@@ -77,9 +77,7 @@ async function fixAbsolutePaths() {
     }
 
     // Filter entries with absolute paths
-    const absolutePathEntries = rows.filter(row =>
-      row.path && isAbsolutePath(row.path)
-    );
+    const absolutePathEntries = rows.filter((row) => row.path && isAbsolutePath(row.path));
 
     console.log(`Found ${absolutePathEntries.length} entries with absolute paths\n`);
 
@@ -155,7 +153,6 @@ async function fixAbsolutePaths() {
     console.log();
     console.log('✓ All paths have been converted to relative format');
     console.log('✓ Your games are now fully compatible with Flashpoint Launcher');
-
   } catch (error) {
     console.error('\n✗ Migration failed:', error);
     process.exit(1);

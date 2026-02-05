@@ -15,15 +15,17 @@ async function main() {
     // Get configuration from environment
     // Docker (production): /data/flashpoint (volume mount point)
     // Local dev: D:/Flashpoint or FLASHPOINT_PATH env var
-    const flashpointPath = process.env.FLASHPOINT_PATH ||
+    const flashpointPath =
+      process.env.FLASHPOINT_PATH ||
       (process.env.NODE_ENV === 'production' ? '/data/flashpoint' : 'D:/Flashpoint');
     const flashpointHtdocsPath = path.join(flashpointPath, 'Legacy', 'htdocs');
     const flashpointGamesPath = path.join(flashpointPath, 'Data', 'Games');
     const proxyPort = parseInt(process.env.PROXY_PORT || '22500', 10);
     const gameZipPort = parseInt(process.env.GAMEZIPSERVER_PORT || '22501', 10);
-    const externalFallbackUrls = (process.env.EXTERNAL_FALLBACK_URLS ||
+    const externalFallbackUrls = (
+      process.env.EXTERNAL_FALLBACK_URLS ||
       'http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs,' +
-      'http://infinity.unstable.life/Flashpoint/Legacy/htdocs/'
+        'http://infinity.unstable.life/Flashpoint/Legacy/htdocs/'
     ).split(',');
 
     logger.info(`📁 Flashpoint path: ${flashpointPath}`);
@@ -41,7 +43,7 @@ async function main() {
         gameDataPath: flashpointGamesPath,
         externalFilePaths: externalFallbackUrls,
         allowCrossDomain: true,
-        chunkSize: parseInt(process.env.PROXY_CHUNK_SIZE || '8192', 10)
+        chunkSize: parseInt(process.env.PROXY_CHUNK_SIZE || '8192', 10),
       });
       logger.info(`✓ HTTP Proxy Server started on port ${proxyPort}`);
       logger.info('  Replicating FlashpointGameServer functionality');

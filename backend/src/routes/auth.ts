@@ -21,8 +21,8 @@ const loginLimiter = rateLimit({
   message: {
     error: {
       message: 'Too many login attempts from this IP, please try again after 15 minutes',
-      statusCode: 429
-    }
+      statusCode: 429,
+    },
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -32,10 +32,10 @@ const loginLimiter = rateLimit({
     res.status(429).json({
       error: {
         message: 'Too many login attempts from this IP, please try again after 15 minutes',
-        statusCode: 429
-      }
+        statusCode: 429,
+      },
     });
-  }
+  },
 });
 
 // Moderate limits on registration
@@ -45,8 +45,8 @@ const registerLimiter = rateLimit({
   message: {
     error: {
       message: 'Too many registration attempts from this IP, please try again after an hour',
-      statusCode: 429
-    }
+      statusCode: 429,
+    },
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -55,26 +55,26 @@ const registerLimiter = rateLimit({
     res.status(429).json({
       error: {
         message: 'Too many registration attempts from this IP, please try again after an hour',
-        statusCode: 429
-      }
+        statusCode: 429,
+      },
     });
-  }
+  },
 });
 
 // Validation schemas
 const loginSchema = z.object({
   username: z.string().min(3).max(50),
-  password: z.string().min(6)
+  password: z.string().min(6),
 });
 
 const registerSchema = z.object({
   username: z.string().min(3).max(50),
   email: z.string().email(),
-  password: z.string().min(6)
+  password: z.string().min(6),
 });
 
 const refreshTokenSchema = z.object({
-  refreshToken: z.string()
+  refreshToken: z.string(),
 });
 
 /**
@@ -88,7 +88,7 @@ router.get('/setup-status', (req, res) => {
     needsSetup,
     message: needsSetup
       ? 'No users found. Please create an administrator account.'
-      : 'System is configured'
+      : 'System is configured',
   });
 });
 
@@ -96,66 +96,71 @@ router.get('/setup-status', (req, res) => {
  * POST /api/auth/login
  * Login with username and password
  */
-router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
-  try {
-    const credentials = loginSchema.parse(req.body);
-    const ipAddress = req.ip || '';
-
-    logger.info(`[Auth] Login attempt for user: ${credentials.username} from ${ipAddress}`);
-
-    const result = await authService.login(credentials, ipAddress);
-
-    // Log activity
-    await activityService.log({
-      userId: result.user.id,
-      username: result.user.username,
-      action: 'login',
-      resource: 'auth',
-      ipAddress,
-      userAgent: req.headers['user-agent']
-    });
-
-    logger.info(`[Auth] Login successful for user: ${credentials.username}`);
-    res.json(result);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      logger.warn(`[Auth] Validation error during login: ${error.errors[0].message}`);
-      throw new AppError(400, `Validation error: ${error.errors[0].message}`);
-    }
-
-    // Log failed login attempt
-    const ipAddress = req.ip || '';
-    const username = req.body.username || 'unknown';
-
+router.post(
+  '/login',
+  loginLimiter,
+  asyncHandler(async (req, res) => {
     try {
+      const credentials = loginSchema.parse(req.body);
+      const ipAddress = req.ip || '';
+
+      logger.info(`[Auth] Login attempt for user: ${credentials.username} from ${ipAddress}`);
+
+      const result = await authService.login(credentials, ipAddress);
+
+      // Log activity
       await activityService.log({
-        userId: undefined,
-        username,
-        action: 'auth.login.failed',
+        userId: result.user.id,
+        username: result.user.username,
+        action: 'login',
         resource: 'auth',
-        details: {
-          reason: error instanceof Error && error.message.includes('Invalid')
-            ? 'invalid_credentials'
-            : 'other',
-          errorMessage: error instanceof Error ? error.message : 'Unknown error'
-        },
         ipAddress,
-        userAgent: req.headers['user-agent']
+        userAgent: req.headers['user-agent'],
       });
-    } catch (logError) {
-      // Don't fail request if logging fails
-      logger.error('[Auth] Failed to log failed login attempt:', logError);
+
+      logger.info(`[Auth] Login successful for user: ${credentials.username}`);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        logger.warn(`[Auth] Validation error during login: ${error.errors[0].message}`);
+        throw new AppError(400, `Validation error: ${error.errors[0].message}`);
+      }
+
+      // Log failed login attempt
+      const ipAddress = req.ip || '';
+      const username = req.body.username || 'unknown';
+
+      try {
+        await activityService.log({
+          userId: undefined,
+          username,
+          action: 'auth.login.failed',
+          resource: 'auth',
+          details: {
+            reason:
+              error instanceof Error && error.message.includes('Invalid')
+                ? 'invalid_credentials'
+                : 'other',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          },
+          ipAddress,
+          userAgent: req.headers['user-agent'],
+        });
+      } catch (logError) {
+        // Don't fail request if logging fails
+        logger.error('[Auth] Failed to log failed login attempt:', logError);
+      }
+
+      // Log the error with full details before passing to error handler
+      logger.error(`[Auth] Login failed for user: ${username}`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      throw error;
     }
-
-    // Log the error with full details before passing to error handler
-    logger.error(`[Auth] Login failed for user: ${username}`, {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-
-    throw error;
-  }
-}));
+  })
+);
 
 /**
  * POST /api/auth/register
@@ -167,40 +172,44 @@ router.post('/login', loginLimiter, asyncHandler(async (req, res) => {
  *
  * The AuthService.register() method automatically detects which scenario applies
  */
-router.post('/register', registerLimiter, asyncHandler(async (req, res) => {
-  try {
-    const data = registerSchema.parse(req.body);
+router.post(
+  '/register',
+  registerLimiter,
+  asyncHandler(async (req, res) => {
+    try {
+      const data = registerSchema.parse(req.body);
 
-    logger.info(`[Auth] Registration attempt for user: ${data.username}`);
+      logger.info(`[Auth] Registration attempt for user: ${data.username}`);
 
-    const result = await authService.register(data);
+      const result = await authService.register(data);
 
-    // Log activity
-    await activityService.log({
-      userId: result.user.id,
-      username: result.user.username,
-      action: 'register',
-      resource: 'auth',
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
+      // Log activity
+      await activityService.log({
+        userId: result.user.id,
+        username: result.user.username,
+        action: 'register',
+        resource: 'auth',
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
 
-    logger.info(`[Auth] Registration successful for user: ${data.username}`);
-    res.status(201).json(result);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      logger.warn(`[Auth] Validation error during registration: ${error.errors[0].message}`);
-      throw new AppError(400, `Validation error: ${error.errors[0].message}`);
+      logger.info(`[Auth] Registration successful for user: ${data.username}`);
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        logger.warn(`[Auth] Validation error during registration: ${error.errors[0].message}`);
+        throw new AppError(400, `Validation error: ${error.errors[0].message}`);
+      }
+
+      logger.error(`[Auth] Registration failed for user: ${req.body.username}`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      throw error;
     }
-
-    logger.error(`[Auth] Registration failed for user: ${req.body.username}`, {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-
-    throw error;
-  }
-}));
+  })
+);
 
 /**
  * POST /api/auth/logout
@@ -222,28 +231,34 @@ router.post(
  * POST /api/auth/refresh
  * Refresh access token using refresh token
  */
-router.post('/refresh', asyncHandler(async (req, res) => {
-  const { refreshToken } = refreshTokenSchema.parse(req.body);
+router.post(
+  '/refresh',
+  asyncHandler(async (req, res) => {
+    const { refreshToken } = refreshTokenSchema.parse(req.body);
 
-  const tokens = await authService.refreshToken(refreshToken);
+    const tokens = await authService.refreshToken(refreshToken);
 
-  res.json(tokens);
-}));
+    res.json(tokens);
+  })
+);
 
 /**
  * GET /api/auth/me
  * Get current authenticated user
  */
-router.get('/me', asyncHandler(async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new AppError(401, 'No token provided');
-  }
+router.get(
+  '/me',
+  asyncHandler(async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new AppError(401, 'No token provided');
+    }
 
-  const token = authHeader.substring(7);
-  const user = await authService.verifyAccessToken(token);
+    const token = authHeader.substring(7);
+    const user = await authService.verifyAccessToken(token);
 
-  res.json(user);
-}));
+    res.json(user);
+  })
+);
 
 export default router;

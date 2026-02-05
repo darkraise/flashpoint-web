@@ -1,6 +1,7 @@
 # Component Overview
 
-This document provides an overview of the component architecture and organization in the Flashpoint Web frontend.
+This document provides an overview of the component architecture and
+organization in the Flashpoint Web frontend.
 
 ## Component Organization
 
@@ -16,8 +17,10 @@ components/
 ├── library/           # Game browsing/display (9 components)
 ├── player/            # Game players (2 components)
 ├── playlist/          # Playlist management (3 components)
+│   └── SharePlaylistDialog includes domain selector for admins
 ├── roles/             # Role management (2 components)
 ├── search/            # Search and filtering (2 components)
+├── settings/          # Settings tabs including AppSettingsTab with Domain Settings
 ├── stats/             # Statistics/charts (4 components)
 ├── theme/             # Theme controls (2 components)
 ├── ui/                # Shadcn UI primitives (40+ components)
@@ -39,7 +42,8 @@ Located in `components/auth/`
 
 Located in `components/common/`
 
-- **FormattedDate** - Reusable date/time formatting component with user preferences
+- **FormattedDate** - Reusable date/time formatting component with user
+  preferences
 - **CardSizeControl** - Control for adjusting card size in grid views
 - **ConfirmDialog** - Generic confirmation dialog for destructive actions
 - **ErrorBoundary** - Error boundary wrapper for graceful error handling
@@ -50,6 +54,26 @@ Located in `components/common/`
 - **NetworkStatusIndicator** - Shows online/offline network status
 - **RoleGuard** - Component wrapper for role-based access control
 - **ViewOptions** - Toggle between list and grid view modes
+
+### Playlist Components
+
+Located in `components/playlist/`
+
+- **SharePlaylistDialog** - Dialog for sharing playlists via URL. Admin users
+  see a domain selector dropdown to choose which domain to use for the share
+  link. Non-admin users use the default domain from public settings. Share URLs
+  are constructed client-side via the `buildShareUrl()` utility.
+- Other playlist management components...
+
+### Settings Components
+
+Located in `components/settings/`
+
+- **AppSettingsTab** - Application settings including Site Name, Maintenance
+  Mode, Theme, and **Domain Settings**. The Domain Settings card allows admins
+  to add/delete domains and set a default via radio buttons, with hostname
+  validation.
+- Other settings tabs...
 
 ### Layout Components
 
@@ -81,9 +105,12 @@ Located in `components/player/`
 
 Located in `components/ui/`
 
-The application uses [Shadcn UI](https://ui.shadcn.com/) - a collection of re-usable components built with Radix UI and Tailwind CSS. These are copied into the project and can be customized.
+The application uses [Shadcn UI](https://ui.shadcn.com/) - a collection of
+re-usable components built with Radix UI and Tailwind CSS. These are copied into
+the project and can be customized.
 
 **40+ components including:**
+
 - Button, Input, Textarea, Select, Checkbox, Switch
 - Dialog, Alert Dialog, Sheet, Popover, Dropdown Menu
 - Card, Badge, Avatar, Separator, Skeleton
@@ -179,10 +206,14 @@ export function GameCardSkeleton() {
 
 ```typescript
 // Named export (preferred for main components)
-export function GameCard({ game }: GameCardProps) { /* ... */ }
+export function GameCard({ game }: GameCardProps) {
+  /* ... */
+}
 
 // Default export (used for views/pages)
-export default function BrowseView() { /* ... */ }
+export default function BrowseView() {
+  /* ... */
+}
 ```
 
 ## Component Props Best Practices
@@ -197,9 +228,9 @@ interface GamePlayerProps {
   canPlayInBrowser: boolean;
 
   // Optional props with defaults
-  allowFullscreen?: boolean;  // Default: true
-  showControls?: boolean;     // Default: true
-  height?: string;            // Default: 'calc(100vh - 220px)'
+  allowFullscreen?: boolean; // Default: true
+  showControls?: boolean; // Default: true
+  height?: string; // Default: 'calc(100vh - 220px)'
 
   // Optional callbacks
   onFullscreenChange?: (isFullscreen: boolean) => void;
@@ -378,9 +409,14 @@ const sortedGames = useMemo(() => {
 Memoize callback functions:
 
 ```typescript
-const handleAddToPlaylist = useCallback((gameId: string) => {
-  // Add to playlist logic
-}, [/* dependencies */]);
+const handleAddToPlaylist = useCallback(
+  (gameId: string) => {
+    // Add to playlist logic
+  },
+  [
+    /* dependencies */
+  ]
+);
 ```
 
 ### Lazy Loading

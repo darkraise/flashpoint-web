@@ -51,7 +51,12 @@ export function GameDetailView() {
   // Wait for token generation before fetching game data
   const canFetchGame = !shareToken || isAuthenticated || hasValidToken;
 
-  const { data: game, isLoading: isLoadingGame, error, refetch } = useGame(id!, { enabled: canFetchGame });
+  const {
+    data: game,
+    isLoading: isLoadingGame,
+    error,
+    refetch,
+  } = useGame(id!, { enabled: canFetchGame });
 
   // Fetch shared playlist metadata if accessed via shareToken
   const { data: sharedPlaylist } = useQuery({
@@ -93,7 +98,7 @@ export function GameDetailView() {
   // Find this game's play stats
   const currentGameStats = useMemo(() => {
     if (!gameStatsData?.data || !id) return null;
-    return gameStatsData.data.find(stats => stats.gameId === id);
+    return gameStatsData.data.find((stats) => stats.gameId === id);
   }, [gameStatsData, id]);
 
   // Reset loading states when game changes
@@ -169,200 +174,218 @@ export function GameDetailView() {
   const needsDataDownload = game.presentOnDisk === 0;
 
   // Build breadcrumb items
-  const breadcrumbItems = shareToken && sharedPlaylist
-    ? [
-        { label: sharedPlaylist.title, href: `/playlists/shared/${shareToken}` },
-        { label: game.title, active: true }
-      ]
-    : shareToken
-    ? [{ label: game.title, active: true }]
-    : breadcrumbContext
-    ? [
-        { label: breadcrumbContext.label, href: breadcrumbContext.href },
-        { label: game.title, active: true }
-      ]
-    : [
-        { label: 'Browse', href: '/browse' },
-        { label: game.title, active: true }
-      ];
+  const breadcrumbItems =
+    shareToken && sharedPlaylist
+      ? [
+          { label: sharedPlaylist.title, href: `/playlists/shared/${shareToken}` },
+          { label: game.title, active: true },
+        ]
+      : shareToken
+        ? [{ label: game.title, active: true }]
+        : breadcrumbContext
+          ? [
+              { label: breadcrumbContext.label, href: breadcrumbContext.href },
+              { label: game.title, active: true },
+            ]
+          : [
+              { label: 'Browse', href: '/browse' },
+              { label: game.title, active: true },
+            ];
 
   return (
     <ErrorBoundary>
       <div className="max-w-6xl mx-auto space-y-6">
-      {/* Breadcrumbs Navigation */}
-      <Breadcrumbs
-        items={breadcrumbItems}
-        homeLabel={shareToken ? "Shared" : "Home"}
-        homeHref={shareToken ? "#" : "/"}
-      />
+        {/* Breadcrumbs Navigation */}
+        <Breadcrumbs
+          items={breadcrumbItems}
+          homeLabel={shareToken ? 'Shared' : 'Home'}
+          homeHref={shareToken ? '#' : '/'}
+        />
 
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Go back to previous page"
-      >
-        <ArrowLeft size={20} />
-        Back
-      </button>
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Go back to previous page"
+        >
+          <ArrowLeft size={20} />
+          Back
+        </button>
 
-      <div className="bg-card rounded-lg p-6 space-y-6 border border-border shadow-md">
-        {/* Logo and Title Section - At the top */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4 flex-1">
-            {/* Game Logo */}
-            {logoUrl && !logoError && (
-              <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-2 relative">
-                {logoLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
-                    <Loader2 size={20} className="text-muted-foreground animate-spin" />
+        <div className="bg-card rounded-lg p-6 space-y-6 border border-border shadow-md">
+          {/* Logo and Title Section - At the top */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1">
+              {/* Game Logo */}
+              {logoUrl && !logoError ? (
+                <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-2 relative">
+                  {logoLoading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
+                      <Loader2 size={20} className="text-muted-foreground animate-spin" />
+                    </div>
+                  ) : null}
+                  <img
+                    src={logoUrl}
+                    alt={`${game.title} logo`}
+                    width="80"
+                    height="80"
+                    className="w-full h-full object-contain relative z-10"
+                    onLoad={() => setLogoLoading(false)}
+                    onError={() => {
+                      setLogoError(true);
+                      setLogoLoading(false);
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 break-words">
+                  {game.title}
+                </h1>
+                {game.alternateTitles ? (
+                  <p className="text-muted-foreground text-sm break-words">
+                    Also known as: {game.alternateTitles}
+                  </p>
+                ) : null}
+
+                {/* Play Statistics - Under title */}
+                {currentGameStats?.lastPlayedAt || currentGameStats?.totalPlaytimeSeconds ? (
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    {currentGameStats?.lastPlayedAt ? (
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={14} />
+                        <span>Last played {formatRelativeTime(currentGameStats.lastPlayedAt)}</span>
+                      </div>
+                    ) : null}
+                    {currentGameStats?.totalPlaytimeSeconds ? (
+                      <div className="flex items-center gap-1.5">
+                        <span>•</span>
+                        <span>{formatDuration(currentGameStats.totalPlaytimeSeconds)} played</span>
+                      </div>
+                    ) : null}
                   </div>
-                )}
+                ) : null}
+              </div>
+            </div>
+
+            {/* Play Button Logic */}
+            <div className="text-center space-y-2 flex-shrink-0">
+              {game.platformName === 'Flash' || game.platformName === 'HTML5' ? (
+                <>
+                  {isDownloading ? (
+                    <button
+                      disabled
+                      className="inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary text-white rounded-xl shadow-lg cursor-wait opacity-75 transition-all w-full sm:w-auto"
+                      title="Preparing game..."
+                    >
+                      <Loader2 size={28} className="sm:w-8 sm:h-8 animate-spin" />
+                    </button>
+                  ) : needsDataDownload ? (
+                    <button
+                      onClick={handleStartDownload}
+                      className="group inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all hover:scale-105 active:scale-95 ring-2 ring-primary/20 hover:ring-primary/40 w-full sm:w-auto"
+                      title="Play Game"
+                    >
+                      <Play
+                        size={28}
+                        className="sm:w-8 sm:h-8 transition-transform group-hover:scale-110"
+                        fill="currentColor"
+                      />
+                    </button>
+                  ) : (
+                    <Link
+                      to={buildSharedGameUrl(`/games/${game.id}/play`, shareToken)}
+                      className="group inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all hover:scale-105 active:scale-95 ring-2 ring-primary/20 hover:ring-primary/40 w-full sm:w-auto"
+                      title="Play Game"
+                    >
+                      <Play
+                        size={28}
+                        className="sm:w-8 sm:h-8 transition-transform group-hover:scale-110"
+                        fill="currentColor"
+                      />
+                    </Link>
+                  )}
+
+                  {/* Error Display */}
+                  {downloadError ? (
+                    <p className="text-sm text-red-500 font-medium">{downloadError}</p>
+                  ) : null}
+                </>
+              ) : (
+                <Badge
+                  variant="secondary"
+                  className="px-4 py-2 text-sm sm:text-base font-medium flex items-center gap-2"
+                >
+                  <Play size={16} className="sm:w-5 sm:h-5" />
+                  Play on Flashpoint Launcher
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Game Screenshot */}
+          {screenshotUrl ? (
+            <div className="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center relative">
+              {imageLoading && !imageError ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 size={48} className="text-muted-foreground animate-spin" />
+                    <span className="text-sm text-muted-foreground">Loading screenshot...</span>
+                  </div>
+                </div>
+              ) : null}
+              {!imageError ? (
                 <img
-                  src={logoUrl}
-                  alt={`${game.title} logo`}
-                  width="80"
-                  height="80"
+                  src={screenshotUrl}
+                  alt={`${game.title} screenshot`}
+                  width="1280"
+                  height="720"
                   className="w-full h-full object-contain relative z-10"
-                  onLoad={() => setLogoLoading(false)}
+                  onLoad={() => setImageLoading(false)}
                   onError={() => {
-                    setLogoError(true);
-                    setLogoLoading(false);
+                    setImageError(true);
+                    setImageLoading(false);
                   }}
                 />
-              </div>
-            )}
-
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 break-words">{game.title}</h1>
-              {game.alternateTitles && (
-                <p className="text-muted-foreground text-sm break-words">Also known as: {game.alternateTitles}</p>
-              )}
-
-              {/* Play Statistics - Under title */}
-              {(currentGameStats?.lastPlayedAt || currentGameStats?.totalPlaytimeSeconds) && (
-                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                  {currentGameStats?.lastPlayedAt && (
-                    <div className="flex items-center gap-1.5">
-                      <Clock size={14} />
-                      <span>Last played {formatRelativeTime(currentGameStats.lastPlayedAt)}</span>
-                    </div>
-                  )}
-                  {currentGameStats?.totalPlaytimeSeconds && (
-                    <div className="flex items-center gap-1.5">
-                      <span>•</span>
-                      <span>{formatDuration(currentGameStats.totalPlaytimeSeconds)} played</span>
-                    </div>
-                  )}
+              ) : (
+                <div className="flex flex-col items-center text-muted-foreground">
+                  <ImageIcon size={64} className="mb-2 opacity-50" />
+                  <span className="text-sm">Screenshot not available</span>
                 </div>
               )}
             </div>
-          </div>
+          ) : null}
 
-          {/* Play Button Logic */}
-          <div className="text-center space-y-2 flex-shrink-0">
-            {(game.platformName === 'Flash' || game.platformName === 'HTML5') ? (
-              <>
-                {isDownloading ? (
-                  <button
-                    disabled
-                    className="inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary text-white rounded-xl shadow-lg cursor-wait opacity-75 transition-all w-full sm:w-auto"
-                    title="Preparing game..."
-                  >
-                    <Loader2 size={28} className="sm:w-8 sm:h-8 animate-spin" />
-                  </button>
-                ) : needsDataDownload ? (
-                  <button
-                    onClick={handleStartDownload}
-                    className="group inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all hover:scale-105 active:scale-95 ring-2 ring-primary/20 hover:ring-primary/40 w-full sm:w-auto"
-                    title="Play Game"
-                  >
-                    <Play size={28} className="sm:w-8 sm:h-8 transition-transform group-hover:scale-110" fill="currentColor" />
-                  </button>
-                ) : (
-                  <Link
-                    to={buildSharedGameUrl(`/games/${game.id}/play`, shareToken)}
-                    className="group inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all hover:scale-105 active:scale-95 ring-2 ring-primary/20 hover:ring-primary/40 w-full sm:w-auto"
-                    title="Play Game"
-                  >
-                    <Play size={28} className="sm:w-8 sm:h-8 transition-transform group-hover:scale-110" fill="currentColor" />
-                  </Link>
-                )}
+          <GameInfoGrid game={game} />
 
-                {/* Error Display */}
-                {downloadError && (
-                  <p className="text-sm text-red-500 font-medium">{downloadError}</p>
-                )}
-              </>
-            ) : (
-              <Badge variant="secondary" className="px-4 py-2 text-sm sm:text-base font-medium flex items-center gap-2">
-                <Play size={16} className="sm:w-5 sm:h-5" />
-                Play on Flashpoint Launcher
-              </Badge>
-            )}
-          </div>
+          {game.originalDescription ? (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Description</h2>
+              <p className="leading-relaxed">{game.originalDescription}</p>
+            </div>
+          ) : null}
+
+          {game.tagsStr ? (
+            <div>
+              <h2 className="text-lg font-semibold mb-2">Tags</h2>
+              <div className="flex flex-wrap gap-2">
+                {game.tagsStr.split(';').map((tag, i) => (
+                  <Badge key={i} variant="tag">
+                    {tag.trim()}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {game.notes ? (
+            <div className="bg-muted/50 rounded p-4">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
+              <p className="text-sm">{game.notes}</p>
+            </div>
+          ) : null}
         </div>
-
-        {/* Game Screenshot */}
-        {screenshotUrl && (
-          <div className="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center relative">
-            {imageLoading && !imageError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 size={48} className="text-muted-foreground animate-spin" />
-                  <span className="text-sm text-muted-foreground">Loading screenshot...</span>
-                </div>
-              </div>
-            )}
-            {!imageError ? (
-              <img
-                src={screenshotUrl}
-                alt={`${game.title} screenshot`}
-                width="1280"
-                height="720"
-                className="w-full h-full object-contain relative z-10"
-                onLoad={() => setImageLoading(false)}
-                onError={() => {
-                  setImageError(true);
-                  setImageLoading(false);
-                }}
-              />
-            ) : (
-              <div className="flex flex-col items-center text-muted-foreground">
-                <ImageIcon size={64} className="mb-2 opacity-50" />
-                <span className="text-sm">Screenshot not available</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        <GameInfoGrid game={game} />
-
-        {game.originalDescription && (
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Description</h2>
-            <p className="leading-relaxed">{game.originalDescription}</p>
-          </div>
-        )}
-
-        {game.tagsStr && (
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Tags</h2>
-            <div className="flex flex-wrap gap-2">
-              {game.tagsStr.split(';').map((tag, i) => (
-                <Badge key={i} variant="tag">{tag.trim()}</Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {game.notes && (
-          <div className="bg-muted/50 rounded p-4">
-            <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>
-            <p className="text-sm">{game.notes}</p>
-          </div>
-        )}
       </div>
-    </div>
     </ErrorBoundary>
   );
 }

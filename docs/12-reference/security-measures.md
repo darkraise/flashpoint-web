@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document catalogs all security measures implemented in the Flashpoint Web application, addressing OWASP Top 10 vulnerabilities and security best practices.
+This document catalogs all security measures implemented in the Flashpoint Web
+application, addressing OWASP Top 10 vulnerabilities and security best
+practices.
 
 ---
 
@@ -19,6 +21,7 @@ This document catalogs all security measures implemented in the Flashpoint Web a
 - ✅ Automatic token cleanup on logout
 
 **Security Features**:
+
 - Secret key from environment variable
 - Token signature verification
 - Expiration validation
@@ -34,10 +37,11 @@ This document catalogs all security measures implemented in the Flashpoint Web a
 - ✅ Permission caching for performance
 
 **Permission System**:
+
 ```typescript
-requirePermission('settings.update')
-requirePermission('users.read')
-requirePermission('games.play')
+requirePermission('settings.update');
+requirePermission('users.read');
+requirePermission('games.play');
 ```
 
 ### Password Security
@@ -61,11 +65,12 @@ requirePermission('games.play')
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per IP
-  skipSuccessfulRequests: false
+  skipSuccessfulRequests: false,
 });
 ```
 
 **Protection Against**:
+
 - Brute force password attacks
 - Credential stuffing
 - Account enumeration
@@ -82,6 +87,7 @@ const registerLimiter = rateLimit({
 ```
 
 **Protection Against**:
+
 - Account creation spam
 - Resource exhaustion
 - Abuse of registration system
@@ -95,22 +101,24 @@ const registerLimiter = rateLimit({
 **Implementation**: Throughout route files
 
 **Examples**:
+
 ```typescript
 // Login validation
 const loginSchema = z.object({
   username: z.string().min(3).max(50),
-  password: z.string().min(6)
+  password: z.string().min(6),
 });
 
 // Registration validation
 const registerSchema = z.object({
   username: z.string().min(3).max(50),
   email: z.string().email(),
-  password: z.string().min(6)
+  password: z.string().min(6),
 });
 ```
 
 **Validation Middleware**: `backend/src/middleware/validation.ts`
+
 - ✅ Centralized validation error handling
 - ✅ Type-safe request validation
 - ✅ Automatic 400 Bad Request responses
@@ -121,20 +129,25 @@ const registerSchema = z.object({
 
 **Centralized Security Utilities**: `game-service/src/utils/pathSecurity.ts`
 
-The game-service now has comprehensive directory traversal protection through centralized validation utilities:
+The game-service now has comprehensive directory traversal protection through
+centralized validation utilities:
 
 **1. Path Sanitization & Validation**:
+
 ```typescript
 sanitizeAndValidatePath(basePath: string, requestPath: string): string
 ```
+
 - Normalizes paths and ensures they stay within allowed directories
 - Platform-aware (Windows/Unix)
 - Blocks: `../`, absolute paths, null bytes, URL-encoded traversal
 
 **2. URL Path Sanitization**:
+
 ```typescript
 sanitizeUrlPath(urlPath: string): string
 ```
+
 - Detects null bytes (`\0`)
 - Blocks URL-encoded directory traversal (`..%2F`, `..%5C`)
 - Blocks backslash path traversal (`..\\`)
@@ -142,18 +155,21 @@ sanitizeUrlPath(urlPath: string): string
 **Implementation Coverage**:
 
 **Legacy Server** (`game-service/src/legacy-server.ts`):
+
 - ✅ URL path sanitization at entry point
 - ✅ Path validation before all file access
 - ✅ Separate validation for htdocs and cgi-bin paths
 
 **GameZip Server** (`game-service/src/gamezipserver.ts`):
+
 - ✅ URL path sanitization in file requests
 - ✅ Mount ID validation (prevents path separators)
 - ✅ ZIP path validation (ensures files within games directory)
 
 **Test Coverage**: 17 tests (all passing) in `pathSecurity.test.ts`
 
-**For detailed information**: See `docs/13-security/directory-traversal-protection.md`
+**For detailed information**: See
+`docs/13-security/directory-traversal-protection.md`
 
 ---
 
@@ -195,6 +211,7 @@ private mountedZips = new LRUCache<string, MountedZip>({
 ```
 
 **Protection**:
+
 - Prevents unlimited ZIP mounts
 - Automatic cleanup of old mounts
 - Resource leak prevention
@@ -208,12 +225,14 @@ private mountedZips = new LRUCache<string, MountedZip>({
 **Implementation**: `backend/src/middleware/activityLogger.ts`
 
 **Tracked Actions**:
+
 - User login/logout
 - Resource creation/updates/deletions
 - Permission changes
 - Failed authentication attempts
 
 **Logged Information**:
+
 - User ID
 - Action type
 - Resource affected
@@ -228,11 +247,17 @@ private mountedZips = new LRUCache<string, MountedZip>({
 function sanitizeBody(body: any): any {
   const sanitized = { ...body };
   const sensitiveFields = [
-    'password', 'currentPassword', 'newPassword',
-    'token', 'refreshToken', 'secret', 'apiKey', 'accessToken'
+    'password',
+    'currentPassword',
+    'newPassword',
+    'token',
+    'refreshToken',
+    'secret',
+    'apiKey',
+    'accessToken',
   ];
 
-  sensitiveFields.forEach(field => {
+  sensitiveFields.forEach((field) => {
     if (sanitized[field]) {
       sanitized[field] = '[REDACTED]';
     }
@@ -255,11 +280,12 @@ function sanitizeBody(body: any): any {
 ```typescript
 cors({
   origin: process.env.DOMAIN || 'http://localhost:5173',
-  credentials: true
-})
+  credentials: true,
+});
 ```
 
 **Security**:
+
 - ✅ Whitelist specific origin only
 - ✅ Credentials allowed for authenticated requests
 - ✅ Protects sensitive API endpoints
@@ -273,6 +299,7 @@ res.setHeader('Access-Control-Allow-Origin', '*');
 ```
 
 **Justification**: See `docs/12-reference/cors-security-decision.md`
+
 - Serves public, read-only game content
 - No sensitive data exposure
 - Supports game embedding use cases
@@ -286,14 +313,13 @@ res.setHeader('Access-Control-Allow-Origin', '*');
 **Implementation**: Throughout `backend/src/services/`
 
 **Example from GameService.ts**:
+
 ```typescript
-const game = DatabaseService.get(
-  'SELECT * FROM game WHERE id = ?',
-  [id]
-);
+const game = DatabaseService.get('SELECT * FROM game WHERE id = ?', [id]);
 ```
 
 **Protection**:
+
 - ✅ All database queries use parameterized statements
 - ✅ No string concatenation in SQL queries
 - ✅ Better-sqlite3 automatic escaping
@@ -307,23 +333,25 @@ const game = DatabaseService.get(
 **Implementation**: `backend/src/middleware/errorHandler.ts`
 
 **Features**:
+
 - ✅ Distinguishes operational vs programmer errors
 - ✅ Generic error messages to clients (prevents information leakage)
 - ✅ Detailed logging for debugging
 - ✅ Sanitized request bodies in logs
 
 **Example**:
+
 ```typescript
 // Unhandled errors
 logger.error('[UnhandledError]', {
   message: err.message,
   stack: err.stack,
-  body: sanitizeBody(req.body) // Sensitive data redacted
+  body: sanitizeBody(req.body), // Sensitive data redacted
 });
 
 // Client receives generic message
 res.status(500).json({
-  error: { message: 'Internal server error' }
+  error: { message: 'Internal server error' },
 });
 ```
 
@@ -334,6 +362,7 @@ res.status(500).json({
 ### XSS Prevention
 
 **React Built-in Protection**:
+
 - ✅ Automatic escaping of JSX expressions
 - ✅ No `dangerouslySetInnerHTML` usage
 - ✅ Content Security Policy headers (if configured)
@@ -345,6 +374,7 @@ res.status(500).json({
 **Location**: localStorage
 
 **Note**: Documented trade-off
+
 - Vulnerable to XSS attacks
 - Acceptable for low-risk application
 - Consider HttpOnly cookies for higher security requirements
@@ -352,6 +382,7 @@ res.status(500).json({
 ### Type Safety
 
 **TypeScript Strict Mode**:
+
 - ✅ No implicit `any` types
 - ✅ Null/undefined checks
 - ✅ Type-safe API calls
@@ -363,6 +394,7 @@ res.status(500).json({
 ### Flashpoint Database
 
 **Access Level**: READ-ONLY
+
 - ✅ No write operations permitted
 - ✅ Separate from user database
 - ✅ File watching for external updates
@@ -370,6 +402,7 @@ res.status(500).json({
 ### User Database
 
 **Security Features**:
+
 - ✅ SQLite with file-level permissions
 - ✅ Schema migrations tracked
 - ✅ Transaction support for data integrity
@@ -382,6 +415,7 @@ res.status(500).json({
 **Implementation**: `backend/src/server.ts:177-200`
 
 **Cleanup on SIGTERM/SIGINT**:
+
 - ✅ Stop scheduled jobs
 - ✅ Stop permission cache cleanup
 - ✅ Stop play session cleanup
@@ -430,5 +464,5 @@ res.status(500).json({
 
 ---
 
-**Last Updated**: 2026-01-29
-**Review Status**: Comprehensive (Enhanced path traversal protection)
+**Last Updated**: 2026-01-29 **Review Status**: Comprehensive (Enhanced path
+traversal protection)

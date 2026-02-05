@@ -58,7 +58,7 @@ export interface Game {
   playtime?: number;
   playCounter?: number;
   archiveState?: number;
-  logoPath?: string;       // Infinity edition only
+  logoPath?: string; // Infinity edition only
   screenshotPath?: string; // Infinity edition only
 }
 
@@ -106,8 +106,11 @@ export class GameService {
 
     // Infinity edition has logoPath and screenshotPath columns
     if (isInfinity) {
-      return baseColumns + `,
-      g.logoPath, g.screenshotPath`;
+      return (
+        baseColumns +
+        `,
+      g.logoPath, g.screenshotPath`
+      );
     }
 
     return baseColumns;
@@ -183,7 +186,7 @@ export class GameService {
       // OPTIMIZATION: Use INSTR instead of LIKE for tag matching (faster in SQLite)
       if (query.tags && query.tags.length > 0) {
         // Check if tags are in tagsStr field using INSTR with semicolon boundaries
-        query.tags.forEach(tag => {
+        query.tags.forEach((tag) => {
           sql += ` AND INSTR(';' || g.tagsStr || ';', ?) > 0`;
           params.push(`;${tag};`);
         });
@@ -245,7 +248,7 @@ export class GameService {
           dateAddedSince: query.dateAddedSince,
           dateModifiedSince: query.dateModifiedSince,
           sortBy: query.sortBy,
-          params: params
+          params: params,
         });
       }
 
@@ -258,7 +261,7 @@ export class GameService {
       // OPTIMIZATION: Fetch presentOnDisk separately for returned games (post-processing pattern)
       // This avoids the LEFT JOIN row explosion and GROUP BY aggregation
       if (games.length > 0) {
-        const gameIds = games.map(g => g.id);
+        const gameIds = games.map((g) => g.id);
         const placeholders = gameIds.map(() => '?').join(', ');
 
         const presentOnDiskSql = `
@@ -275,7 +278,7 @@ export class GameService {
 
         // Create a map for O(1) lookup
         const presentOnDiskMap = new Map(
-          presentOnDiskResults.map(r => [r.gameId, r.presentOnDisk])
+          presentOnDiskResults.map((r) => [r.gameId, r.presentOnDisk])
         );
 
         // Merge presentOnDisk into game objects and remove total_count
@@ -290,7 +293,7 @@ export class GameService {
         total,
         page: query.page,
         limit: query.limit,
-        totalPages: Math.ceil(total / query.limit)
+        totalPages: Math.ceil(total / query.limit),
       };
     } catch (error) {
       logger.error('Error searching games:', {
@@ -301,8 +304,8 @@ export class GameService {
           sortBy: query.sortBy,
           library: query.library,
           page: query.page,
-          limit: query.limit
-        }
+          limit: query.limit,
+        },
       });
       throw error;
     }
@@ -354,8 +357,8 @@ export class GameService {
       const games = DatabaseService.all(sql, ids) as Game[];
 
       // Sort games to match the order of input IDs
-      const gamesMap = new Map(games.map(g => [g.id, g]));
-      return ids.map(id => gamesMap.get(id)).filter((g): g is Game => g !== undefined);
+      const gamesMap = new Map(games.map((g) => [g.id, g]));
+      return ids.map((id) => gamesMap.get(id)).filter((g): g is Game => g !== undefined);
     } catch (error) {
       logger.error('Error getting games by IDs:', error);
       throw error;
@@ -460,7 +463,7 @@ export class GameService {
         sourceGame.platformName,
         sourceGame.developer,
         sourceGame.platformName,
-        limit
+        limit,
       ]) as Game[];
 
       return games;
@@ -504,7 +507,7 @@ export class GameService {
       releaseDate: 'g.releaseDate',
       dateAdded: 'g.dateAdded',
       dateModified: 'g.dateModified',
-      developer: 'g.developer'
+      developer: 'g.developer',
     };
     return columnMap[sortBy] || 'g.orderTitle';
   }
@@ -697,7 +700,10 @@ export class GameService {
       const tagCounts = new Map<string, number>();
 
       for (const row of results) {
-        const tags = row.tagsStr.split(';').map(tag => tag.trim()).filter(tag => tag);
+        const tags = row.tagsStr
+          .split(';')
+          .map((tag) => tag.trim())
+          .filter((tag) => tag);
         for (const tag of tags) {
           tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
         }
@@ -792,7 +798,7 @@ export class GameService {
       }
 
       // Get game IDs for query
-      const gameIds = mostPlayedStats.map(stat => stat.game_id);
+      const gameIds = mostPlayedStats.map((stat) => stat.game_id);
 
       // Fetch full game details from flashpoint database using list fields
       const placeholders = gameIds.map(() => '?').join(',');
@@ -805,9 +811,9 @@ export class GameService {
       const games = DatabaseService.all(sql, gameIds) as Game[];
 
       // Sort games by the original play count order
-      const gameMap = new Map(games.map(game => [game.id, game]));
+      const gameMap = new Map(games.map((game) => [game.id, game]));
       const sortedGames = gameIds
-        .map(id => gameMap.get(id))
+        .map((id) => gameMap.get(id))
         .filter((game): game is Game => game !== undefined);
 
       return sortedGames;

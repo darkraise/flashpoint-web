@@ -26,7 +26,7 @@ export function UnauthorizedView() {
 
   const handleLogin = () => {
     navigate('/login', {
-      state: { from: fromPath || location.pathname }
+      state: { from: fromPath || location.pathname },
     });
   };
 
@@ -48,7 +48,7 @@ export function UnauthorizedView() {
     if (isGuest) {
       return [
         'Log in with an account that has the required permissions',
-        'Create a new account if you don\'t have one',
+        "Create a new account if you don't have one",
         'Return to the home page to browse available content',
       ];
     }
@@ -76,49 +76,51 @@ export function UnauthorizedView() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {isAuthenticated && user && (
+          {isAuthenticated && user ? (
             <Alert>
               <AlertDescription>
                 <div className="space-y-1">
                   <p className="font-medium">Current user:</p>
                   <div className="text-sm">
-                    <p><span className="font-semibold">Username:</span> {user.username}</p>
-                    <p><span className="font-semibold">Role:</span> {user.role}</p>
+                    <p>
+                      <span className="font-semibold">Username:</span> {user.username}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Role:</span> {user.role}
+                    </p>
                   </div>
                 </div>
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
-          {(requiredPermission || requiredFeature) && (
+          {requiredPermission || requiredFeature ? (
             <Alert>
               <AlertDescription>
                 <div className="space-y-1">
-                  {requiredPermission && (
+                  {requiredPermission ? (
                     <p className="text-sm">
                       <span className="font-semibold">Required permission:</span>{' '}
                       <code className="bg-muted px-1 py-0.5 rounded text-xs">
                         {requiredPermission}
                       </code>
                     </p>
-                  )}
-                  {requiredFeature && (
+                  ) : null}
+                  {requiredFeature ? (
                     <p className="text-sm">
                       <span className="font-semibold">Required feature:</span>{' '}
                       <code className="bg-muted px-1 py-0.5 rounded text-xs">
                         {requiredFeature}
                       </code>
                     </p>
-                  )}
-                  {fromPath && (
-                    <p className="text-sm text-muted-foreground">
-                      Attempted to access: {fromPath}
-                    </p>
-                  )}
+                  ) : null}
+                  {fromPath ? (
+                    <p className="text-sm text-muted-foreground">Attempted to access: {fromPath}</p>
+                  ) : null}
                 </div>
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
           <div className="space-y-2">
             <h3 className="font-semibold text-sm">What you can do:</h3>
@@ -145,11 +147,11 @@ export function UnauthorizedView() {
               <Button onClick={handleGoHome} variant="default">
                 Go to Home
               </Button>
-              {isAuthenticated && (
+              {isAuthenticated ? (
                 <Button onClick={() => navigate('/settings')} variant="secondary">
                   View Settings
                 </Button>
-              )}
+              ) : null}
             </>
           )}
         </CardFooter>

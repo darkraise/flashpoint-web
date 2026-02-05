@@ -1,6 +1,8 @@
 # UserDatabaseService
 
-`UserDatabaseService` manages the connection to the user database (user.db). It provides a singleton interface for accessing user data, authentication, roles, permissions, and play tracking.
+`UserDatabaseService` manages the connection to the user database (user.db). It
+provides a singleton interface for accessing user data, authentication, roles,
+permissions, and play tracking.
 
 ## Location
 
@@ -8,7 +10,9 @@
 
 ## Overview
 
-The UserDatabaseService connects to the application-specific SQLite database for storing user accounts, sessions, and application data. Unlike DatabaseService (read-only Flashpoint data), this service has full read/write access.
+The UserDatabaseService connects to the application-specific SQLite database for
+storing user accounts, sessions, and application data. Unlike DatabaseService
+(read-only Flashpoint data), this service has full read/write access.
 
 ## Key Features
 
@@ -154,10 +158,9 @@ const db = UserDatabaseService.getDatabase();
 Execute query and return first row.
 
 ```typescript
-const user = UserDatabaseService.get(
-  'SELECT * FROM users WHERE username = ?',
-  ['admin']
-);
+const user = UserDatabaseService.get('SELECT * FROM users WHERE username = ?', [
+  'admin',
+]);
 ```
 
 **Returns**: First result row or null
@@ -199,6 +202,7 @@ const userId = result.lastInsertRowid;
 ```
 
 **Returns**: RunResult object with:
+
 - `changes`: Number of rows affected
 - `lastInsertRowid`: ID of inserted row (for INSERT)
 
@@ -293,10 +297,9 @@ const permissions = UserDatabaseService.all(
 );
 
 // Get role with permissions
-const role = UserDatabaseService.get(
-  'SELECT * FROM roles WHERE id = ?',
-  [roleId]
-);
+const role = UserDatabaseService.get('SELECT * FROM roles WHERE id = ?', [
+  roleId,
+]);
 
 const rolePermissions = UserDatabaseService.all(
   `SELECT p.* FROM permissions p
@@ -348,7 +351,15 @@ UserDatabaseService.run(
   `INSERT INTO activity_logs
    (user_id, username, action, resource, resource_id, details, ip_address)
    VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  [userId, username, 'create', 'users', newUserId, JSON.stringify(details), ipAddress]
+  [
+    userId,
+    username,
+    'create',
+    'users',
+    newUserId,
+    JSON.stringify(details),
+    ipAddress,
+  ]
 );
 
 // Get recent activity
@@ -369,9 +380,11 @@ UserDatabaseService.run(
 
 ## Database Schema
 
-See [database/schema.md](../database/schema.md) for complete schema documentation.
+See [database/schema.md](../database/schema.md) for complete schema
+documentation.
 
 Main tables:
+
 - `users` - User accounts
 - `roles` - User roles (admin, user, guest)
 - `permissions` - Available permissions
@@ -415,16 +428,16 @@ const db = UserDatabaseService.getDatabase();
 
 const createUser = db.transaction((username, email, passwordHash, roleId) => {
   // Create user
-  const userResult = db.prepare(
-    'INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)'
-  ).run(username, email, passwordHash, roleId);
+  const userResult = db
+    .prepare(
+      'INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)'
+    )
+    .run(username, email, passwordHash, roleId);
 
   const userId = userResult.lastInsertRowid;
 
   // Initialize user stats
-  db.prepare(
-    'INSERT INTO user_stats (user_id) VALUES (?)'
-  ).run(userId);
+  db.prepare('INSERT INTO user_stats (user_id) VALUES (?)').run(userId);
 
   return userId;
 });
@@ -434,6 +447,7 @@ const userId = createUser('newuser', 'user@example.com', hash, 2);
 ```
 
 **Benefits**:
+
 - Atomic: All operations succeed or all fail
 - Consistent: Database remains in valid state
 - Fast: Single disk write for all operations
@@ -466,6 +480,7 @@ Migrations run automatically on startup.
 ### Migration File Naming
 
 Migrations are numbered sequentially:
+
 ```
 001_user-schema.sql          # Initial schema
 002_create-user-settings.sql # Add user_settings table
@@ -479,14 +494,19 @@ Migrations are numbered sequentially:
 
 ```typescript
 // Check if migration is needed
-const tables = this.db!.prepare(`
+const tables = this.db!.prepare(
+  `
   SELECT name FROM sqlite_master
   WHERE type='table' AND name='new_table'
-`).all();
+`
+).all();
 
 if (tables.length === 0) {
   logger.info('[UserDB] Running migration: 005_add-new-feature');
-  const migrationPath = path.join(__dirname, '../migrations/005_add-new-feature.sql');
+  const migrationPath = path.join(
+    __dirname,
+    '../migrations/005_add-new-feature.sql'
+  );
   const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
   this.db!.exec(migrationSQL);
   logger.info('[UserDB] Migration completed: 005_add-new-feature');
@@ -494,6 +514,7 @@ if (tables.length === 0) {
 ```
 
 3. Test on clean database:
+
 ```bash
 rm user.db
 npm run dev
@@ -513,6 +534,7 @@ npm run dev
 ### Connection Pooling
 
 Not needed - SQLite is single-threaded:
+
 - Single connection shared across requests
 - Synchronous operations are fast
 - No connection overhead
@@ -542,6 +564,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
 **Cause**: Another process has write lock
 
 **Solution**:
+
 - Ensure only one backend instance
 - Check for abandoned connections
 - Use shorter transactions
@@ -551,6 +574,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
 **Cause**: Attempting to insert/update with invalid foreign key
 
 **Solution**:
+
 - Verify referenced record exists
 - Check ON DELETE CASCADE/RESTRICT constraints
 - Ensure foreign keys are enabled
@@ -560,6 +584,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
 **Cause**: Migration SQL has error
 
 **Solution**:
+
 - Check migration SQL syntax
 - Test migration file in SQLite CLI
 - Review error message in logs
@@ -569,10 +594,9 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
 ### AuthService
 
 ```typescript
-const user = UserDatabaseService.get(
-  'SELECT * FROM users WHERE username = ?',
-  [username]
-);
+const user = UserDatabaseService.get('SELECT * FROM users WHERE username = ?', [
+  username,
+]);
 
 const passwordHash = await bcrypt.hash(password, config.bcryptSaltRounds);
 

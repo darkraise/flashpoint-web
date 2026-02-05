@@ -10,7 +10,15 @@ All services include wget-based health checks in docker-compose files.
 
 ```yaml
 healthcheck:
-  test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/api/health"]
+  test:
+    [
+      'CMD',
+      'wget',
+      '--quiet',
+      '--tries=1',
+      '--spider',
+      'http://localhost:3100/api/health',
+    ]
   interval: 30s
   timeout: 10s
   retries: 3
@@ -18,6 +26,7 @@ healthcheck:
 ```
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -38,7 +47,7 @@ Response:
 
 ```yaml
 healthcheck:
-  test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+  test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost/']
   interval: 30s
   timeout: 3s
   retries: 3
@@ -49,7 +58,15 @@ healthcheck:
 
 ```yaml
 healthcheck:
-  test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:22500/"]
+  test:
+    [
+      'CMD',
+      'wget',
+      '--quiet',
+      '--tries=1',
+      '--spider',
+      'http://localhost:22500/',
+    ]
   interval: 30s
   timeout: 10s
   retries: 3
@@ -100,6 +117,7 @@ backend:
 ```
 
 **Sequence:**
+
 1. Game Service → health check → healthy (30s)
 2. Backend → health check → healthy (40s)
 3. Frontend → health check → healthy (10s)
@@ -119,17 +137,20 @@ docker inspect flashpoint-backend --format='{{range .State.Health.Log}}{{.ExitCo
 **Health Check Keeps Failing:**
 
 1. **Service not fully started**: Increase `start_period`
+
    ```yaml
    healthcheck:
      start_period: 60s
    ```
 
 2. **Database issues**: Verify flashpoint.sqlite exists and is readable
+
    ```bash
    docker-compose exec backend ls -la /data/flashpoint/Data/flashpoint.sqlite
    ```
 
 3. **Port conflicts**: Ensure ports are available
+
    ```bash
    netstat -tulpn | grep -E '(3100|80|22500|22501)'
    ```
@@ -143,10 +164,10 @@ docker inspect flashpoint-backend --format='{{range .State.Health.Log}}{{.ExitCo
 
 ```yaml
 healthcheck:
-  interval: 60s      # Check less frequently
-  timeout: 30s       # Allow more time
-  retries: 5         # More retries
-  start_period: 90s  # Longer grace period
+  interval: 60s # Check less frequently
+  timeout: 30s # Allow more time
+  retries: 5 # More retries
+  start_period: 90s # Longer grace period
 ```
 
 ## Integration with Orchestrators

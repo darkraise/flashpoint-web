@@ -8,19 +8,63 @@ import { logger } from '../utils/logger';
 export class RoleService {
   /**
    * Get all roles with permissions
+   * Uses a single query to fetch all role-permission mappings to avoid N+1 queries
    */
   async getRoles(): Promise<Role[]> {
-    const roles = UserDatabaseService.all(
+    // Fetch all roles
+    const roles = UserDatabaseService.all<{
+      id: number;
+      name: string;
+      description: string | null;
+      priority: number;
+      createdAt: string;
+      updatedAt: string;
+    }>(
       `SELECT id, name, description, priority, created_at as createdAt, updated_at as updatedAt
        FROM roles
        ORDER BY priority DESC, name ASC`,
       []
     );
 
-    // Get permissions for each role
-    return roles.map(role => ({
-      ...role,
-      permissions: this.getRolePermissions(role.id)
+    // Fetch all role-permission mappings in a single query
+    const allRolePermissions = UserDatabaseService.all<{
+      role_id: number;
+      id: number;
+      name: string;
+      description: string | null;
+      resource: string;
+      action: string;
+    }>(
+      `SELECT rp.role_id, p.id, p.name, p.description, p.resource, p.action
+       FROM role_permissions rp
+       JOIN permissions p ON p.id = rp.permission_id
+       ORDER BY p.resource, p.action`,
+      []
+    );
+
+    // Group permissions by role_id
+    const permissionsByRole = new Map<number, Permission[]>();
+    for (const perm of allRolePermissions) {
+      const rolePerms = permissionsByRole.get(perm.role_id) || [];
+      rolePerms.push({
+        id: perm.id,
+        name: perm.name,
+        description: perm.description ?? undefined,
+        resource: perm.resource,
+        action: perm.action,
+      });
+      permissionsByRole.set(perm.role_id, rolePerms);
+    }
+
+    // Map roles with their permissions (convert null to undefined for description)
+    return roles.map((role) => ({
+      id: role.id,
+      name: role.name,
+      description: role.description ?? undefined,
+      priority: role.priority,
+      createdAt: role.createdAt,
+      updatedAt: role.updatedAt,
+      permissions: permissionsByRole.get(role.id) || [],
     }));
   }
 
@@ -28,7 +72,14 @@ export class RoleService {
    * Get role by ID
    */
   async getRoleById(id: number): Promise<Role | null> {
-    const role = UserDatabaseService.get(
+    const role = UserDatabaseService.get<{
+      id: number;
+      name: string;
+      description: string | null;
+      priority: number;
+      createdAt: string;
+      updatedAt: string;
+    }>(
       `SELECT id, name, description, priority, created_at as createdAt, updated_at as updatedAt
        FROM roles WHERE id = ?`,
       [id]
@@ -37,8 +88,13 @@ export class RoleService {
     if (!role) return null;
 
     return {
-      ...role,
-      permissions: this.getRolePermissions(id)
+      id: role.id,
+      name: role.name,
+      description: role.description ?? undefined,
+      priority: role.priority,
+      createdAt: role.createdAt,
+      updatedAt: role.updatedAt,
+      permissions: this.getRolePermissions(id),
     };
   }
 
@@ -100,7 +156,12 @@ export class RoleService {
   /**
    * Update role
    */
-  async updateRole(id: number, name?: string, description?: string, priority?: number): Promise<Role> {
+  async updateRole(
+    id: number,
+    name?: string,
+    description?: string,
+    priority?: number
+  ): Promise<Role> {
     const role = await this.getRoleById(id);
     if (!role) {
       throw new AppError(404, 'Role not found');
@@ -115,10 +176,10 @@ export class RoleService {
     const params: any[] = [];
 
     if (name !== undefined) {
-      const existing = UserDatabaseService.get(
-        'SELECT id FROM roles WHERE name = ? AND id != ?',
-        [name, id]
-      );
+      const existing = UserDatabaseService.get('SELECT id FROM roles WHERE name = ? AND id != ?', [
+        name,
+        id,
+      ]);
       if (existing) {
         throw new AppError(409, 'Role name already exists');
       }
@@ -140,14 +201,11 @@ export class RoleService {
       return role;
     }
 
-    updates.push("updated_at = ?");
+    updates.push('updated_at = ?');
     params.push(new Date().toISOString());
     params.push(id);
 
-    UserDatabaseService.run(
-      `UPDATE roles SET ${updates.join(', ')} WHERE id = ?`,
-      params
-    );
+    UserDatabaseService.run(`UPDATE roles SET ${updates.join(', ')} WHERE id = ?`, params);
 
     return (await this.getRoleById(id))!;
   }
@@ -201,10 +259,9 @@ export class RoleService {
     }
 
     // Check if role is assigned to users
-    const userCount = UserDatabaseService.get(
-      'SELECT COUNT(*) as count FROM users WHERE role_id = ?',
-      [id]
-    )?.count || 0;
+    const userCount =
+      UserDatabaseService.get('SELECT COUNT(*) as count FROM users WHERE role_id = ?', [id])
+        ?.count || 0;
 
     if (userCount > 0) {
       throw new AppError(409, `Cannot delete role: ${userCount} users are assigned to this role`);

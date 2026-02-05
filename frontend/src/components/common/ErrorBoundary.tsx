@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     };
   }
 
@@ -46,7 +46,7 @@ export class ErrorBoundary extends Component<Props, State> {
     // Store error info in state
     this.setState({
       error,
-      errorInfo
+      errorInfo,
     });
   }
 
@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     });
   };
 
@@ -88,34 +88,28 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Error details (only in development) */}
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {process.env.NODE_ENV === 'development' && this.state.error ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h2 className="text-sm font-semibold text-red-400 mb-2">Error Details:</h2>
                 <pre className="text-xs text-gray-300 overflow-auto max-h-64">
                   {this.state.error.toString()}
-                  {this.state.errorInfo && (
+                  {this.state.errorInfo ? (
                     <>
                       {'\n\nComponent Stack:'}
                       {this.state.errorInfo.componentStack}
                     </>
-                  )}
+                  ) : null}
                 </pre>
               </div>
-            )}
+            ) : null}
 
             {/* Action buttons */}
             <div className="flex gap-3">
-              <Button
-                variant="default"
-                onClick={this.handleReset}
-              >
+              <Button variant="default" onClick={this.handleReset}>
                 <RefreshCw size={18} className="mr-2" />
                 Try Again
               </Button>
-              <Button
-                variant="secondary"
-                onClick={this.handleGoHome}
-              >
+              <Button variant="secondary" onClick={this.handleGoHome}>
                 <Home size={18} className="mr-2" />
                 Go to Home
               </Button>
@@ -123,9 +117,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             {/* Additional help text */}
             <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-sm text-gray-400">
-                If this problem persists, please try:
-              </p>
+              <p className="text-sm text-gray-400">If this problem persists, please try:</p>
               <ul className="mt-2 space-y-1 text-sm text-gray-400 list-disc list-inside">
                 <li>Refreshing the page</li>
                 <li>Clearing your browser cache</li>

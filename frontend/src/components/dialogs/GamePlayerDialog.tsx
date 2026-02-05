@@ -1,8 +1,5 @@
 import { GamePlayer } from '@/components/player';
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 export interface GamePlayerDialogProps {
   /** Whether the dialog is open */

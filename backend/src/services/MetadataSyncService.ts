@@ -7,7 +7,6 @@ import { DatabaseService } from './DatabaseService';
 import { GameMetadataSource } from './MetadataUpdateService';
 import { SyncStatusService } from './SyncStatusService';
 
-
 interface SyncResult {
   success: boolean;
   gamesUpdated: number;
@@ -57,7 +56,7 @@ interface ApiTag {
   description: string | null;
   category: string | null;
   date_modified: string;
-  aliases?: string;        // semicolon-separated
+  aliases?: string; // semicolon-separated
   user_id?: number;
   Deleted?: boolean;
 }
@@ -67,7 +66,7 @@ interface ApiPlatform {
   name: string;
   description: string | null;
   date_modified: string;
-  aliases?: string;        // semicolon-separated
+  aliases?: string; // semicolon-separated
   user_id?: number;
   Deleted?: boolean;
 }
@@ -124,7 +123,7 @@ export class MetadataSyncService {
         tagsUpdated: 0,
         platformsUpdated: 0,
         error: 'Metadata sync is not available for Flashpoint Ultimate edition',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
     const startTime = new Date();
@@ -185,7 +184,7 @@ export class MetadataSyncService {
       await this.updatePreferencesTimestamps(source, preferences, {
         gamesLatestDate: latestGameDate,
         tagsLatestDate: latestTagDate,
-        platformsLatestDate: latestPlatformDate
+        platformsLatestDate: latestPlatformDate,
       });
 
       const result: SyncResult = {
@@ -194,7 +193,7 @@ export class MetadataSyncService {
         gamesDeleted,
         tagsUpdated,
         platformsUpdated,
-        timestamp: startTime.toISOString()
+        timestamp: startTime.toISOString(),
       };
 
       // Mark sync as completed
@@ -202,7 +201,6 @@ export class MetadataSyncService {
 
       logger.info(`[MetadataSync] Sync completed successfully:`, result);
       return result;
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
@@ -217,7 +215,7 @@ export class MetadataSyncService {
         tagsUpdated,
         platformsUpdated,
         error: errorMessage,
-        timestamp: startTime.toISOString()
+        timestamp: startTime.toISOString(),
       };
     }
   }
@@ -225,7 +223,9 @@ export class MetadataSyncService {
   /**
    * Sync platforms from FPFSS API
    */
-  private async syncPlatforms(source: GameMetadataSource): Promise<{ count: number; latestDate: string | null }> {
+  private async syncPlatforms(
+    source: GameMetadataSource
+  ): Promise<{ count: number; latestDate: string | null }> {
     try {
       const after = source.platforms?.latestUpdateTime || '1970-01-01';
       const url = `${source.baseUrl}/api/platforms?after=${after}`;
@@ -261,7 +261,9 @@ export class MetadataSyncService {
   /**
    * Sync tags from FPFSS API
    */
-  private async syncTags(source: GameMetadataSource): Promise<{ count: number; latestDate: string | null }> {
+  private async syncTags(
+    source: GameMetadataSource
+  ): Promise<{ count: number; latestDate: string | null }> {
     try {
       const after = source.tags?.latestUpdateTime || '1970-01-01';
       const url = `${source.baseUrl}/api/tags?after=${after}`;
@@ -297,7 +299,9 @@ export class MetadataSyncService {
   /**
    * Sync games from FPFSS API (with pagination)
    */
-  private async syncGames(source: GameMetadataSource): Promise<{ updated: number; deleted: number; latestDate: string | null }> {
+  private async syncGames(
+    source: GameMetadataSource
+  ): Promise<{ updated: number; deleted: number; latestDate: string | null }> {
     try {
       const after = source.games?.latestUpdateTime || '1970-01-01';
       let totalUpdated = 0;
@@ -316,8 +320,12 @@ export class MetadataSyncService {
         }
 
         logger.debug(`[MetadataSync] Fetching games batch ${batchCount} from: ${url}`);
-        const progress = Math.min(80, 40 + (batchCount * 5)); // Cap at 80% during game sync
-        this.syncStatusService.updateProgress('syncing-games', progress, `Syncing games (batch ${batchCount})...`);
+        const progress = Math.min(80, 40 + batchCount * 5); // Cap at 80% during game sync
+        this.syncStatusService.updateProgress(
+          'syncing-games',
+          progress,
+          `Syncing games (batch ${batchCount})...`
+        );
 
         const response = await axios.get(url, { timeout: 60000 });
         // FPFSS API returns {"games": [...]} not just an array
@@ -342,14 +350,19 @@ export class MetadataSyncService {
         // Get last game ID for pagination
         afterId = games[games.length - 1].id;
 
-        logger.info(`[MetadataSync] Batch ${batchCount}: ${games.length} games processed (total: ${totalUpdated})`);
+        logger.info(
+          `[MetadataSync] Batch ${batchCount}: ${games.length} games processed (total: ${totalUpdated})`
+        );
       }
 
       // Sync deleted games
       const deleted = await this.syncDeletedGames(source);
 
-      return { updated: totalUpdated, deleted, latestDate: latestDate !== after ? latestDate : null };
-
+      return {
+        updated: totalUpdated,
+        deleted,
+        latestDate: latestDate !== after ? latestDate : null,
+      };
     } catch (error) {
       logger.error('[MetadataSync] Error syncing games:', error);
       throw error;
@@ -382,7 +395,9 @@ export class MetadataSyncService {
         deletedIds = response.data.deletedGames;
       } else if (response.data.games && Array.isArray(response.data.games)) {
         // Wrapped in games property
-        deletedIds = response.data.games.map((g: unknown) => typeof g === 'string' ? g : (g as { id: string }).id);
+        deletedIds = response.data.games.map((g: unknown) =>
+          typeof g === 'string' ? g : (g as { id: string }).id
+        );
       } else {
         logger.warn('[MetadataSync] Unexpected deleted games API response format:', response.data);
       }
@@ -396,7 +411,6 @@ export class MetadataSyncService {
 
       logger.info(`[MetadataSync] Deleted ${deletedIds.length} games`);
       return deletedIds.length;
-
     } catch (error) {
       logger.error('[MetadataSync] Error syncing deleted games:', error);
       throw error;
@@ -420,7 +434,9 @@ export class MetadataSyncService {
     // Platform data is embedded in game records (game.platformName column)
     // No separate platform table exists in flashpoint.sqlite
     // The settings toggle works, but the actual data is synced via game records
-    logger.debug(`[MetadataSync] Received ${platforms.length} platform updates (data synced via game records)`);
+    logger.debug(
+      `[MetadataSync] Received ${platforms.length} platform updates (data synced via game records)`
+    );
   }
 
   /**
@@ -440,7 +456,9 @@ export class MetadataSyncService {
     // Tag data is embedded in game records (game.tagsStr column as semicolon-separated strings)
     // No separate tag table exists in flashpoint.sqlite
     // The settings toggle works, but the actual data is synced via game records
-    logger.debug(`[MetadataSync] Received ${tags.length} tag updates (data synced via game records)`);
+    logger.debug(
+      `[MetadataSync] Received ${tags.length} tag updates (data synced via game records)`
+    );
   }
 
   /**
@@ -454,12 +472,15 @@ export class MetadataSyncService {
     const sortedGames = this.sortGamesByParentDependency(games);
 
     // Build SQL for bulk upsert (29 columns per row)
-    const placeholders = sortedGames.map(() =>
-      '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).join(', ');
+    const placeholders = sortedGames
+      .map(
+        () =>
+          '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      )
+      .join(', ');
 
     const values: any[] = [];
-    sortedGames.forEach(game => {
+    sortedGames.forEach((game) => {
       values.push(
         game.id,
         game.parent_game_id || null,
@@ -547,7 +568,7 @@ export class MetadataSyncService {
     const visiting = new Set<string>(); // Track games currently being visited to detect cycles
 
     // Build game map
-    games.forEach(game => gameMap.set(game.id, game));
+    games.forEach((game) => gameMap.set(game.id, game));
 
     // Recursive function to add game and its parents first
     const addGame = (game: ApiGame): void => {
@@ -556,7 +577,9 @@ export class MetadataSyncService {
 
       // Circular dependency detected - break the cycle by skipping parent
       if (visiting.has(game.id)) {
-        logger.warn(`[MetadataSync] Circular parent dependency detected for game: ${game.id} (${game.title})`);
+        logger.warn(
+          `[MetadataSync] Circular parent dependency detected for game: ${game.id} (${game.title})`
+        );
         visited.add(game.id);
         sorted.push(game);
         return;
@@ -578,7 +601,7 @@ export class MetadataSyncService {
     };
 
     // Process all games
-    games.forEach(game => addGame(game));
+    games.forEach((game) => addGame(game));
 
     return sorted;
   }
@@ -621,7 +644,9 @@ export class MetadataSyncService {
           const updateSql = `UPDATE game SET parentGameId = NULL WHERE id IN (${updatePlaceholders})`;
           const updateStmt = db.prepare(updateSql);
           updateStmt.run(childGameIds);
-          logger.debug(`[MetadataSync] Orphaned ${childGameIds.length} child games (set parentGameId to NULL)`);
+          logger.debug(
+            `[MetadataSync] Orphaned ${childGameIds.length} child games (set parentGameId to NULL)`
+          );
         }
 
         // Now safe to delete the games
@@ -667,25 +692,33 @@ export class MetadataSyncService {
         // Update latestUpdateTime to the latest game/tag/platform dateModified
         // This is what the update check uses to determine what's new
         if (latestDates.gamesLatestDate) {
-          preferences.gameMetadataSources[sourceIndex].games.latestUpdateTime = latestDates.gamesLatestDate;
-          logger.info(`[MetadataSync] Updated games latestUpdateTime to: ${latestDates.gamesLatestDate}`);
+          preferences.gameMetadataSources[sourceIndex].games.latestUpdateTime =
+            latestDates.gamesLatestDate;
+          logger.info(
+            `[MetadataSync] Updated games latestUpdateTime to: ${latestDates.gamesLatestDate}`
+          );
         }
         if (latestDates.tagsLatestDate) {
-          preferences.gameMetadataSources[sourceIndex].tags.latestUpdateTime = latestDates.tagsLatestDate;
-          logger.info(`[MetadataSync] Updated tags latestUpdateTime to: ${latestDates.tagsLatestDate}`);
+          preferences.gameMetadataSources[sourceIndex].tags.latestUpdateTime =
+            latestDates.tagsLatestDate;
+          logger.info(
+            `[MetadataSync] Updated tags latestUpdateTime to: ${latestDates.tagsLatestDate}`
+          );
         }
-        if (latestDates.platformsLatestDate && preferences.gameMetadataSources[sourceIndex].platforms) {
-          preferences.gameMetadataSources[sourceIndex].platforms.latestUpdateTime = latestDates.platformsLatestDate;
-          logger.info(`[MetadataSync] Updated platforms latestUpdateTime to: ${latestDates.platformsLatestDate}`);
+        if (
+          latestDates.platformsLatestDate &&
+          preferences.gameMetadataSources[sourceIndex].platforms
+        ) {
+          preferences.gameMetadataSources[sourceIndex].platforms.latestUpdateTime =
+            latestDates.platformsLatestDate;
+          logger.info(
+            `[MetadataSync] Updated platforms latestUpdateTime to: ${latestDates.platformsLatestDate}`
+          );
         }
       }
 
       // Write back to preferences.json
-      await fs.writeFile(
-        this.preferencesPath,
-        JSON.stringify(preferences, null, 2),
-        'utf-8'
-      );
+      await fs.writeFile(this.preferencesPath, JSON.stringify(preferences, null, 2), 'utf-8');
 
       logger.info(`[MetadataSync] Updated preferences.json timestamps. actualUpdateTime: ${now}`);
     } catch (error) {
@@ -693,5 +726,4 @@ export class MetadataSyncService {
       throw error;
     }
   }
-
 }

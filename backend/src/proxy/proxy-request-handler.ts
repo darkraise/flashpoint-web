@@ -72,7 +72,6 @@ export class ProxyRequestHandler {
 
       logger.info(`[ProxyHandler] ✓ Served from ${legacyResult.source}`);
       this.sendResponse(res, legacyResult.data, legacyResult.contentType, legacyResult.source);
-
     } catch (error) {
       logger.error('[ProxyHandler] Error handling request:', error);
 
@@ -119,7 +118,12 @@ export class ProxyRequestHandler {
   /**
    * Send successful response
    */
-  private sendResponse(res: ServerResponse, data: Buffer, contentType: string, source: string): void {
+  private sendResponse(
+    res: ServerResponse,
+    data: Buffer,
+    contentType: string,
+    source: string
+  ): void {
     // CORS headers
     if (this.settings.allowCrossDomain) {
       res.setHeader('Access-Control-Allow-Origin', '*');

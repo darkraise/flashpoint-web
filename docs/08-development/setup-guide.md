@@ -7,22 +7,26 @@ Complete guide to setting up Flashpoint Web development environment.
 ### Required Software
 
 **Node.js v20.0.0+**
+
 ```bash
 node --version  # Verify
 nvm install 20 && nvm use 20  # Install with nvm
 ```
 
 **npm v9.0.0+** (included with Node.js)
+
 ```bash
 npm --version  # Verify
 ```
 
 **Git**
+
 ```bash
 git --version  # Verify
 ```
 
 **Flashpoint Archive**
+
 - Download from [flashpointarchive.org](https://flashpointarchive.org/)
 - Default path: `D:\Flashpoint` (Windows) or `~/Flashpoint` (Linux/Mac)
 - Verify: `ls D:/Flashpoint/Data/flashpoint.sqlite`
@@ -32,12 +36,14 @@ git --version  # Verify
 ## Initial Setup
 
 ### 1. Clone Repository
+
 ```bash
 git clone https://github.com/darkraise/flashpoint-web.git
 cd flashpoint-web
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 npm run install:all
 
@@ -45,12 +51,14 @@ npm run install:all
 ```
 
 ### 3. Configure Backend
+
 ```bash
 cd backend
 cp .env.example .env
 ```
 
 Edit `backend/.env`:
+
 ```bash
 FLASHPOINT_PATH=D:/Flashpoint
 JWT_SECRET=change-this-in-production
@@ -62,15 +70,18 @@ LOG_LEVEL=info
 NODE_ENV=development
 ```
 
-**Note:** All paths (database, images, logos, htdocs, games) are automatically derived from `FLASHPOINT_PATH`.
+**Note:** All paths (database, images, logos, htdocs, games) are automatically
+derived from `FLASHPOINT_PATH`.
 
 ### 4. Configure Game Service
+
 ```bash
 cd game-service
 cp .env.example .env
 ```
 
 Edit `game-service/.env`:
+
 ```bash
 FLASHPOINT_PATH=D:/Flashpoint
 LOG_LEVEL=info
@@ -78,6 +89,7 @@ EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/h
 ```
 
 ### 5. Verify Setup
+
 ```bash
 npm run typecheck   # Type check all services
 npm run build       # Build all services
@@ -88,6 +100,7 @@ npm run build       # Build all services
 ## Start Development
 
 ### Option A: All Services Together
+
 ```bash
 npm run dev
 
@@ -98,6 +111,7 @@ npm run dev
 ```
 
 ### Option B: Individual Services
+
 ```bash
 # Terminal 1: Backend
 npm run dev:backend
@@ -110,6 +124,7 @@ npm run dev:game-service
 ```
 
 ### Verify Services
+
 ```bash
 # Backend
 curl http://localhost:3100/health  # Should return {"status":"ok"}
@@ -139,6 +154,7 @@ curl http://localhost:22500/health
 ### Visual Studio Code
 
 **Install Recommended Extensions:**
+
 - ESLint
 - Prettier
 - TypeScript Language Features
@@ -147,6 +163,7 @@ curl http://localhost:22500/health
 - SQLite Viewer
 
 **Settings (.vscode/settings.json):**
+
 ```json
 {
   "editor.formatOnSave": true,
@@ -158,8 +175,8 @@ curl http://localhost:22500/health
 }
 ```
 
-**Debug Configuration (.vscode/launch.json):**
-See [Debugging Guide](./debugging.md) for complete setup.
+**Debug Configuration (.vscode/launch.json):** See
+[Debugging Guide](./debugging.md) for complete setup.
 
 ### WebStorm/IntelliJ
 
@@ -182,12 +199,14 @@ cd backend && npm run lint && npm test  # Lint and test
 ## Troubleshooting
 
 ### Port Already in Use
+
 ```bash
 cd backend
 npm run kill-port  # Windows utility
 ```
 
 ### Database Not Found
+
 ```bash
 # Verify Flashpoint path
 ls D:/Flashpoint/Data/flashpoint.sqlite
@@ -197,6 +216,7 @@ cat backend/.env | grep FLASHPOINT_PATH
 ```
 
 ### Dependencies Won't Install
+
 ```bash
 npm cache clean --force
 npm run clean
@@ -204,6 +224,7 @@ npm run install:all
 ```
 
 ### Ruffle Not Loading
+
 ```bash
 cd frontend
 npm run copy-ruffle
@@ -219,23 +240,26 @@ See [Common Pitfalls](./common-pitfalls.md) for more issues.
 ## Environment Variables Reference
 
 ### Backend (.env)
-| Variable | Required | Default |
-|----------|----------|---------|
-| `FLASHPOINT_PATH` | Yes | - |
-| `JWT_SECRET` | Yes* | - |
-| `DOMAIN` | No | http://localhost:5173 |
-| `GAME_SERVICE_HOST` | No | localhost |
-| `LOG_LEVEL` | No | info |
-| `NODE_ENV` | No | development |
+
+| Variable            | Required | Default               |
+| ------------------- | -------- | --------------------- |
+| `FLASHPOINT_PATH`   | Yes      | -                     |
+| `JWT_SECRET`        | Yes\*    | -                     |
+| `DOMAIN`            | No       | http://localhost:5173 |
+| `GAME_SERVICE_HOST` | No       | localhost             |
+| `LOG_LEVEL`         | No       | info                  |
+| `NODE_ENV`          | No       | development           |
 
 ### Game Service (.env)
-| Variable | Required | Default |
-|----------|----------|---------|
-| `FLASHPOINT_PATH` | Yes | - |
-| `LOG_LEVEL` | No | info |
-| `EXTERNAL_FALLBACK_URLS` | No | - |
+
+| Variable                 | Required | Default |
+| ------------------------ | -------- | ------- |
+| `FLASHPOINT_PATH`        | Yes      | -       |
+| `LOG_LEVEL`              | No       | info    |
+| `EXTERNAL_FALLBACK_URLS` | No       | -       |
 
 ### Frontend
+
 No environment variables required for local development.
 
 ---

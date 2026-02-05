@@ -19,9 +19,7 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   return (
     <MaintenanceGuard>
-      <AppShell>
-        {children || <Outlet />}
-      </AppShell>
+      <AppShell>{children || <Outlet />}</AppShell>
     </MaintenanceGuard>
   );
 }

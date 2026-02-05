@@ -4,13 +4,15 @@ Documentation for Shadcn UI components used in the application.
 
 ## Overview
 
-The application uses [Shadcn UI](https://ui.shadcn.com/) - a collection of beautifully designed, accessible, and customizable components built with:
+The application uses [Shadcn UI](https://ui.shadcn.com/) - a collection of
+beautifully designed, accessible, and customizable components built with:
 
 - **Radix UI** - Unstyled, accessible component primitives
 - **Tailwind CSS** - Utility-first styling
 - **CVA** (Class Variance Authority) - Component variants
 
-All components are located in `frontend/src/components/ui/` and can be customized directly.
+All components are located in `frontend/src/components/ui/` and can be
+customized directly.
 
 ## Core Components
 
@@ -32,6 +34,7 @@ import { Button } from '@/components/ui/button';
 ```
 
 **Variants:**
+
 - `default` - Primary action button
 - `destructive` - Dangerous actions (delete, remove)
 - `outline` - Secondary actions
@@ -168,7 +171,7 @@ toast.warning('Warning message');
 toast.promise(asyncFunction, {
   loading: 'Loading...',
   success: 'Success!',
-  error: 'Failed'
+  error: 'Failed',
 });
 ```
 
@@ -291,7 +294,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 ## Customization
 
-All components can be customized by editing files in `frontend/src/components/ui/`. They use Tailwind CSS classes and CSS variables for theming.
+All components can be customized by editing files in
+`frontend/src/components/ui/`. They use Tailwind CSS classes and CSS variables
+for theming.
 
 ### Theme Variables
 

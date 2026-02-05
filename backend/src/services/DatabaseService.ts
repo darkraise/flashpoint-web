@@ -7,10 +7,15 @@ import path from 'path';
 
 // Import GameSearchCache for cache invalidation
 // Using dynamic import to avoid circular dependency
-let GameSearchCache: any = null;
+// Type is defined here to maintain type safety while avoiding circular import
+interface GameSearchCacheType {
+  clearCache: () => void;
+}
+let GameSearchCache: GameSearchCacheType | null = null;
 try {
-  GameSearchCache = require('./GameSearchCache').GameSearchCache;
-} catch (error) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  GameSearchCache = require('./GameSearchCache').GameSearchCache as GameSearchCacheType;
+} catch {
   // GameSearchCache may not be available in all contexts
   logger.debug('GameSearchCache not available for cache invalidation');
 }
@@ -52,7 +57,7 @@ export class DatabaseService {
       logger.info('Database connection opened successfully', {
         sourcePath: this.sourceDbPath,
         activePath: this.activeDbPath,
-        usingLocalCopy: this.isUsingLocalCopy
+        usingLocalCopy: this.isUsingLocalCopy,
       });
 
       // Start watching source database for changes
@@ -128,7 +133,7 @@ export class DatabaseService {
         mmapSize: this.isUsingLocalCopy ? config.sqliteMmapSize : 0,
         tempStore: 'MEMORY',
         journalMode: 'DELETE',
-        synchronous: 'NORMAL'
+        synchronous: 'NORMAL',
       });
     } catch (error) {
       logger.error('Failed to apply some PRAGMA optimizations:', error);
@@ -180,7 +185,7 @@ export class DatabaseService {
       if (sourceStats.mtimeMs > localStats.mtimeMs) {
         logger.info('Source database is newer than local copy, will update', {
           sourceModified: new Date(sourceStats.mtimeMs).toISOString(),
-          localModified: new Date(localStats.mtimeMs).toISOString()
+          localModified: new Date(localStats.mtimeMs).toISOString(),
         });
         return true;
       }
@@ -189,7 +194,7 @@ export class DatabaseService {
       if (sourceStats.size !== localStats.size) {
         logger.info('Source database size differs from local copy, will update', {
           sourceSize: sourceStats.size,
-          localSize: localStats.size
+          localSize: localStats.size,
         });
         return true;
       }
@@ -211,7 +216,7 @@ export class DatabaseService {
     try {
       logger.info('Copying database to local storage...', {
         source: this.sourceDbPath,
-        destination: config.localDbPath
+        destination: config.localDbPath,
       });
 
       // Copy to temp file first (atomic operation)
@@ -226,7 +231,7 @@ export class DatabaseService {
 
       logger.info(`Database copied to local storage in ${duration}ms`, {
         size: `${sizeMB} MB`,
-        path: config.localDbPath
+        path: config.localDbPath,
       });
     } catch (error) {
       // Clean up temp file if it exists
@@ -266,7 +271,7 @@ export class DatabaseService {
       });
 
       logger.info('Database file watcher started', {
-        watching: this.sourceDbPath
+        watching: this.sourceDbPath,
       });
     } catch (error) {
       logger.error('Failed to start database file watcher:', error);
@@ -418,7 +423,7 @@ export class DatabaseService {
       sourcePath: this.sourceDbPath,
       activePath: this.activeDbPath,
       usingLocalCopy: this.isUsingLocalCopy,
-      lastModified: this.lastModifiedTime ? new Date(this.lastModifiedTime) : null
+      lastModified: this.lastModifiedTime ? new Date(this.lastModifiedTime) : null,
     };
   }
 
@@ -433,65 +438,98 @@ export class DatabaseService {
     }
   }
 
-  // Helper method to execute queries and return results as objects
-  static exec<T = any>(sql: string, params: any[] = []): T[] {
+  /**
+   * Execute queries and return results as objects.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example DatabaseService.exec<{ id: number; name: string }>('SELECT ...', [])
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static exec<T = any>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        return stmt.all(params) as T[];
-      } catch (error) {
-        logger.error('Database query error:', { sql, params, error });
-        throw error;
-      }
-    }, sql, params);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          return stmt.all(params) as T[];
+        } catch (error) {
+          logger.error('Database query error:', { sql, params, error });
+          throw error;
+        }
+      },
+      sql,
+      params
+    );
   }
 
-  // Helper method to get a single row
-  static get<T = any>(sql: string, params: any[] = []): T | undefined {
+  /**
+   * Get a single row from the database.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example DatabaseService.get<{ id: number }>('SELECT ...', [])
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static get<T = any>(sql: string, params: unknown[] = []): T | undefined {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        const result = stmt.get(params);
-        return result as T | undefined;
-      } catch (error) {
-        logger.error('Database get error:', error);
-        throw error;
-      }
-    }, sql, params);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          const result = stmt.get(params);
+          return result as T | undefined;
+        } catch (error) {
+          logger.error('Database get error:', error);
+          throw error;
+        }
+      },
+      sql,
+      params
+    );
   }
 
-  // Helper method to get all rows
-  static all<T = any>(sql: string, params: any[] = []): T[] {
+  /**
+   * Get all rows from the database.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example DatabaseService.all<{ id: number }>('SELECT ...', [])
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static all<T = any>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        return stmt.all(params) as T[];
-      } catch (error) {
-        logger.error('Database all error:', error);
-        throw error;
-      }
-    }, sql, params);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          return stmt.all(params) as T[];
+        } catch (error) {
+          logger.error('Database all error:', error);
+          throw error;
+        }
+      },
+      sql,
+      params
+    );
   }
 
-  // Helper method to run INSERT/UPDATE/DELETE queries (doesn't return rows)
-  static run(sql: string, params: any[] = []): void {
+  /**
+   * Run INSERT/UPDATE/DELETE queries (doesn't return rows).
+   */
+  static run(sql: string, params: unknown[] = []): void {
     const db = this.getDatabase();
 
-    measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        stmt.run(params);
-      } catch (error) {
-        logger.error('Database run error:', { sql, params, error });
-        throw error;
-      }
-    }, sql, params);
+    measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          stmt.run(params);
+        } catch (error) {
+          logger.error('Database run error:', { sql, params, error });
+          throw error;
+        }
+      },
+      sql,
+      params
+    );
   }
 
   // Save database changes to disk

@@ -2,7 +2,12 @@ import { UserDatabaseService } from './UserDatabaseService';
 import { DatabaseService } from './DatabaseService';
 import { logger } from '../utils/logger';
 import { randomBytes } from 'crypto';
-import { PlaySessionRow, GameStatsRow, PlaytimeActivityRow, DistributionRow } from '../types/database-rows';
+import {
+  PlaySessionRow,
+  GameStatsRow,
+  PlaytimeActivityRow,
+  DistributionRow,
+} from '../types/database-rows';
 
 export interface PlaySession {
   id: number;
@@ -49,7 +54,9 @@ export class PlayTrackingService {
         [userId, gameId, gameTitle, sessionId]
       );
 
-      logger.info(`Play session started: userId=${userId}, gameId=${gameId}, sessionId=${sessionId}`);
+      logger.info(
+        `Play session started: userId=${userId}, gameId=${gameId}, sessionId=${sessionId}`
+      );
       return sessionId;
     } catch (error) {
       logger.error('Failed to start play session:', error);
@@ -82,17 +89,23 @@ export class PlayTrackingService {
 
       const durationSeconds = session.duration_seconds || 0;
 
-      // OPTIMIZATION: Single UPDATE statement with inline duration calculation
+      // Use the duration value from the SELECT query to avoid race condition
+      // (time passes between SELECT and UPDATE, causing inconsistent values)
       UserDatabaseService.run(
         `UPDATE user_game_plays
          SET ended_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
-             duration_seconds = CAST((julianday('now') - julianday(started_at)) * 86400 AS INTEGER)
+             duration_seconds = ?
          WHERE session_id = ?`,
-        [sessionId]
+        [durationSeconds, sessionId]
       );
 
       // Update aggregated stats
-      await this.updateGameStats(session.user_id, session.game_id, session.game_title, durationSeconds);
+      await this.updateGameStats(
+        session.user_id,
+        session.game_id,
+        session.game_title,
+        durationSeconds
+      );
       await this.updateUserStats(session.user_id, durationSeconds);
 
       // Update aggregate stats in Flashpoint database for compatibility with Launcher
@@ -107,6 +120,7 @@ export class PlayTrackingService {
 
   /**
    * Update game-specific stats for a user
+   * Uses UPSERT to avoid race conditions in concurrent requests
    */
   private async updateGameStats(
     userId: number,
@@ -115,30 +129,15 @@ export class PlayTrackingService {
     durationSeconds: number
   ): Promise<void> {
     try {
-      // Check if stats exist
-      const existing = UserDatabaseService.get(
-        'SELECT * FROM user_game_stats WHERE user_id = ? AND game_id = ?',
-        [userId, gameId]
+      UserDatabaseService.run(
+        `INSERT INTO user_game_stats (user_id, game_id, game_title, total_plays, total_playtime_seconds, first_played_at, last_played_at)
+         VALUES (?, ?, ?, 1, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+         ON CONFLICT(user_id, game_id) DO UPDATE SET
+           total_plays = total_plays + 1,
+           total_playtime_seconds = total_playtime_seconds + excluded.total_playtime_seconds,
+           last_played_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+        [userId, gameId, gameTitle, durationSeconds]
       );
-
-      if (existing) {
-        // Update existing stats
-        UserDatabaseService.run(
-          `UPDATE user_game_stats
-           SET total_plays = total_plays + 1,
-               total_playtime_seconds = total_playtime_seconds + ?,
-               last_played_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-           WHERE user_id = ? AND game_id = ?`,
-          [durationSeconds, userId, gameId]
-        );
-      } else {
-        // Insert new stats
-        UserDatabaseService.run(
-          `INSERT INTO user_game_stats (user_id, game_id, game_title, total_plays, total_playtime_seconds, first_played_at, last_played_at)
-           VALUES (?, ?, ?, 1, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
-          [userId, gameId, gameTitle, durationSeconds]
-        );
-      }
     } catch (error) {
       logger.error('Failed to update game stats:', error);
     }
@@ -146,47 +145,36 @@ export class PlayTrackingService {
 
   /**
    * Update overall user stats
+   * Uses UPSERT to avoid race conditions in concurrent requests
    */
   private async updateUserStats(userId: number, durationSeconds: number): Promise<void> {
     try {
-      // Check if stats exist
-      const existing = UserDatabaseService.get(
-        'SELECT * FROM user_stats WHERE user_id = ?',
-        [userId]
-      );
-
       // Count unique games played
-      const gamesPlayed = UserDatabaseService.get(
-        'SELECT COUNT(DISTINCT game_id) as count FROM user_game_stats WHERE user_id = ?',
-        [userId]
-      );
+      const gamesPlayed =
+        UserDatabaseService.get(
+          'SELECT COUNT(DISTINCT game_id) as count FROM user_game_stats WHERE user_id = ?',
+          [userId]
+        )?.count || 0;
 
       // Count total sessions
-      const totalSessions = UserDatabaseService.get(
-        'SELECT COUNT(*) as count FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL',
-        [userId]
-      );
+      const totalSessions =
+        UserDatabaseService.get(
+          'SELECT COUNT(*) as count FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL',
+          [userId]
+        )?.count || 0;
 
-      if (existing) {
-        // Update existing stats
-        UserDatabaseService.run(
-          `UPDATE user_stats
-           SET total_games_played = ?,
-               total_playtime_seconds = total_playtime_seconds + ?,
-               total_sessions = ?,
-               last_play_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
-               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-           WHERE user_id = ?`,
-          [gamesPlayed?.count || 0, durationSeconds, totalSessions?.count || 0, userId]
-        );
-      } else {
-        // Insert new stats
-        UserDatabaseService.run(
-          `INSERT INTO user_stats (user_id, total_games_played, total_playtime_seconds, total_sessions, first_play_at, last_play_at)
-           VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
-          [userId, gamesPlayed?.count || 0, durationSeconds, totalSessions?.count || 0]
-        );
-      }
+      // UPSERT user stats
+      UserDatabaseService.run(
+        `INSERT INTO user_stats (user_id, total_games_played, total_playtime_seconds, total_sessions, first_play_at, last_play_at)
+         VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+         ON CONFLICT(user_id) DO UPDATE SET
+           total_games_played = excluded.total_games_played,
+           total_playtime_seconds = total_playtime_seconds + ?,
+           total_sessions = excluded.total_sessions,
+           last_play_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
+        [userId, gamesPlayed, durationSeconds, totalSessions, durationSeconds]
+      );
     } catch (error) {
       logger.error('Failed to update user stats:', error);
     }
@@ -194,48 +182,18 @@ export class PlayTrackingService {
 
   /**
    * Update aggregate play statistics in Flashpoint database
-   * This maintains compatibility with Flashpoint Launcher
+   *
+   * NOTE: This is now a no-op. Play statistics are tracked in the user database
+   * (user_game_plays, user_game_stats) which is the authoritative source.
+   * The flashpoint.sqlite database is read-only and managed by Flashpoint Launcher.
+   * Writing to it could cause conflicts and data corruption.
+   *
+   * @deprecated Play stats are tracked in user database only
    */
   private async updateFlashpointGameStats(gameId: string, _sessionDuration: number): Promise<void> {
-    try {
-      // Get aggregate stats across ALL users for this game
-      const aggregateStats = UserDatabaseService.get(
-        `SELECT
-          COUNT(*) as totalPlays,
-          SUM(duration_seconds) as totalPlaytime,
-          MAX(ended_at) as lastPlayed
-        FROM user_game_plays
-        WHERE game_id = ? AND ended_at IS NOT NULL`,
-        [gameId]
-      ) as { totalPlays: number; totalPlaytime: number; lastPlayed: string } | undefined;
-
-      if (!aggregateStats) {
-        logger.warn(`No aggregate stats found for game ${gameId}`);
-        return;
-      }
-
-      // Update the game table in flashpoint.sqlite
-      DatabaseService.run(
-        `UPDATE game
-        SET lastPlayed = ?,
-            playtime = ?,
-            playCounter = ?
-        WHERE id = ?`,
-        [
-          aggregateStats.lastPlayed,
-          aggregateStats.totalPlaytime,
-          aggregateStats.totalPlays,
-          gameId
-        ]
-      );
-
-      logger.info(
-        `Updated Flashpoint DB stats for game ${gameId}: ${aggregateStats.totalPlays} plays, ${aggregateStats.totalPlaytime}s total`
-      );
-    } catch (error) {
-      // Log but don't throw - Flashpoint DB might be locked by Launcher
-      logger.warn(`Failed to update Flashpoint DB stats for game ${gameId}:`, error);
-    }
+    // No-op: Flashpoint database is read-only
+    // Play statistics are tracked in the user database instead
+    logger.debug(`[PlayTracking] Skipping Flashpoint DB update for game ${gameId} (read-only)`);
   }
 
   /**
@@ -256,7 +214,7 @@ export class PlayTrackingService {
           totalPlaytimeSeconds: 0,
           totalSessions: 0,
           firstPlayAt: null,
-          lastPlayAt: null
+          lastPlayAt: null,
         };
       }
 
@@ -266,7 +224,7 @@ export class PlayTrackingService {
         totalPlaytimeSeconds: stats.total_playtime_seconds,
         totalSessions: stats.total_sessions,
         firstPlayAt: stats.first_play_at,
-        lastPlayAt: stats.last_play_at
+        lastPlayAt: stats.last_play_at,
       };
     } catch (error) {
       logger.error('Failed to get user stats:', error);
@@ -294,7 +252,7 @@ export class PlayTrackingService {
         totalPlays: stat.total_plays,
         totalPlaytimeSeconds: stat.total_playtime_seconds,
         firstPlayedAt: stat.first_played_at,
-        lastPlayedAt: stat.last_played_at
+        lastPlayedAt: stat.last_played_at,
       }));
     } catch (error) {
       logger.error('Failed to get user game stats:', error);
@@ -324,7 +282,7 @@ export class PlayTrackingService {
         startedAt: session.started_at,
         endedAt: session.ended_at,
         durationSeconds: session.duration_seconds,
-        sessionId: session.session_id
+        sessionId: session.session_id,
       }));
     } catch (error) {
       logger.error('Failed to get user play history:', error);
@@ -352,7 +310,7 @@ export class PlayTrackingService {
         totalPlays: stat.total_plays,
         totalPlaytimeSeconds: stat.total_playtime_seconds,
         firstPlayedAt: stat.first_played_at,
-        lastPlayedAt: stat.last_played_at
+        lastPlayedAt: stat.last_played_at,
       }));
     } catch (error) {
       logger.error('Failed to get top games:', error);
@@ -363,7 +321,10 @@ export class PlayTrackingService {
   /**
    * Get play activity over time (daily aggregation)
    */
-  async getPlayActivityOverTime(userId: number, days = 30): Promise<Array<{ date: string; playtime: number; sessions: number }>> {
+  async getPlayActivityOverTime(
+    userId: number,
+    days = 30
+  ): Promise<Array<{ date: string; playtime: number; sessions: number }>> {
     try {
       // Validate and sanitize days parameter to prevent SQL injection
       // Ensure it's a positive integer between 1 and 365
@@ -386,7 +347,7 @@ export class PlayTrackingService {
       return data.map((row: PlaytimeActivityRow) => ({
         date: row.date,
         playtime: row.total_playtime || 0,
-        sessions: row.session_count || 0
+        sessions: row.session_count || 0,
       }));
     } catch (error) {
       logger.error('Failed to get play activity over time:', error);
@@ -397,7 +358,10 @@ export class PlayTrackingService {
   /**
    * Get games distribution by playtime
    */
-  async getGamesDistribution(userId: number, limit = 10): Promise<Array<{ name: string; value: number }>> {
+  async getGamesDistribution(
+    userId: number,
+    limit = 10
+  ): Promise<Array<{ name: string; value: number }>> {
     try {
       const stats = UserDatabaseService.all(
         `SELECT game_title, total_playtime_seconds
@@ -410,7 +374,7 @@ export class PlayTrackingService {
 
       return stats.map((stat: DistributionRow) => ({
         name: stat.game_title,
-        value: stat.total_playtime_seconds
+        value: stat.total_playtime_seconds,
       }));
     } catch (error) {
       logger.error('Failed to get games distribution:', error);

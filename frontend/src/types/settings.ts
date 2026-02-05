@@ -81,6 +81,16 @@ export interface SystemSettings {
 }
 
 /**
+ * Configured domain for sharing
+ */
+export interface Domain {
+  id: number;
+  hostname: string;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+/**
  * Public settings available without authentication
  */
 export interface PublicSettings {
@@ -88,6 +98,7 @@ export interface PublicSettings {
   auth: Pick<AuthSettings, 'guestAccessEnabled' | 'userRegistrationEnabled'>;
   features?: Partial<FeatureSettings>;
   metadata?: { flashpointEdition?: string; flashpointVersion?: string };
+  domains?: { defaultDomain?: string | null };
 }
 
 /**

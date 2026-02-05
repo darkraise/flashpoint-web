@@ -11,6 +11,7 @@ import {
 import { UserPlaylist } from '@/types/playlist';
 import { ListVideo, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { AxiosError } from 'axios';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,8 +53,9 @@ export function UserPlaylistsView() {
       await deletePlaylist.mutateAsync(deletingPlaylist.id);
       toast.success('Playlist deleted successfully');
       setDeletingPlaylist(null);
-    } catch (error: any) {
-      toast.error(error?.response?.data?.error?.message || 'Failed to delete playlist');
+    } catch (error: unknown) {
+      const axiosError = error instanceof AxiosError ? error : null;
+      toast.error(axiosError?.response?.data?.error?.message || 'Failed to delete playlist');
     }
   };
 
@@ -148,13 +150,13 @@ export function UserPlaylistsView() {
       />
 
       {/* Share Dialog */}
-      {sharingPlaylist && (
+      {sharingPlaylist ? (
         <SharePlaylistDialog
           isOpen={!!sharingPlaylist}
           onClose={() => setSharingPlaylist(null)}
           playlist={sharingPlaylist}
         />
-      )}
+      ) : null}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog

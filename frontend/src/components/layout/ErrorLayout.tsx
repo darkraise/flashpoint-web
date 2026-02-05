@@ -15,9 +15,5 @@ interface ErrorLayoutProps {
  * - Used for 404, 500, network error, and unauthorized pages
  */
 export function ErrorLayout({ children }: ErrorLayoutProps) {
-  return (
-    <div className="min-h-screen bg-background">
-      {children || <Outlet />}
-    </div>
-  );
+  return <div className="min-h-screen bg-background">{children || <Outlet />}</div>;
 }

@@ -70,7 +70,7 @@ export function NetworkErrorView() {
 
   return (
     <div className="relative">
-      {showRestored && (
+      {showRestored ? (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
           <Alert className="bg-green-50 border-green-200">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -79,7 +79,7 @@ export function NetworkErrorView() {
             </AlertDescription>
           </Alert>
         </div>
-      )}
+      ) : null}
 
       <ErrorPage
         type="network"

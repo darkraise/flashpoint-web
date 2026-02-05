@@ -53,15 +53,18 @@ export function IconSelector({
 
   // Flatten all icons from all categories into a single array (memoized to prevent GC pressure)
   const allIcons = useMemo(
-    () => Object.values(ICON_CATEGORIES).flatMap(category => category.icons),
+    () => Object.values(ICON_CATEGORIES).flatMap((category) => category.icons),
     [] // ICON_CATEGORIES is static, no dependencies needed
   );
 
   // Memoized handler to select an icon and close popover
-  const handleIconSelect = useCallback((iconName: PlaylistIconName) => {
-    onChange(iconName);
-    setOpen(false);
-  }, [onChange]);
+  const handleIconSelect = useCallback(
+    (iconName: PlaylistIconName) => {
+      onChange(iconName);
+      setOpen(false);
+    },
+    [onChange]
+  );
 
   // Memoized handler to clear selection
   const handleClear = useCallback(() => {
@@ -88,12 +91,12 @@ export function IconSelector({
 
   return (
     <div className="space-y-2">
-      {label && (
+      {label ? (
         <Label className="flex items-center gap-2 text-sm font-medium">
           <Sparkles className="h-3.5 w-3.5 text-primary" />
           {label}
         </Label>
-      )}
+      ) : null}
 
       <Popover open={open} onOpenChange={handleOpenChange} modal={true}>
         <PopoverTrigger asChild>
@@ -171,7 +174,7 @@ export function IconSelector({
           </div>
 
           {/* Footer */}
-          {value && (
+          {value ? (
             <div className="border-t bg-muted/30 p-3">
               <Button
                 variant="ghost"
@@ -187,7 +190,7 @@ export function IconSelector({
                 Clear Selection
               </Button>
             </div>
-          )}
+          ) : null}
         </PopoverContent>
       </Popover>
     </div>

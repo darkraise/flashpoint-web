@@ -1,10 +1,12 @@
 # API Client
 
-Complete documentation of the Axios-based API client and all available endpoints.
+Complete documentation of the Axios-based API client and all available
+endpoints.
 
 ## Overview
 
-The API client is a centralized Axios instance with request/response interceptors for authentication and error handling.
+The API client is a centralized Axios instance with request/response
+interceptors for authentication and error handling.
 
 **Location:** `frontend/src/lib/api.ts`
 
@@ -14,8 +16,8 @@ The API client is a centralized Axios instance with request/response interceptor
 const api = axios.create({
   baseURL: '/api',
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 ```
 
@@ -26,15 +28,13 @@ const api = axios.create({
 Automatically adds JWT token to all requests:
 
 ```typescript
-api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 ```
 
 ### Response Interceptor
@@ -143,6 +143,15 @@ playTrackingApi.getActivityOverTime(days?: number): Promise<PlayActivityData[]>
 playTrackingApi.getGamesDistribution(limit?: number): Promise<GameDistribution[]>
 ```
 
+### domainsApi
+
+```typescript
+domainsApi.getAll(): Promise<Domain[]>
+domainsApi.add(hostname: string): Promise<Domain>
+domainsApi.delete(id: number): Promise<void>
+domainsApi.setDefault(id: number): Promise<Domain>
+```
+
 ## Usage with Custom Hooks
 
 All API calls should use custom hooks wrapping TanStack Query:
@@ -194,4 +203,3 @@ interface PaginatedResult<T> {
 
 - [Backend API Documentation](../06-api-reference/README.md)
 - [Custom Hooks](./custom-hooks.md)
-- [Type Definitions](../06-api-reference/types.md)

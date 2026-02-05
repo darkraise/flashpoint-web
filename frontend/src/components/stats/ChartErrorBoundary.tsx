@@ -44,11 +44,11 @@ export class ChartErrorBoundary extends Component<Props, State> {
               <p className="text-muted-foreground text-sm">
                 Unable to render chart. Please try refreshing the page.
               </p>
-              {this.state.error && (
+              {this.state.error ? (
                 <p className="text-xs text-muted-foreground mt-2 font-mono">
                   {this.state.error.message}
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

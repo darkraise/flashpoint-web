@@ -6,7 +6,9 @@ import fs from 'fs';
 // In Docker (production): defaults to /app/logs/game-service.log
 // In local dev: no file logging unless LOG_FILE is explicitly set
 const logLevel = process.env.LOG_LEVEL || 'info';
-const logFile = process.env.LOG_FILE || (process.env.NODE_ENV === 'production' ? '/app/logs/game-service.log' : undefined);
+const logFile =
+  process.env.LOG_FILE ||
+  (process.env.NODE_ENV === 'production' ? '/app/logs/game-service.log' : undefined);
 
 // Try to import OpenTelemetry API for trace context
 let trace: any = null;
@@ -34,7 +36,7 @@ function getTraceContext(): { trace_id?: string; span_id?: string } {
       const spanContext = activeSpan.spanContext();
       return {
         trace_id: spanContext.traceId,
-        span_id: spanContext.spanId
+        span_id: spanContext.spanId,
       };
     }
   } catch {
@@ -49,13 +51,13 @@ function getTraceContext(): { trace_id?: string; span_id?: string } {
  */
 function getSeverityNumber(level: string): number {
   const severityMap: Record<string, number> = {
-    error: 17,   // ERROR
-    warn: 13,    // WARN
-    info: 9,     // INFO
-    http: 9,     // INFO
-    verbose: 5,  // DEBUG
-    debug: 5,    // DEBUG
-    silly: 1     // TRACE
+    error: 17, // ERROR
+    warn: 13, // WARN
+    info: 9, // INFO
+    http: 9, // INFO
+    verbose: 5, // DEBUG
+    debug: 5, // DEBUG
+    silly: 1, // TRACE
   };
   return severityMap[level] || 9;
 }
@@ -103,8 +105,8 @@ const transports: winston.transport[] = [
         }
         return msg;
       })
-    )
-  })
+    ),
+  }),
 ];
 
 // Track file transport for diagnostics
@@ -133,7 +135,9 @@ if (logFile) {
       fs.unlinkSync(testFile);
       console.log(`[Logger]   Directory is writable`);
     } catch (writeError) {
-      throw new Error(`Log directory is not writable: ${writeError instanceof Error ? writeError.message : writeError}`);
+      throw new Error(
+        `Log directory is not writable: ${writeError instanceof Error ? writeError.message : writeError}`
+      );
     }
 
     // Create file transport with OTEL-compatible JSON format
@@ -147,7 +151,7 @@ if (logFile) {
       ),
       maxsize: 10485760, // 10MB
       maxFiles: 5,
-      tailable: true
+      tailable: true,
     });
 
     // Add error handler to catch write failures
@@ -177,7 +181,7 @@ export const logger = winston.createLogger({
     winston.format.json()
   ),
   defaultMeta: { service: 'flashpoint-game-service' },
-  transports
+  transports,
 });
 
 /**
@@ -197,7 +201,7 @@ export function getLoggingStatus(): {
     filePath: logFile || null,
     fileError: fileLoggingError?.message || null,
     logLevel,
-    otelIntegration: trace !== null
+    otelIntegration: trace !== null,
   };
 }
 

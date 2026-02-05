@@ -69,7 +69,7 @@ async function serveFileWithFallback(
         const response = await axios.get(externalUrl, {
           responseType: 'arraybuffer',
           timeout: 10000, // 10 second timeout
-          validateStatus: (status) => status === 200
+          validateStatus: (status) => status === 200,
         });
 
         if (response.status === 200 && response.data) {
@@ -89,7 +89,9 @@ async function serveFileWithFallback(
               logger.info(`[Proxy] Cached image locally: ${localPath}`);
             } catch (cacheError) {
               // Log cache errors but don't fail the request
-              logger.warn(`[Proxy] Failed to cache image locally: ${cacheError instanceof Error ? cacheError.message : 'Unknown error'}`);
+              logger.warn(
+                `[Proxy] Failed to cache image locally: ${cacheError instanceof Error ? cacheError.message : 'Unknown error'}`
+              );
             }
           })();
 
@@ -101,7 +103,9 @@ async function serveFileWithFallback(
           return res.send(imageBuffer);
         }
       } catch (err) {
-        logger.debug(`[Proxy] Failed to fetch from ${baseUrl}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        logger.debug(
+          `[Proxy] Failed to fetch from ${baseUrl}: ${err instanceof Error ? err.message : 'Unknown error'}`
+        );
         // Continue to next URL
       }
     }
@@ -111,8 +115,8 @@ async function serveFileWithFallback(
     res.status(404).json({
       error: {
         message: 'Image not found',
-        statusCode: 404
-      }
+        statusCode: 404,
+      },
     });
   } catch (error) {
     next(error);
@@ -120,114 +124,108 @@ async function serveFileWithFallback(
 }
 
 // Proxy to Flashpoint Game Server for game content
-router.use('/game', createProxyMiddleware({
-  target: config.gameServerUrl,
-  changeOrigin: true,
-  pathRewrite: {
-    '^/proxy/game': '' // Remove /proxy/game prefix
-  },
-  onProxyReq: (proxyReq, req, _res) => {
-    // Add headers if needed
-    if (req.ip) {
-      proxyReq.setHeader('X-Forwarded-For', req.ip);
-    }
-  },
-  onError: (err, req, res) => {
-    logger.error('Proxy error:', err);
-    res.status(500).json({
-      error: {
-        message: 'Failed to proxy request to game server',
-        statusCode: 500
+router.use(
+  '/game',
+  createProxyMiddleware({
+    target: config.gameServerUrl,
+    changeOrigin: true,
+    pathRewrite: {
+      '^/proxy/game': '', // Remove /proxy/game prefix
+    },
+    onProxyReq: (proxyReq, req, _res) => {
+      // Add headers if needed
+      if (req.ip) {
+        proxyReq.setHeader('X-Forwarded-For', req.ip);
       }
-    });
-  }
-}));
+    },
+    onError: (err, req, res) => {
+      logger.error('Proxy error:', err);
+      res.status(500).json({
+        error: {
+          message: 'Failed to proxy request to game server',
+          statusCode: 500,
+        },
+      });
+    },
+  })
+);
 
 // Serve images with CDN fallback
-router.get('/images/:path(*)', asyncHandler(async (req, res, next) => {
-  const relativePath = req.params.path;
+router.get(
+  '/images/:path(*)',
+  asyncHandler(async (req, res, next) => {
+    const relativePath = req.params.path;
 
-  // Validate path to prevent directory traversal
-  const localPath = validatePath(relativePath, config.flashpointImagesPath);
+    // Validate path to prevent directory traversal
+    const localPath = validatePath(relativePath, config.flashpointImagesPath);
 
-  if (!localPath) {
-    return res.status(403).json({
-      error: {
-        message: 'Access denied',
-        statusCode: 403
-      }
-    });
-  }
+    if (!localPath) {
+      return res.status(403).json({
+        error: {
+          message: 'Access denied',
+          statusCode: 403,
+        },
+      });
+    }
 
-  // Get external image URLs dynamically from preferences
-  const externalImageUrls = await getExternalImageUrls();
+    // Get external image URLs dynamically from preferences
+    const externalImageUrls = await getExternalImageUrls();
 
-  await serveFileWithFallback(
-    localPath,
-    relativePath,
-    externalImageUrls,
-    res,
-    next
-  );
-}));
+    await serveFileWithFallback(localPath, relativePath, externalImageUrls, res, next);
+  })
+);
 
 // Serve logos with CDN fallback
-router.get('/logos/:path(*)', asyncHandler(async (req, res, next) => {
-  const relativePath = req.params.path;
+router.get(
+  '/logos/:path(*)',
+  asyncHandler(async (req, res, next) => {
+    const relativePath = req.params.path;
 
-  // Validate path to prevent directory traversal
-  const localPath = validatePath(relativePath, config.flashpointLogosPath);
+    // Validate path to prevent directory traversal
+    const localPath = validatePath(relativePath, config.flashpointLogosPath);
 
-  if (!localPath) {
-    return res.status(403).json({
-      error: {
-        message: 'Access denied',
-        statusCode: 403
-      }
-    });
-  }
+    if (!localPath) {
+      return res.status(403).json({
+        error: {
+          message: 'Access denied',
+          statusCode: 403,
+        },
+      });
+    }
 
-  // Get external image URLs dynamically from preferences
-  const externalImageUrls = await getExternalImageUrls();
+    // Get external image URLs dynamically from preferences
+    const externalImageUrls = await getExternalImageUrls();
 
-  // For logos, the external path should include 'Logos' subdirectory
-  const externalUrls = externalImageUrls.map(url => `${url}/../Logos`);
+    // For logos, the external path should include 'Logos' subdirectory
+    const externalUrls = externalImageUrls.map((url) => `${url}/../Logos`);
 
-  await serveFileWithFallback(
-    localPath,
-    relativePath,
-    externalUrls,
-    res,
-    next
-  );
-}));
+    await serveFileWithFallback(localPath, relativePath, externalUrls, res, next);
+  })
+);
 
 // Serve screenshots with CDN fallback
-router.get('/screenshots/:path(*)', asyncHandler(async (req, res, next) => {
-  const relativePath = `Screenshots/${req.params.path}`;
+router.get(
+  '/screenshots/:path(*)',
+  asyncHandler(async (req, res, next) => {
+    const relativePath = `Screenshots/${req.params.path}`;
 
-  // Validate path to prevent directory traversal
-  const localPath = validatePath(relativePath, config.flashpointImagesPath);
+    // Validate path to prevent directory traversal
+    const localPath = validatePath(relativePath, config.flashpointImagesPath);
 
-  if (!localPath) {
-    return res.status(403).json({
-      error: {
-        message: 'Access denied',
-        statusCode: 403
-      }
-    });
-  }
+    if (!localPath) {
+      return res.status(403).json({
+        error: {
+          message: 'Access denied',
+          statusCode: 403,
+        },
+      });
+    }
 
-  // Get external image URLs dynamically from preferences
-  const externalImageUrls = await getExternalImageUrls();
+    // Get external image URLs dynamically from preferences
+    const externalImageUrls = await getExternalImageUrls();
 
-  await serveFileWithFallback(
-    localPath,
-    relativePath,
-    externalImageUrls,
-    res,
-    next
-  );
-}));
+    await serveFileWithFallback(localPath, relativePath, externalImageUrls, res, next);
+  })
+);
 
 export default router;

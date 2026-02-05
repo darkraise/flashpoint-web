@@ -25,12 +25,12 @@ const INITIAL_FILTER_STATE: ActivityFilterState = {
 export function useActivityFilters() {
   const [filters, setFilters] = useState<ActivityFilterState>(INITIAL_FILTER_STATE);
 
-  const updateFilter = useCallback(<K extends keyof ActivityFilterState>(
-    key: K,
-    value: ActivityFilterState[K]
-  ) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  }, []);
+  const updateFilter = useCallback(
+    <K extends keyof ActivityFilterState>(key: K, value: ActivityFilterState[K]) => {
+      setFilters((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
 
   const clearFilters = useCallback(() => {
     setFilters(INITIAL_FILTER_STATE);
@@ -40,15 +40,15 @@ export function useActivityFilters() {
   useEffect(() => {
     if (filters.startDate && filters.endDate) {
       if (filters.endDate < filters.startDate) {
-        setFilters(prev => ({
+        setFilters((prev) => ({
           ...prev,
-          dateRangeError: 'End date must be after or equal to start date'
+          dateRangeError: 'End date must be after or equal to start date',
         }));
       } else {
-        setFilters(prev => ({ ...prev, dateRangeError: '' }));
+        setFilters((prev) => ({ ...prev, dateRangeError: '' }));
       }
     } else {
-      setFilters(prev => ({ ...prev, dateRangeError: '' }));
+      setFilters((prev) => ({ ...prev, dateRangeError: '' }));
     }
   }, [filters.startDate, filters.endDate]);
 

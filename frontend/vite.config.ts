@@ -11,17 +11,17 @@ export default defineConfig({
       open: false,
       filename: 'stats.html',
       gzipSize: true,
-      brotliSize: true
-    })
+      brotliSize: true,
+    }),
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
+      '@': path.resolve(__dirname, './src'),
+    },
   },
   assetsInclude: ['**/*.wasm'],
   esbuild: {
-    drop: ['console', 'debugger']
+    drop: ['console', 'debugger'],
   },
   build: {
     // Target modern browsers for smaller bundles
@@ -42,7 +42,11 @@ export default defineConfig({
 
         manualChunks: (id) => {
           // Core React libraries
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/react-dom') ||
+            id.includes('node_modules/react-router-dom')
+          ) {
             return 'react-vendor';
           }
 
@@ -67,7 +71,11 @@ export default defineConfig({
           }
 
           // Form libraries
-          if (id.includes('react-hook-form') || id.includes('@hookform/resolvers') || id.includes('zod')) {
+          if (
+            id.includes('react-hook-form') ||
+            id.includes('@hookform/resolvers') ||
+            id.includes('zod')
+          ) {
             return 'forms';
           }
 
@@ -77,38 +85,42 @@ export default defineConfig({
           }
 
           // Utilities (date-fns, clsx, etc.)
-          if (id.includes('date-fns') || id.includes('clsx') || id.includes('class-variance-authority')) {
+          if (
+            id.includes('date-fns') ||
+            id.includes('clsx') ||
+            id.includes('class-variance-authority')
+          ) {
             return 'utils';
           }
 
           // Remaining node_modules: let Rollup decide optimal chunking
           // A catch-all 'vendor' bucket causes circular deps with react-vendor
           // because packages like framer-motion/axios import React
-        }
-      }
+        },
+      },
     },
 
     // Source maps for production debugging (can be disabled for smaller builds)
-    sourcemap: false
+    sourcemap: false,
   },
   server: {
     port: 5173,
     headers: {
       'Cross-Origin-Embedder-Policy': 'credentialless',
-      'Cross-Origin-Opener-Policy': 'same-origin'
+      'Cross-Origin-Opener-Policy': 'same-origin',
     },
     proxy: {
       '/api': {
         target: 'http://localhost:3100',
-        changeOrigin: true
+        changeOrigin: true,
       },
       '/proxy': {
         target: 'http://localhost:3100',
-        changeOrigin: true
-      }
-    }
+        changeOrigin: true,
+      },
+    },
   },
   optimizeDeps: {
-    exclude: ['*.wasm']
-  }
+    exclude: ['*.wasm'],
+  },
 });

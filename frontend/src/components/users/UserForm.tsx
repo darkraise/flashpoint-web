@@ -36,7 +36,10 @@ import {
 } from '@/components/ui/dialog';
 
 const createUserSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters').max(50, 'Username must be at most 50 characters'),
+  username: z
+    .string()
+    .min(3, 'Username must be at least 3 characters')
+    .max(50, 'Username must be at most 50 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   roleId: z.number(),
@@ -61,25 +64,26 @@ interface UserFormProps {
 export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
-  const { data: roles } = useRoles();
+  const { data: roles, isLoading: rolesLoading, isError: rolesError } = useRoles();
 
   const isEditMode = !!user;
 
   const form = useForm<CreateUserFormValues | UpdateUserFormValues>({
     resolver: zodResolver(isEditMode ? updateUserSchema : createUserSchema),
-    defaultValues: isEditMode && user
-      ? {
-          email: user.email,
-          roleId: user.roleId,
-          isActive: user.isActive,
-        }
-      : {
-          username: '',
-          email: '',
-          password: '',
-          roleId: 2, // Default to 'user' role
-          isActive: true,
-        },
+    defaultValues:
+      isEditMode && user
+        ? {
+            email: user.email,
+            roleId: user.roleId,
+            isActive: user.isActive,
+          }
+        : {
+            username: '',
+            email: '',
+            password: '',
+            roleId: 2, // Default to 'user' role
+            isActive: true,
+          },
   });
 
   useEffect(() => {
@@ -114,23 +118,21 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
     <Dialog open={true} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {isEditMode ? 'Edit User' : 'Create New User'}
-          </DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit User' : 'Create New User'}</DialogTitle>
         </DialogHeader>
 
         <DialogBody>
-          {mutation.isError && (
+          {mutation.isError ? (
             <Alert variant="destructive" className="mb-4">
               <AlertDescription>
                 {getErrorMessage(mutation.error) || 'Operation failed'}
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {!isEditMode && (
+              {!isEditMode ? (
                 <FormField
                   control={form.control}
                   name="username"
@@ -138,30 +140,23 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Username"
-                          {...field}
-                        />
+                        <Input placeholder="Username" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
+              ) : null}
 
-              {isEditMode && user && (
+              {isEditMode && user ? (
                 <div className="space-y-2">
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Username
                   </label>
-                  <Input
-                    value={user.username}
-                    disabled
-                    className="bg-muted"
-                  />
+                  <Input value={user.username} disabled className="bg-muted" />
                   <p className="text-xs text-muted-foreground mt-1">Username cannot be changed</p>
                 </div>
-              )}
+              ) : null}
 
               <FormField
                 control={form.control}
@@ -170,18 +165,14 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        {...field}
-                      />
+                      <Input type="email" placeholder="you@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {!isEditMode && (
+              {!isEditMode ? (
                 <FormField
                   control={form.control}
                   name="password"
@@ -189,17 +180,13 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="******************"
-                          {...field}
-                        />
+                        <Input type="password" placeholder="******************" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
+              ) : null}
 
               <FormField
                 control={form.control}
@@ -217,11 +204,25 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {roles?.map((role) => (
-                          <SelectItem key={role.id} value={role.id.toString()}>
-                            {role.name} - {role.description}
+                        {rolesLoading ? (
+                          <SelectItem value="loading" disabled>
+                            Loading roles...
                           </SelectItem>
-                        ))}
+                        ) : rolesError ? (
+                          <SelectItem value="error" disabled>
+                            Failed to load roles
+                          </SelectItem>
+                        ) : !roles || roles.length === 0 ? (
+                          <SelectItem value="empty" disabled>
+                            No roles available
+                          </SelectItem>
+                        ) : (
+                          roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id.toString()}>
+                              {role.name} - {role.description}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -236,32 +237,20 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
                       <FormLabel>Active</FormLabel>
-                      <FormDescription>
-                        User can sign in and access the application
-                      </FormDescription>
+                      <FormDescription>User can sign in and access the application</FormDescription>
                     </div>
                     <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
                     </FormControl>
                   </FormItem>
                 )}
               />
 
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={onClose}
-                >
+                <Button type="button" variant="secondary" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={mutation.isPending}
-                >
+                <Button type="submit" disabled={mutation.isPending}>
                   {mutation.isPending ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
                 </Button>
               </DialogFooter>

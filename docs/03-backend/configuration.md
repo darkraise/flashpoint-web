@@ -1,6 +1,7 @@
 # Backend Configuration
 
-This document describes all environment variables and configuration options for the Flashpoint Web backend service.
+This document describes all environment variables and configuration options for
+the Flashpoint Web backend service.
 
 ## Configuration File
 
@@ -40,6 +41,7 @@ export const config = {
 ### Server Configuration
 
 #### `NODE_ENV`
+
 - **Type**: string
 - **Default**: `development`
 - **Options**: `development`, `production`, `test`
@@ -50,6 +52,7 @@ export const config = {
   ```
 
 #### `PORT`
+
 - **Type**: number
 - **Default**: `3100`
 - **Description**: HTTP server port
@@ -59,6 +62,7 @@ export const config = {
   ```
 
 #### `HOST`
+
 - **Type**: string
 - **Default**: `0.0.0.0`
 - **Description**: Server bind address
@@ -71,6 +75,7 @@ export const config = {
 ### Flashpoint Paths
 
 #### `FLASHPOINT_PATH`
+
 - **Type**: string
 - **Default**: `D:/Flashpoint`
 - **Required**: Yes
@@ -92,39 +97,54 @@ All other Flashpoint paths are automatically derived from `FLASHPOINT_PATH`:
 - Playlists: `${FLASHPOINT_PATH}/Data/Playlists`
 - Games: `${FLASHPOINT_PATH}/Data/Games`
 
-You do not need to set environment variables for these paths - they are calculated automatically from `FLASHPOINT_PATH`.
+You do not need to set environment variables for these paths - they are
+calculated automatically from `FLASHPOINT_PATH`.
 
 ### Flashpoint Edition Auto-Detection
 
-The Flashpoint edition is **automatically detected** from `${FLASHPOINT_PATH}/version.txt` on server startup. No environment variable is needed.
+The Flashpoint edition is **automatically detected** from
+`${FLASHPOINT_PATH}/version.txt` on server startup. No environment variable is
+needed.
 
 **How it works:**
 
-1. On startup, `backend/src/config.ts` reads `version.txt` from the Flashpoint installation directory
+1. On startup, `backend/src/config.ts` reads `version.txt` from the Flashpoint
+   installation directory
 2. The file content is parsed for "Infinity" or "Ultimate" (case-insensitive)
-3. The detected edition and full version string are stored in the `config` object:
+3. The detected edition and full version string are stored in the `config`
+   object:
    - `config.flashpointEdition` — `"infinity"` or `"ultimate"`
-   - `config.flashpointVersionString` — Full version string (e.g., `"Flashpoint 14.0.3 Infinity - Kingfisher"`)
-4. Backend services (GameService, MetadataSyncService, MetadataUpdateService) read `config` directly
-5. The frontend receives edition/version via the `/api/settings/public` endpoint (injected from `config`, not stored in DB)
+   - `config.flashpointVersionString` — Full version string (e.g.,
+     `"Flashpoint 14.0.3 Infinity - Kingfisher"`)
+4. Backend services (GameService, MetadataSyncService, MetadataUpdateService)
+   read `config` directly
+5. The frontend receives edition/version via the `/api/settings/public` endpoint
+   (injected from `config`, not stored in DB)
 6. If `version.txt` is missing or unparseable, defaults to `"infinity"`
 
 **Example version.txt contents:**
+
 - Infinity: `Flashpoint 14.0.3 Infinity - Kingfisher`
 - Ultimate: `Flashpoint 14 Ultimate - Kingfisher`
 
 **Edition differences:**
-- **Infinity**: Supports metadata sync from FPFSS, game table includes `logoPath`/`screenshotPath` columns
-- **Ultimate**: No metadata sync, game table lacks `logoPath`/`screenshotPath` columns
 
-The edition is displayed as read-only information in the Settings UI (not user-configurable).
+- **Infinity**: Supports metadata sync from FPFSS, game table includes
+  `logoPath`/`screenshotPath` columns
+- **Ultimate**: No metadata sync, game table lacks `logoPath`/`screenshotPath`
+  columns
+
+The edition is displayed as read-only information in the Settings UI (not
+user-configurable).
 
 ### Game Service Configuration
 
 #### `GAME_SERVICE_HOST`
+
 - **Type**: string
 - **Default**: `localhost`
-- **Description**: Hostname/IP of game-service for constructing proxy and GameZip URLs
+- **Description**: Hostname/IP of game-service for constructing proxy and
+  GameZip URLs
 - **Usage**:
   ```bash
   GAME_SERVICE_HOST=localhost  # Development
@@ -133,6 +153,7 @@ The edition is displayed as read-only information in the Settings UI (not user-c
   ```
 
 The proxy and GameZip server URLs are automatically constructed as:
+
 - Proxy: `http://${GAME_SERVICE_HOST}:22500`
 - GameZip: `http://${GAME_SERVICE_HOST}:22501`
 
@@ -140,9 +161,11 @@ The proxy and GameZip server URLs are automatically constructed as:
 
 #### Image CDN URLs (Automatic)
 
-Image CDN URLs are automatically read from Flashpoint's preferences file. No configuration required.
+Image CDN URLs are automatically read from Flashpoint's preferences file. No
+configuration required.
 
-- **Source**: Flashpoint preferences (`onDemandBaseUrl` from `preferences.json` or `.preferences.defaults.json`)
+- **Source**: Flashpoint preferences (`onDemandBaseUrl` from `preferences.json`
+  or `.preferences.defaults.json`)
 - **Fallback**: If preferences are unavailable, defaults to:
   - `https://infinity.flashpointarchive.org/Flashpoint/Data/Images`
   - `https://infinity.unstable.life/Flashpoint/Data/Images`
@@ -150,6 +173,7 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
 ### Database Configuration
 
 #### `USER_DB_PATH`
+
 - **Type**: string
 - **Default**: `./user.db`
 - **Description**: Path to user database file
@@ -162,6 +186,7 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
 ### Security Configuration
 
 #### `JWT_SECRET`
+
 - **Type**: string
 - **Default**: `change-in-production-use-long-random-string`
 - **Required**: Yes (in production)
@@ -178,6 +203,7 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
   ```
 
 #### `JWT_EXPIRES_IN`
+
 - **Type**: string
 - **Default**: `1h`
 - **Description**: Access token expiration time
@@ -190,6 +216,7 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
   ```
 
 #### `BCRYPT_SALT_ROUNDS`
+
 - **Type**: number
 - **Default**: `10`
 - **Description**: Number of bcrypt hashing rounds
@@ -203,6 +230,7 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
 ### CORS Configuration
 
 #### `DOMAIN`
+
 - **Type**: string
 - **Default**: `http://localhost:5173`
 - **Required**: Yes
@@ -216,6 +244,7 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
 ### Rate Limiting
 
 #### `RATE_LIMIT_WINDOW_MS`
+
 - **Type**: number
 - **Default**: `60000` (1 minute)
 - **Description**: Rate limit window in milliseconds
@@ -225,6 +254,7 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
   ```
 
 #### `RATE_LIMIT_MAX_REQUESTS`
+
 - **Type**: number
 - **Default**: `100`
 - **Description**: Maximum requests per window
@@ -234,39 +264,10 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
   RATE_LIMIT_MAX_REQUESTS=1000  # More permissive
   ```
 
-### Redis Configuration
-
-#### `REDIS_ENABLED`
-- **Type**: boolean
-- **Default**: `false`
-- **Description**: Enable Redis for caching
-- **Usage**:
-  ```bash
-  REDIS_ENABLED=true
-  ```
-
-#### `REDIS_HOST`
-- **Type**: string
-- **Default**: `localhost`
-- **Description**: Redis server hostname
-- **Usage**:
-  ```bash
-  REDIS_HOST=localhost
-  REDIS_HOST=redis  # Docker
-  ```
-
-#### `REDIS_PORT`
-- **Type**: number
-- **Default**: `6379`
-- **Description**: Redis server port
-- **Usage**:
-  ```bash
-  REDIS_PORT=6379
-  ```
-
 ### Logging Configuration
 
 #### `LOG_LEVEL`
+
 - **Type**: string
 - **Default**: `info`
 - **Options**: `error`, `warn`, `info`, `debug`
@@ -279,15 +280,18 @@ Image CDN URLs are automatically read from Flashpoint's preferences file. No con
   ```
 
 #### `LOG_FILE`
+
 - **Type**: string
 - **Default**: undefined (console only)
-- **Description**: Path to log file for persistent logging. When set, logs are written to both console and file.
+- **Description**: Path to log file for persistent logging. When set, logs are
+  written to both console and file.
 - **Features**:
   - Automatic log rotation (10MB max file size)
   - Keeps last 5 log files
   - JSON format for easy parsing
   - Directory created automatically
 - **Usage**:
+
   ```bash
   # File logging enabled
   LOG_FILE=/var/log/flashpoint-backend.log
@@ -358,11 +362,6 @@ BCRYPT_SALT_ROUNDS=12
 # CORS
 DOMAIN=https://flashpoint.example.com
 
-# Redis (optional)
-REDIS_ENABLED=true
-REDIS_HOST=redis
-REDIS_PORT=6379
-
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
@@ -398,11 +397,6 @@ BCRYPT_SALT_ROUNDS=12
 # CORS
 DOMAIN=${DOMAIN}  # Pass from environment
 
-# Redis
-REDIS_ENABLED=true
-REDIS_HOST=redis
-REDIS_PORT=6379
-
 # Logging
 LOG_FILE=/app/logs/backend.log
 LOG_LEVEL=info
@@ -417,9 +411,10 @@ Configuration is loaded in this order:
 3. **Default values** in `config.ts`
 
 Example:
+
 ```typescript
 // PORT comes from: process.env.PORT → .env file → default '3100'
-port: parseInt(process.env.PORT || '3100', 10)
+port: parseInt(process.env.PORT || '3100', 10);
 ```
 
 ## Security Best Practices
@@ -439,17 +434,20 @@ port: parseInt(process.env.PORT || '3100', 10)
 ### Secret Management
 
 **Development**:
+
 - Use `.env` file
 - Add `.env` to `.gitignore`
 - Share `.env.example` (without secrets)
 
 **Production**:
+
 - Use environment variables (not `.env` file)
 - Use secret management service (AWS Secrets Manager, Azure Key Vault, etc.)
 - Rotate secrets regularly
 - Never commit secrets to git
 
 **Docker**:
+
 ```bash
 # Pass secrets via environment
 docker run -e JWT_SECRET=$JWT_SECRET -e DOMAIN=$DOMAIN ...
@@ -465,13 +463,16 @@ The backend validates configuration on startup:
 ```typescript
 // Checks performed in DatabaseService.initialize()
 if (!fs.existsSync(config.flashpointDbPath)) {
-  throw new Error(`Flashpoint database not found at: ${config.flashpointDbPath}`);
+  throw new Error(
+    `Flashpoint database not found at: ${config.flashpointDbPath}`
+  );
 }
 ```
 
 ### Common Configuration Errors
 
 **Database not found**:
+
 ```
 Error: Flashpoint database not found at: D:/Flashpoint/Data/flashpoint.sqlite
 Solution: Verify FLASHPOINT_PATH environment variable points to valid Flashpoint installation
@@ -479,12 +480,14 @@ Solution: Verify FLASHPOINT_PATH environment variable points to valid Flashpoint
 ```
 
 **Port already in use**:
+
 ```
 Error: listen EADDRINUSE: address already in use :::3100
 Solution: Change PORT or stop other process using port 3100
 ```
 
 **CORS error**:
+
 ```
 Access to fetch at 'http://localhost:3100/api/games' from origin
 'http://localhost:5174' has been blocked by CORS policy
@@ -492,6 +495,7 @@ Solution: Set DOMAIN=http://localhost:5174
 ```
 
 **JWT verification failed**:
+
 ```
 Error: Invalid or expired token
 Solution: Ensure frontend and backend use same JWT_SECRET

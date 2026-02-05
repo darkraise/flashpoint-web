@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { LRUCache } from 'lru-cache';
 import { logger } from './utils/logger';
+import { sanitizeErrorMessage } from './utils/pathSecurity';
 
 interface MountedZip {
   id: string;
@@ -32,7 +33,7 @@ export class ZipManager {
       // Update access time on get
       updateAgeOnGet: true,
       // Don't update on has() check
-      updateAgeOnHas: false
+      updateAgeOnHas: false,
     });
   }
 
@@ -52,7 +53,9 @@ export class ZipManager {
     try {
       await fs.access(zipPath);
     } catch (error) {
-      throw new Error(`ZIP file not found: ${zipPath}`);
+      // Don't expose full path in error message (G-H4)
+      logger.error(`[ZipManager] ZIP file not found: ${zipPath}`);
+      throw new Error('ZIP file not found');
     }
 
     logger.info(`[ZipManager] Mounting ZIP: ${id} -> ${zipPath}`);
@@ -134,9 +137,9 @@ export class ZipManager {
   async findFile(relPath: string): Promise<{ data: Buffer; mountId: string } | null> {
     // Try with different prefixes (different ZIP structures)
     const pathsToTry = [
-      `content/${relPath}`,       // Most common: content/domain/path
-      `htdocs/${relPath}`,        // Standard: htdocs/domain/path
-      relPath,                     // No prefix: domain/path
+      `content/${relPath}`, // Most common: content/domain/path
+      `htdocs/${relPath}`, // Standard: htdocs/domain/path
+      relPath, // No prefix: domain/path
       `Legacy/htdocs/${relPath}`, // Full path: Legacy/htdocs/domain/path
     ];
 
@@ -201,12 +204,15 @@ export class ZipManager {
 
       if (pattern) {
         const regex = new RegExp(pattern, 'i');
-        files = files.filter(f => regex.test(f));
+        files = files.filter((f) => regex.test(f));
       }
 
       return files;
     } catch (error) {
-      logger.error(`[ZipManager] Error listing files in ${id}:`, error);
+      // Sanitize error message to prevent path leakage (G-H4)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const safeMessage = sanitizeErrorMessage(errorMessage);
+      logger.error(`[ZipManager] Error listing files in ${id}: ${safeMessage}`);
       return [];
     }
   }
@@ -224,7 +230,7 @@ export class ZipManager {
   async unmountAll(): Promise<void> {
     logger.info(`[ZipManager] Unmounting all ZIPs (${this.mountedZips.size})...`);
 
-    const promises = Array.from(this.mountedZips.keys()).map(id => this.unmount(id));
+    const promises = Array.from(this.mountedZips.keys()).map((id) => this.unmount(id));
     await Promise.all(promises);
 
     logger.info(`[ZipManager] ✓ All ZIPs unmounted`);

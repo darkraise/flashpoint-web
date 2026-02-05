@@ -65,6 +65,7 @@ Thumbs.db
 !game-service/src/**/*.d.ts
 
 # Documentation (preserve original formatting)
+docs/
 CHANGELOG.md
 LICENSE
 

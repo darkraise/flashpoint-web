@@ -1,10 +1,12 @@
 # Legacy Server and Fallback Chain
 
-The Legacy Server implements a comprehensive fallback chain for serving legacy web content from multiple sources, ensuring maximum content availability.
+The Legacy Server implements a comprehensive fallback chain for serving legacy
+web content from multiple sources, ensuring maximum content availability.
 
 ## Overview
 
-Multi-level fallback system that checks local directories, external CDNs, and override paths for game files.
+Multi-level fallback system that checks local directories, external CDNs, and
+override paths for game files.
 
 ## Fallback Chain
 
@@ -56,6 +58,7 @@ private buildPathCandidates(relPath: string): Array<{path, type}> {
 ## Hostname Variations
 
 For hostname `mochibot.com`, tries:
+
 1. `mochibot.com` (original)
 2. `www.mochibot.com`
 3. `core.mochibot.com`
@@ -63,7 +66,8 @@ For hostname `mochibot.com`, tries:
 5. `cdn.mochibot.com`
 6. ... (12 more standard subdomains)
 
-**Why?** Games may request `mochibot.com` but Flashpoint stores it as `core.mochibot.com`.
+**Why?** Games may request `mochibot.com` but Flashpoint stores it as
+`core.mochibot.com`.
 
 ## Query String Handling
 
@@ -74,6 +78,7 @@ const pathWithoutQuery = relPath.split('?')[0];
 ```
 
 **Example:**
+
 - Request: `file.swf?v=123&cache=false`
 - Try: `file.swf?v=123` (exact match)
 - Try: `file.swf` (common case)
@@ -85,6 +90,7 @@ Files stored without query strings, so both are attempted.
 Override paths are special directories that take precedence over normal paths.
 
 **Configuration** (proxySettings.json):
+
 ```json
 {
   "legacyOverridePaths": ["custom", "fixes", "overrides"]
@@ -92,11 +98,13 @@ Override paths are special directories that take precedence over normal paths.
 ```
 
 **Example:**
+
 - Request: `www.example.com/game.swf`
 - Normal: `D:/Flashpoint/Legacy/htdocs/www.example.com/game.swf`
 - Override: `D:/Flashpoint/Legacy/htdocs/custom/www.example.com/game.swf`
 
 **Use cases:**
+
 - Patched game files
 - Fixed versions of broken content
 - Custom modifications
@@ -106,7 +114,7 @@ Override paths are special directories that take precedence over normal paths.
 ### Infinity Server (Primary CDN)
 
 ```typescript
-infinityServerURL: 'https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/'
+infinityServerURL: 'https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/';
 ```
 
 Official Flashpoint CDN for missing local files.
@@ -116,8 +124,8 @@ Official Flashpoint CDN for missing local files.
 ```typescript
 externalFilePaths: [
   'https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs',
-  'https://infinity.unstable.life/Flashpoint/Legacy/htdocs/'
-]
+  'https://infinity.unstable.life/Flashpoint/Legacy/htdocs/',
+];
 ```
 
 Backup CDNs tried in order.
@@ -138,6 +146,7 @@ private async tryExternalSource(baseUrl: string, relPath: string) {
 ```
 
 **Features:**
+
 - HTTPS enforced (HTTP auto-upgraded)
 - 45 second timeout
 - 5 redirect limit
@@ -155,28 +164,30 @@ if (settings.enableBrotli && filePath.endsWith('.br')) {
 ```
 
 **Example:**
+
 - Stored: `file.js.br` (Brotli compressed)
 - Decompressed: `file.js`
 - MIME: `text/javascript`
 
 ## Error Handling
 
-**File Not Found:**
-If no source has the file, returns 404 after all sources exhausted.
+**File Not Found:** If no source has the file, returns 404 after all sources
+exhausted.
 
-**Network Errors:**
-External downloads may fail (404, 403, timeout). Service continues to next source without aborting.
+**Network Errors:** External downloads may fail (404, 403, timeout). Service
+continues to next source without aborting.
 
-**Disk Errors:**
-Local file access failures (permissions, not found) continue to next candidate.
+**Disk Errors:** Local file access failures (permissions, not found) continue to
+next candidate.
 
-**Graceful Degradation:**
-Failures don't abort the chain; next source is tried.
+**Graceful Degradation:** Failures don't abort the chain; next source is tried.
 
 ## Performance Optimization
 
 ### Early Exit
+
 Stop as soon as file is found:
+
 ```typescript
 for (const candidate of pathCandidates) {
   const stats = await fs.stat(candidate.path);
@@ -191,12 +202,14 @@ Typically only 1-3 paths checked before finding file.
 ## Logging
 
 ### Path Resolution
+
 ```
 [LegacyServer] Trying: D:/Flashpoint/Legacy/htdocs/www.example.com/game.swf (exact)
 [LegacyServer] ✓ Found file: D:/Flashpoint/Legacy/htdocs/www.example.com/game.swf
 ```
 
 ### External Fallback
+
 ```
 [LegacyServer] File not found locally, trying external sources...
 [LegacyServer] Downloading: https://infinity.flashpointarchive.org/.../game.swf
@@ -219,7 +232,9 @@ EXTERNAL_FALLBACK_URLS=https://infinity.flashpointarchive.org/...,https://backup
 {
   "legacyOverridePaths": ["custom", "fixes"],
   "infinityServerURL": "https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/",
-  "externalFilePaths": ["https://infinity.unstable.life/Flashpoint/Legacy/htdocs/"],
+  "externalFilePaths": [
+    "https://infinity.unstable.life/Flashpoint/Legacy/htdocs/"
+  ],
   "enableBrotli": true,
   "enableCGI": false
 }
@@ -241,12 +256,15 @@ curl http://localhost:22500/http://test.com/index.html
 ## Security
 
 ### Path Validation
+
 All paths normalized to prevent directory traversal:
+
 - Blocks `../../../etc/passwd`
 - Blocks absolute path escapes
 - Blocks URL-encoded traversal
 
 ### External CDN
+
 - HTTPS enforced
 - Timeouts prevent DoS
 - User-Agent header for tracking

@@ -54,9 +54,11 @@ src/
 ## Database
 
 Uses sql.js (pure JavaScript SQLite) for direct read-only access to:
+
 - `D:\Flashpoint\Data\flashpoint.sqlite`
 
-**No native compilation required!** sql.js is a WebAssembly-based SQLite implementation that works without Visual Studio or build tools.
+**No native compilation required!** sql.js is a WebAssembly-based SQLite
+implementation that works without Visual Studio or build tools.
 
 Schema includes tables for games, platforms, tags, and more.
 
@@ -73,10 +75,12 @@ npm run lint       # ESLint
 ## Environment Variables
 
 Required:
+
 - `FLASHPOINT_PATH` - Path to Flashpoint installation
 - `FLASHPOINT_DB_PATH` - Path to SQLite database
 
 Optional:
+
 - `PORT` - Server port (default: 3100)
 - `NODE_ENV` - Environment (development/production)
 - `GAME_SERVER_URL` - Game Server URL (default: http://localhost:22500)

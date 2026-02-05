@@ -25,7 +25,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
     onError: (error) => {
       logger.error('[PlaySession] Failed to start play session:', error);
       hasStartedSessionRef.current = false;
-    }
+    },
   });
 
   const endMutation = useMutation({
@@ -36,7 +36,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
     },
     onError: (error) => {
       logger.error('[PlaySession] Failed to end play session:', error);
-    }
+    },
   });
 
   // Handle session lifecycle (start on mount, end on game change)
@@ -49,7 +49,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
       gameTitle,
       hasStartedSession: hasStartedSessionRef.current,
       previousGameId: previousGameIdRef.current,
-      isPending: startMutation.isPending
+      isPending: startMutation.isPending,
     });
 
     // Skip if feature disabled, not authenticated, is guest, or no game data
@@ -72,17 +72,20 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
         logger.debug('[PlaySession] Ending previous session before starting new one');
         sessionIdRef.current = null;
 
-        playTrackingApi.endSession(previousSessionId).then(() => {
-          previousGameIdRef.current = gameId;
-          hasStartedSessionRef.current = true;
-          startMutation.mutate({ gameId, gameTitle });
-        }).catch(error => {
-          logger.error('[PlaySession] Failed to end previous session:', error);
-          // Start new session anyway
-          previousGameIdRef.current = gameId;
-          hasStartedSessionRef.current = true;
-          startMutation.mutate({ gameId, gameTitle });
-        });
+        playTrackingApi
+          .endSession(previousSessionId)
+          .then(() => {
+            previousGameIdRef.current = gameId;
+            hasStartedSessionRef.current = true;
+            startMutation.mutate({ gameId, gameTitle });
+          })
+          .catch((error) => {
+            logger.error('[PlaySession] Failed to end previous session:', error);
+            // Start new session anyway
+            previousGameIdRef.current = gameId;
+            hasStartedSessionRef.current = true;
+            startMutation.mutate({ gameId, gameTitle });
+          });
       } else {
         // No previous session or same game, just start
         logger.debug('[PlaySession] Starting new session');
@@ -98,7 +101,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
     return () => {
       if (sessionIdRef.current) {
         logger.debug('[PlaySession] Component unmounting, ending session:', sessionIdRef.current);
-        playTrackingApi.endSession(sessionIdRef.current).catch(error => {
+        playTrackingApi.endSession(sessionIdRef.current).catch((error) => {
           logger.error('[PlaySession] Failed to end play session on cleanup:', error);
         });
         // Reset refs on unmount
@@ -115,7 +118,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
       if (sessionIdRef.current) {
         endMutation.mutate(sessionIdRef.current);
       }
-    }
+    },
   };
 }
 

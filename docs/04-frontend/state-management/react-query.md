@@ -4,7 +4,8 @@ Documentation for server state management using TanStack Query v5.
 
 ## Overview
 
-TanStack Query handles all server-side data (games, playlists, users) with automatic caching, background refetching, and request deduplication.
+TanStack Query handles all server-side data (games, playlists, users) with
+automatic caching, background refetching, and request deduplication.
 
 **Version:** 5.62.7
 
@@ -44,7 +45,7 @@ export function useGames(filters: GameFilters) {
   return useQuery({
     queryKey: ['games', filters],
     queryFn: () => gamesApi.search(filters),
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
   });
 }
 ```
@@ -55,16 +56,16 @@ Query keys determine caching and invalidation:
 
 ```typescript
 // Simple key
-queryKey: ['games']
+queryKey: ['games'];
 
 // With parameters
-queryKey: ['games', filters]
+queryKey: ['games', filters];
 
 // Nested resources
-queryKey: ['game', gameId, 'related']
+queryKey: ['game', gameId, 'related'];
 
 // Complex keys
-queryKey: ['users', { page, limit, search }]
+queryKey: ['users', { page, limit, search }];
 ```
 
 ## Mutations
@@ -86,7 +87,7 @@ export function useCreatePlaylist() {
     },
     onError: (error) => {
       toast.error('Failed to create playlist');
-    }
+    },
   });
 }
 ```
@@ -122,7 +123,7 @@ export function useToggleFavorite() {
     onSettled: () => {
       // Refetch after mutation
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
-    }
+    },
   });
 }
 ```
@@ -140,14 +141,14 @@ Different data has different stale times:
 useQuery({
   queryKey: ['games', id],
   queryFn: () => gamesApi.getById(id),
-  staleTime: 5 * 60 * 1000  // 5 minutes
+  staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
 // Short stale time for dynamic data
 useQuery({
   queryKey: ['stats'],
   queryFn: () => statsApi.get(),
-  staleTime: 30 * 1000  // 30 seconds
+  staleTime: 30 * 1000, // 30 seconds
 });
 ```
 
@@ -159,7 +160,7 @@ Conditional query execution:
 useQuery({
   queryKey: ['game', id],
   queryFn: () => gamesApi.getById(id),
-  enabled: !!id  // Only run if id exists
+  enabled: !!id, // Only run if id exists
 });
 ```
 
@@ -170,10 +171,11 @@ For pagination:
 ```typescript
 useInfiniteQuery({
   queryKey: ['games', filters],
-  queryFn: ({ pageParam = 1 }) => gamesApi.search({ ...filters, page: pageParam }),
+  queryFn: ({ pageParam = 1 }) =>
+    gamesApi.search({ ...filters, page: pageParam }),
   getNextPageParam: (lastPage) => {
     return lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined;
-  }
+  },
 });
 ```
 

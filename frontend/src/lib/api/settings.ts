@@ -85,10 +85,9 @@ export const systemSettingsApi = {
     key: string,
     value: unknown
   ): Promise<{ value: unknown }> => {
-    const { data } = await apiClient.patch<{ value: unknown }>(
-      `/settings/${category}/${key}`,
-      { value }
-    );
+    const { data } = await apiClient.patch<{ value: unknown }>(`/settings/${category}/${key}`, {
+      value,
+    });
     return data;
   },
 

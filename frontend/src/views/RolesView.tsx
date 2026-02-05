@@ -38,29 +38,23 @@ export function RolesView() {
           <h1 className="text-3xl font-bold">Role & Permission Management</h1>
         </div>
         <RoleGuard permission="roles.create">
-          <Button onClick={() => setShowRoleForm(true)}>
-            Create Role
-          </Button>
+          <Button onClick={() => setShowRoleForm(true)}>Create Role</Button>
         </RoleGuard>
       </div>
 
       <RoleTable onEdit={handleEdit} onManagePermissions={handleManagePermissions} />
 
-      {showRoleForm && (
-        <RoleForm
-          role={editingRole}
-          onClose={handleCloseForm}
-          onSuccess={handleSuccess}
-        />
-      )}
+      {showRoleForm ? (
+        <RoleForm role={editingRole} onClose={handleCloseForm} onSuccess={handleSuccess} />
+      ) : null}
 
-      {managingPermissionsRole && (
+      {managingPermissionsRole ? (
         <PermissionSelector
           role={managingPermissionsRole}
           onClose={() => setManagingPermissionsRole(null)}
           onSuccess={handleSuccess}
         />
-      )}
+      ) : null}
     </div>
   );
 }

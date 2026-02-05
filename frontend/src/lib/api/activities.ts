@@ -18,11 +18,7 @@ export const activitiesApi = {
   /**
    * Get all activities with pagination and filtering
    */
-  getAll: async (
-    page = 1,
-    limit = 50,
-    filters?: ActivityFilters
-  ): Promise<ActivitiesResponse> => {
+  getAll: async (page = 1, limit = 50, filters?: ActivityFilters): Promise<ActivitiesResponse> => {
     const { data } = await apiClient.get<ActivitiesResponse>('/activities', {
       params: { page, limit, ...filters },
     });
@@ -55,10 +51,7 @@ export const activitiesApi = {
   /**
    * Get top actions by frequency
    */
-  getTopActions: async (
-    limit = 10,
-    timeRange: TimeRange = '24h'
-  ): Promise<TopActionsResponse> => {
+  getTopActions: async (limit = 10, timeRange: TimeRange = '24h'): Promise<TopActionsResponse> => {
     const { data } = await apiClient.get<TopActionsResponse>('/activities/top-actions', {
       params: { limit, timeRange },
     });

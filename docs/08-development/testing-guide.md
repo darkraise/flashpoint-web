@@ -5,17 +5,21 @@ Testing practices for Flashpoint Web.
 ## Testing Philosophy
 
 ### Pyramid
+
 - **Unit Tests (70%)**: Individual functions in isolation
 - **Integration Tests (20%)**: Service interactions and API endpoints
 - **E2E Tests (10%)**: Critical user flows
 
 ### Coverage Goals
+
 - Backend: 80% target
 - Critical services: 90%+
 - Routes: Test all endpoints
 
 ### When to Test
+
 **Always:**
+
 - Business logic in services
 - Database operations
 - Authentication and authorization
@@ -24,6 +28,7 @@ Testing practices for Flashpoint Web.
 - Data transformations
 
 **Skip:**
+
 - Simple getter/setter methods
 - Trivial UI components
 - Configuration files
@@ -34,6 +39,7 @@ Testing practices for Flashpoint Web.
 ## Backend Testing (Vitest)
 
 ### Configuration
+
 ```typescript
 // vitest.config.ts
 import { defineConfig } from 'vitest/config';
@@ -46,13 +52,14 @@ export default defineConfig({
     setupFiles: ['./src/tests/setup.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html']
-    }
-  }
+      reporter: ['text', 'json', 'html'],
+    },
+  },
 });
 ```
 
 ### Running Tests
+
 ```bash
 cd backend
 
@@ -64,11 +71,13 @@ npm test -- --grep "authentication"       # Pattern matching
 ```
 
 ### Test Structure
+
 - Co-locate tests with implementation: `GameService.test.ts`
 - Use fixtures for test data in `src/tests/fixtures/`
 - Use helpers in `src/tests/helpers/`
 
 ### Unit Test Example
+
 ```typescript
 describe('GameService', () => {
   let gameService: GameService;
@@ -82,7 +91,9 @@ describe('GameService', () => {
   describe('getGameById', () => {
     it('should return game when found', () => {
       const mockGame = { id: 'game-123', title: 'Test Game' };
-      const mockPrepare = vi.fn().mockReturnValue({ get: vi.fn().mockReturnValue(mockGame) });
+      const mockPrepare = vi
+        .fn()
+        .mockReturnValue({ get: vi.fn().mockReturnValue(mockGame) });
       mockDb.prepare = mockPrepare;
 
       const result = gameService.getGameById('game-123');
@@ -91,7 +102,9 @@ describe('GameService', () => {
     });
 
     it('should return null when game not found', () => {
-      const mockPrepare = vi.fn().mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
+      const mockPrepare = vi
+        .fn()
+        .mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
       mockDb.prepare = mockPrepare;
 
       const result = gameService.getGameById('nonexistent');
@@ -103,6 +116,7 @@ describe('GameService', () => {
 ```
 
 ### Integration Test Example
+
 ```typescript
 describe('Games API', () => {
   let authToken: string;
@@ -114,9 +128,7 @@ describe('Games API', () => {
 
   describe('GET /api/games', () => {
     it('should return list of games', async () => {
-      const response = await request(app)
-        .get('/api/games')
-        .expect(200);
+      const response = await request(app).get('/api/games').expect(200);
 
       expect(response.body).toHaveProperty('data');
       expect(Array.isArray(response.body.data)).toBe(true);
@@ -126,6 +138,7 @@ describe('Games API', () => {
 ```
 
 ### Test Data Fixtures
+
 ```typescript
 // src/tests/fixtures/games.ts
 export const testGames = {
@@ -133,8 +146,8 @@ export const testGames = {
     id: 'flash-1',
     title: 'Flash Game',
     platform: 'Flash',
-    library: 'arcade'
-  }
+    library: 'arcade',
+  },
 };
 
 export function createTestGame(overrides = {}) {
@@ -145,6 +158,7 @@ export function createTestGame(overrides = {}) {
 ### Testing Patterns
 
 **Async Code:**
+
 ```typescript
 it('should fetch games asynchronously', async () => {
   const games = await service.fetchGames();
@@ -153,6 +167,7 @@ it('should fetch games asynchronously', async () => {
 ```
 
 **Error Handling:**
+
 ```typescript
 it('should throw error on invalid input', () => {
   expect(() => validateGameData({ title: '' })).toThrow('Title is required');
@@ -160,9 +175,10 @@ it('should throw error on invalid input', () => {
 ```
 
 **Mocking:**
+
 ```typescript
 vi.mock('@/utils/jwt', () => ({
-  verifyToken: vi.fn()
+  verifyToken: vi.fn(),
 }));
 
 const mockVerify = vi.mocked(verifyToken);
@@ -173,7 +189,9 @@ mockVerify.mockReturnValue({ userId: '123' });
 
 ## Frontend Testing
 
-Frontend testing setup is planned but not yet implemented. When implemented, it will use:
+Frontend testing setup is planned but not yet implemented. When implemented, it
+will use:
+
 - **Vitest**: Test runner
 - **React Testing Library**: Component testing
 - **MSW**: API mocking
@@ -184,13 +202,16 @@ Frontend testing setup is planned but not yet implemented. When implemented, it 
 ## Coverage
 
 ### Running Coverage Reports
+
 ```bash
 cd backend
 npm test -- --coverage
 ```
 
 ### Coverage Thresholds
+
 Add to `vitest.config.ts`:
+
 ```typescript
 export default defineConfig({
   test: {
@@ -199,10 +220,10 @@ export default defineConfig({
         statements: 80,
         branches: 75,
         functions: 80,
-        lines: 80
-      }
-    }
-  }
+        lines: 80,
+      },
+    },
+  },
 });
 ```
 
@@ -211,6 +232,7 @@ export default defineConfig({
 ## Best Practices
 
 ### Do's
+
 - Write tests before fixing bugs (regression testing)
 - Test one thing per test
 - Use descriptive test names ("should return null when game not found")
@@ -220,6 +242,7 @@ export default defineConfig({
 - Test edge cases and error paths
 
 ### Don'ts
+
 - Don't test implementation details
 - Don't make tests dependent on each other
 - Don't use production databases

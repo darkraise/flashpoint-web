@@ -22,65 +22,68 @@ const getTimeRangeLabel = (timeRange: TimeRange = '24h') => {
 
 export function ActivityStats({ stats, timeRange = '24h' }: ActivityStatsProps) {
   const timeLabel = getTimeRangeLabel(timeRange);
-  const statCards = useMemo(() => [
-    {
-      id: 'total',
-      icon: Activity,
-      label: 'Total Activities',
-      value: stats.total.toLocaleString(),
-      sublabel: timeLabel,
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-500/10',
-      trend: stats.trends.totalChange
-    },
-    {
-      id: 'users',
-      icon: Users,
-      label: 'Unique Active Users',
-      value: stats.uniqueUsers.toLocaleString(),
-      sublabel: timeLabel,
-      color: 'text-green-400',
-      bgColor: 'bg-green-500/10',
-      trend: stats.trends.userChange
-    },
-    {
-      id: 'peak',
-      icon: Clock,
-      label: 'Peak Activity Hour',
-      value: stats.peakHour.formattedRange,
-      sublabel: `${stats.peakHour.count} activities`,
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-500/10'
-    },
-    {
-      id: 'auth',
-      icon: Shield,
-      label: 'Auth Events',
-      value: stats.authEvents.total.toLocaleString(),
-      sublabel: `${stats.authEvents.successful} successful, ${stats.authEvents.failed} failed`,
-      color: 'text-amber-400',
-      bgColor: 'bg-amber-500/10',
-      trend: stats.trends.authChange
-    },
-    {
-      id: 'failed',
-      icon: AlertTriangle,
-      label: 'Failed Operations',
-      value: stats.failedOperations.toLocaleString(),
-      sublabel: 'Errors and failures',
-      color: 'text-red-400',
-      bgColor: 'bg-red-500/10'
-    },
-    {
-      id: 'system',
-      icon: Server,
-      label: 'System Events',
-      value: stats.systemEvents.toLocaleString(),
-      sublabel: 'Automated actions',
-      color: 'text-cyan-400',
-      bgColor: 'bg-cyan-500/10'
-    }
-  ], [stats, timeLabel]);
+  const statCards = useMemo(
+    () => [
+      {
+        id: 'total',
+        icon: Activity,
+        label: 'Total Activities',
+        value: stats.total.toLocaleString(),
+        sublabel: timeLabel,
+        color: 'text-blue-400',
+        bgColor: 'bg-blue-500/10',
+        trend: stats.trends.totalChange,
+      },
+      {
+        id: 'users',
+        icon: Users,
+        label: 'Unique Active Users',
+        value: stats.uniqueUsers.toLocaleString(),
+        sublabel: timeLabel,
+        color: 'text-green-400',
+        bgColor: 'bg-green-500/10',
+        trend: stats.trends.userChange,
+      },
+      {
+        id: 'peak',
+        icon: Clock,
+        label: 'Peak Activity Hour',
+        value: stats.peakHour.formattedRange,
+        sublabel: `${stats.peakHour.count} activities`,
+        color: 'text-purple-400',
+        bgColor: 'bg-purple-500/10',
+      },
+      {
+        id: 'auth',
+        icon: Shield,
+        label: 'Auth Events',
+        value: stats.authEvents.total.toLocaleString(),
+        sublabel: `${stats.authEvents.successful} successful, ${stats.authEvents.failed} failed`,
+        color: 'text-amber-400',
+        bgColor: 'bg-amber-500/10',
+        trend: stats.trends.authChange,
+      },
+      {
+        id: 'failed',
+        icon: AlertTriangle,
+        label: 'Failed Operations',
+        value: stats.failedOperations.toLocaleString(),
+        sublabel: 'Errors and failures',
+        color: 'text-red-400',
+        bgColor: 'bg-red-500/10',
+      },
+      {
+        id: 'system',
+        icon: Server,
+        label: 'System Events',
+        value: stats.systemEvents.toLocaleString(),
+        sublabel: 'Automated actions',
+        color: 'text-cyan-400',
+        bgColor: 'bg-cyan-500/10',
+      },
+    ],
+    [stats, timeLabel]
+  );
 
   const getTrendIcon = (trend: number) => {
     if (trend > 0) return '↑';
@@ -112,15 +115,17 @@ export function ActivityStats({ stats, timeRange = '24h' }: ActivityStatsProps) 
               <div className="flex-1 min-w-0">
                 <p className="text-muted-foreground text-xs mb-1">{stat.label}</p>
                 {/* Peak Hour: use smaller font and break text instead of truncate */}
-                <p className={`font-bold ${isPeakHour ? 'text-base break-words' : 'text-xl truncate'}`}>
+                <p
+                  className={`font-bold ${isPeakHour ? 'text-base break-words' : 'text-xl truncate'}`}
+                >
                   {stat.value}
                 </p>
                 <p className="text-muted-foreground text-xs mt-1 truncate">{stat.sublabel}</p>
-                {stat.trend !== undefined && (
+                {stat.trend !== undefined ? (
                   <div className={`text-xs mt-1 font-medium ${getTrendColor(stat.trend)}`}>
                     {getTrendIcon(stat.trend)} {Math.abs(stat.trend)}%
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { CachedSystemSettingsService } from './CachedSystemSettingsService';
+import { UserDatabaseService } from './UserDatabaseService';
 import { AuthSettings } from '../types/auth';
 
 /**
@@ -10,8 +11,8 @@ export class AuthSettingsService {
   private systemSettings: CachedSystemSettingsService;
 
   constructor() {
-    // Use cached version for better performance (auth settings accessed frequently)
-    this.systemSettings = new CachedSystemSettingsService(60000); // 1 minute TTL
+    // Use cached singleton for better performance (auth settings accessed frequently)
+    this.systemSettings = CachedSystemSettingsService.getInstance();
   }
 
   /**
@@ -24,14 +25,30 @@ export class AuthSettingsService {
     const latestUpdate = this.getLatestUpdate();
 
     return {
-      guestAccessEnabled: typeof authSettings.guestAccessEnabled === 'boolean' ? authSettings.guestAccessEnabled : true,
-      userRegistrationEnabled: typeof authSettings.userRegistrationEnabled === 'boolean' ? authSettings.userRegistrationEnabled : true,
-      requireEmailVerification: typeof authSettings.requireEmailVerification === 'boolean' ? authSettings.requireEmailVerification : false,
-      sessionTimeoutMinutes: typeof authSettings.sessionTimeoutMinutes === 'number' ? authSettings.sessionTimeoutMinutes : 60,
-      maxLoginAttempts: typeof authSettings.maxLoginAttempts === 'number' ? authSettings.maxLoginAttempts : 5,
-      lockoutDurationMinutes: typeof authSettings.lockoutDurationMinutes === 'number' ? authSettings.lockoutDurationMinutes : 15,
+      guestAccessEnabled:
+        typeof authSettings.guestAccessEnabled === 'boolean'
+          ? authSettings.guestAccessEnabled
+          : true,
+      userRegistrationEnabled:
+        typeof authSettings.userRegistrationEnabled === 'boolean'
+          ? authSettings.userRegistrationEnabled
+          : true,
+      requireEmailVerification:
+        typeof authSettings.requireEmailVerification === 'boolean'
+          ? authSettings.requireEmailVerification
+          : false,
+      sessionTimeoutMinutes:
+        typeof authSettings.sessionTimeoutMinutes === 'number'
+          ? authSettings.sessionTimeoutMinutes
+          : 60,
+      maxLoginAttempts:
+        typeof authSettings.maxLoginAttempts === 'number' ? authSettings.maxLoginAttempts : 5,
+      lockoutDurationMinutes:
+        typeof authSettings.lockoutDurationMinutes === 'number'
+          ? authSettings.lockoutDurationMinutes
+          : 15,
       updatedAt: latestUpdate.updatedAt,
-      updatedBy: latestUpdate.updatedBy
+      updatedBy: latestUpdate.updatedBy,
     };
   }
 
@@ -65,11 +82,14 @@ export class AuthSettingsService {
       LIMIT 1
     `;
 
-    const result = require('./UserDatabaseService').UserDatabaseService.get(query, []);
+    const result = UserDatabaseService.get<{ updated_at: string; updated_by: number | null }>(
+      query,
+      []
+    );
 
     return {
       updatedAt: result?.updated_at || new Date().toISOString(),
-      updatedBy: result?.updated_by
+      updatedBy: result?.updated_by ?? undefined,
     };
   }
 }

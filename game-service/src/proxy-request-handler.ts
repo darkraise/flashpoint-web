@@ -1,10 +1,19 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { URL } from 'url';
+import { Readable } from 'stream';
 import { logger } from './utils/logger';
 import { ConfigManager } from './config';
 import { LegacyServer } from './legacy-server';
 import { injectPolyfills } from './utils/htmlInjector';
+import { sanitizeErrorMessage, sanitizeUrlPath } from './utils/pathSecurity';
 import axios from 'axios';
+
+// Internal request timeout constants (G-H2)
+const GAMEZIP_REQUEST_TIMEOUT_MS = 5000; // 5 seconds for local GameZip server
+const STREAM_TIMEOUT_MS = 120000; // 2 minutes for streaming responses
+
+// Cache control constants
+const CACHE_MAX_AGE_SECONDS = 86400; // 24 hours (in seconds)
 
 export class ProxyRequestHandler {
   private legacyServer: LegacyServer;
@@ -30,6 +39,18 @@ export class ProxyRequestHandler {
         return;
       }
 
+      // Security check: Sanitize URL path BEFORE any processing (G-H1)
+      // This catches double-encoded attacks and dangerous patterns early
+      try {
+        sanitizeUrlPath(req.url);
+      } catch (error) {
+        logger.warn(
+          `[Security] Invalid URL rejected: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+        this.sendError(res, 400, 'Bad Request: Invalid URL');
+        return;
+      }
+
       let targetUrl: URL;
       let hostname: string;
       let urlPath: string;
@@ -40,7 +61,7 @@ export class ProxyRequestHandler {
       if (normalizedUrl.match(/^\/https?:\/[^\/]/)) {
         // Single slash after protocol - insert the missing slash
         normalizedUrl = normalizedUrl.replace(/^(\/https?:)\//, '$1//');
-        logger.debug(`[ProxyHandler] Normalized malformed URL: ${req.url} → ${normalizedUrl}`);
+        logger.debug(`[ProxyHandler] Normalized malformed URL`);
       }
 
       // Check if this is a proxy-style request (starts with http://)
@@ -71,7 +92,7 @@ export class ProxyRequestHandler {
         const gameZipResult = await this.tryGameZipServer(hostname, urlPath);
         if (gameZipResult) {
           logger.info(`[ProxyHandler] ✓ Served from GameZip`);
-          this.sendResponse(res, gameZipResult.data, gameZipResult.contentType, 'gamezipserver');
+          this.sendResponse(res, gameZipResult, 'gamezipserver');
           return;
         }
       }
@@ -81,14 +102,17 @@ export class ProxyRequestHandler {
       const legacyResult = await this.legacyServer.serveLegacy(hostname, urlPath);
 
       logger.info(`[ProxyHandler] ✓ Served from ${legacyResult.source}`);
-      this.sendResponse(res, legacyResult.data, legacyResult.contentType, legacyResult.source);
-
+      this.sendResponse(res, legacyResult, legacyResult.source);
     } catch (error) {
-      logger.error('[ProxyHandler] Error handling request:', error);
+      // Sanitize error message before logging to prevent path leakage (G-H4)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const safeMessage = sanitizeErrorMessage(errorMessage);
+      logger.error(`[ProxyHandler] Error handling request: ${safeMessage}`);
 
       if (error instanceof Error && error.message.includes('not found')) {
-        this.sendError(res, 404, 'File not found in any source');
+        this.sendError(res, 404, 'File not found');
       } else {
+        // Never expose internal error details to client (G-H4)
         this.sendError(res, 500, 'Internal server error');
       }
     }
@@ -96,11 +120,21 @@ export class ProxyRequestHandler {
 
   /**
    * Try to fetch from GameZip server
+   * Note: GameZip server responses are kept buffered since they come from local ZIP archives
+   * and are typically already compressed/optimized
+   *
+   * Implements timeout enforcement (G-H2)
    */
   private async tryGameZipServer(
     hostname: string,
     urlPath: string
   ): Promise<{ data: Buffer; contentType: string } | null> {
+    // Create abort controller for request timeout (G-H2)
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      abortController.abort();
+    }, GAMEZIP_REQUEST_TIMEOUT_MS);
+
     try {
       // Make proxy-style request to GameZip server
       // The GameZip server also accepts proxy-style requests: GET http://hostname/path HTTP/1.1
@@ -110,7 +144,8 @@ export class ProxyRequestHandler {
 
       const response = await axios.get(requestUrl, {
         responseType: 'arraybuffer',
-        timeout: 5000, // Quick timeout for local server
+        timeout: GAMEZIP_REQUEST_TIMEOUT_MS,
+        signal: abortController.signal,
         validateStatus: (status) => status === 200,
         proxy: false, // Don't use system proxy
       });
@@ -121,21 +156,23 @@ export class ProxyRequestHandler {
       return { data, contentType };
     } catch (error) {
       // GameZip server not available or file not found
+      // Don't log detailed errors to avoid path leakage (G-H4)
       logger.debug(`[ProxyHandler] GameZip unavailable or file not found`);
       return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   /**
-   * Send successful response
+   * Send successful response (supports both buffered and streamed responses)
    */
-  private sendResponse(res: ServerResponse, data: Buffer, contentType: string, source: string): void {
-    // Process HTML files to inject polyfills for better game compatibility
-    let fileData = data;
-    if (contentType.includes('text/html')) {
-      fileData = injectPolyfills(data);
-      logger.info(`[ProxyHandler] Injected polyfills into HTML file`);
-    }
+  private sendResponse(
+    res: ServerResponse,
+    result: { data?: Buffer; stream?: Readable; size?: number; contentType: string },
+    source: string
+  ): void {
+    const contentType = result.contentType;
 
     // CORS headers
     if (this.settings.allowCrossDomain) {
@@ -144,17 +181,66 @@ export class ProxyRequestHandler {
       res.setHeader('Access-Control-Allow-Headers', '*');
     }
 
-    // Content headers
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Length', fileData.length);
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+    // Common headers
+    res.setHeader('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}`);
     res.setHeader('X-Source', source); // Debug header
-
-    // Connection keep-alive
     res.setHeader('Connection', 'keep-alive');
 
-    res.writeHead(200);
-    res.end(fileData);
+    if (result.stream) {
+      // Streaming response for large non-HTML files
+      res.setHeader('Content-Type', contentType);
+      if (result.size !== undefined) {
+        res.setHeader('Content-Length', result.size);
+      }
+      res.writeHead(200);
+
+      // Set up streaming timeout (G-H2)
+      // This prevents hung connections from consuming resources indefinitely
+      const streamTimeout = setTimeout(() => {
+        logger.warn('[ProxyHandler] Stream timeout - closing connection');
+        result.stream?.destroy(new Error('Stream timeout'));
+        if (!res.writableEnded) {
+          res.end();
+        }
+      }, STREAM_TIMEOUT_MS);
+
+      result.stream.pipe(res);
+
+      result.stream.on('error', (err) => {
+        clearTimeout(streamTimeout);
+        // Sanitize stream errors to prevent path leakage (G-H4)
+        const safeMessage = sanitizeErrorMessage(err.message || 'Unknown error');
+        logger.error(`[ProxyHandler] Stream error: ${safeMessage}`);
+        if (!res.headersSent) {
+          res.writeHead(500);
+        }
+        res.end();
+      });
+
+      result.stream.on('end', () => {
+        clearTimeout(streamTimeout);
+      });
+
+      result.stream.on('close', () => {
+        clearTimeout(streamTimeout);
+      });
+    } else if (result.data) {
+      // Buffered response (HTML files that need polyfill injection)
+      let fileData = result.data;
+      if (contentType.includes('text/html')) {
+        fileData = injectPolyfills(result.data);
+        logger.info(`[ProxyHandler] Injected polyfills into HTML file`);
+      }
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Length', fileData.length);
+      res.writeHead(200);
+      res.end(fileData);
+    } else {
+      // Should never happen, but handle gracefully
+      logger.error('[ProxyHandler] Invalid response: neither data nor stream provided');
+      this.sendError(res, 500, 'Internal server error: invalid response format');
+    }
   }
 
   /**
@@ -184,7 +270,7 @@ export class ProxyRequestHandler {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', '*');
-      res.setHeader('Access-Control-Max-Age', '86400');
+      res.setHeader('Access-Control-Max-Age', CACHE_MAX_AGE_SECONDS.toString());
     }
 
     res.writeHead(204);

@@ -52,9 +52,7 @@ export function validateRequest<T extends z.ZodType>(
       if (error instanceof z.ZodError) {
         // Extract first validation error message
         const firstError = error.errors[0];
-        const message = firstError
-          ? `Validation error: ${firstError.message}`
-          : 'Validation error';
+        const message = firstError ? `Validation error: ${firstError.message}` : 'Validation error';
 
         return next(new AppError(400, message));
       }
@@ -104,9 +102,7 @@ export function validateMultiple(schemas: Partial<Record<RequestProperty, z.ZodT
     } catch (error) {
       if (error instanceof z.ZodError) {
         const firstError = error.errors[0];
-        const message = firstError
-          ? `Validation error: ${firstError.message}`
-          : 'Validation error';
+        const message = firstError ? `Validation error: ${firstError.message}` : 'Validation error';
 
         return next(new AppError(400, message));
       }

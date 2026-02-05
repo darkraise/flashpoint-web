@@ -1,7 +1,14 @@
 import { ReactNode, useState } from 'react';
 import { logger } from '@/lib/logger';
 import { useNavigate } from 'react-router-dom';
-import { FileQuestion, AlertCircle, WifiOff, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  FileQuestion,
+  AlertCircle,
+  WifiOff,
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -138,11 +145,7 @@ export function ErrorPage({
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2">
                 <CardTitle className="text-2xl font-bold">{displayTitle}</CardTitle>
-                {errorCode && (
-                  <Badge variant={config.badgeVariant}>
-                    {errorCode}
-                  </Badge>
-                )}
+                {errorCode ? <Badge variant={config.badgeVariant}>{errorCode}</Badge> : null}
               </div>
               <p className="text-muted-foreground">{displayMessage}</p>
             </div>
@@ -150,7 +153,7 @@ export function ErrorPage({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {hasDetails && (
+          {hasDetails ? (
             <Alert>
               <AlertDescription>
                 <div className="space-y-2">
@@ -170,15 +173,15 @@ export function ErrorPage({
                       </>
                     )}
                   </button>
-                  {showDetails && (
+                  {showDetails ? (
                     <pre className="mt-2 p-4 bg-muted rounded-md overflow-x-auto text-xs">
                       <code>{details}</code>
                     </pre>
-                  )}
+                  ) : null}
                 </div>
               </AlertDescription>
             </Alert>
-          )}
+          ) : null}
 
           <div className="space-y-2">
             <h3 className="font-semibold text-sm">What you can do:</h3>
@@ -198,21 +201,19 @@ export function ErrorPage({
               <Button onClick={handleGoHome} variant="default">
                 Go to Home
               </Button>
-              {onRetry && (
+              {onRetry ? (
                 <Button onClick={handleRetry} variant="secondary">
                   Retry
                 </Button>
-              )}
-              {showReportButton && onReport && !hasReported && (
+              ) : null}
+              {showReportButton && onReport && !hasReported ? (
                 <Button onClick={handleReport} variant="outline" disabled={isReporting}>
                   {isReporting ? 'Reporting...' : 'Report Error'}
                 </Button>
-              )}
-              {hasReported && (
-                <span className="text-sm text-muted-foreground">
-                  ✓ Error reported successfully
-                </span>
-              )}
+              ) : null}
+              {hasReported ? (
+                <span className="text-sm text-muted-foreground">✓ Error reported successfully</span>
+              ) : null}
             </>
           )}
         </CardFooter>

@@ -140,13 +140,13 @@ export function InitialSetupView() {
               </AlertDescription>
             </Alert>
 
-            {registerMutation.isError && (
+            {registerMutation.isError ? (
               <Alert variant="destructive" className="mb-6 animate-slide-in-down">
                 <AlertDescription>
                   {getErrorMessage(registerMutation.error) || 'Setup failed. Please try again.'}
                 </AlertDescription>
               </Alert>
-            )}
+            ) : null}
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="relative space-y-4">

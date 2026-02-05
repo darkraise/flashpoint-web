@@ -48,7 +48,7 @@ export function useLazyLoad<T extends HTMLElement = HTMLDivElement>(
       },
       {
         rootMargin,
-        threshold
+        threshold,
       }
     );
 

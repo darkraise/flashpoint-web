@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from 'recharts';
 import { useTopActions } from '@/hooks/useActivities';
 import { TimeRange } from '@/types/auth';
 import type { CustomTooltipProps } from '@/types/chart';
@@ -25,12 +34,12 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
             <span className="text-muted-foreground text-sm">Category:</span>
             <span className="font-semibold text-sm capitalize">{action.category}</span>
           </div>
-          {action.topResource && (
+          {action.topResource ? (
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">Top Resource:</span>
               <span className="font-semibold text-sm">{action.topResource}</span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     );
@@ -80,14 +89,14 @@ export function TopActionsChart({ autoRefresh = false }: TopActionsChartProps) {
     );
   }
 
-  const chartData = data.data.map(action => ({
+  const chartData = data.data.map((action) => ({
     name: truncateAction(action.action),
     fullAction: action.action,
     count: action.count,
     percentage: action.percentage,
     category: action.category,
     topResource: action.topResource,
-    color: CATEGORY_COLORS[action.category] || '#6b7280'
+    color: CATEGORY_COLORS[action.category] || '#6b7280',
   }));
 
   return (
@@ -135,11 +144,7 @@ export function TopActionsChart({ autoRefresh = false }: TopActionsChartProps) {
             margin={{ top: 5, right: 30, left: 140, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
-            <XAxis
-              type="number"
-              stroke="#9ca3af"
-              tick={{ fill: '#9ca3af', fontSize: 12 }}
-            />
+            <XAxis type="number" stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
             <YAxis
               type="category"
               dataKey="name"

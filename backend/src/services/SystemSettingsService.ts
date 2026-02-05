@@ -137,10 +137,7 @@ export class SystemSettingsService {
    * Check if a setting exists
    */
   exists(key: string): boolean {
-    const row = UserDatabaseService.get(
-      'SELECT 1 FROM system_settings WHERE key = ?',
-      [key]
-    );
+    const row = UserDatabaseService.get('SELECT 1 FROM system_settings WHERE key = ?', [key]);
     return !!row;
   }
 
@@ -182,7 +179,7 @@ export class SystemSettingsService {
       category: row.category,
       description: row.description,
       isPublic: row.is_public === 1,
-      defaultValue: this.parseValue(row.default_value, row.data_type)
+      defaultValue: this.parseValue(row.default_value, row.data_type),
     };
   }
 
@@ -203,21 +200,27 @@ export class SystemSettingsService {
       const schema = JSON.parse(row.validation_schema);
       this.validateAgainstSchema(value, schema, key);
     } catch (error) {
-      throw new Error(`Invalid validation schema for ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Invalid validation schema for ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
    * Validate value against JSON schema
    */
-  private validateAgainstSchema(value: SettingValue, schema: Record<string, unknown>, key: string): void {
+  private validateAgainstSchema(
+    value: SettingValue,
+    schema: Record<string, unknown>,
+    key: string
+  ): void {
     // Type validation
     if (typeof schema.type === 'string') {
       const actualType = this.getType(value);
 
       // Allow integers when schema expects 'number' (e.g., 0, 1 are valid for float settings)
-      const isValidType = actualType === schema.type ||
-        (schema.type === 'number' && actualType === 'integer');
+      const isValidType =
+        actualType === schema.type || (schema.type === 'number' && actualType === 'integer');
 
       if (!isValidType) {
         throw new Error(`Setting '${key}' must be of type ${schema.type}, got ${actualType}`);

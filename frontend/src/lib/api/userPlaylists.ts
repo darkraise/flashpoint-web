@@ -50,7 +50,7 @@ export const userPlaylistsApi = {
    * Get games in a playlist
    */
   getGames: async (id: number): Promise<Game[]> => {
-    const { data} = await apiClient.get<Game[]>(`/user-playlists/${id}/games`);
+    const { data } = await apiClient.get<Game[]>(`/user-playlists/${id}/games`);
     return data;
   },
 
@@ -81,10 +81,9 @@ export const userPlaylistsApi = {
    * Add games to a playlist
    */
   addGames: async (id: number, gameIds: string[]): Promise<PlaylistWithGames> => {
-    const { data } = await apiClient.post<PlaylistWithGames>(
-      `/user-playlists/${id}/games`,
-      { gameIds }
-    );
+    const { data } = await apiClient.post<PlaylistWithGames>(`/user-playlists/${id}/games`, {
+      gameIds,
+    });
     return data;
   },
 
@@ -92,10 +91,9 @@ export const userPlaylistsApi = {
    * Remove games from a playlist
    */
   removeGames: async (id: number, gameIds: string[]): Promise<PlaylistWithGames> => {
-    const { data } = await apiClient.delete<PlaylistWithGames>(
-      `/user-playlists/${id}/games`,
-      { data: { gameIds } }
-    );
+    const { data } = await apiClient.delete<PlaylistWithGames>(`/user-playlists/${id}/games`, {
+      data: { gameIds },
+    });
     return data;
   },
 
@@ -123,10 +121,7 @@ export const userPlaylistsApi = {
   /**
    * Enable sharing for a playlist
    */
-  enableSharing: async (
-    id: number,
-    options?: EnableSharingOptions
-  ): Promise<ShareLinkData> => {
+  enableSharing: async (id: number, options?: EnableSharingOptions): Promise<ShareLinkData> => {
     const { data } = await apiClient.post<ShareLinkData>(
       `/user-playlists/${id}/share/enable`,
       options
@@ -148,9 +143,7 @@ export const userPlaylistsApi = {
    * Regenerate share token (invalidates old links)
    */
   regenerateShareToken: async (id: number): Promise<ShareLinkData> => {
-    const { data } = await apiClient.post<ShareLinkData>(
-      `/user-playlists/${id}/share/regenerate`
-    );
+    const { data } = await apiClient.post<ShareLinkData>(`/user-playlists/${id}/share/regenerate`);
     return data;
   },
 

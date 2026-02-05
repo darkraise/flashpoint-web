@@ -7,7 +7,7 @@ import { useAuthStore } from './auth';
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type PrimaryColor =
-  | 'blue'      // Default
+  | 'blue' // Default
   | 'slate'
   | 'gray'
   | 'zinc'
@@ -74,11 +74,12 @@ const applyTheme = (mode: ThemeMode) => {
   root.classList.remove('light', 'dark');
 
   // Determine actual theme to apply
-  const actualTheme: 'light' | 'dark' = mode === 'system'
-    ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
-    : mode;
+  const actualTheme: 'light' | 'dark' =
+    mode === 'system'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+      : mode;
 
   // Apply theme class
   root.classList.add(actualTheme);
@@ -87,11 +88,12 @@ const applyTheme = (mode: ThemeMode) => {
 // Apply primary color to document
 const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
   const root = document.documentElement;
-  const actualTheme: 'light' | 'dark' = currentMode === 'system'
-    ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
-    : currentMode;
+  const actualTheme: 'light' | 'dark' =
+    currentMode === 'system'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light'
+      : currentMode;
 
   const colorValue = colorPalette[color][actualTheme];
 
@@ -100,13 +102,14 @@ const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
   root.style.setProperty('--ring', colorValue);
 
   // Parse HSL values to create toned-down versions for scrollbar
-  const [hue, saturation, lightness] = colorValue.split(' ').map(v => parseFloat(v));
+  const [hue, saturation, lightness] = colorValue.split(' ').map((v) => parseFloat(v));
 
   // Scrollbar thumb: Use primary color with adjusted lightness for better visibility
   // Light mode: Slightly darker, Dark mode: Slightly lighter
-  const scrollbarLightness = actualTheme === 'light'
-    ? Math.max(lightness - 15, 30)  // Darker in light mode (min 30%)
-    : Math.min(lightness + 10, 70);  // Lighter in dark mode (max 70%)
+  const scrollbarLightness =
+    actualTheme === 'light'
+      ? Math.max(lightness - 15, 30) // Darker in light mode (min 30%)
+      : Math.min(lightness + 10, 70); // Lighter in dark mode (max 70%)
 
   const scrollbarThumb = `${hue} ${saturation}% ${scrollbarLightness}%`;
 
@@ -134,9 +137,11 @@ export const useThemeStore = create<ThemeState>()(
         // Sync to server if authenticated (not guest)
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated && !authState.isGuest) {
-          get().syncThemeToServer().catch((error) => {
-            logger.debug('Theme sync to server failed:', error);
-          });
+          get()
+            .syncThemeToServer()
+            .catch((error) => {
+              logger.debug('Theme sync to server failed:', error);
+            });
         }
       },
 
@@ -147,9 +152,11 @@ export const useThemeStore = create<ThemeState>()(
         // Sync to server if authenticated (not guest)
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated && !authState.isGuest) {
-          get().syncThemeToServer().catch((error) => {
-            logger.debug('Theme sync to server failed:', error);
-          });
+          get()
+            .syncThemeToServer()
+            .catch((error) => {
+              logger.debug('Theme sync to server failed:', error);
+            });
         }
       },
 
@@ -181,13 +188,13 @@ export const useThemeStore = create<ThemeState>()(
           // Silent fail - user might not be authenticated
           logger.debug('Theme sync to server failed:', error);
         }
-      }
+      },
     }),
     {
       name: 'flashpoint-theme-settings',
       partialize: (state) => ({
         mode: state.mode,
-        primaryColor: state.primaryColor
+        primaryColor: state.primaryColor,
       }),
       onRehydrateStorage: () => (state) => {
         // Apply theme after rehydration
@@ -203,7 +210,7 @@ export const useThemeStore = create<ThemeState>()(
             });
           }
         }
-      }
+      },
     }
   )
 );

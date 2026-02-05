@@ -81,7 +81,7 @@ export function LazyImage({
       },
       {
         rootMargin,
-        threshold
+        threshold,
       }
     );
 
@@ -152,7 +152,7 @@ export function LazyImage({
           'opacity-0': !isLoaded && blurPlaceholder,
           'opacity-100': isLoaded || !blurPlaceholder,
           'blur-sm': !isLoaded && blurPlaceholder && placeholder,
-          'blur-none': isLoaded || !blurPlaceholder
+          'blur-none': isLoaded || !blurPlaceholder,
         },
         className
       )}
@@ -172,7 +172,7 @@ export function LazyBackgroundImage({
   rootMargin = '50px',
   threshold = 0.01,
   onLoad,
-  onError
+  onError,
 }: {
   src: string;
   children?: React.ReactNode;

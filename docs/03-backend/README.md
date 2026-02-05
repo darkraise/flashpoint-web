@@ -1,6 +1,9 @@
 # Backend Service
 
-The backend is a REST API built with Express and TypeScript that serves as the central hub for the Flashpoint Web application. It manages game metadata, user accounts, authentication, and coordinates with the separate game-service for content delivery.
+The backend is a REST API built with Express and TypeScript that serves as the
+central hub for the Flashpoint Web application. It manages game metadata, user
+accounts, authentication, and coordinates with the separate game-service for
+content delivery.
 
 ## Overview
 
@@ -38,11 +41,14 @@ npm start       # Run production build
 ## Environment Variables
 
 **Required:**
-- `FLASHPOINT_PATH` - Path to Flashpoint installation (all other paths derived automatically)
+
+- `FLASHPOINT_PATH` - Path to Flashpoint installation (all other paths derived
+  automatically)
 - `GAME_SERVICE_HOST` - Game service hostname/IP (default: localhost)
 - `DOMAIN` - Frontend URL (default: http://localhost:5173)
 
-See [configuration.md](./configuration.md) for complete environment variable documentation.
+See [configuration.md](./configuration.md) for complete environment variable
+documentation.
 
 ## Core Concepts
 
@@ -76,11 +82,13 @@ See [configuration.md](./configuration.md) for complete environment variable doc
 ### Role-Based Access Control (RBAC)
 
 Three default roles:
+
 - **Admin** (priority 100): Full access
 - **User** (priority 50): Can play games, manage playlists
 - **Guest** (priority 0): Read-only access
 
-Permissions are assigned to roles, and users inherit permissions from their role.
+Permissions are assigned to roles, and users inherit permissions from their
+role.
 
 ## Project Structure
 
@@ -103,6 +111,7 @@ backend/
 ## API Routes
 
 Main route groups:
+
 - `/api/auth` - Login, register, token refresh
 - `/api/users` - User management
 - `/api/roles` - Role and permission management
@@ -110,17 +119,22 @@ Main route groups:
 - `/api/play` - Play session tracking
 - `/api/activities` - Activity logs
 - `/api/playlists` - User playlists
+- `/api/domains` - Domain management
 
-See the [API Reference](../06-api-reference/README.md) for complete API documentation.
+See the [API Reference](../06-api-reference/README.md) for complete API
+documentation.
 
 ## Services
 
-- [database-service.md](./services/database-service.md) - Flashpoint database connection with hot-reload
-- [user-database-service.md](./services/user-database-service.md) - User database with migrations
+- [database-service.md](./services/database-service.md) - Flashpoint database
+  connection with hot-reload
+- [user-database-service.md](./services/user-database-service.md) - User
+  database with migrations
 - AuthService - Authentication and JWT management
 - UserService - User CRUD operations
 - GameService - Game metadata queries
 - PlayTrackingService - Play session tracking
+- DomainService - Domain CRUD with CORS cache
 
 ## Security Features
 
@@ -129,7 +143,7 @@ See the [API Reference](../06-api-reference/README.md) for complete API document
 - Login attempt tracking and account lockout
 - RBAC for fine-grained access control
 - Activity logging for audit trails
-- CORS protection
+- Dynamic CORS protection (env var + configured domains)
 - Helmet.js security headers
 - Input validation and sanitization
 
@@ -145,6 +159,7 @@ See the [API Reference](../06-api-reference/README.md) for complete API document
 ## Background Jobs
 
 **Abandoned Session Cleanup**
+
 - Runs every 6 hours
 - Ends sessions older than 24 hours
 - Updates play statistics
@@ -152,6 +167,7 @@ See the [API Reference](../06-api-reference/README.md) for complete API document
 ## Error Handling
 
 Centralized error middleware:
+
 - `AppError` class for operational errors
 - Automatic HTTP status code mapping
 - Structured error responses
@@ -160,6 +176,7 @@ Centralized error middleware:
 ## Logging
 
 Winston logger with:
+
 - Console output with colors (development)
 - File logging (production)
 - Log levels: error, warn, info, debug
@@ -199,16 +216,19 @@ npm test -- --coverage     # Coverage report
 ## Troubleshooting
 
 ### Database Locked Error
+
 - Close Flashpoint Launcher before starting backend
 - Ensure only one backend instance is running
 - Check file permissions on database files
 
 ### Authentication Failures
+
 - Verify JWT_SECRET is set correctly
 - Check token expiration time
 - Ensure user is active in database
 
 ### Game Files Not Loading
+
 - Verify game-service is running on port 22500/22501
 - Check GAME_SERVICE_HOST in .env (default: localhost)
 - Ensure FLASHPOINT_PATH is correct
@@ -228,6 +248,7 @@ NODE_ENV=production npm start
 ```
 
 Requirements:
+
 1. Set `NODE_ENV=production`
 2. Set secure `JWT_SECRET`
 3. Configure proper `DOMAIN`
@@ -238,6 +259,7 @@ Requirements:
 ## Performance Metrics
 
 Typical response times (p95):
+
 - Game search: < 100ms
 - Game details: < 50ms
 - User login: < 200ms (bcrypt hashing)

@@ -23,7 +23,7 @@ export class GameProxyServer {
     this.app = express();
     this.config = {
       ...proxyConfig,
-      chunkSize: proxyConfig.chunkSize || 8192 // 8KB default chunk size
+      chunkSize: proxyConfig.chunkSize || 8192, // 8KB default chunk size
     };
     this.setupMiddleware();
     this.setupRoutes();
@@ -35,7 +35,10 @@ export class GameProxyServer {
       this.app.use((req, res, next) => {
         res.header('Access-Control-Allow-Origin', '*');
         res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+        res.header(
+          'Access-Control-Allow-Headers',
+          'Origin, X-Requested-With, Content-Type, Accept'
+        );
 
         if (req.method === 'OPTIONS') {
           res.sendStatus(200);
@@ -68,8 +71,8 @@ export class GameProxyServer {
       res.status(500).json({
         error: {
           message: 'Proxy server error',
-          statusCode: 500
-        }
+          statusCode: 500,
+        },
       });
     });
   }
@@ -113,8 +116,8 @@ export class GameProxyServer {
       error: {
         message: 'File not found',
         path: requestPath,
-        statusCode: 404
-      }
+        statusCode: 404,
+      },
     });
   }
 
@@ -159,7 +162,7 @@ export class GameProxyServer {
 
     const pathsToTry = [
       path.join(this.config.legacyHTDOCSPath, requestPath),
-      path.join(this.config.gameDataPath, requestPath)
+      path.join(this.config.gameDataPath, requestPath),
     ];
 
     for (const filePath of pathsToTry) {
@@ -201,7 +204,9 @@ export class GameProxyServer {
       const result = await zipManager.findFile(requestPath);
 
       if (result) {
-        logger.info(`[Proxy] ✓ Found in ZIP ${result.mountId}: ${requestPath} (${result.data.length} bytes)`);
+        logger.info(
+          `[Proxy] ✓ Found in ZIP ${result.mountId}: ${requestPath} (${result.data.length} bytes)`
+        );
         return result.data;
       }
 
@@ -231,7 +236,7 @@ export class GameProxyServer {
 
       // Find all .zip files in Data/Games
       const files = fs.readdirSync(gamesPath);
-      const zipFiles = files.filter(f => f.toLowerCase().endsWith('.zip'));
+      const zipFiles = files.filter((f) => f.toLowerCase().endsWith('.zip'));
 
       if (zipFiles.length === 0) {
         logger.info(`[Proxy] No ZIP files found in ${gamesPath}`);
@@ -274,7 +279,11 @@ export class GameProxyServer {
   /**
    * Serve content from ZIP file
    */
-  private async serveZipContent(content: Buffer, requestPath: string, res: Response): Promise<void> {
+  private async serveZipContent(
+    content: Buffer,
+    requestPath: string,
+    res: Response
+  ): Promise<void> {
     try {
       // Determine MIME type from file extension
       const ext = path.extname(requestPath).substring(1).toLowerCase();
@@ -287,7 +296,9 @@ export class GameProxyServer {
 
       res.send(content);
 
-      logger.debug(`[Proxy] Served from ZIP: ${requestPath} (${mimeType}, ${content.length} bytes)`);
+      logger.debug(
+        `[Proxy] Served from ZIP: ${requestPath} (${mimeType}, ${content.length} bytes)`
+      );
     } catch (error) {
       logger.error('[Proxy] Error serving ZIP content:', error);
       throw error;
@@ -307,7 +318,7 @@ export class GameProxyServer {
       // Encode each path segment individually
       // This prevents double-encoding while ensuring special characters are handled
       const pathSegments = urlObj.pathname.split('/');
-      const encodedSegments = pathSegments.map(segment => {
+      const encodedSegments = pathSegments.map((segment) => {
         if (!segment) return segment; // Preserve empty segments (leading/trailing slashes)
 
         try {
@@ -333,7 +344,9 @@ export class GameProxyServer {
       return urlObj.toString();
     } catch (error) {
       // If URL parsing fails, return original URL
-      logger.warn(`[Proxy] Failed to encode URL for CDN: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.warn(
+        `[Proxy] Failed to encode URL for CDN: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
       return url;
     }
   }
@@ -354,8 +367,8 @@ export class GameProxyServer {
           maxRedirects: 5,
           headers: {
             // Match PHP router's Accept-Encoding header
-            'Accept-Encoding': 'identity'
-          }
+            'Accept-Encoding': 'identity',
+          },
           // Note: Removed validateStatus to allow axios to follow redirects automatically
         });
 
@@ -368,7 +381,9 @@ export class GameProxyServer {
             continue;
           }
 
-          logger.info(`[Proxy] ✓ Successfully fetched from external: ${encodedUrl} (${buffer.length} bytes)`);
+          logger.info(
+            `[Proxy] ✓ Successfully fetched from external: ${encodedUrl} (${buffer.length} bytes)`
+          );
 
           // Cache the downloaded file locally for future use
           await this.cacheDownloadedFile(requestPath, buffer);
@@ -426,7 +441,7 @@ export class GameProxyServer {
 
       // Stream file with chunking for large files
       const readStream = fs.createReadStream(filePath, {
-        highWaterMark: this.config.chunkSize
+        highWaterMark: this.config.chunkSize,
       });
 
       readStream.on('error', (error) => {
@@ -435,8 +450,8 @@ export class GameProxyServer {
           res.status(500).json({
             error: {
               message: 'Error streaming file',
-              statusCode: 500
-            }
+              statusCode: 500,
+            },
           });
         }
       });
@@ -477,8 +492,13 @@ export class GameProxyServer {
       server.on('error', (error: NodeJS.ErrnoException) => {
         if (error.code === 'EADDRINUSE') {
           logger.error(`[Proxy] Port ${this.config.proxyPort} is already in use.`);
-          logger.error('[Proxy] Please check if another instance is running or change PROXY_PORT in .env');
-          logger.error('[Proxy] You can find the process using: netstat -ano | findstr :' + this.config.proxyPort);
+          logger.error(
+            '[Proxy] Please check if another instance is running or change PROXY_PORT in .env'
+          );
+          logger.error(
+            '[Proxy] You can find the process using: netstat -ano | findstr :' +
+              this.config.proxyPort
+          );
         } else {
           logger.error('[Proxy] Failed to start proxy server:', error);
         }

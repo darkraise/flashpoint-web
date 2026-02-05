@@ -5,7 +5,13 @@ import { Clock } from 'lucide-react';
 import { JobCard } from '@/components/jobs/JobCard';
 import { JobExecutionLogTable } from '@/components/jobs/JobExecutionLogTable';
 import { JobEditDialog } from '@/components/jobs/JobEditDialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+} from '@/components/ui/dialog';
 import { useDialog } from '@/contexts/DialogContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getErrorMessage } from '@/types/api-error';
@@ -18,18 +24,22 @@ export function JobsView() {
   const queryClient = useQueryClient();
 
   // Fetch jobs with auto-refresh every 5 seconds
-  const { data: jobs = [], isLoading, error } = useQuery({
+  const {
+    data: jobs = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['jobs'],
     queryFn: () => jobsApi.getAll(),
     refetchInterval: 5000, // Real-time updates
-    refetchIntervalInBackground: true
+    refetchIntervalInBackground: true,
   });
 
   // Fetch logs for selected job
   const { data: logsData, isLoading: logsLoading } = useQuery({
     queryKey: ['jobLogs', selectedJobId],
     queryFn: () => jobsApi.getLogs(selectedJobId!, 50, 0),
-    enabled: !!selectedJobId && showLogsDialog
+    enabled: !!selectedJobId && showLogsDialog,
   });
 
   // Stop mutation
@@ -41,7 +51,7 @@ export function JobsView() {
     },
     onError: (error: unknown) => {
       showToast(getErrorMessage(error) || 'Failed to stop job', 'error');
-    }
+    },
   });
 
   // Trigger mutation
@@ -53,7 +63,7 @@ export function JobsView() {
     },
     onError: (error: unknown) => {
       showToast(getErrorMessage(error) || 'Failed to trigger job', 'error');
-    }
+    },
   });
 
   // Update mutation (for enabling/disabling jobs)
@@ -67,7 +77,7 @@ export function JobsView() {
     },
     onError: (error: unknown) => {
       showToast(getErrorMessage(error) || 'Failed to update job', 'error');
-    }
+    },
   });
 
   const handleStop = (jobId: string) => {
@@ -92,7 +102,8 @@ export function JobsView() {
     updateMutation.mutate({ jobId, enabled });
   };
 
-  const isAnyMutating = stopMutation.isPending || triggerMutation.isPending || updateMutation.isPending;
+  const isAnyMutating =
+    stopMutation.isPending || triggerMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -103,23 +114,23 @@ export function JobsView() {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
+      {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2].map((i) => (
             <Skeleton key={i} className="h-64 w-full" />
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Error State */}
-      {error && (
+      {error ? (
         <div className="bg-red-950/20 border border-red-500 rounded-lg p-4">
           <p className="text-red-400">Failed to load jobs. Please try again.</p>
         </div>
-      )}
+      ) : null}
 
       {/* Jobs Grid */}
-      {!isLoading && !error && (
+      {!isLoading && !error ? (
         <>
           {jobs.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -143,26 +154,25 @@ export function JobsView() {
             </div>
           )}
         </>
-      )}
+      ) : null}
 
       {/* Logs Dialog */}
       <Dialog open={showLogsDialog} onOpenChange={setShowLogsDialog}>
         <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Execution Logs - {jobs.find(j => j.id === selectedJobId)?.name}</DialogTitle>
+            <DialogTitle>
+              Execution Logs - {jobs.find((j) => j.id === selectedJobId)?.name}
+            </DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <JobExecutionLogTable
-              logs={logsData?.data || []}
-              loading={logsLoading}
-            />
+            <JobExecutionLogTable logs={logsData?.data || []} loading={logsLoading} />
           </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* Edit Dialog */}
       <JobEditDialog
-        job={jobs.find(j => j.id === selectedJobId) || null}
+        job={jobs.find((j) => j.id === selectedJobId) || null}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />

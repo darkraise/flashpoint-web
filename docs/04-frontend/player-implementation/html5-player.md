@@ -4,7 +4,9 @@ Documentation for HTML5 game iframe player.
 
 ## Overview
 
-HTML5 games are rendered using a sandboxed iframe for security and isolation. Unlike Flash games that require emulation, HTML5 games run natively in the browser.
+HTML5 games are rendered using a sandboxed iframe for security and isolation.
+Unlike Flash games that require emulation, HTML5 games run natively in the
+browser.
 
 **Location:** `frontend/src/components/player/GamePlayer.tsx` (HTML5 branch)
 
@@ -66,6 +68,7 @@ allow="
 ### What's Blocked
 
 Without explicit permission, the iframe CANNOT:
+
 - Access parent window (except via postMessage)
 - Navigate top window
 - Access local storage (unless same-origin)
@@ -76,6 +79,7 @@ Without explicit permission, the iframe CANNOT:
 ### What's Allowed
 
 With current sandbox settings:
+
 - Run JavaScript
 - Make network requests (same-origin)
 - Use Canvas and WebGL
@@ -93,11 +97,13 @@ http://localhost:22500/[relativePath]
 ```
 
 Example:
+
 ```
 http://localhost:22500/Games/HTML5/example-game/index.html
 ```
 
 The game-service handles:
+
 - Serving index.html
 - Serving game assets (JS, CSS, images)
 - CORS headers
@@ -143,16 +149,19 @@ const [iframeError, setIframeError] = useState<string | null>(null);
 ### Common Issues
 
 **Issue: Game doesn't load**
+
 - Check browser console for CORS errors
 - Verify content URL is correct
 - Ensure game-service is running
 
 **Issue: Game loads but doesn't work**
+
 - Check if game requires additional permissions
 - Verify sandbox attributes allow required features
 - Check browser console for JavaScript errors
 
 **Issue: Game can't access resources**
+
 - CORS may be blocking cross-origin requests
 - Game may need same-origin access
 - Check game-service proxy configuration
@@ -160,6 +169,7 @@ const [iframeError, setIframeError] = useState<string | null>(null);
 ## Performance
 
 HTML5 games generally perform better than Flash:
+
 - No emulation overhead
 - Native browser rendering
 - Direct access to WebGL
@@ -190,10 +200,13 @@ Games can communicate with the parent window using postMessage:
 
 ```javascript
 // Inside game iframe
-window.parent.postMessage({
-  type: 'GAME_LOADED',
-  data: { gameId: '123' }
-}, '*');
+window.parent.postMessage(
+  {
+    type: 'GAME_LOADED',
+    data: { gameId: '123' },
+  },
+  '*'
+);
 
 // In parent window
 window.addEventListener('message', (event) => {
@@ -206,6 +219,7 @@ window.addEventListener('message', (event) => {
 ## Browser Compatibility
 
 HTML5 games work in all modern browsers:
+
 - Chrome/Edge (Chromium) - Best performance
 - Firefox - Good performance
 - Safari - Good performance (some WebGL limitations)

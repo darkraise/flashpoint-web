@@ -1,10 +1,13 @@
 # HTML Polyfills
 
-The game-service automatically injects JavaScript polyfills into HTML files to improve compatibility with Unity WebGL and other game engines.
+The game-service automatically injects JavaScript polyfills into HTML files to
+improve compatibility with Unity WebGL and other game engines.
 
 ## Overview
 
-Many legacy games expect certain browser APIs and global functions to exist. The HTML Polyfill Injector detects game engines and automatically adds compatibility shims to prevent errors and improve stability.
+Many legacy games expect certain browser APIs and global functions to exist. The
+HTML Polyfill Injector detects game engines and automatically adds compatibility
+shims to prevent errors and improve stability.
 
 ## Architecture
 
@@ -33,15 +36,15 @@ Injected when Unity game is detected.
 ```typescript
 function needsUnityPolyfills(html: string): boolean {
   const unityIndicators = [
-    /UnityProgress/i,           // Unity 5.x progress callback
-    /UnityLoader/i,             // Unity loader script
-    /createUnityInstance/i,     // Unity 2020+ API
-    /unityFramework\.js/i,      // Unity framework
-    /Build\/.*\.loader\.js/i,   // Unity build files
-    /UnityEngine/i              // Unity namespace
+    /UnityProgress/i, // Unity 5.x progress callback
+    /UnityLoader/i, // Unity loader script
+    /createUnityInstance/i, // Unity 2020+ API
+    /unityFramework\.js/i, // Unity framework
+    /Build\/.*\.loader\.js/i, // Unity build files
+    /UnityEngine/i, // Unity namespace
   ];
 
-  return unityIndicators.some(pattern => pattern.test(html));
+  return unityIndicators.some((pattern) => pattern.test(html));
 }
 ```
 
@@ -53,39 +56,45 @@ function needsUnityPolyfills(html: string): boolean {
 // Unity WebGL Polyfills
 
 // 1. UnityProgress - Progress callback for Unity 5.x
-window.UnityProgress = window.UnityProgress || function(gameInstance, progress) {
-  if (!gameInstance.Module) return;
-  if (!gameInstance.progress) {
-    gameInstance.progress = { loaded: 0, total: 1 };
-  }
-  gameInstance.progress.loaded = progress;
-  if (progress === 1) {
-    console.log('[Unity] Game loaded successfully');
-  }
-};
+window.UnityProgress =
+  window.UnityProgress ||
+  function (gameInstance, progress) {
+    if (!gameInstance.Module) return;
+    if (!gameInstance.progress) {
+      gameInstance.progress = { loaded: 0, total: 1 };
+    }
+    gameInstance.progress.loaded = progress;
+    if (progress === 1) {
+      console.log('[Unity] Game loaded successfully');
+    }
+  };
 
 // 2. createUnityInstance - Unity 2020+ loader API
-window.createUnityInstance = window.createUnityInstance || function(canvas, config) {
-  return new Promise((resolve) => {
-    console.log('[Unity] createUnityInstance called - using polyfill');
-    resolve({
-      Module: {},
-      SetFullscreen: function() {},
-      SendMessage: function() {},
-      Quit: function() { return Promise.resolve(); }
+window.createUnityInstance =
+  window.createUnityInstance ||
+  function (canvas, config) {
+    return new Promise((resolve) => {
+      console.log('[Unity] createUnityInstance called - using polyfill');
+      resolve({
+        Module: {},
+        SetFullscreen: function () {},
+        SendMessage: function () {},
+        Quit: function () {
+          return Promise.resolve();
+        },
+      });
     });
-  });
-};
+  };
 
 // 3. UnityLoader2020 - Error handler
 if (typeof UnityLoader2020 === 'undefined') {
   window.UnityLoader2020 = {
     Error: {
-      handler: function(message, filename, lineno) {
+      handler: function (message, filename, lineno) {
         console.warn('[Unity] Error:', message, 'at', filename + ':' + lineno);
         return true; // Prevent default error handling
-      }
-    }
+      },
+    },
   };
 }
 ```
@@ -103,7 +112,10 @@ if (typeof window.external === 'undefined') {
 }
 
 // 2. AudioContext - WebKit prefix polyfill
-if (typeof AudioContext === 'undefined' && typeof webkitAudioContext !== 'undefined') {
+if (
+  typeof AudioContext === 'undefined' &&
+  typeof webkitAudioContext !== 'undefined'
+) {
   window.AudioContext = webkitAudioContext;
 }
 ```
@@ -151,32 +163,36 @@ const headMatch = htmlString.match(/<head[^>]*>/i);
 if (headMatch) {
   const headOpenTag = headMatch[0];
   const insertPosition = htmlString.indexOf(headOpenTag) + headOpenTag.length;
-  htmlString = htmlString.slice(0, insertPosition) +
-               polyfillsToInject +
-               htmlString.slice(insertPosition);
-}
-else {
+  htmlString =
+    htmlString.slice(0, insertPosition) +
+    polyfillsToInject +
+    htmlString.slice(insertPosition);
+} else {
   // No <head> tag, try to inject after <html>
   const htmlMatch = htmlString.match(/<html[^>]*>/i);
   if (htmlMatch) {
     const htmlOpenTag = htmlMatch[0];
     const insertPosition = htmlString.indexOf(htmlOpenTag) + htmlOpenTag.length;
-    htmlString = htmlString.slice(0, insertPosition) +
-                 '<head>' + polyfillsToInject + '</head>' +
-                 htmlString.slice(insertPosition);
-  }
-  else {
+    htmlString =
+      htmlString.slice(0, insertPosition) +
+      '<head>' +
+      polyfillsToInject +
+      '</head>' +
+      htmlString.slice(insertPosition);
+  } else {
     // No <html> or <head> tag, wrap entire content
-    htmlString = '<!DOCTYPE html><html><head>' +
-                 polyfillsToInject +
-                 '</head><body>' +
-                 htmlString +
-                 '</body></html>';
+    htmlString =
+      '<!DOCTYPE html><html><head>' +
+      polyfillsToInject +
+      '</head><body>' +
+      htmlString +
+      '</body></html>';
   }
 }
 ```
 
 **Injection priority**:
+
 1. After `<head>` opening tag (best)
 2. Create `<head>` after `<html>` (fallback)
 3. Wrap entire content in HTML structure (last resort)
@@ -188,20 +204,23 @@ else {
 **Purpose**: Legacy Unity 5.x games call this to report loading progress
 
 **Without polyfill**:
+
 ```javascript
 UnityProgress(gameInstance, 0.5);
 // Error: UnityProgress is not defined
 ```
 
 **With polyfill**:
+
 ```javascript
 UnityProgress(gameInstance, 0.5);
 // Works: Updates progress, logs completion
 ```
 
 **Implementation**:
+
 ```javascript
-window.UnityProgress = function(gameInstance, progress) {
+window.UnityProgress = function (gameInstance, progress) {
   if (!gameInstance.Module) return;
 
   // Initialize progress tracking
@@ -224,33 +243,37 @@ window.UnityProgress = function(gameInstance, progress) {
 **Purpose**: Unity 2020+ uses this to instantiate games
 
 **Without polyfill**:
+
 ```javascript
-createUnityInstance(canvas, config).then(instance => {
+createUnityInstance(canvas, config).then((instance) => {
   // Error: createUnityInstance is not defined
 });
 ```
 
 **With polyfill**:
+
 ```javascript
-createUnityInstance(canvas, config).then(instance => {
+createUnityInstance(canvas, config).then((instance) => {
   // Works: Returns mock instance
 });
 ```
 
 **Implementation**:
+
 ```javascript
-window.createUnityInstance = function(canvas, config) {
+window.createUnityInstance = function (canvas, config) {
   return new Promise((resolve) => {
     console.log('[Unity] createUnityInstance called - using polyfill');
 
     // Return mock Unity instance
     resolve({
-      Module: {},                      // Unity WebAssembly module
-      SetFullscreen: function() {},    // Fullscreen API
-      SendMessage: function() {},      // Unity-to-JS messaging
-      Quit: function() {               // Cleanup
+      Module: {}, // Unity WebAssembly module
+      SetFullscreen: function () {}, // Fullscreen API
+      SendMessage: function () {}, // Unity-to-JS messaging
+      Quit: function () {
+        // Cleanup
         return Promise.resolve();
-      }
+      },
     });
   });
 };
@@ -261,25 +284,28 @@ window.createUnityInstance = function(canvas, config) {
 **Purpose**: Suppress Unity framework errors
 
 **Without polyfill**:
+
 ```
 Uncaught ReferenceError: UnityLoader2020 is not defined
 ```
 
 **With polyfill**:
+
 ```
 [Unity] Error: ... (logged but not thrown)
 ```
 
 **Implementation**:
+
 ```javascript
 if (typeof UnityLoader2020 === 'undefined') {
   window.UnityLoader2020 = {
     Error: {
-      handler: function(message, filename, lineno) {
+      handler: function (message, filename, lineno) {
         console.warn('[Unity] Error:', message, 'at', filename + ':' + lineno);
         return true; // Prevent default error handling
-      }
-    }
+      },
+    },
   };
 }
 ```
@@ -291,18 +317,21 @@ if (typeof UnityLoader2020 === 'undefined') {
 **Purpose**: Legacy ActiveX/IE games expect `window.external`
 
 **Without polyfill**:
+
 ```javascript
 window.external.someMethod();
 // Error: Cannot read property 'someMethod' of undefined
 ```
 
 **With polyfill**:
+
 ```javascript
 window.external.someMethod();
 // Error: someMethod is not a function (better than undefined)
 ```
 
 **Implementation**:
+
 ```javascript
 if (typeof window.external === 'undefined') {
   window.external = {};
@@ -314,20 +343,26 @@ if (typeof window.external === 'undefined') {
 **Purpose**: Older browsers use `webkitAudioContext`
 
 **Without polyfill**:
+
 ```javascript
 const audioContext = new AudioContext();
 // Error: AudioContext is not defined (in older Safari/Chrome)
 ```
 
 **With polyfill**:
+
 ```javascript
 const audioContext = new AudioContext();
 // Works: Uses webkitAudioContext
 ```
 
 **Implementation**:
+
 ```javascript
-if (typeof AudioContext === 'undefined' && typeof webkitAudioContext !== 'undefined') {
+if (
+  typeof AudioContext === 'undefined' &&
+  typeof webkitAudioContext !== 'undefined'
+) {
   window.AudioContext = webkitAudioContext;
 }
 ```
@@ -372,15 +407,15 @@ Create test HTML file:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Unity Game</title>
-</head>
-<body>
-  <script src="Build/game.loader.js"></script>
-  <script>
-    createUnityInstance(canvas, config);
-  </script>
-</body>
+  <head>
+    <title>Unity Game</title>
+  </head>
+  <body>
+    <script src="Build/game.loader.js"></script>
+    <script>
+      createUnityInstance(canvas, config);
+    </script>
+  </body>
 </html>
 ```
 
@@ -395,20 +430,21 @@ Expected output (excerpt):
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Unity Game</title>
-  <script>
-  // Unity WebGL Polyfills
-  window.UnityProgress = ...
-  window.createUnityInstance = ...
-  </script>
-  <script>
-  // General game compatibility polyfills
-  if (typeof window.external === 'undefined') {
-    window.external = {};
-  }
-  </script>
-</head>
+  <head>
+    <title>Unity Game</title>
+    <script>
+      // Unity WebGL Polyfills
+      window.UnityProgress = ...
+      window.createUnityInstance = ...
+    </script>
+    <script>
+      // General game compatibility polyfills
+      if (typeof window.external === 'undefined') {
+        window.external = {};
+      }
+    </script>
+  </head>
+</html>
 ```
 
 ### Test Non-Unity HTML
@@ -418,12 +454,12 @@ Create test HTML file:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Regular Game</title>
-</head>
-<body>
-  <p>Regular content</p>
-</body>
+  <head>
+    <title>Regular Game</title>
+  </head>
+  <body>
+    <p>Regular content</p>
+  </body>
 </html>
 ```
 
@@ -438,13 +474,14 @@ Expected output (excerpt):
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Regular Game</title>
-  <script>
-  // General game compatibility polyfills
-  // (Unity polyfills NOT injected)
-  </script>
-</head>
+  <head>
+    <title>Regular Game</title>
+    <script>
+      // General game compatibility polyfills
+      // (Unity polyfills NOT injected)
+    </script>
+  </head>
+</html>
 ```
 
 ### Test Non-HTML File
@@ -458,22 +495,23 @@ Expected: No polyfills injected (binary file returned as-is)
 ## Browser Compatibility
 
 Polyfills tested on:
+
 - Chrome 90+
 - Firefox 88+
 - Safari 14+
 - Edge 90+
 
 **Legacy browser support**:
+
 - IE 11: Limited support (some polyfills may not work)
 - Chrome < 50: AudioContext polyfill helps
 - Safari < 10: WebKit prefix polyfills help
 
 ## Performance Impact
 
-**HTML parsing**: ~1-5ms for typical game HTML
-**Regex matching**: <1ms for detection
-**String manipulation**: ~1-5ms for injection
-**Total overhead**: ~5-10ms per HTML file
+**HTML parsing**: ~1-5ms for typical game HTML **Regex matching**: <1ms for
+detection **String manipulation**: ~1-5ms for injection **Total overhead**:
+~5-10ms per HTML file
 
 **Memory impact**: Negligible (polyfills add ~2KB to HTML)
 
@@ -484,6 +522,7 @@ Polyfills tested on:
 ### No Unsafe Code
 
 Polyfills only add safe, read-only functions:
+
 - No eval()
 - No innerHTML manipulation
 - No DOM modifications
@@ -492,6 +531,7 @@ Polyfills only add safe, read-only functions:
 ### Injection Safety
 
 HTML is treated as string, not parsed as DOM:
+
 - No XSS risk from polyfill injection
 - Original content preserved
 - Only `<head>` tag modified
@@ -499,6 +539,7 @@ HTML is treated as string, not parsed as DOM:
 ### Console Logging
 
 Polyfills log to console for debugging:
+
 - No sensitive information logged
 - Helps developers troubleshoot issues
 - Can be disabled in production (future)
@@ -510,6 +551,7 @@ Polyfills log to console for debugging:
 **Symptom**: Unity game fails, no polyfills in HTML
 
 **Debug steps**:
+
 1. Check if Content-Type is `text/html`
 2. Verify HTML has `<head>` or `<html>` tag
 3. Check logs for injection message
@@ -522,6 +564,7 @@ Polyfills log to console for debugging:
 **Symptom**: Polyfills injected but game still fails
 
 **Debug steps**:
+
 1. Open browser console
 2. Check for errors before polyfills load
 3. Verify polyfill code is executed
@@ -534,6 +577,7 @@ Polyfills log to console for debugging:
 **Symptom**: Unity polyfills injected for non-Unity game
 
 **Debug steps**:
+
 1. Check HTML for Unity indicators
 2. Verify detection regex patterns
 3. Add exclusion pattern if needed
@@ -561,11 +605,8 @@ window.NewEngine = window.NewEngine || {
 
 ```typescript
 function needsNewEnginePolyfills(html: string): boolean {
-  const indicators = [
-    /NewEngine/i,
-    /newengine\.js/i
-  ];
-  return indicators.some(p => p.test(html));
+  const indicators = [/NewEngine/i, /newengine\.js/i];
+  return indicators.some((p) => p.test(html));
 }
 ```
 
@@ -610,7 +651,10 @@ curl http://localhost:22500/test-new.html | grep "NewEngine"
 
 ## References
 
-- Unity WebGL API: https://docs.unity3d.com/Manual/webgl-interactingwithbrowserscripting.html
+- Unity WebGL API:
+  https://docs.unity3d.com/Manual/webgl-interactingwithbrowserscripting.html
 - MDN Polyfills: https://developer.mozilla.org/en-US/docs/Glossary/Polyfill
-- WebKit AudioContext: https://developer.mozilla.org/en-US/docs/Web/API/AudioContext
-- window.external: https://developer.mozilla.org/en-US/docs/Web/API/Window/external
+- WebKit AudioContext:
+  https://developer.mozilla.org/en-US/docs/Web/API/AudioContext
+- window.external:
+  https://developer.mozilla.org/en-US/docs/Web/API/Window/external

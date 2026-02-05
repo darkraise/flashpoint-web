@@ -1,15 +1,20 @@
 # Game Service Architecture
 
-This document describes the architectural design and implementation patterns of the Flashpoint Game Service.
+This document describes the architectural design and implementation patterns of
+the Flashpoint Game Service.
 
 ## System Overview
 
-The game-service is designed as a standalone microservice that handles all game content delivery, replacing the original Go-based FlashpointGameServer with a TypeScript/Node.js implementation.
+The game-service is designed as a standalone microservice that handles all game
+content delivery, replacing the original Go-based FlashpointGameServer with a
+TypeScript/Node.js implementation.
 
 ### Design Principles
 
-1. **Separation of Concerns**: Game content serving separated from metadata management
-2. **Zero Extraction**: ZIP files served via streaming, no disk extraction required
+1. **Separation of Concerns**: Game content serving separated from metadata
+   management
+2. **Zero Extraction**: ZIP files served via streaming, no disk extraction
+   required
 3. **Fallback Chain**: Multi-level fallback ensures content availability
 4. **Performance**: Streaming, connection pooling, and caching for optimal speed
 5. **Compatibility**: 199+ MIME types and HTML polyfills for legacy content
@@ -64,11 +69,13 @@ The game-service is designed as a standalone microservice that handles all game 
 **Purpose**: Serve legacy web content with intelligent fallback chain
 
 **Components**:
+
 - `http-proxy-server.ts`: Express server setup and configuration
 - `proxy-request-handler.ts`: Request routing and response handling
 - `legacy-server.ts`: Fallback chain implementation
 
 **Request Flow**:
+
 ```
 Request
   ↓
@@ -84,6 +91,7 @@ Return response with CORS headers
 ```
 
 **Key Features**:
+
 - Supports three URL formats: proxy-style, path-based, standard
 - Automatic subdomain variation matching (www, core, cdn, etc.)
 - External CDN fallback with local caching
@@ -94,10 +102,12 @@ Return response with CORS headers
 **Purpose**: Mount and serve files from ZIP archives without extraction
 
 **Components**:
+
 - `gamezipserver.ts`: GameZip server implementation
 - `zip-manager.ts`: ZIP mounting, indexing, and file access
 
 **API Endpoints**:
+
 ```
 POST   /mount/:id        Mount a ZIP file
 DELETE /mount/:id        Unmount a ZIP file
@@ -106,6 +116,7 @@ GET    /*                Serve file from mounted ZIP
 ```
 
 **Request Flow**:
+
 ```
 Mount Request
   ↓
@@ -131,6 +142,7 @@ Return with MIME type + CORS
 ```
 
 **Key Features**:
+
 - Zero-extraction ZIP access using node-stream-zip
 - Multi-ZIP search with path variation handling
 - Streaming for large files
@@ -141,19 +153,22 @@ Return with MIME type + CORS
 **Purpose**: Centralized configuration from environment and proxySettings.json
 
 **Sources** (in priority order):
+
 1. Environment variables (.env)
 2. proxySettings.json (Flashpoint standard config)
 3. Hardcoded defaults
 
 **Configuration Loading**:
+
 ```typescript
 class ConfigManager {
-  static async loadConfig(flashpointPath: string): Promise<ServerSettings>
-  static getSettings(): ServerSettings
+  static async loadConfig(flashpointPath: string): Promise<ServerSettings>;
+  static getSettings(): ServerSettings;
 }
 ```
 
 **Settings Managed**:
+
 - Server ports
 - File paths (htdocs, games, CGI)
 - External fallback URLs
@@ -165,6 +180,7 @@ class ConfigManager {
 **Purpose**: Implement multi-level fallback for legacy content serving
 
 **Fallback Chain**:
+
 ```
 1. Local htdocs (exact hostname + path)
    ↓ Not found
@@ -186,6 +202,7 @@ class ConfigManager {
 ```
 
 **Path Resolution Algorithm**:
+
 ```typescript
 buildPathCandidates(relPath, urlPath):
   // 1. Exact paths
@@ -211,33 +228,37 @@ buildPathCandidates(relPath, urlPath):
 **Hostname Variation Matching**:
 
 For a request to `mochibot.com/file.swf`, try:
+
 1. `mochibot.com/file.swf`
 2. `www.mochibot.com/file.swf`
 3. `core.mochibot.com/file.swf`
 4. `cdn.mochibot.com/file.swf`
 5. ... (12 common subdomain prefixes)
 
-This handles cases where Flashpoint stores files with subdomain prefixes but games request without them.
+This handles cases where Flashpoint stores files with subdomain prefixes but
+games request without them.
 
 ### 5. ZIP Manager
 
 **Purpose**: Manage ZIP mounting and provide file access without extraction
 
 **Architecture**:
+
 ```typescript
 class ZipManager {
-  private mountedZips: LRUCache<string, MountedZip>
+  private mountedZips: LRUCache<string, MountedZip>;
 
-  async mount(id: string, zipPath: string): void
-  async unmount(id: string): Promise<boolean>
-  async getFile(id: string, filePath: string): Promise<Buffer | null>
-  async findFile(relPath: string): Promise<{data, mountId} | null>
+  async mount(id: string, zipPath: string): void;
+  async unmount(id: string): Promise<boolean>;
+  async getFile(id: string, filePath: string): Promise<Buffer | null>;
+  async findFile(relPath: string): Promise<{ data; mountId } | null>;
 }
 ```
 
 **Performance Optimization - LRU Cache**:
 
-The ZIP manager uses an LRU (Least Recently Used) cache to prevent memory leaks and manage resources:
+The ZIP manager uses an LRU (Least Recently Used) cache to prevent memory leaks
+and manage resources:
 
 ```typescript
 constructor() {
@@ -256,6 +277,7 @@ constructor() {
 ```
 
 **Benefits**:
+
 - Prevents unlimited ZIP mounts (bounded at 100)
 - Automatic cleanup of old mounts after 30 minutes
 - Resource leak prevention via disposal callback
@@ -263,6 +285,7 @@ constructor() {
 - Graceful eviction when limit reached
 
 **Mounting Process**:
+
 ```
 1. Check if already mounted (prevent duplicates)
 2. Verify ZIP file exists on disk
@@ -272,6 +295,7 @@ constructor() {
 ```
 
 **File Access**:
+
 ```
 1. Normalize file path (remove leading slash)
 2. Look up mounted ZIP by ID
@@ -280,6 +304,7 @@ constructor() {
 ```
 
 **Multi-ZIP Search**:
+
 ```
 Try path variations in order:
   - content/{relPath}       (most common)
@@ -297,6 +322,7 @@ For each variation:
 **Purpose**: Provide accurate content-type headers for 199+ file types
 
 **Architecture**:
+
 ```typescript
 CUSTOM_MIME_TYPES: 199 legacy formats
 STANDARD_MIME_TYPES: Common web formats
@@ -309,16 +335,18 @@ getMimeType(ext: string): string {
 ```
 
 **Priority**:
+
 1. Custom MIME types (Flashpoint legacy formats)
 2. Standard MIME types (web formats)
 3. Default: application/octet-stream
 
 **Special Cases**:
+
 - Director files (.dcr, .dir, .dxr) → application/x-director
 - Shockwave Flash (.swf) → application/x-shockwave-flash
 - Unity3D (.unity3d) → application/vnd.unity
 - VRML (.wrl) → model/vrml
-- Chemical formats (.pdb, .mol) → chemical/x-*
+- Chemical formats (.pdb, .mol) → chemical/x-\*
 
 ### 7. CORS Utilities
 
@@ -327,6 +355,7 @@ getMimeType(ext: string): string {
 **Location**: `game-service/src/utils/cors.ts`
 
 **Benefits**:
+
 - Eliminates 6+ instances of duplicate CORS header setting
 - Consistent CORS configuration across both servers
 - Reusable functions for standard and preflight requests
@@ -339,14 +368,14 @@ interface CorsSettings {
 }
 
 // Standard CORS headers
-function setCorsHeaders(res: ServerResponse, settings: CorsSettings): void
+function setCorsHeaders(res: ServerResponse, settings: CorsSettings): void;
 
 // CORS headers with max-age (for OPTIONS preflight)
 function setCorsHeadersWithMaxAge(
   res: ServerResponse,
   settings: CorsSettings,
   maxAge: number = 86400
-): void
+): void;
 ```
 
 **Usage**:
@@ -372,14 +401,17 @@ if (req.method === 'OPTIONS') {
 
 **Security Justification**:
 
-The game-service uses wildcard CORS (`Access-Control-Allow-Origin: *`) which is justified because:
+The game-service uses wildcard CORS (`Access-Control-Allow-Origin: *`) which is
+justified because:
+
 - Serves public, read-only game content only
 - No sensitive data exposure
 - No authentication required
 - Supports game embedding across different domains
 - Backend service maintains restrictive CORS for sensitive operations
 
-See `docs/12-reference/cors-security-decision.md` for detailed security rationale.
+See `docs/12-reference/cors-security-decision.md` for detailed security
+rationale.
 
 ### 8. HTML Polyfill Injector
 
@@ -397,6 +429,7 @@ See `docs/12-reference/cors-security-decision.md` for detailed security rational
    - `AudioContext` polyfill - WebKit prefix handling
 
 **Injection Algorithm**:
+
 ```
 1. Detect if HTML file (check for <html> or <head>)
 2. Analyze content for Unity indicators
@@ -408,6 +441,7 @@ See `docs/12-reference/cors-security-decision.md` for detailed security rational
 ```
 
 **Detection Patterns**:
+
 ```typescript
 needsUnityPolyfills(html: string): boolean {
   const indicators = [
@@ -526,10 +560,12 @@ needsUnityPolyfills(html: string): boolean {
 ### Horizontal Scaling
 
 Current limitations:
+
 - ZIP mounts are in-memory per process
 - No shared state between instances
 
 Future improvements:
+
 - Redis for mount registry
 - Consistent hashing for ZIP distribution
 - Load balancer for multiple instances
@@ -537,23 +573,27 @@ Future improvements:
 ### Performance Tuning
 
 **Memory**:
+
 - ZIP indexes are loaded into memory
 - Large ZIPs (>1GB) take ~500MB RAM for index
 - Solution: Lazy loading, LRU cache for ZIP handles
 
 **CPU**:
+
 - MIME type lookup: O(1) hash map
 - Path candidates: O(n) where n = variations
 - ZIP search: O(m × p) where m = mounted ZIPs, p = path variations
 - Solution: Cache results, reduce variations
 
 **Network**:
+
 - External downloads: 45s timeout
 - Concurrent limit: 10 requests
 - Keep-alive: 65s
 - Solution: Increase timeouts for slow connections
 
 **Disk I/O**:
+
 - ZIP reads: Random access via node-stream-zip
 - Local cache: Sequential writes
 - Solution: SSD recommended, RAM disk for cache
@@ -584,18 +624,19 @@ try {
   // Try operation
 } catch (error) {
   if (isRecoverable(error)) {
-    logger.warn('Recoverable error, trying next source', error)
-    continue // Try next fallback
+    logger.warn('Recoverable error, trying next source', error);
+    continue; // Try next fallback
   } else {
-    logger.error('Fatal error', error)
-    throw error // Return 500
+    logger.error('Fatal error', error);
+    throw error; // Return 500
   }
 }
 ```
 
 ### CORS Error Handling
 
-**Critical**: CORS headers MUST be set even for error responses, otherwise browsers show CORS error instead of actual error.
+**Critical**: CORS headers MUST be set even for error responses, otherwise
+browsers show CORS error instead of actual error.
 
 ```typescript
 import { setCorsHeaders } from '../utils/cors';
@@ -612,7 +653,8 @@ private sendError(res: Response, status: number, message: string) {
 
 ### Request Body Size Limits
 
-**DoS Protection**: The GameZip server limits request body sizes to prevent memory exhaustion attacks:
+**DoS Protection**: The GameZip server limits request body sizes to prevent
+memory exhaustion attacks:
 
 ```typescript
 // gamezipserver.ts
@@ -633,6 +675,7 @@ private readBody(req: http.IncomingMessage, maxSize: number = 1024 * 1024): Prom
 ```
 
 **Protection**:
+
 - 1MB maximum request size by default
 - Connection destroyed immediately on overflow
 - Prevents memory exhaustion attacks
@@ -641,33 +684,45 @@ private readBody(req: http.IncomingMessage, maxSize: number = 1024 * 1024): Prom
 ### Path Traversal Prevention
 
 All file paths are normalized:
+
 ```typescript
-path.normalize(filePath).toLowerCase()
+path.normalize(filePath).toLowerCase();
 ```
 
 **ZIP Mount ID Validation**:
+
 ```typescript
 // Reject IDs with path traversal sequences
-if (id.includes('/') || id.includes('\\') ||
-    id.includes('..') || id.includes('\0')) {
+if (
+  id.includes('/') ||
+  id.includes('\\') ||
+  id.includes('..') ||
+  id.includes('\0')
+) {
   this.sendError(res, 400, 'Invalid mount ID');
   return;
 }
 ```
 
 **ZIP Path Validation**:
+
 ```typescript
 // Ensure ZIP files are within allowed directory
 const resolvedZipPath = path.resolve(normalizedZipPath);
 const resolvedGamesPath = path.resolve(allowedGamesPath);
 
 if (!resolvedZipPath.startsWith(resolvedGamesPath)) {
-  this.sendError(res, 403, 'Forbidden: ZIP file must be within games directory');
+  this.sendError(
+    res,
+    403,
+    'Forbidden: ZIP file must be within games directory'
+  );
   return;
 }
 ```
 
 Prevents attacks like:
+
 - `../../../etc/passwd`
 - `..\\..\\windows\\system32`
 - Null byte injection (`file.txt\0.jpg`)
@@ -698,12 +753,14 @@ Prevents attacks like:
 ### Logging Strategy
 
 **Levels**:
+
 - DEBUG: Path candidates, ZIP searches, file access
 - INFO: Requests, mounts, file serves, sources
 - WARN: Fallback attempts, missing files
 - ERROR: Server errors, mount failures, fatal errors
 
 **Log Format**:
+
 ```
 [Component] Message
 [HTTPProxyServer] GET http://domain.com/file.swf
@@ -715,6 +772,7 @@ Prevents attacks like:
 ### Metrics (Future)
 
 Potential metrics to track:
+
 - Requests per second
 - Response time percentiles (p50, p95, p99)
 - Cache hit rate
@@ -725,6 +783,7 @@ Potential metrics to track:
 ### Health Checks
 
 Endpoint suggestions:
+
 ```
 GET /health        Basic health check
 GET /metrics       Prometheus metrics

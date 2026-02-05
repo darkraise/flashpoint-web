@@ -47,6 +47,9 @@ export { statisticsApi } from './statistics';
 // Play Tracking
 export { playTrackingApi } from './playTracking';
 
+// Domains
+export { domainsApi } from './domains';
+
 // Settings
 export { authSettingsApi, systemSettingsApi } from './settings';
 

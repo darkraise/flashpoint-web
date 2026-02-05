@@ -92,11 +92,19 @@ export function UserLeaderboard({ autoRefresh = false }: UserLeaderboardProps) {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left p-3 text-sm font-semibold text-muted-foreground">Rank</th>
-                <th className="text-left p-3 text-sm font-semibold text-muted-foreground">Username</th>
-                <th className="text-right p-3 text-sm font-semibold text-muted-foreground">Activities</th>
+                <th className="text-left p-3 text-sm font-semibold text-muted-foreground">
+                  Username
+                </th>
+                <th className="text-right p-3 text-sm font-semibold text-muted-foreground">
+                  Activities
+                </th>
                 <th className="text-right p-3 text-sm font-semibold text-muted-foreground">%</th>
-                <th className="text-left p-3 text-sm font-semibold text-muted-foreground">Top Action</th>
-                <th className="text-left p-3 text-sm font-semibold text-muted-foreground">Last Activity</th>
+                <th className="text-left p-3 text-sm font-semibold text-muted-foreground">
+                  Top Action
+                </th>
+                <th className="text-left p-3 text-sm font-semibold text-muted-foreground">
+                  Last Activity
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -121,9 +129,7 @@ export function UserLeaderboard({ autoRefresh = false }: UserLeaderboardProps) {
                         {user.key}
                       </span>
                     </td>
-                    <td className="p-3 text-right font-semibold">
-                      {user.count.toLocaleString()}
-                    </td>
+                    <td className="p-3 text-right font-semibold">{user.count.toLocaleString()}</td>
                     <td className="p-3 text-right text-muted-foreground">
                       {user.percentage.toFixed(1)}%
                     </td>
@@ -131,7 +137,9 @@ export function UserLeaderboard({ autoRefresh = false }: UserLeaderboardProps) {
                       {user.metadata.topAction || '-'}
                     </td>
                     <td className="p-3 text-sm text-muted-foreground">
-                      {user.metadata.lastActivity ? formatDateTime(user.metadata.lastActivity) : '-'}
+                      {user.metadata.lastActivity
+                        ? formatDateTime(user.metadata.lastActivity)
+                        : '-'}
                     </td>
                   </tr>
                 );

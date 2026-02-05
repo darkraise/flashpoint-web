@@ -43,14 +43,14 @@ export function validateDateRange(
       if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid date format'
+          error: 'Invalid date format',
         });
       }
 
       if (endDateObj < startDateObj) {
         return res.status(400).json({
           success: false,
-          error: 'End date must be after or equal to start date'
+          error: 'End date must be after or equal to start date',
         });
       }
     }

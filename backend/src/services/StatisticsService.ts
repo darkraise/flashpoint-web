@@ -15,7 +15,7 @@ export class StatisticsService {
   private playlistService = new PlaylistService();
   private cache: { data: Statistics | null; timestamp: number } = {
     data: null,
-    timestamp: 0
+    timestamp: 0,
   };
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -73,7 +73,10 @@ export class StatisticsService {
         const uniqueTags = new Set<string>();
 
         for (const row of results) {
-          const tags = row.tagsStr.split(';').map(tag => tag.trim()).filter(tag => tag);
+          const tags = row.tagsStr
+            .split(';')
+            .map((tag) => tag.trim())
+            .filter((tag) => tag);
           for (const tag of tags) {
             uniqueTags.add(tag);
           }
@@ -103,7 +106,7 @@ export class StatisticsService {
         totalPlatforms,
         webPlayableGames,
         totalPlaylists,
-        totalTags
+        totalTags,
       };
 
       logger.debug('Statistics calculated:', statistics);
@@ -111,7 +114,7 @@ export class StatisticsService {
       // Update cache
       this.cache = {
         data: statistics,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       return statistics;

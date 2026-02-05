@@ -26,8 +26,14 @@ export function BrandPanel() {
       />
 
       {/* Multi-layer gradient backgrounds */}
-      <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent pointer-events-none" aria-hidden="true" />
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-primary/3 to-primary/8 pointer-events-none" aria-hidden="true" />
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent pointer-events-none"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 bg-gradient-to-br from-transparent via-primary/3 to-primary/8 pointer-events-none"
+        aria-hidden="true"
+      />
 
       {/* Content container */}
       <div className="relative z-10 flex flex-col items-center px-12 animate-fade-in-up">
@@ -59,12 +65,8 @@ export function BrandPanel() {
                 animationFillMode: 'both',
               }}
             >
-              <div className="text-3xl font-bold text-primary mb-2">
-                {stat.value}
-              </div>
-              <div className="text-sm text-muted-foreground text-center">
-                {stat.label}
-              </div>
+              <div className="text-3xl font-bold text-primary mb-2">{stat.value}</div>
+              <div className="text-sm text-muted-foreground text-center">{stat.label}</div>
             </div>
           ))}
         </div>

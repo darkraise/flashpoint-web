@@ -120,10 +120,7 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
             return [newItem, ...old];
           });
-          showToast(
-            options.messages?.createSuccess || 'Created successfully',
-            'success'
-          );
+          showToast(options.messages?.createSuccess || 'Created successfully', 'success');
         },
         onError: (error: unknown) => {
           showToast(getErrorMessage(error), 'error');
@@ -134,19 +131,13 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
     // Update mutation with optimistic update
     const useUpdateMutation = () => {
       return useMutation({
-        mutationFn: ({ id, data }: { id: TId; data: TUpdate }) =>
-          options.api.update(id, data),
+        mutationFn: ({ id, data }: { id: TId; data: TUpdate }) => options.api.update(id, data),
         onSuccess: (updated) => {
           // Optimistically update cache by replacing the updated item
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
-            return old.map((item) =>
-              (item as any).id === (updated as any).id ? updated : item
-            );
+            return old.map((item) => ((item as any).id === (updated as any).id ? updated : item));
           });
-          showToast(
-            options.messages?.updateSuccess || 'Updated successfully',
-            'success'
-          );
+          showToast(options.messages?.updateSuccess || 'Updated successfully', 'success');
         },
         onError: (error: unknown) => {
           showToast(getErrorMessage(error), 'error');
@@ -163,10 +154,7 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
             return old.filter((item) => (item as any).id !== deletedId);
           });
-          showToast(
-            options.messages?.deleteSuccess || 'Deleted successfully',
-            'success'
-          );
+          showToast(options.messages?.deleteSuccess || 'Deleted successfully', 'success');
         },
         onError: (error: unknown) => {
           showToast(getErrorMessage(error), 'error');

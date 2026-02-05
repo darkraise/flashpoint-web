@@ -31,7 +31,7 @@ export class SyncStatusService {
       isRunning: false,
       stage: 'idle',
       progress: 0,
-      message: 'No sync in progress'
+      message: 'No sync in progress',
     };
   }
 
@@ -69,7 +69,7 @@ export class SyncStatusService {
       stage: 'initializing',
       progress: 0,
       message: 'Starting metadata sync...',
-      startTime: new Date().toISOString()
+      startTime: new Date().toISOString(),
     };
 
     logger.info('[SyncStatus] Sync started');
@@ -121,7 +121,7 @@ export class SyncStatusService {
       isRunning: false,
       stage: 'idle',
       progress: 0,
-      message: 'No sync in progress'
+      message: 'No sync in progress',
     };
 
     logger.debug('[SyncStatus] Status reset');

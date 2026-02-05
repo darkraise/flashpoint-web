@@ -16,9 +16,9 @@ export function SidebarSection({
 }: SidebarSectionProps) {
   return (
     <>
-      {showSeparator && <Separator className="my-3" />}
+      {showSeparator ? <Separator className="my-3" /> : null}
       <div className="space-y-1">
-        {title && (
+        {title ? (
           <div
             className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider overflow-hidden"
             style={{
@@ -31,7 +31,7 @@ export function SidebarSection({
           >
             {title}
           </div>
-        )}
+        ) : null}
         {children}
       </div>
     </>

@@ -29,22 +29,22 @@ router.post(
   requirePermission('settings.update'),
   logActivity('database.reload', 'database'),
   async (req: Request, res: Response) => {
-  try {
-    logger.info('Manual database reload requested');
+    try {
+      logger.info('Manual database reload requested');
 
-    await DatabaseService.reload();
+      await DatabaseService.reload();
 
-    res.json({
-      success: true,
-      message: 'Database reloaded successfully from disk'
-    });
-  } catch (error) {
-    logger.error('Manual database reload failed:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
+      res.json({
+        success: true,
+        message: 'Database reloaded successfully from disk',
+      });
+    } catch (error) {
+      logger.error('Manual database reload failed:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 );
 
@@ -69,28 +69,28 @@ router.get(
   requirePermission('settings.update'),
   logActivity('database.status', 'database'),
   async (req: Request, res: Response) => {
-  try {
-    const fs = require('fs');
-    const { config } = require('../config');
+    try {
+      const fs = require('fs');
+      const { config } = require('../config');
 
-    const isConnected = DatabaseService.isConnected();
-    const stats = fs.statSync(config.flashpointDbPath);
+      const isConnected = DatabaseService.isConnected();
+      const stats = fs.statSync(config.flashpointDbPath);
 
-    res.json({
-      success: true,
-      connected: isConnected,
-      dbPath: config.flashpointDbPath,
-      fileSizeBytes: stats.size,
-      fileSizeMB: (stats.size / (1024 * 1024)).toFixed(2),
-      lastModified: stats.mtime.toISOString()
-    });
-  } catch (error) {
-    logger.error('Error getting database status:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
+      res.json({
+        success: true,
+        connected: isConnected,
+        dbPath: config.flashpointDbPath,
+        fileSizeBytes: stats.size,
+        fileSizeMB: (stats.size / (1024 * 1024)).toFixed(2),
+        lastModified: stats.mtime.toISOString(),
+      });
+    } catch (error) {
+      logger.error('Error getting database status:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   }
 );
 

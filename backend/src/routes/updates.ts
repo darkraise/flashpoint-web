@@ -17,11 +17,14 @@ const metadataSyncService = new MetadataSyncService();
  * GET /api/updates/check
  * Check for available updates
  */
-router.get('/check', asyncHandler(async (req, res) => {
-  logger.info('[Updates API] Checking for updates...');
-  const updateInfo = await updateService.checkForUpdates();
-  res.json(updateInfo);
-}));
+router.get(
+  '/check',
+  asyncHandler(async (req, res) => {
+    logger.info('[Updates API] Checking for updates...');
+    const updateInfo = await updateService.checkForUpdates();
+    res.json(updateInfo);
+  })
+);
 
 /**
  * POST /api/updates/install
@@ -64,12 +67,15 @@ router.get(
  * Returns info about game database updates from FPFSS
  * Includes edition info so frontend knows whether sync is available
  */
-router.get('/metadata', asyncHandler(async (req, res) => {
-  const edition = metadataUpdateService.getEdition();
-  logger.info(`[Updates API] Checking for metadata updates... (edition: ${edition})`);
-  const metadataInfo = await metadataUpdateService.getMetadataUpdateInfo();
-  res.json({ ...metadataInfo, edition });
-}));
+router.get(
+  '/metadata',
+  asyncHandler(async (req, res) => {
+    const edition = metadataUpdateService.getEdition();
+    logger.info(`[Updates API] Checking for metadata updates... (edition: ${edition})`);
+    const metadataInfo = await metadataUpdateService.getMetadataUpdateInfo();
+    res.json({ ...metadataInfo, edition });
+  })
+);
 
 /**
  * POST /api/updates/metadata/sync
@@ -92,23 +98,24 @@ router.post(
       return res.status(409).json({
         success: false,
         error: 'Sync already in progress',
-        status: syncStatus.getStatus()
+        status: syncStatus.getStatus(),
       });
     }
 
-    logger.info(`[Updates API] Starting metadata sync in background (requested by ${req.user?.username})...`);
+    logger.info(
+      `[Updates API] Starting metadata sync in background (requested by ${req.user?.username})...`
+    );
 
     // Start sync in background (don't await - let it run async)
-    metadataSyncService.syncMetadata()
-      .catch((error) => {
-        logger.error('[Updates API] Background sync error:', error);
-      });
+    metadataSyncService.syncMetadata().catch((error) => {
+      logger.error('[Updates API] Background sync error:', error);
+    });
 
     // Return immediately
     res.json({
       success: true,
       message: 'Sync started',
-      status: syncStatus.getStatus()
+      status: syncStatus.getStatus(),
     });
   })
 );
@@ -129,7 +136,7 @@ router.get('/metadata/sync/status', (req, res) => {
       stage: 'error',
       progress: 0,
       message: 'Error getting sync status',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });

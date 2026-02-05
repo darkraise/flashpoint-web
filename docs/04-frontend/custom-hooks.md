@@ -1,6 +1,7 @@
 # Custom Hooks
 
-Comprehensive documentation of all custom React hooks in the Flashpoint Web frontend.
+Comprehensive documentation of all custom React hooks in the Flashpoint Web
+frontend.
 
 ## Overview
 
@@ -8,8 +9,10 @@ The application uses 18+ custom hooks organized by functionality:
 
 - **Data Fetching** - useGames, usePlaylists, useUsers, useRoles, useActivities
 - **Authentication** - useAuth
-- **UI** - useDebounce, useSwipeGesture, useMountEffect, useToast, useDateTimeFormat
-- **Game Data** - useFilterOptions, useTags, usePlatforms, useStatistics, useDownload
+- **UI** - useDebounce, useSwipeGesture, useMountEffect, useToast,
+  useDateTimeFormat
+- **Game Data** - useFilterOptions, useTags, usePlatforms, useStatistics,
+  useDownload
 - **Play Tracking** - usePlayTracking
 - **Community** - useCommunityPlaylists
 
@@ -39,6 +42,7 @@ const { data: launchData } = useGameLaunchData(id: string);
 ```
 
 **Example:**
+
 ```typescript
 function BrowseView() {
   const [filters, setFilters] = useState<GameFilters>({
@@ -72,6 +76,32 @@ const removeGamesMutation = useRemoveGamesFromPlaylist();
 const deleteMutation = useDeletePlaylist();
 ```
 
+### useDomains
+
+Domain management hooks for admin domain settings.
+
+**Location:** `frontend/src/hooks/useDomains.ts`
+
+```typescript
+// Fetch all domains (admin only)
+const { data: domains } = useDomains(enabled?: boolean);
+
+// Mutations
+const addDomain = useAddDomain();       // addDomain.mutate('play.example.com')
+const deleteDomain = useDeleteDomain(); // deleteDomain.mutate(domainId)
+const setDefault = useSetDefaultDomain(); // setDefault.mutate(domainId) - optimistic update
+
+// Utility: build share URL from hostname + token
+import { buildShareUrl } from '@/hooks/useDomains';
+const url = buildShareUrl('play.example.com', shareToken);
+// => "https://play.example.com/playlists/shared/{token}"
+const fallback = buildShareUrl(null, shareToken);
+// => "{window.location.origin}/playlists/shared/{token}"
+```
+
+All mutations automatically invalidate the `['system-settings', 'public']` cache
+so the default domain updates across the app.
+
 ## Authentication Hook
 
 ### useAuth
@@ -87,7 +117,11 @@ const { login, logout, register } = useAuth();
 await login({ username: 'user', password: 'pass' });
 
 // Register
-await register({ username: 'newuser', email: 'email@example.com', password: 'pass' });
+await register({
+  username: 'newuser',
+  email: 'email@example.com',
+  password: 'pass',
+});
 
 // Logout
 await logout();
@@ -140,19 +174,21 @@ Date and time formatting hook with user-configurable formats.
 
 **Location:** `frontend/src/hooks/useDateTimeFormat.ts`
 
-**Purpose:** Provides consistent date/time formatting across the application using user-selected format preferences from system settings.
+**Purpose:** Provides consistent date/time formatting across the application
+using user-selected format preferences from system settings.
 
 ```typescript
 const {
-  dateFormat,      // Current date format string (e.g., 'MM/dd/yyyy')
-  timeFormat,      // Current time format string (e.g., 'hh:mm a')
-  formatDate,      // Function to format dates
-  formatTime,      // Function to format times
-  formatDateTime   // Function to format date + time
+  dateFormat, // Current date format string (e.g., 'MM/dd/yyyy')
+  timeFormat, // Current time format string (e.g., 'hh:mm a')
+  formatDate, // Function to format dates
+  formatTime, // Function to format times
+  formatDateTime, // Function to format date + time
 } = useDateTimeFormat();
 ```
 
 **Available Date Formats:**
+
 - `MM/dd/yyyy` - US format (01/24/2026)
 - `dd/MM/yyyy` - European format (24/01/2026)
 - `yyyy-MM-dd` - ISO 8601 format (2026-01-24)
@@ -162,6 +198,7 @@ const {
 - `dd MMMM yyyy` - Day-first full month (24 January 2026)
 
 **Available Time Formats:**
+
 - `hh:mm a` - 12-hour with AM/PM (02:30 PM)
 - `HH:mm` - 24-hour (14:30)
 - `hh:mm:ss a` - 12-hour with seconds (02:30:45 PM)
@@ -201,13 +238,15 @@ function GameStats() {
 ```
 
 **Features:**
+
 - Automatically fetches user's format preferences from system settings
 - Caches settings with 5-minute staleTime
 - Handles Date objects, ISO strings, and timestamps
 - Falls back to defaults if settings not loaded
 - Uses date-fns for reliable formatting
 
-**See Also:** [Date & Time Formatting Feature](../../10-features/10-date-time-formatting.md)
+**See Also:**
+[Date & Time Formatting Feature](../../10-features/10-date-time-formatting.md)
 
 ### useFilterOptions
 
@@ -243,12 +282,12 @@ All hooks use TanStack Query with these defaults:
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,      // 5 minutes
-      cacheTime: 10 * 60 * 1000,     // 10 minutes
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
       refetchOnWindowFocus: false,
-      retry: 1
-    }
-  }
+      retry: 1,
+    },
+  },
 });
 ```
 

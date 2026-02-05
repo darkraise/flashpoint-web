@@ -14,16 +14,8 @@ import { Label } from '../ui/label';
 import { FilterInput } from './FilterInput';
 import { DatePicker } from '../ui/date-picker';
 import { FormattedDate } from '../common/FormattedDate';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '../ui/collapsible';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '../ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface ActivityLog {
   id: number;
@@ -93,9 +85,7 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
       return (
         <div className="text-muted-foreground">
           {resource || '-'}
-          {resourceId && (
-            <span className="text-muted-foreground/60"> #{resourceId}</span>
-          )}
+          {resourceId ? <span className="text-muted-foreground/60"> #{resourceId}</span> : null}
         </div>
       );
     },
@@ -106,11 +96,7 @@ const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
     enableSorting: true,
     cell: ({ row }) => {
       const ipAddress = row.getValue('ipAddress') as string | null;
-      return (
-        <div className="text-muted-foreground font-mono text-xs">
-          {ipAddress || '-'}
-        </div>
-      );
+      return <div className="text-muted-foreground font-mono text-xs">{ipAddress || '-'}</div>;
     },
   },
   {
@@ -144,7 +130,9 @@ function ActivityTableComponent() {
   const limit = PAGINATION_LIMIT;
 
   // Sorting state
-  const [sortBy, setSortBy] = useState<'createdAt' | 'username' | 'action' | 'resource' | 'ipAddress'>('createdAt');
+  const [sortBy, setSortBy] = useState<
+    'createdAt' | 'username' | 'action' | 'resource' | 'ipAddress'
+  >('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Transition for deferred state updates
@@ -160,44 +148,64 @@ function ActivityTableComponent() {
 
   // Build filters object - convert Date objects to ISO strings for API
   // Only include dates if the range is valid
-  const hasValidDateRange = !filterState.dateRangeError || (!filterState.startDate && !filterState.endDate);
-  const filters: ActivityFilters = useMemo(() => ({
-    username: debouncedUsername || undefined,
-    action: debouncedAction || undefined,
-    resource: debouncedResource || undefined,
-    startDate: hasValidDateRange && filterState.startDate ? filterState.startDate.toISOString() : undefined,
-    endDate: hasValidDateRange && filterState.endDate ? filterState.endDate.toISOString() : undefined,
-    sortBy,
-    sortOrder,
-  }), [debouncedUsername, debouncedAction, debouncedResource, filterState.startDate, filterState.endDate, hasValidDateRange, sortBy, sortOrder]);
+  const hasValidDateRange =
+    !filterState.dateRangeError || (!filterState.startDate && !filterState.endDate);
+  const filters: ActivityFilters = useMemo(
+    () => ({
+      username: debouncedUsername || undefined,
+      action: debouncedAction || undefined,
+      resource: debouncedResource || undefined,
+      startDate:
+        hasValidDateRange && filterState.startDate
+          ? filterState.startDate.toISOString()
+          : undefined,
+      endDate:
+        hasValidDateRange && filterState.endDate ? filterState.endDate.toISOString() : undefined,
+      sortBy,
+      sortOrder,
+    }),
+    [
+      debouncedUsername,
+      debouncedAction,
+      debouncedResource,
+      filterState.startDate,
+      filterState.endDate,
+      hasValidDateRange,
+      sortBy,
+      sortOrder,
+    ]
+  );
 
   const { data, isLoading, isError, error } = useActivities(page, limit, filters);
 
   // Convert sorting state to TanStack Table format
-  const sortingState: SortingState = useMemo(() => [
-    { id: sortBy, desc: sortOrder === 'desc' }
-  ], [sortBy, sortOrder]);
+  const sortingState: SortingState = useMemo(
+    () => [{ id: sortBy, desc: sortOrder === 'desc' }],
+    [sortBy, sortOrder]
+  );
 
   // Handle sorting changes from DataTable
-  const handleSortingChange = useCallback((updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
-    const newSorting = typeof updaterOrValue === 'function'
-      ? updaterOrValue(sortingState)
-      : updaterOrValue;
+  const handleSortingChange = useCallback(
+    (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+      const newSorting =
+        typeof updaterOrValue === 'function' ? updaterOrValue(sortingState) : updaterOrValue;
 
-    // Wrap state updates in transition to defer prop changes
-    startTransition(() => {
-      if (newSorting.length === 0) {
-        // Reset to default when cleared
-        setSortBy('createdAt');
-        setSortOrder('desc');
-      } else {
-        const { id, desc } = newSorting[0];
-        setSortBy(id as typeof sortBy);
-        setSortOrder(desc ? 'desc' : 'asc');
-      }
-      setPage(1); // Reset to first page on sort change
-    });
-  }, [sortingState]);
+      // Wrap state updates in transition to defer prop changes
+      startTransition(() => {
+        if (newSorting.length === 0) {
+          // Reset to default when cleared
+          setSortBy('createdAt');
+          setSortOrder('desc');
+        } else {
+          const { id, desc } = newSorting[0];
+          setSortBy(id as typeof sortBy);
+          setSortOrder(desc ? 'desc' : 'asc');
+        }
+        setPage(1); // Reset to first page on sort change
+      });
+    },
+    [sortingState]
+  );
 
   const handleClearFilters = useCallback(() => {
     clearFilters();
@@ -206,7 +214,11 @@ function ActivityTableComponent() {
 
   // Check if any filters are active
   const hasActiveFilters =
-    filterState.username || filterState.action || filterState.resource || filterState.startDate || filterState.endDate;
+    filterState.username ||
+    filterState.action ||
+    filterState.resource ||
+    filterState.startDate ||
+    filterState.endDate;
 
   // Count active filters
   const activeFilterCount = [
@@ -232,26 +244,21 @@ function ActivityTableComponent() {
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
               {showFilters ? 'Hide' : 'Show'} Filters
-              {!showFilters && activeFilterCount > 0 && (
-                <Badge
-                  variant="default"
-                  className="h-5 min-w-[20px] px-1.5 text-xs font-semibold"
-                >
+              {!showFilters && activeFilterCount > 0 ? (
+                <Badge variant="default" className="h-5 min-w-[20px] px-1.5 text-xs font-semibold">
                   {activeFilterCount}
                 </Badge>
-              )}
+              ) : null}
               <ChevronDown
-                className={`h-4 w-4 transition-transform ${
-                  showFilters ? 'rotate-180' : ''
-                }`}
+                className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`}
               />
             </Button>
           </CollapsibleTrigger>
-          {hasActiveFilters && (
+          {hasActiveFilters ? (
             <Button variant="ghost" size="sm" onClick={handleClearFilters}>
               Clear Filters
             </Button>
-          )}
+          ) : null}
         </div>
         <CollapsibleContent className="mt-4">
           <div className="rounded-lg border bg-card p-4 space-y-4">
@@ -317,12 +324,12 @@ function ActivityTableComponent() {
                 </div>
               </div>
 
-              {filterState.dateRangeError && (
+              {filterState.dateRangeError ? (
                 <div className="text-sm text-destructive flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   {filterState.dateRangeError}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </CollapsibleContent>

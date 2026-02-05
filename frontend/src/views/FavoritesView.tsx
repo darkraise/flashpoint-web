@@ -1,25 +1,29 @@
-import { useMemo, useState } from "react";
-import { GameGrid } from "@/components/library/GameGrid";
-import { GameList } from "@/components/library/GameList";
-import { CardSizeControl } from "@/components/common/CardSizeControl";
-import { useUIStore } from "@/store/ui";
-import { useFavoriteGames } from "@/hooks/useFavorites";
-import { Heart, ArrowDownAZ, Calendar } from "lucide-react";
+import { useMemo, useState } from 'react';
+import { GameGrid } from '@/components/library/GameGrid';
+import { GameList } from '@/components/library/GameList';
+import { CardSizeControl } from '@/components/common/CardSizeControl';
+import { useUIStore } from '@/store/ui';
+import { useFavoriteGames } from '@/hooks/useFavorites';
+import { Heart, ArrowDownAZ, Calendar } from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 export function FavoritesView() {
   const viewMode = useUIStore((state) => state.viewMode);
   const [sortBy, setSortBy] = useState<'title' | 'dateAdded'>('dateAdded');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const { data: games = [], isLoading, error } = useFavoriteGames(undefined, undefined, sortBy, sortOrder);
+  const {
+    data: games = [],
+    isLoading,
+    error,
+  } = useFavoriteGames(undefined, undefined, sortBy, sortOrder);
 
   // Handle sort change - combined value like "title-asc" or "dateAdded-desc"
   const handleSortChange = (value: string) => {
@@ -31,10 +35,7 @@ export function FavoritesView() {
   const currentSortValue = `${sortBy}-${sortOrder}`;
 
   // All games in this view are favorites by definition
-  const favoriteGameIds = useMemo(
-    () => new Set(games.map((game) => game.id)),
-    [games],
-  );
+  const favoriteGameIds = useMemo(() => new Set(games.map((game) => game.id)), [games]);
 
   if (isLoading) {
     return (
@@ -64,8 +65,7 @@ export function FavoritesView() {
           <div>
             <h1 className="text-3xl font-bold">Favorites</h1>
             <p className="text-muted-foreground mt-1">
-              {games.length} {games.length === 1 ? "game" : "games"} in your
-              favorites
+              {games.length} {games.length === 1 ? 'game' : 'games'} in your favorites
             </p>
           </div>
         </div>
@@ -73,7 +73,7 @@ export function FavoritesView() {
         {/* Controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Sort Dropdown */}
-          {games.length > 0 && (
+          {games.length > 0 ? (
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Label htmlFor="sort-select" className="text-sm whitespace-nowrap hidden sm:inline">
                 Sort by:
@@ -110,7 +110,7 @@ export function FavoritesView() {
                 </SelectContent>
               </Select>
             </div>
-          )}
+          ) : null}
 
           {/* View Mode Controls */}
           <CardSizeControl />
@@ -125,13 +125,12 @@ export function FavoritesView() {
           </div>
           <h2 className="text-2xl font-semibold mb-2">No Favorites Yet</h2>
           <p className="text-muted-foreground mb-6">
-            Start adding games to your favorites by clicking the heart icon on
-            any game
+            Start adding games to your favorites by clicking the heart icon on any game
           </p>
         </div>
       ) : (
         <>
-          {viewMode === "grid" ? (
+          {viewMode === 'grid' ? (
             <GameGrid
               games={games}
               favoriteGameIds={favoriteGameIds}

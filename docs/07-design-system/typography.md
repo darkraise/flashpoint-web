@@ -1,10 +1,12 @@
 # Typography
 
-Inter font family with 12 text sizes, 4 weights, and optimized line heights. All typography meets WCAG accessibility standards.
+Inter font family with 12 text sizes, 4 weights, and optimized line heights. All
+typography meets WCAG accessibility standards.
 
 ## Font Family
 
-**Inter** - Modern sans-serif designed for UI with excellent character differentiation.
+**Inter** - Modern sans-serif designed for UI with excellent character
+differentiation.
 
 Fallback chain: Inter → system-ui → Helvetica → Arial → sans-serif
 
@@ -13,24 +15,25 @@ font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
 ```
 
 Loaded with Google Fonts optimizations:
+
 - `preconnect` for faster loading
 - `display=swap` to prevent invisible text
 - Only 400, 500, 600, 700 weights
 
 ## Font Sizes
 
-| Class | Size | Pixels | Use Case |
-|-------|------|--------|----------|
-| `text-xs` | 0.75rem | 12px | Labels, badges |
-| `text-sm` | 0.875rem | 14px | Small text, captions |
-| `text-base` | 1rem | 16px | **Body text (default)** |
-| `text-lg` | 1.125rem | 18px | Emphasized body |
-| `text-xl` | 1.25rem | 20px | Small headings |
-| `text-2xl` | 1.5rem | 24px | Card titles, h3 |
-| `text-3xl` | 1.875rem | 30px | Section headings, h2 |
-| `text-4xl` | 2.25rem | 36px | Page titles, h1 |
-| `text-5xl` | 3rem | 48px | Large displays |
-| `text-6xl` | 3.75rem | 60px | Hero text |
+| Class       | Size     | Pixels | Use Case                |
+| ----------- | -------- | ------ | ----------------------- |
+| `text-xs`   | 0.75rem  | 12px   | Labels, badges          |
+| `text-sm`   | 0.875rem | 14px   | Small text, captions    |
+| `text-base` | 1rem     | 16px   | **Body text (default)** |
+| `text-lg`   | 1.125rem | 18px   | Emphasized body         |
+| `text-xl`   | 1.25rem  | 20px   | Small headings          |
+| `text-2xl`  | 1.5rem   | 24px   | Card titles, h3         |
+| `text-3xl`  | 1.875rem | 30px   | Section headings, h2    |
+| `text-4xl`  | 2.25rem  | 36px   | Page titles, h1         |
+| `text-5xl`  | 3rem     | 48px   | Large displays          |
+| `text-6xl`  | 3.75rem  | 60px   | Hero text               |
 
 Usage:
 
@@ -45,12 +48,12 @@ Usage:
 
 ## Font Weights
 
-| Class | Weight | Use Case |
-|-------|--------|----------|
-| `font-normal` | 400 | Body text, paragraphs |
-| `font-medium` | 500 | Labels, buttons |
-| `font-semibold` | 600 | Headings |
-| `font-bold` | 700 | Strong emphasis |
+| Class           | Weight | Use Case              |
+| --------------- | ------ | --------------------- |
+| `font-normal`   | 400    | Body text, paragraphs |
+| `font-medium`   | 500    | Labels, buttons       |
+| `font-semibold` | 600    | Headings              |
+| `font-bold`     | 700    | Strong emphasis       |
 
 Usage:
 
@@ -67,13 +70,23 @@ Tailwind applies optimal line heights automatically:
 
 ```css
 /* Headings get tighter */
-.text-4xl { line-height: 1.1; }
-.text-3xl { line-height: 1.2; }
-.text-2xl { line-height: 1.3; }
+.text-4xl {
+  line-height: 1.1;
+}
+.text-3xl {
+  line-height: 1.2;
+}
+.text-2xl {
+  line-height: 1.3;
+}
 
 /* Body text gets comfortable */
-.text-base { line-height: 1.5; }
-.text-sm { line-height: 1.43; }
+.text-base {
+  line-height: 1.5;
+}
+.text-sm {
+  line-height: 1.43;
+}
 ```
 
 Explicit utilities:

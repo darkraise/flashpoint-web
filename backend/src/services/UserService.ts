@@ -1,6 +1,6 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { PermissionCache } from './PermissionCache';
-import { hashPassword } from '../utils/password';
+import { hashPassword, verifyPassword } from '../utils/password';
 import { AppError } from '../middleware/errorHandler';
 import { User, CreateUserData, UpdateUserData } from '../types/auth';
 import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../utils/pagination';
@@ -51,19 +51,17 @@ export class UserService {
    */
   async createUser(data: CreateUserData): Promise<User> {
     // Check if username exists
-    const existingUser = UserDatabaseService.get(
-      'SELECT id FROM users WHERE username = ?',
-      [data.username]
-    );
+    const existingUser = UserDatabaseService.get('SELECT id FROM users WHERE username = ?', [
+      data.username,
+    ]);
     if (existingUser) {
       throw new AppError(409, 'Username already exists');
     }
 
     // Check if email exists
-    const existingEmail = UserDatabaseService.get(
-      'SELECT id FROM users WHERE email = ?',
-      [data.email]
-    );
+    const existingEmail = UserDatabaseService.get('SELECT id FROM users WHERE email = ?', [
+      data.email,
+    ]);
     if (existingEmail) {
       throw new AppError(409, 'Email already exists');
     }
@@ -98,10 +96,10 @@ export class UserService {
 
     if (data.email !== undefined) {
       // Check if email is taken by another user
-      const existing = UserDatabaseService.get(
-        'SELECT id FROM users WHERE email = ? AND id != ?',
-        [data.email, id]
-      );
+      const existing = UserDatabaseService.get('SELECT id FROM users WHERE email = ? AND id != ?', [
+        data.email,
+        id,
+      ]);
       if (existing) {
         throw new AppError(409, 'Email already exists');
       }
@@ -123,14 +121,11 @@ export class UserService {
       return user; // No changes
     }
 
-    updates.push("updated_at = ?");
+    updates.push('updated_at = ?');
     params.push(new Date().toISOString());
     params.push(id);
 
-    UserDatabaseService.run(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
-      params
-    );
+    UserDatabaseService.run(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
 
     // Invalidate permission cache if role changed
     if (data.roleId !== undefined) {
@@ -152,10 +147,11 @@ export class UserService {
 
     // Prevent deleting the last admin
     if (user.roleName === 'admin') {
-      const adminCount = UserDatabaseService.get(
-        'SELECT COUNT(*) as count FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = "admin"',
-        []
-      )?.count || 0;
+      const adminCount =
+        UserDatabaseService.get(
+          'SELECT COUNT(*) as count FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = "admin"',
+          []
+        )?.count || 0;
 
       if (adminCount <= 1) {
         throw new AppError(403, 'Cannot delete the last admin user');
@@ -169,18 +165,14 @@ export class UserService {
    * Change user password
    */
   async changePassword(id: number, currentPassword: string, newPassword: string): Promise<void> {
-    const user = UserDatabaseService.get(
-      'SELECT password_hash FROM users WHERE id = ?',
-      [id]
-    );
+    const user = UserDatabaseService.get('SELECT password_hash FROM users WHERE id = ?', [id]);
 
     if (!user) {
       throw new AppError(404, 'User not found');
     }
 
-    // Verify current password
-    const bcrypt = require('bcrypt');
-    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    // Verify current password using centralized utility
+    const isValid = await verifyPassword(currentPassword, user.password_hash);
     if (!isValid) {
       throw new AppError(401, 'Current password is incorrect');
     }
@@ -189,13 +181,12 @@ export class UserService {
     const passwordHash = await hashPassword(newPassword);
 
     // Update password
-    UserDatabaseService.run(
-      "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
-      [passwordHash, new Date().toISOString(), id]
-    );
+    UserDatabaseService.run('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?', [
+      passwordHash,
+      new Date().toISOString(),
+      id,
+    ]);
   }
-
-
 
   /**
    * Get user setting by key
@@ -218,10 +209,13 @@ export class UserService {
       [userId]
     );
 
-    return results.reduce((acc: Record<string, string>, row: any) => {
-      acc[row.setting_key] = row.setting_value;
-      return acc;
-    }, {} as Record<string, string>);
+    return results.reduce(
+      (acc: Record<string, string>, row: any) => {
+        acc[row.setting_key] = row.setting_value;
+        return acc;
+      },
+      {} as Record<string, string>
+    );
   }
 
   /**
@@ -266,7 +260,7 @@ export class UserService {
 
     return {
       mode: mode || 'dark',
-      primaryColor: primaryColor || 'blue'
+      primaryColor: primaryColor || 'blue',
     };
   }
 }

@@ -70,11 +70,7 @@ function logSlowQuery(metrics: QueryMetrics): void {
  * @param params - Query parameters
  * @returns The result of the query function
  */
-export function measureQueryPerformance<T>(
-  queryFn: () => T,
-  sql: string,
-  params: any[] = []
-): T {
+export function measureQueryPerformance<T>(queryFn: () => T, sql: string, params: any[] = []): T {
   const start = performance.now();
 
   try {

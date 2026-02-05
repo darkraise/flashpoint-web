@@ -1,6 +1,7 @@
 # Admin & Operations API
 
-Administrative endpoints for system monitoring and maintenance. All endpoints require authentication and appropriate permissions unless otherwise noted.
+Administrative endpoints for system monitoring and maintenance. All endpoints
+require authentication and appropriate permissions unless otherwise noted.
 
 ## Health Endpoints
 
@@ -28,14 +29,20 @@ Returns `200 OK` (healthy) or `503 Service Unavailable` (unhealthy)
   "uptime": 86400,
   "databases": {
     "user": { "connected": true, "fileSizeBytes": 2097152 },
-    "flashpoint": { "connected": true, "fileSizeBytes": 5368709120, "lastModified": "2026-02-02T12:15:30Z" }
+    "flashpoint": {
+      "connected": true,
+      "fileSizeBytes": 5368709120,
+      "lastModified": "2026-02-02T12:15:30Z"
+    }
   },
   "cache": {
     "gameSearch": { "hits": 45230, "misses": 3421, "hitRate": 0.9296 },
     "permissions": { "hits": 12340, "misses": 234, "hitRate": 0.9812 }
   },
   "memory": { "heapUsed": 125829120, "heapTotal": 536870912 },
-  "services": { "gameService": { "available": true, "url": "http://localhost:22500" } }
+  "services": {
+    "gameService": { "available": true, "url": "http://localhost:22500" }
+  }
 }
 ```
 
@@ -45,7 +52,8 @@ Returns `200 OK` (healthy) or `503 Service Unavailable` (unhealthy)
 
 `GET /api/cache/stats` - Requires `settings.view` permission
 
-Returns cache performance metrics (gameSearch, permissions with size, hits, misses, hitRate).
+Returns cache performance metrics (gameSearch, permissions with size, hits,
+misses, hitRate).
 
 ### Clear Caches
 
@@ -67,7 +75,8 @@ Returns connected status, file size, game count, platform count, tag count.
 
 `POST /api/database/reload` - Requires `settings.update` permission
 
-Response: `{ "success": true, "previousGameCount": 62845, "newGameCount": 62847, "duration": 2345 }`
+Response:
+`{ "success": true, "previousGameCount": 62845, "newGameCount": 62847, "duration": 2345 }`
 
 Error: `400 Bad Request` if reload already in progress
 
@@ -77,17 +86,20 @@ Error: `400 Bad Request` if reload already in progress
 
 `GET /api/metrics/summary` - Requires `settings.view` permission
 
-Returns uptime, request stats, performance percentiles, cache hit rates, error counts.
+Returns uptime, request stats, performance percentiles, cache hit rates, error
+counts.
 
 ### Get Endpoint Metrics
 
 `GET /api/metrics/endpoints` - Requires `settings.view` permission
 
-Returns array of endpoints with method, path, call counts, response times, errors.
+Returns array of endpoints with method, path, call counts, response times,
+errors.
 
 ### Get Slowest Endpoints
 
-`GET /api/metrics/endpoints/slowest?limit=10` - Requires `settings.view` permission
+`GET /api/metrics/endpoints/slowest?limit=10` - Requires `settings.view`
+permission
 
 ### Get Cache Metrics
 
@@ -135,7 +147,8 @@ Error: `409 Conflict` if job already running
 
 ### Get Job Logs
 
-`GET /api/jobs/:jobId/logs?limit=50&offset=0` - Requires `settings.update` permission
+`GET /api/jobs/:jobId/logs?limit=50&offset=0` - Requires `settings.update`
+permission
 
 Returns paginated logs with timestamp, status, duration, message, details.
 
@@ -206,13 +219,15 @@ Returns game counts, platform distribution, archive size, user stats.
 
 `GET /api/settings/auth` - No auth required
 
-Returns guestAccessEnabled, userRegistrationEnabled, sessionTimeoutMinutes, maxLoginAttempts, lockoutDurationMinutes.
+Returns guestAccessEnabled, userRegistrationEnabled, sessionTimeoutMinutes,
+maxLoginAttempts, lockoutDurationMinutes.
 
 ### Update Auth Settings
 
 `PATCH /api/settings/auth` - Requires `settings.update` permission
 
-All fields optional. Validates ranges (sessionTimeoutMinutes: 0-10080, maxLoginAttempts: 1-10).
+All fields optional. Validates ranges (sessionTimeoutMinutes: 0-10080,
+maxLoginAttempts: 1-10).
 
 ## Game Files Endpoint
 
@@ -222,7 +237,8 @@ All fields optional. Validates ranges (sessionTimeoutMinutes: 0-10080, maxLoginA
 
 Returns file content with appropriate MIME type and CORS headers.
 
-Uses fallback chain: Game Service → Game Service GameZip → External CDN → Local cache
+Uses fallback chain: Game Service → Game Service GameZip → External CDN → Local
+cache
 
 Query parameter `cache=false` bypasses caching.
 

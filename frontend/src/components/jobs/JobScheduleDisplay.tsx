@@ -16,9 +16,7 @@ export function JobScheduleDisplay({ cronSchedule }: JobScheduleDisplayProps) {
         <p className="font-medium">{readable}</p>
         <Tooltip>
           <TooltipTrigger asChild>
-            <p className="text-xs text-muted-foreground font-mono cursor-help">
-              {cronSchedule}
-            </p>
+            <p className="text-xs text-muted-foreground font-mono cursor-help">{cronSchedule}</p>
           </TooltipTrigger>
           <TooltipContent>
             <p>Cron expression: {cronSchedule}</p>

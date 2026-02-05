@@ -20,7 +20,7 @@ router.get(
 
     res.json({
       success: true,
-      data: summary
+      data: summary,
     });
   })
 );
@@ -39,7 +39,7 @@ router.get(
 
     res.json({
       success: true,
-      data: stats
+      data: stats,
     });
   })
 );
@@ -59,7 +59,7 @@ router.get(
 
     res.json({
       success: true,
-      data: slowest
+      data: slowest,
     });
   })
 );
@@ -78,7 +78,7 @@ router.get(
 
     res.json({
       success: true,
-      data: cacheStats
+      data: cacheStats,
     });
   })
 );
@@ -97,7 +97,7 @@ router.get(
 
     res.json({
       success: true,
-      data: queryStats
+      data: queryStats,
     });
   })
 );
@@ -116,7 +116,7 @@ router.post(
 
     res.json({
       success: true,
-      message: 'Performance metrics reset successfully'
+      message: 'Performance metrics reset successfully',
     });
   })
 );

@@ -22,7 +22,11 @@ function ActivityDashboardComponent() {
     localStorage.setItem('activityDashboardCollapsed', String(isCollapsed));
   }, [isCollapsed]);
 
-  const { data: stats, isLoading, isFetching } = useActivityStats(timeRange, undefined, autoRefresh);
+  const {
+    data: stats,
+    isLoading,
+    isFetching,
+  } = useActivityStats(timeRange, undefined, autoRefresh);
 
   const handleToggleAutoRefresh = () => {
     setAutoRefresh(!autoRefresh);
@@ -42,7 +46,7 @@ function ActivityDashboardComponent() {
               {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
             </button>
             <h2 className="text-xl font-bold">Activity Dashboard</h2>
-            {!isCollapsed && (
+            {!isCollapsed ? (
               <div className="flex gap-2 ml-4">
                 <button
                   onClick={() => setTimeRange('24h')}
@@ -75,9 +79,9 @@ function ActivityDashboardComponent() {
                   30d
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
-          {!isCollapsed && (
+          {!isCollapsed ? (
             <button
               onClick={handleToggleAutoRefresh}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
@@ -86,24 +90,23 @@ function ActivityDashboardComponent() {
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               }`}
             >
-              <RefreshCw
-                size={16}
-                className={autoRefresh && isFetching ? 'animate-spin' : ''}
-              />
+              <RefreshCw size={16} className={autoRefresh && isFetching ? 'animate-spin' : ''} />
               <span className="text-sm">
                 Auto-refresh {autoRefresh ? 'ON' : 'OFF'}
-                {autoRefresh && isFetching && <span className="ml-1 opacity-70">(updating...)</span>}
+                {autoRefresh && isFetching ? (
+                  <span className="ml-1 opacity-70">(updating...)</span>
+                ) : null}
               </span>
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* Dashboard Content */}
-      {!isCollapsed && (
+      {!isCollapsed ? (
         <div className="space-y-6">
           {/* Loading State */}
-          {isLoading && (
+          {isLoading ? (
             <div className="bg-card rounded-lg p-6 border border-border shadow-md">
               <div className="animate-pulse space-y-4">
                 <div className="h-24 bg-muted rounded"></div>
@@ -114,15 +117,10 @@ function ActivityDashboardComponent() {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Stats Cards */}
-          {stats && (
-            <ActivityStats
-              stats={stats.data}
-              timeRange={timeRange}
-            />
-          )}
+          {stats ? <ActivityStats stats={stats.data} timeRange={timeRange} /> : null}
 
           {/* Activity Trend Chart */}
           <ActivityTrendChart autoRefresh={autoRefresh} />
@@ -139,7 +137,7 @@ function ActivityDashboardComponent() {
           {/* User Leaderboard */}
           <UserLeaderboard autoRefresh={autoRefresh} />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

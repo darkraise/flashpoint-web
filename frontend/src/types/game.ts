@@ -44,17 +44,17 @@ export interface PaginatedResult<T> {
 export interface GameFilters {
   search?: string;
   platform?: string;
-  series?: string;        // Comma-separated series
-  developers?: string;    // Comma-separated developers
-  publishers?: string;    // Comma-separated publishers
-  playModes?: string;     // Comma-separated play modes
-  languages?: string;     // Comma-separated languages
+  series?: string; // Comma-separated series
+  developers?: string; // Comma-separated developers
+  publishers?: string; // Comma-separated publishers
+  playModes?: string; // Comma-separated play modes
+  languages?: string; // Comma-separated languages
   library?: string;
   tags?: string;
   yearFrom?: number;
   yearTo?: number;
-  dateAddedSince?: string;      // ISO 8601 timestamp - filter games added after this date
-  dateModifiedSince?: string;   // ISO 8601 timestamp - filter games modified after this date
+  dateAddedSince?: string; // ISO 8601 timestamp - filter games added after this date
+  dateModifiedSince?: string; // ISO 8601 timestamp - filter games modified after this date
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   page?: number;

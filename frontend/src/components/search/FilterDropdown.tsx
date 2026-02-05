@@ -41,21 +41,33 @@ export function FilterDropdown({
 }: FilterDropdownProps) {
   const selectedCount = selectedValues.length;
   const buttonText = compact
-    ? (selectedCount > 0 ? `${selectedCount}` : '')
-    : (selectedCount > 0 ? `${selectedCount} ${label}${selectedCount > 1 ? 's' : ''}` : placeholder);
+    ? selectedCount > 0
+      ? `${selectedCount}`
+      : ''
+    : selectedCount > 0
+      ? `${selectedCount} ${label}${selectedCount > 1 ? 's' : ''}`
+      : placeholder;
 
   return (
     <Popover open={isOpen} onOpenChange={onOpenChange} modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={compact ? "justify-between" : "min-w-[120px] justify-between"}
+          className={compact ? 'justify-between' : 'min-w-[120px] justify-between'}
           type="button"
           aria-label={`Filter by ${label}: ${selectedCount > 0 ? `${selectedCount} selected` : 'none selected'}`}
         >
-          {icon && <span className={compact ? "" : "mr-2"} aria-hidden="true">{icon}</span>}
-          {buttonText && <span className={compact && icon ? "ml-1" : ""}>{buttonText}</span>}
-          <ChevronDown size={16} className={`${compact ? 'ml-1' : 'ml-2'} transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+          {icon && (
+            <span className={compact ? '' : 'mr-2'} aria-hidden="true">
+              {icon}
+            </span>
+          )}
+          {buttonText && <span className={compact && icon ? 'ml-1' : ''}>{buttonText}</span>}
+          <ChevronDown
+            size={16}
+            className={`${compact ? 'ml-1' : 'ml-2'} transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -68,7 +80,7 @@ export function FilterDropdown({
         <div className="sticky top-0 bg-popover border-b p-2 z-10">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">{label}</span>
-            {selectedCount > 0 && (
+            {selectedCount > 0 ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -78,7 +90,7 @@ export function FilterDropdown({
               >
                 Clear All
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -101,9 +113,7 @@ export function FilterDropdown({
               </label>
             ))
           ) : (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              {emptyMessage}
-            </div>
+            <div className="p-4 text-center text-sm text-muted-foreground">{emptyMessage}</div>
           )}
         </div>
       </PopoverContent>

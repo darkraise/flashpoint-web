@@ -68,7 +68,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <DialogContext.Provider value={{ showToast, showConfirm }}>
       {children}
-      {confirmState && (
+      {confirmState ? (
         <ConfirmDialog
           isOpen={confirmState.isOpen}
           title={confirmState.options.title}
@@ -79,7 +79,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           onConfirm={handleConfirm}
           onCancel={handleCancel}
         />
-      )}
+      ) : null}
     </DialogContext.Provider>
   );
 }

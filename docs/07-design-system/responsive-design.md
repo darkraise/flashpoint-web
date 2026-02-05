@@ -1,17 +1,18 @@
 # Responsive Design
 
-Mobile-first responsive design using Tailwind CSS breakpoints. Works beautifully on all devices from 320px to 1920px+.
+Mobile-first responsive design using Tailwind CSS breakpoints. Works beautifully
+on all devices from 320px to 1920px+.
 
 ## Breakpoints
 
-| Breakpoint | Min Width | Device | Container |
-|------------|-----------|--------|-----------|
-| (none) | 0px | Mobile | 100% |
-| `sm` | 640px | Large phone | 640px |
-| `md` | 768px | Tablet | 768px |
-| `lg` | 1024px | Laptop | 1024px |
-| `xl` | 1280px | Desktop | 1280px |
-| `2xl` | 1400px | Large desktop | 1400px (custom) |
+| Breakpoint | Min Width | Device        | Container       |
+| ---------- | --------- | ------------- | --------------- |
+| (none)     | 0px       | Mobile        | 100%            |
+| `sm`       | 640px     | Large phone   | 640px           |
+| `md`       | 768px     | Tablet        | 768px           |
+| `lg`       | 1024px    | Laptop        | 1024px          |
+| `xl`       | 1280px    | Desktop       | 1280px          |
+| `2xl`      | 1400px    | Large desktop | 1400px (custom) |
 
 ## Mobile-First Approach
 
@@ -38,7 +39,9 @@ Write for mobile first, enhance for larger screens:
 ```tsx
 // Game card grid
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-  {games.map(game => <GameCard key={game.id} game={game} />)}
+  {games.map((game) => (
+    <GameCard key={game.id} game={game} />
+  ))}
 </div>
 ```
 
@@ -146,8 +149,12 @@ function Header() {
           </nav>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <Button size="sm" className="hidden sm:inline-flex">Sign In</Button>
-            <Button size="icon" className="lg:hidden"><Menu /></Button>
+            <Button size="sm" className="hidden sm:inline-flex">
+              Sign In
+            </Button>
+            <Button size="icon" className="lg:hidden">
+              <Menu />
+            </Button>
           </div>
         </div>
       </div>
@@ -163,7 +170,11 @@ function GameCard({ game }) {
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <div className="aspect-video md:aspect-[4/3] lg:aspect-video overflow-hidden">
-        <img src={game.image} alt={game.title} className="w-full h-full object-cover" />
+        <img
+          src={game.image}
+          alt={game.title}
+          className="w-full h-full object-cover"
+        />
       </div>
 
       <CardHeader className="p-3 md:p-4 lg:p-6">
@@ -174,7 +185,9 @@ function GameCard({ game }) {
 
       <CardFooter className="p-3 md:p-4 lg:p-6 pt-0 flex flex-col sm:flex-row gap-2">
         <Button className="flex-1">Play Now</Button>
-        <Button variant="outline" size="icon"><Heart className="h-4 w-4" /></Button>
+        <Button variant="outline" size="icon">
+          <Heart className="h-4 w-4" />
+        </Button>
       </CardFooter>
     </Card>
   );
@@ -327,6 +340,7 @@ All interactive elements should be 44px × 44px on mobile:
 ## Testing Breakpoints
 
 Always test at:
+
 - 320px (small mobile)
 - 375px (mobile)
 - 768px (tablet)
@@ -336,7 +350,8 @@ Always test at:
 
 ## Best Practices
 
-1. **Mobile-First Always** - Write mobile styles first, add breakpoint prefixes for larger screens
+1. **Mobile-First Always** - Write mobile styles first, add breakpoint prefixes
+   for larger screens
 2. **Progressive Enhancement** - Basic on mobile, enhanced on desktop
 3. **Avoid Overuse** - Use 2-3 breakpoints, not every breakpoint
 4. **Test All Breakpoints** - Don't assume it works without testing

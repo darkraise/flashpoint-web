@@ -62,11 +62,11 @@ router.get(
   rateLimitStrict,
   validateSharedPlaylist,
   asyncHandler(async (req, res) => {
-    const games = await playlistService.getSharedPlaylistGames(
-      req.params.shareToken
-    );
+    const games = await playlistService.getSharedPlaylistGames(req.params.shareToken);
 
-    logger.debug(`Shared playlist ${req.sharedPlaylist!.id} games accessed (${games.length} games)`);
+    logger.debug(
+      `Shared playlist ${req.sharedPlaylist!.id} games accessed (${games.length} games)`
+    );
 
     res.json(games);
   })
@@ -119,7 +119,7 @@ router.post(
 
     const accessToken = generateSharedAccessToken({
       shareToken: req.params.shareToken,
-      playlistId: playlist.id
+      playlistId: playlist.id,
     });
 
     logger.debug(`Generated shared access token for playlist ${playlist.id}`);
@@ -127,7 +127,7 @@ router.post(
     res.json({
       accessToken,
       expiresIn: 3600, // 60 minutes in seconds
-      playlistId: playlist.id
+      playlistId: playlist.id,
     });
   })
 );
@@ -156,7 +156,9 @@ router.post(
       throw new AppError(400, 'Unable to clone playlist');
     }
 
-    logger.info(`User ${req.user!.id} cloned shared playlist ${req.sharedPlaylist!.id} as "${clonedPlaylist.title}"`);
+    logger.info(
+      `User ${req.user!.id} cloned shared playlist ${req.sharedPlaylist!.id} as "${clonedPlaylist.title}"`
+    );
 
     res.status(201).json(clonedPlaylist);
   })

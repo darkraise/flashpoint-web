@@ -64,5 +64,5 @@ export const useSharedAccessStore = create<SharedAccessState>((set, get) => ({
       return token;
     }
     return null;
-  }
+  },
 }));

@@ -4,7 +4,10 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { resourceFromAttributes } from '@opentelemetry/resources';
-import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
+import {
+  SEMRESATTRS_SERVICE_NAME,
+  SEMRESATTRS_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions';
 import { logger } from '../utils/logger';
 
 /**
@@ -42,7 +45,7 @@ function getOtelConfig() {
     tracesEnabled: process.env.OTEL_TRACES_ENABLED !== 'false',
     metricsEnabled: process.env.OTEL_METRICS_ENABLED !== 'false',
     metricsExportInterval: parseInt(process.env.OTEL_METRICS_EXPORT_INTERVAL || '60000', 10),
-    logLevel: process.env.OTEL_LOG_LEVEL || 'info'
+    logLevel: process.env.OTEL_LOG_LEVEL || 'info',
   };
 }
 
@@ -54,7 +57,7 @@ function getExporterHeaders(apiKey: string): Record<string, string> {
     return {};
   }
   return {
-    'Authorization': `Api-Key ${apiKey}`
+    Authorization: `Api-Key ${apiKey}`,
   };
 }
 
@@ -76,14 +79,14 @@ export function initializeTelemetry(): void {
       endpoint: config.endpoint,
       service: config.serviceName,
       traces: config.tracesEnabled,
-      metrics: config.metricsEnabled
+      metrics: config.metricsEnabled,
     });
 
     // Create resource (service metadata)
     const resource = resourceFromAttributes({
       [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
       [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion,
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
     });
 
     // Build exporter headers
@@ -117,10 +120,10 @@ export function initializeTelemetry(): void {
         getNodeAutoInstrumentations({
           // Disable specific instrumentations if needed
           '@opentelemetry/instrumentation-fs': {
-            enabled: false // File system instrumentation can be noisy
+            enabled: false, // File system instrumentation can be noisy
           },
           '@opentelemetry/instrumentation-dns': {
-            enabled: false
+            enabled: false,
           },
           // HTTP instrumentation
           '@opentelemetry/instrumentation-http': {
@@ -134,16 +137,16 @@ export function initializeTelemetry(): void {
             headersToSpanAttributes: {
               server: {
                 requestHeaders: ['user-agent', 'content-type'],
-                responseHeaders: ['content-type']
-              }
-            }
+                responseHeaders: ['content-type'],
+              },
+            },
           },
           // Express instrumentation
           '@opentelemetry/instrumentation-express': {
-            enabled: true
-          }
-        })
-      ]
+            enabled: true,
+          },
+        }),
+      ],
     });
 
     // Start SDK
@@ -151,14 +154,13 @@ export function initializeTelemetry(): void {
 
     logger.info('[OpenTelemetry] Telemetry initialized successfully', {
       traces: config.tracesEnabled ? 'enabled' : 'disabled',
-      metrics: config.metricsEnabled ? 'enabled' : 'disabled'
+      metrics: config.metricsEnabled ? 'enabled' : 'disabled',
     });
 
     // Graceful shutdown
     process.on('SIGTERM', () => {
       shutdownTelemetry();
     });
-
   } catch (error) {
     logger.error('[OpenTelemetry] Failed to initialize telemetry:', error);
     // Non-fatal - application continues without telemetry

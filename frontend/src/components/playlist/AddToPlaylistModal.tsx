@@ -82,7 +82,9 @@ export function AddToPlaylistModal({
 
       await Promise.all(promises);
 
-      toast.success(`Added to ${selectedPlaylists.size} playlist${selectedPlaylists.size > 1 ? 's' : ''}`);
+      toast.success(
+        `Added to ${selectedPlaylists.size} playlist${selectedPlaylists.size > 1 ? 's' : ''}`
+      );
 
       onClose();
     } catch (error) {
@@ -107,7 +109,9 @@ export function AddToPlaylistModal({
           <DialogHeader>
             <DialogTitle>Add to Playlist</DialogTitle>
             <DialogDescription>
-              {gameTitle ? `Select playlists to add "${gameTitle}" to` : 'Select playlists for this game'}
+              {gameTitle
+                ? `Select playlists to add "${gameTitle}" to`
+                : 'Select playlists for this game'}
             </DialogDescription>
           </DialogHeader>
 
@@ -124,9 +128,7 @@ export function AddToPlaylistModal({
 
             {/* Playlists List */}
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading playlists...
-              </div>
+              <div className="text-center py-8 text-muted-foreground">Loading playlists...</div>
             ) : playlists.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <ListVideo size={48} className="mx-auto mb-2 opacity-50" />
@@ -151,14 +153,12 @@ export function AddToPlaylistModal({
                           className="mt-0.5"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
-                            {playlist.title}
-                          </p>
-                          {playlist.description && (
+                          <p className="font-medium text-sm truncate">{playlist.title}</p>
+                          {playlist.description ? (
                             <p className="text-xs text-muted-foreground line-clamp-1">
                               {playlist.description}
                             </p>
-                          )}
+                          ) : null}
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
                           </p>

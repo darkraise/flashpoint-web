@@ -26,9 +26,7 @@ export class GameDataService {
 
       // Look for ZIP file starting with gameId
       const zipPattern = `${gameId}-`;
-      const zipFile = files.find(f =>
-        f.startsWith(zipPattern) && f.endsWith('.zip')
-      );
+      const zipFile = files.find((f) => f.startsWith(zipPattern) && f.endsWith('.zip'));
 
       if (!zipFile) {
         logger.warn(`[GameDataService] No ZIP file found for game ${gameId}`);
@@ -37,17 +35,23 @@ export class GameDataService {
 
       const zipPath = path.join(gamesPath, zipFile);
 
-      logger.info(`[GameDataService] Requesting game-service to mount ZIP for game ${gameId}: ${zipFile}`);
+      logger.info(
+        `[GameDataService] Requesting game-service to mount ZIP for game ${gameId}: ${zipFile}`
+      );
 
       // Call game-service API to mount the ZIP
       const gameZipServerUrl = config.gameServiceGameZipUrl || 'http://localhost:22501';
       try {
-        const response = await axios.post(`${gameZipServerUrl}/mount/${mountId}`, {
-          zipPath: zipPath
-        }, {
-          timeout: 5000,
-          validateStatus: (status) => status === 200 || status === 409 // 409 = already mounted
-        });
+        const response = await axios.post(
+          `${gameZipServerUrl}/mount/${mountId}`,
+          {
+            zipPath: zipPath,
+          },
+          {
+            timeout: 5000,
+            validateStatus: (status) => status === 200 || status === 409, // 409 = already mounted
+          }
+        );
 
         if (response.status === 409) {
           logger.debug(`[GameDataService] ZIP already mounted for game ${gameId}`);
@@ -64,7 +68,6 @@ export class GameDataService {
         logger.error(`[GameDataService] Failed to mount ZIP via game-service:`, error);
         return false;
       }
-
     } catch (error) {
       logger.error(`[GameDataService] Error mounting ZIP for game ${gameId}:`, error);
       return false;
@@ -87,23 +90,30 @@ export class GameDataService {
 
     const gameDataResults = await Promise.allSettled(gameDataPromises);
     const validGameData = gameDataResults
-      .filter((r): r is PromiseFulfilledResult<{ gameId: string; activeDataId: number } | null> => r.status === 'fulfilled' && r.value !== null)
-      .map(r => r.value!);
+      .filter(
+        (r): r is PromiseFulfilledResult<{ gameId: string; activeDataId: number } | null> =>
+          r.status === 'fulfilled' && r.value !== null
+      )
+      .map((r) => r.value!);
 
     const results = await Promise.allSettled(
       validGameData.map(({ gameId }) => this.mountGameZip(gameId))
     );
 
-    const succeeded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    const succeeded = results.filter((r) => r.status === 'fulfilled' && r.value).length;
     const failed = results.length - succeeded;
 
-    logger.info(`[GameDataService] Mounted ${succeeded}/${results.length} game ZIPs (${failed} failed)`);
+    logger.info(
+      `[GameDataService] Mounted ${succeeded}/${results.length} game ZIPs (${failed} failed)`
+    );
   }
 
   /**
    * Get list of all available game data ZIP files
    */
-  async listAvailableGameDataZips(): Promise<Array<{ activeDataId: number; filename: string; size: number }>> {
+  async listAvailableGameDataZips(): Promise<
+    Array<{ activeDataId: number; filename: string; size: number }>
+  > {
     try {
       const gamesPath = config.flashpointGamesPath;
       const files = await fs.readdir(gamesPath);
@@ -122,7 +132,7 @@ export class GameDataService {
             zipFiles.push({
               activeDataId,
               filename: file,
-              size: stats.size
+              size: stats.size,
             });
           }
         }

@@ -14,30 +14,30 @@ router.get('/stars', async (_req: Request, res: Response) => {
 
     const response = await fetch(repoUrl, {
       headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'Flashpoint-Web-App'
-      }
+        Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'Flashpoint-Web-App',
+      },
     });
 
     if (!response.ok) {
       throw new Error(`GitHub API error: ${response.status}`);
     }
 
-    const data = await response.json() as { stargazers_count: number };
+    const data = (await response.json()) as { stargazers_count: number };
 
     res.json({
       success: true,
       data: {
-        stars: data.stargazers_count
-      }
+        stars: data.stargazers_count,
+      },
     });
   } catch (error) {
     logger.error('Failed to fetch GitHub stars:', error);
     res.status(500).json({
       success: false,
       error: {
-        message: 'Failed to fetch GitHub star count'
-      }
+        message: 'Failed to fetch GitHub star count',
+      },
     });
   }
 });

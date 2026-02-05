@@ -30,10 +30,10 @@ function sanitizeBody(body: any): any {
     'refreshToken',
     'secret',
     'apiKey',
-    'accessToken'
+    'accessToken',
   ];
 
-  sensitiveFields.forEach(field => {
+  sensitiveFields.forEach((field) => {
     if (sanitized[field]) {
       sanitized[field] = '[REDACTED]';
     }
@@ -53,15 +53,15 @@ export function errorHandler(
       statusCode: err.statusCode,
       path: req.path,
       method: req.method,
-      stack: err.stack
+      stack: err.stack,
     });
 
     return res.status(err.statusCode).json({
       error: {
         message: err.message,
         statusCode: err.statusCode,
-        ...(err.code && { code: err.code })
-      }
+        ...(err.code && { code: err.code }),
+      },
     });
   }
 
@@ -74,14 +74,14 @@ export function errorHandler(
     method: req.method,
     body: sanitizeBody(req.body),
     query: req.query,
-    params: req.params
+    params: req.params,
   });
 
   // Return generic error message to client (prevent information leakage)
   res.status(500).json({
     error: {
       message: 'Internal server error',
-      statusCode: 500
-    }
+      statusCode: 500,
+    },
   });
 }

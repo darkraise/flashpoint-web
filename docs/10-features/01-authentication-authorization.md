@@ -2,11 +2,14 @@
 
 ## Overview
 
-JWT-based authentication system with Role-Based Access Control (RBAC). Enables secure user registration, login, session management, and fine-grained permission control across the application.
+JWT-based authentication system with Role-Based Access Control (RBAC). Enables
+secure user registration, login, session management, and fine-grained permission
+control across the application.
 
 ## Architecture
 
 **Backend Components:**
+
 - `AuthService`: Core authentication logic
 - Auth routes (routes/auth.ts): REST API endpoints
 - JWT utilities (utils/jwt.ts): Token generation and verification
@@ -15,6 +18,7 @@ JWT-based authentication system with Role-Based Access Control (RBAC). Enables s
 - Auth middleware (middleware/auth.ts): JWT validation
 
 **Frontend Components:**
+
 - `AuthContext`: React context for auth state
 - `LoginForm`: Login UI component
 - `RegisterForm`: Registration UI component
@@ -25,6 +29,7 @@ JWT-based authentication system with Role-Based Access Control (RBAC). Enables s
 ## Database Schema
 
 **users table:**
+
 ```sql
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,6 +46,7 @@ CREATE TABLE users (
 ```
 
 **refresh_tokens table:**
+
 ```sql
 CREATE TABLE refresh_tokens (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,6 +60,7 @@ CREATE TABLE refresh_tokens (
 ```
 
 **login_attempts table:**
+
 ```sql
 CREATE TABLE login_attempts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,32 +74,43 @@ CREATE TABLE login_attempts (
 ## API Endpoints
 
 #### POST /api/auth/register
+
 Register a new user account.
+
 - **Body:** `{ "username", "email", "password" }`
 - **Response:** User object + tokens (201)
 - **Validation:** username 3-50 chars, email valid format, password min 6 chars
-- **Errors:** 400 validation, 403 registration disabled, 409 duplicate username/email
+- **Errors:** 400 validation, 403 registration disabled, 409 duplicate
+  username/email
 
 #### POST /api/auth/login
+
 Authenticate with username and password.
+
 - **Body:** `{ "username", "password" }`
 - **Response:** User object + tokens
 - **Rate Limiting:** 5 failed attempts locks account for 15 minutes
 - **Errors:** 401 invalid credentials, 429 too many attempts
 
 #### POST /api/auth/logout
+
 Revoke refresh token and logout.
+
 - **Body:** `{ "refreshToken" }`
 - **Response:** `{ "success": true }`
 
 #### POST /api/auth/refresh
+
 Refresh access token using refresh token.
+
 - **Body:** `{ "refreshToken" }`
 - **Response:** New access token + new refresh token
 - **Note:** Old refresh token automatically revoked
 
 #### GET /api/auth/me
+
 Get current authenticated user information.
+
 - **Headers:** `Authorization: Bearer {accessToken}`
 - **Response:** User object with permissions
 
@@ -135,25 +153,30 @@ Get current authenticated user information.
 ## Default Roles
 
 **Admin (priority: 100):**
+
 - All permissions granted
 - Can manage users, roles, and settings
 
 **User (priority: 50):**
+
 - games.read, games.play, games.download
 - playlists.read, .create, .update, .delete
 - Cannot manage users, roles, settings, or view activity logs
 
 **Guest (priority: 0):**
+
 - games.read, playlists.read
 - Read-only access only
 
 ## Permissions
 
-Complete permission list in [Role-Based Access Control](./07-role-permissions.md)
+Complete permission list in
+[Role-Based Access Control](./07-role-permissions.md)
 
 ## Configuration
 
 **Environment Variables (.env):**
+
 ```bash
 JWT_SECRET=your-secret-key-here        # Change in production
 JWT_EXPIRES_IN=1h                       # Token expiration
@@ -162,6 +185,7 @@ DOMAIN=http://localhost:5173           # Frontend URL
 ```
 
 **Auth Settings (Database):**
+
 - `auth.guestAccessEnabled` - Allow guest browsing (default: true)
 - `auth.userRegistrationEnabled` - Allow new user registration (default: true)
 - `auth.maxLoginAttempts` - Before lockout (default: 5)
@@ -170,11 +194,13 @@ DOMAIN=http://localhost:5173           # Frontend URL
 ## Security Features
 
 **Password Security:**
+
 - Bcrypt hashing with 10 salt rounds
 - Minimum 6 character requirement
 - Password not returned in API responses
 
 **Token Security:**
+
 - Access tokens expire in 1 hour
 - Refresh tokens expire in 30 days
 - Tokens use HS256 algorithm
@@ -182,12 +208,14 @@ DOMAIN=http://localhost:5173           # Frontend URL
 - Bulk token revocation available (admin)
 
 **Rate Limiting:**
+
 - 5 failed login attempts before lockout
 - 15 minute lockout duration
 - Tracking by both username and IP address
 - Old login attempts cleaned up after 24 hours
 
 **Session Security:**
+
 - IP address and user agent tracked per session
 - Activity logging for audit trail
 - Tokens stored in localStorage (client-side)
@@ -196,27 +224,30 @@ DOMAIN=http://localhost:5173           # Frontend URL
 ## Common Use Cases
 
 ### 1. User Registration
+
 ```typescript
 const registerMutation = useRegister();
 
 await registerMutation.mutateAsync({
   username: 'johndoe',
   email: 'john@example.com',
-  password: 'secure123'
+  password: 'secure123',
 });
 ```
 
 ### 2. User Login
+
 ```typescript
 const loginMutation = useLogin();
 
 await loginMutation.mutateAsync({
   username: 'johndoe',
-  password: 'secure123'
+  password: 'secure123',
 });
 ```
 
 ### 3. Guest Access
+
 ```typescript
 const { loginAsGuest } = useAuth();
 
@@ -224,31 +255,39 @@ loginAsGuest();
 ```
 
 ### 4. Protected Route
+
 ```tsx
-<Route path="/admin/users" element={
-  <ProtectedRoute requiredPermissions={['users.read']}>
-    <UsersView />
-  </ProtectedRoute>
-} />
+<Route
+  path="/admin/users"
+  element={
+    <ProtectedRoute requiredPermissions={['users.read']}>
+      <UsersView />
+    </ProtectedRoute>
+  }
+/>
 ```
 
 ### 5. Permission-Based UI
+
 ```tsx
 const { hasPermission } = useAuth();
 
-{hasPermission('users.create') && (
-  <Button onClick={handleCreateUser}>Create User</Button>
-)}
+{
+  hasPermission('users.create') && (
+    <Button onClick={handleCreateUser}>Create User</Button>
+  );
+}
 ```
 
 ### 6. Change Password
+
 ```typescript
 const mutation = useChangePassword();
 
 await mutation.mutateAsync({
   userId: currentUser.id,
   currentPassword: 'old123',
-  newPassword: 'new456'
+  newPassword: 'new456',
 });
 ```
 
@@ -266,21 +305,25 @@ await mutation.mutateAsync({
 ## Troubleshooting
 
 **"Invalid credentials" error:**
+
 - Verify username and password are correct
 - Check if account is active (is_active = 1)
 - Ensure password was hashed correctly during registration
 
 **"Too many login attempts" error:**
+
 - Wait for lockout duration to expire (15 minutes default)
 - Or manually clear login attempts from database
 - Check if IP address or username is being rate-limited
 
 **Token expired errors:**
+
 - Implement automatic token refresh on client
 - Check system clock synchronization
 - Verify JWT expiration times in configuration
 
 **Permission denied errors:**
+
 - Verify user has correct role assigned
 - Check role-permission mappings in database
 - Ensure permissions loaded correctly in token

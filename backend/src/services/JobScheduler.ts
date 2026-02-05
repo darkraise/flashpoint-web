@@ -53,7 +53,9 @@ class JobSchedulerService {
 
     // Validate cron expression
     if (!cron.validate(job.cronSchedule)) {
-      logger.error(`Cannot start job: Invalid cron expression '${job.cronSchedule}' for job ${job.name}`);
+      logger.error(
+        `Cannot start job: Invalid cron expression '${job.cronSchedule}' for job ${job.name}`
+      );
       return;
     }
 
@@ -189,7 +191,7 @@ class JobSchedulerService {
     return {
       enabled: job.enabled,
       running: this.cronTasks.has(jobId),
-      cronSchedule: job.cronSchedule
+      cronSchedule: job.cronSchedule,
     };
   }
 
@@ -229,7 +231,7 @@ class JobSchedulerService {
       running,
       cronSchedule: job.cronSchedule,
       lastExecution,
-      nextRunEstimate
+      nextRunEstimate,
     };
   }
 

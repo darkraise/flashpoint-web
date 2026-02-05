@@ -31,7 +31,7 @@ const activityQuerySchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   sortBy: z.enum(['createdAt', 'username', 'action', 'resource', 'ipAddress']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc')
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
 // Apply feature flag check to all routes in this router
@@ -54,11 +54,22 @@ router.get(
       return res.status(400).json({
         success: false,
         error: 'Invalid query parameters',
-        details: queryResult.error.errors
+        details: queryResult.error.errors,
       });
     }
 
-    const { page, limit, userId, username, action, resource, startDate, endDate, sortBy, sortOrder } = queryResult.data;
+    const {
+      page,
+      limit,
+      userId,
+      username,
+      action,
+      resource,
+      startDate,
+      endDate,
+      sortBy,
+      sortOrder,
+    } = queryResult.data;
 
     // Build filters object
     const filters: any = {};
@@ -85,12 +96,13 @@ router.get(
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
     const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
-    const customRange = req.query.startDate && req.query.endDate
-      ? {
-          startDate: req.query.startDate as string,
-          endDate: req.query.endDate as string
-        }
-      : undefined;
+    const customRange =
+      req.query.startDate && req.query.endDate
+        ? {
+            startDate: req.query.startDate as string,
+            endDate: req.query.endDate as string,
+          }
+        : undefined;
 
     const stats = await activityService.getStats(timeRange, customRange);
 
@@ -99,8 +111,8 @@ router.get(
       data: stats,
       meta: {
         calculatedAt: new Date().toISOString(),
-        timeRange
-      }
+        timeRange,
+      },
     });
   })
 );
@@ -120,7 +132,7 @@ router.get(
 
     res.json({
       success: true,
-      ...result
+      ...result,
     });
   })
 );
@@ -141,7 +153,7 @@ router.get(
 
     res.json({
       success: true,
-      ...result
+      ...result,
     });
   })
 );
@@ -163,7 +175,7 @@ router.get(
     if (!['resource', 'user', 'ip'].includes(groupBy)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid groupBy parameter. Must be one of: resource, user, ip'
+        error: 'Invalid groupBy parameter. Must be one of: resource, user, ip',
       });
     }
 
@@ -171,7 +183,7 @@ router.get(
 
     res.json({
       success: true,
-      ...result
+      ...result,
     });
   })
 );

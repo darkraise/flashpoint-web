@@ -20,15 +20,15 @@ router.use(requireFeature('enableFavorites'));
 
 // Validation schemas
 const toggleFavoriteSchema = z.object({
-  gameId: z.string()
+  gameId: z.string(),
 });
 
 const batchAddSchema = z.object({
-  gameIds: z.array(z.string()).min(1)
+  gameIds: z.array(z.string()).min(1),
 });
 
 const batchRemoveSchema = z.object({
-  gameIds: z.array(z.string()).min(1)
+  gameIds: z.array(z.string()).min(1),
 });
 
 /**
@@ -88,7 +88,13 @@ router.get(
     const sortBy = (req.query.sortBy as 'title' | 'dateAdded') || 'dateAdded';
     const sortOrder = (req.query.sortOrder as 'asc' | 'desc') || 'desc';
 
-    const games = await favoritesService.getUserFavoriteGames(req.user.id, limit, offset, sortBy, sortOrder);
+    const games = await favoritesService.getUserFavoriteGames(
+      req.user.id,
+      limit,
+      offset,
+      sortBy,
+      sortOrder
+    );
     res.json(games);
   })
 );

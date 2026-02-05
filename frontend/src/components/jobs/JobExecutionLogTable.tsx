@@ -14,7 +14,7 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const toggleRow = (id: number) => {
-    setExpandedRows(prev => {
+    setExpandedRows((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -28,11 +28,23 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'success':
-        return <Badge variant="default" className="bg-green-600 gap-1"><CheckCircle size={12} /> Success</Badge>;
+        return (
+          <Badge variant="default" className="bg-green-600 gap-1">
+            <CheckCircle size={12} /> Success
+          </Badge>
+        );
       case 'failed':
-        return <Badge variant="destructive" className="gap-1"><XCircle size={12} /> Failed</Badge>;
+        return (
+          <Badge variant="destructive" className="gap-1">
+            <XCircle size={12} /> Failed
+          </Badge>
+        );
       case 'running':
-        return <Badge variant="default" className="gap-1"><Loader2 size={12} className="animate-spin" /> Running</Badge>;
+        return (
+          <Badge variant="default" className="gap-1">
+            <Loader2 size={12} className="animate-spin" /> Running
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -64,14 +76,18 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
             <>
               <tr key={log.id} className="border-t hover:bg-accent/50">
                 <td className="p-3">
-                  {log.errorDetails && (
+                  {log.errorDetails ? (
                     <button
                       onClick={() => toggleRow(log.id)}
                       className="hover:bg-accent p-1 rounded"
                     >
-                      {expandedRows.has(log.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      {expandedRows.has(log.id) ? (
+                        <ChevronDown size={16} />
+                      ) : (
+                        <ChevronRight size={16} />
+                      )}
                     </button>
-                  )}
+                  ) : null}
                 </td>
                 <td className="p-3">{getStatusBadge(log.status)}</td>
                 <td className="p-3 text-sm">
@@ -81,7 +97,7 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
                 <td className="p-3 text-sm">{log.triggeredBy}</td>
                 <td className="p-3 text-sm text-muted-foreground">{log.message || '-'}</td>
               </tr>
-              {expandedRows.has(log.id) && log.errorDetails && (
+              {expandedRows.has(log.id) && log.errorDetails ? (
                 <tr className="border-t bg-red-950/20">
                   <td colSpan={6} className="p-3">
                     <div className="text-xs font-mono bg-red-950/50 p-3 rounded">
@@ -90,7 +106,7 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
                     </div>
                   </td>
                 </tr>
-              )}
+              ) : null}
             </>
           ))}
         </tbody>

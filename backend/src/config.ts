@@ -20,8 +20,8 @@ function getJwtSecret(): string {
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
       'FATAL: JWT_SECRET environment variable is required in production.\n' +
-      'Generate a secure secret: openssl rand -base64 64\n' +
-      'Set it in your .env file or environment variables.'
+        'Generate a secure secret: openssl rand -base64 64\n' +
+        'Set it in your .env file or environment variables.'
     );
   }
 
@@ -106,13 +106,9 @@ export const config = {
   // In Docker: Use relative paths through nginx proxy (/game-proxy)
   // In local dev: Use direct localhost URLs (http://localhost:22500)
   // Can be overridden with GAME_SERVICE_EXTERNAL_URL env var
-  gameServiceExternalUrl: process.env.GAME_SERVICE_EXTERNAL_URL ||
+  gameServiceExternalUrl:
+    process.env.GAME_SERVICE_EXTERNAL_URL ||
     (process.env.NODE_ENV === 'production' ? '/game-proxy' : `http://localhost:22500`),
-
-  // Redis
-  redisEnabled: process.env.REDIS_ENABLED === 'true',
-  redisHost: process.env.REDIS_HOST || 'localhost',
-  redisPort: parseInt(process.env.REDIS_PORT || '6379', 10),
 
   // Frontend domain (used for CORS and share URL generation)
   domain: process.env.DOMAIN || 'http://localhost:5173',
@@ -125,7 +121,9 @@ export const config = {
   // In Docker (production): defaults to /app/logs/backend.log
   // In local dev: no file logging unless LOG_FILE is explicitly set
   logLevel: process.env.LOG_LEVEL || 'info',
-  logFile: process.env.LOG_FILE || (process.env.NODE_ENV === 'production' ? '/app/logs/backend.log' : undefined),
+  logFile:
+    process.env.LOG_FILE ||
+    (process.env.NODE_ENV === 'production' ? '/app/logs/backend.log' : undefined),
 
   // User Database
   // In Docker (production): /app/data/user.db
@@ -146,7 +144,7 @@ export const config = {
   // When enabled, copies flashpoint.sqlite to local storage for faster access
   // Stored in /app/data alongside user.db
   enableLocalDbCopy: process.env.ENABLE_LOCAL_DB_COPY === 'true',
-  localDbPath: '/app/data/flashpoint.sqlite',  // Only used when enableLocalDbCopy is true
+  localDbPath: '/app/data/flashpoint.sqlite', // Only used when enableLocalDbCopy is true
 
   // SQLite Performance Tuning
   sqliteCacheSize: parseInt(process.env.SQLITE_CACHE_SIZE || '-64000', 10), // Negative = KB, -64000 = 64MB
@@ -161,7 +159,7 @@ export const config = {
   flashpointEdition: flashpointVersion.edition,
 
   // Full version string from version.txt (e.g., "Flashpoint 14.0.3 Infinity - Kingfisher")
-  flashpointVersionString: flashpointVersion.versionString
+  flashpointVersionString: flashpointVersion.versionString,
 };
 
 /**

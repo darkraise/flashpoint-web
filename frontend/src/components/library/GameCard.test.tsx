@@ -148,7 +148,9 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(),
       });
 
-      expect(screen.getByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')
+      ).toBeInTheDocument();
     });
 
     it('should not show favorite button when game is favorited', () => {
@@ -157,7 +159,9 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(['abcd1234-5678-90ab-cdef-1234567890ab']),
       });
 
-      expect(screen.queryByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')
+      ).not.toBeInTheDocument();
     });
 
     it('should not show favorite button when showFavoriteButton is false', () => {
@@ -166,7 +170,9 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(),
       });
 
-      expect(screen.queryByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('favorite-button-abcd1234-5678-90ab-cdef-1234567890ab')
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -177,7 +183,9 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(['abcd1234-5678-90ab-cdef-1234567890ab']),
       });
 
-      expect(screen.getByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')).toBeInTheDocument();
+      expect(
+        screen.getByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')
+      ).toBeInTheDocument();
     });
 
     it('should not show remove button when game is not favorited', () => {
@@ -186,7 +194,9 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(),
       });
 
-      expect(screen.queryByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')
+      ).not.toBeInTheDocument();
     });
 
     it('should not show remove button when showRemoveButton is false', () => {
@@ -195,7 +205,9 @@ describe('GameCard', () => {
         favoriteGameIds: new Set(['abcd1234-5678-90ab-cdef-1234567890ab']),
       });
 
-      expect(screen.queryByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('remove-button-abcd1234-5678-90ab-cdef-1234567890ab')
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -268,7 +280,9 @@ describe('GameCard', () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(screen.getByTestId('playlist-modal-abcd1234-5678-90ab-cdef-1234567890ab')).toBeInTheDocument();
+        expect(
+          screen.getByTestId('playlist-modal-abcd1234-5678-90ab-cdef-1234567890ab')
+        ).toBeInTheDocument();
       });
     });
 
@@ -283,7 +297,9 @@ describe('GameCard', () => {
       await user.click(button);
 
       expect(toast.error).toHaveBeenCalledWith('Please log in to add games to playlists');
-      expect(screen.queryByTestId('playlist-modal-abcd1234-5678-90ab-cdef-1234567890ab')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('playlist-modal-abcd1234-5678-90ab-cdef-1234567890ab')
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -312,7 +328,10 @@ describe('GameCard', () => {
       renderGameCard(mockFlashGame);
 
       const playButton = screen.getByLabelText('Play Test Flash Game');
-      expect(playButton).toHaveAttribute('href', '/games/abcd1234-5678-90ab-cdef-1234567890ab/play');
+      expect(playButton).toHaveAttribute(
+        'href',
+        '/games/abcd1234-5678-90ab-cdef-1234567890ab/play'
+      );
     });
 
     it('should include shareToken in play URL when provided', () => {
@@ -322,7 +341,10 @@ describe('GameCard', () => {
 
       const playButton = screen.getByLabelText('Play Test Flash Game');
       // When shareToken is provided, it uses play-shared route with shareToken query param
-      expect(playButton).toHaveAttribute('href', '/games/abcd1234-5678-90ab-cdef-1234567890ab/play-shared?shareToken=test-share-token');
+      expect(playButton).toHaveAttribute(
+        'href',
+        '/games/abcd1234-5678-90ab-cdef-1234567890ab/play-shared?shareToken=test-share-token'
+      );
     });
   });
 

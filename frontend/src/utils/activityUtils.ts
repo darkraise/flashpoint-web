@@ -17,11 +17,7 @@ export function categorizeAction(action: string): ActionCategory {
   ) {
     return 'auth';
   }
-  if (
-    action.includes('schedule') ||
-    action.includes('cleanup') ||
-    action.includes('maintenance')
-  ) {
+  if (action.includes('schedule') || action.includes('cleanup') || action.includes('maintenance')) {
     return 'system';
   }
   return 'crud';

@@ -1,13 +1,17 @@
 # Development Documentation
 
-This directory contains comprehensive documentation for developers working on the Flashpoint Web application.
+This directory contains comprehensive documentation for developers working on
+the Flashpoint Web application.
 
 ## Contents
 
 1. **[Setup Guide](./setup-guide.md)** - Complete development environment setup
-2. **[Commands Reference](./commands.md)** - All npm commands for monorepo and services
-3. **[Project Structure](./project-structure.md)** - Directory structure explained
-4. **[Coding Standards](./coding-standards.md)** - TypeScript conventions and style guide
+2. **[Commands Reference](./commands.md)** - All npm commands for monorepo and
+   services
+3. **[Project Structure](./project-structure.md)** - Directory structure
+   explained
+4. **[Coding Standards](./coding-standards.md)** - TypeScript conventions and
+   style guide
 5. **[Testing Guide](./testing-guide.md)** - Testing approach and best practices
 6. **[Debugging Guide](./debugging.md)** - Debugging tips and troubleshooting
 7. **[Common Pitfalls](./common-pitfalls.md)** - Known issues and solutions
@@ -52,7 +56,8 @@ Each service can be developed, tested, and deployed independently.
 
 - Review existing documentation in this directory
 - Check the main [CLAUDE.md](../../CLAUDE.md) for project overview
-- Consult service-specific docs in `docs/03-backend`, `docs/04-frontend`, and `docs/05-game-service`
+- Consult service-specific docs in `docs/03-backend`, `docs/04-frontend`, and
+  `docs/05-game-service`
 - Review architecture documentation in `docs/02-architecture`
 
 ## Contributing

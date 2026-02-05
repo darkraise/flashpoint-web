@@ -43,7 +43,8 @@ export function NetworkStatusIndicator() {
 
     const checkNetworkSpeed = () => {
       if (navigator.onLine) {
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        const connection =
+          navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 
         if (connection) {
           // Use Network Information API if available
@@ -96,7 +97,7 @@ export function NetworkStatusIndicator() {
           <Badge
             variant={status === 'offline' ? 'destructive' : 'default'}
             className={cn(
-              "flex items-center gap-2",
+              'flex items-center gap-2',
               status === 'slow' && 'bg-yellow-600 hover:bg-yellow-600'
             )}
           >
@@ -107,7 +108,8 @@ export function NetworkStatusIndicator() {
             )}
             <span>
               {status === 'offline' && 'No internet connection. Please check your network.'}
-              {status === 'slow' && 'Slow network detected. Some features may be slower than usual.'}
+              {status === 'slow' &&
+                'Slow network detected. Some features may be slower than usual.'}
             </span>
           </Badge>
         </div>

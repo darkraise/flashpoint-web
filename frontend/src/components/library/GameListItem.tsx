@@ -26,7 +26,17 @@ interface GameListItemProps {
   breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
 }
 
-export function GameListItem({ game, showFavoriteButton = true, showRemoveButton = false, showFavoriteIndicator = false, showAddToPlaylistButton = true, favoriteGameIds, isFavoritePage = false, shareToken = null, breadcrumbContext }: GameListItemProps) {
+export function GameListItem({
+  game,
+  showFavoriteButton = true,
+  showRemoveButton = false,
+  showFavoriteIndicator = false,
+  showAddToPlaylistButton = true,
+  favoriteGameIds,
+  isFavoritePage = false,
+  shareToken = null,
+  breadcrumbContext,
+}: GameListItemProps) {
   const [imageError, setImageError] = useState(false);
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
 
@@ -38,7 +48,11 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
 
   // Parse tags (limit to first 3 for list display)
   const tags = game.tagsStr
-    ? game.tagsStr.split(';').map(t => t.trim()).filter(Boolean).slice(0, 3)
+    ? game.tagsStr
+        .split(';')
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .slice(0, 3)
     : [];
 
   const isFavorited = favoriteGameIds?.has(game.id) ?? false;
@@ -51,7 +65,7 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
   // Handle navigation to game details with breadcrumb context
   const handleNavigateToDetails = () => {
     navigate(gameDetailUrl, {
-      state: breadcrumbContext ? { breadcrumbContext } : undefined
+      state: breadcrumbContext ? { breadcrumbContext } : undefined,
     });
   };
 
@@ -82,7 +96,10 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
           {/* Game Info */}
           <div className="flex-1 min-w-0 space-y-1">
             <div onClick={handleNavigateToDetails} className="cursor-pointer">
-              <h3 className="font-semibold text-sm truncate hover:text-primary transition-colors" title={game.title}>
+              <h3
+                className="font-semibold text-sm truncate hover:text-primary transition-colors"
+                title={game.title}
+              >
                 {game.title}
               </h3>
             </div>
@@ -98,34 +115,30 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
             </div>
 
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              {game.developer && (
+              {game.developer ? (
                 <span className="truncate" title={game.developer}>
                   {game.developer}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex-shrink-0 flex items-center gap-2">
             {/* Favorite Indicator (non-clickable, always visible if favorited) */}
-            {showFavoriteIndicator && isFavorited && !isFavoritePage && (
+            {showFavoriteIndicator && isFavorited && !isFavoritePage ? (
               <div className="h-9 w-9 flex items-center justify-center">
                 <Heart size={18} fill="currentColor" className="text-primary" />
               </div>
-            )}
+            ) : null}
 
             {/* Remove from Favorites Button (Favorites page only) */}
-            {showRemoveButton && isFavoritePage && (
-              <RemoveFavoriteButton
-                gameId={game.id}
-                size="sm"
-                className="h-9 w-9 p-0"
-              />
-            )}
+            {showRemoveButton && isFavoritePage ? (
+              <RemoveFavoriteButton gameId={game.id} size="sm" className="h-9 w-9 p-0" />
+            ) : null}
 
             {/* Add to Favorites Button (other pages, when not favorited) */}
-            {showFavoriteButton && !isFavoritePage && !isFavorited && (
+            {showFavoriteButton && !isFavoritePage && !isFavorited ? (
               <FavoriteButton
                 gameId={game.id}
                 isFavorited={false}
@@ -134,9 +147,9 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
                 className="h-9 w-9 p-0"
                 showOnHoverOnly={false}
               />
-            )}
+            ) : null}
 
-            {showAddToPlaylistButton && (
+            {showAddToPlaylistButton ? (
               <Button
                 size="sm"
                 variant="ghost"
@@ -144,7 +157,7 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
                   e.preventDefault();
                   e.stopPropagation();
                   if (!isAuthenticated) {
-                    toast.error("Please log in to add games to playlists");
+                    toast.error('Please log in to add games to playlists');
                     return;
                   }
                   setIsPlaylistModalOpen(true);
@@ -155,22 +168,15 @@ export function GameListItem({ game, showFavoriteButton = true, showRemoveButton
               >
                 <ListPlus size={18} />
               </Button>
-            )}
+            ) : null}
 
-            {isPlayable && (
-              <Button
-                size="sm"
-                asChild
-              >
-                <Link
-                  to={gamePlayUrl}
-                  title="Play Game"
-                  aria-label="Play Game"
-                >
+            {isPlayable ? (
+              <Button size="sm" asChild>
+                <Link to={gamePlayUrl} title="Play Game" aria-label="Play Game">
                   <Play size={18} />
                 </Link>
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
       </CardContent>

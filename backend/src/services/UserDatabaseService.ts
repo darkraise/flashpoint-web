@@ -93,7 +93,7 @@ export class UserDatabaseService {
       ).all() as { name: string }[];
 
       // Filter out the migrations table itself to check for other tables
-      const otherTables = tables.filter(t => t.name !== 'migrations');
+      const otherTables = tables.filter((t) => t.name !== 'migrations');
 
       if (otherTables.length === 0) {
         // New database, no detection needed
@@ -113,7 +113,7 @@ export class UserDatabaseService {
 
       // Detect 001_complete_schema (check for users table)
       // This migration includes all schema, seed data, and indexes
-      if (otherTables.some(t => t.name === 'users')) {
+      if (otherTables.some((t) => t.name === 'users')) {
         markApplied('001_complete_schema', 'Detected existing schema and seed data');
       }
 
@@ -140,8 +140,9 @@ export class UserDatabaseService {
       const migrationDir = path.join(__dirname, '../migrations');
 
       // Get all migration files (*.sql files with numeric prefix)
-      const files = fs.readdirSync(migrationDir)
-        .filter(f => f.endsWith('.sql') && /^\d{3}_/.test(f))
+      const files = fs
+        .readdirSync(migrationDir)
+        .filter((f) => f.endsWith('.sql') && /^\d{3}_/.test(f))
         .sort(); // Alphabetical sort ensures correct order (001, 002, etc.)
 
       logger.info(`[UserDB] Found ${files.length} migration file(s)`);
@@ -151,9 +152,7 @@ export class UserDatabaseService {
         const migrationPath = path.join(migrationDir, file);
 
         // Check if migration has already been applied
-        const applied = this.db!.prepare(
-          'SELECT 1 FROM migrations WHERE name = ?'
-        ).get(name);
+        const applied = this.db!.prepare('SELECT 1 FROM migrations WHERE name = ?').get(name);
 
         if (!applied) {
           logger.info(`[UserDB] Running migration: ${name}`);
@@ -221,66 +220,86 @@ export class UserDatabaseService {
   }
 
   /**
-   * Execute a query and return all rows
+   * Execute a query and return all rows.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example UserDatabaseService.exec<{ id: number }>('SELECT ...', [])
    */
-  static exec<T = any>(sql: string, params: any[] = []): T[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static exec<T = any>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        return stmt.all(params) as T[];
-      } catch (error) {
-        logger.error('[UserDB] Query error:', { sql, params, error });
-        throw error;
-      }
-    }, sql, params);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          return stmt.all(params) as T[];
+        } catch (error) {
+          logger.error('[UserDB] Query error:', { sql, params, error });
+          throw error;
+        }
+      },
+      sql,
+      params
+    );
   }
 
   /**
-   * Execute a query and return first row
+   * Execute a query and return first row.
+   * @template T - Explicit type parameter recommended for type safety
+   * @example UserDatabaseService.get<{ id: number }>('SELECT ...', [])
    */
-  static get<T = any>(sql: string, params: any[] = []): T | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static get<T = any>(sql: string, params: unknown[] = []): T | undefined {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        const result = stmt.get(params);
-        return result as T | undefined;
-      } catch (error) {
-        logger.error('[UserDB] Get error:', { sql, params, error });
-        throw error;
-      }
-    }, sql, params);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          const result = stmt.get(params);
+          return result as T | undefined;
+        } catch (error) {
+          logger.error('[UserDB] Get error:', { sql, params, error });
+          throw error;
+        }
+      },
+      sql,
+      params
+    );
   }
 
   /**
-   * Execute a query and return all rows (alias for exec)
+   * Execute a query and return all rows (alias for exec).
+   * @template T - Explicit type parameter recommended for type safety
    */
-  static all<T = any>(sql: string, params: any[] = []): T[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static all<T = any>(sql: string, params: unknown[] = []): T[] {
     return this.exec<T>(sql, params);
   }
 
   /**
-   * Execute an INSERT, UPDATE, or DELETE statement
+   * Execute an INSERT, UPDATE, or DELETE statement.
    */
-  static run(sql: string, params: any[] = []): BetterSqlite3.RunResult {
+  static run(sql: string, params: unknown[] = []): BetterSqlite3.RunResult {
     const db = this.getDatabase();
 
-    return measureQueryPerformance(() => {
-      try {
-        const stmt = db.prepare(sql);
-        return stmt.run(params);
-      } catch (error) {
-        logger.error('[UserDB] Run error:', { sql, params });
-        logger.error('[UserDB] Error details:', error);
-        if (error instanceof Error) {
-          logger.error('[UserDB] Error stack:', error.stack);
+    return measureQueryPerformance(
+      () => {
+        try {
+          const stmt = db.prepare(sql);
+          return stmt.run(params);
+        } catch (error) {
+          logger.error('[UserDB] Run error:', { sql, params });
+          logger.error('[UserDB] Error details:', error);
+          if (error instanceof Error) {
+            logger.error('[UserDB] Error stack:', error.stack);
+          }
+          throw error;
         }
-        throw error;
-      }
-    }, sql, params);
+      },
+      sql,
+      params
+    );
   }
 
   /**

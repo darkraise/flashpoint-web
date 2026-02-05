@@ -18,6 +18,7 @@ import { PlaylistIcon } from '@/components/playlist/PlaylistIcon';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
+import { AxiosError } from 'axios';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +44,11 @@ export function UserPlaylistDetailView() {
 
   const playlistId = id ? parseInt(id, 10) : null;
 
-  const { data: playlist, isLoading: isLoadingPlaylist, error: playlistError } = useUserPlaylist(playlistId);
+  const {
+    data: playlist,
+    isLoading: isLoadingPlaylist,
+    error: playlistError,
+  } = useUserPlaylist(playlistId);
   const { data: playlistGames = [], isLoading: isLoadingGames } = useUserPlaylistGames(playlistId);
 
   // Fetch favorite game IDs for performance optimization
@@ -68,10 +73,9 @@ export function UserPlaylistDetailView() {
       await deletePlaylist.mutateAsync(playlistId);
       toast.success('Playlist deleted successfully');
       navigate('/playlists');
-    } catch (error: any) {
-      toast.error(
-        error?.response?.data?.error?.message || 'Failed to delete playlist'
-      );
+    } catch (error: unknown) {
+      const axiosError = error instanceof AxiosError ? error : null;
+      toast.error(axiosError?.response?.data?.error?.message || 'Failed to delete playlist');
     }
   };
 
@@ -88,10 +92,7 @@ export function UserPlaylistDetailView() {
     return (
       <div className="text-center py-12">
         <p className="text-destructive">Error loading playlist</p>
-        <Link
-          to="/playlists"
-          className="text-primary hover:underline mt-4 inline-block"
-        >
+        <Link to="/playlists" className="text-primary hover:underline mt-4 inline-block">
           Back to playlists
         </Link>
       </div>
@@ -116,7 +117,7 @@ export function UserPlaylistDetailView() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex gap-4">
           {/* Playlist Icon */}
-          {playlist.icon && (
+          {playlist.icon ? (
             <div className="flex-shrink-0">
               <div className="p-4 bg-primary/20 rounded-xl border-2 border-primary/30">
                 <PlaylistIcon
@@ -127,19 +128,17 @@ export function UserPlaylistDetailView() {
                 />
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Playlist Info */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold">{playlist.title}</h1>
-              {playlist.isPublic && (
-                <Badge variant="secondary">Shared</Badge>
-              )}
+              {playlist.isPublic ? <Badge variant="secondary">Shared</Badge> : null}
             </div>
-            {playlist.description && (
+            {playlist.description ? (
               <p className="text-muted-foreground">{playlist.description}</p>
-            )}
+            ) : null}
             <p className="text-sm text-muted-foreground mt-2">
               {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
             </p>
@@ -223,14 +222,12 @@ export function UserPlaylistDetailView() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Playlist</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{playlist.title}"? This action cannot be
-              undone. All games in this playlist will remain in your library.
+              Are you sure you want to delete "{playlist.title}"? This action cannot be undone. All
+              games in this playlist will remain in your library.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletePlaylist.isPending}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={deletePlaylist.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deletePlaylist.isPending}

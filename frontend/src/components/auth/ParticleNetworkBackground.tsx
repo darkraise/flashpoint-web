@@ -4,12 +4,12 @@ import { useEffect, useRef } from 'react';
  * Particle data structure
  */
 interface Particle {
-  x: number;          // X position
-  y: number;          // Y position
-  vx: number;         // X velocity (slow drift)
-  vy: number;         // Y velocity (slow drift)
-  radius: number;     // Particle size (2-4px)
-  opacity: number;    // Base opacity (0.4-0.8)
+  x: number; // X position
+  y: number; // Y position
+  vx: number; // X velocity (slow drift)
+  vy: number; // Y velocity (slow drift)
+  radius: number; // Particle size (2-4px)
+  opacity: number; // Base opacity (0.4-0.8)
 }
 
 /**
@@ -18,23 +18,23 @@ interface Particle {
 interface MousePosition {
   x: number;
   y: number;
-  active: boolean;    // Is mouse over canvas?
+  active: boolean; // Is mouse over canvas?
 }
 
 /**
  * Configuration constants for particle network
  */
 const CONFIG = {
-  PARTICLE_COUNT: 160,              // Base count at 1920px reference width
+  PARTICLE_COUNT: 160, // Base count at 1920px reference width
   PARTICLE_MIN_RADIUS: 2,
   PARTICLE_MAX_RADIUS: 4,
-  PARTICLE_MIN_SPEED: 0.1,          // Slow drift
+  PARTICLE_MIN_SPEED: 0.1, // Slow drift
   PARTICLE_MAX_SPEED: 0.3,
   PARTICLE_MIN_OPACITY: 0.4,
   PARTICLE_MAX_OPACITY: 0.8,
-  CONNECTION_DISTANCE: 120,         // Max distance for particle-to-particle lines
-  MOUSE_CONNECTION_DISTANCE: 150,   // Max distance for mouse-to-particle lines
-  LINE_OPACITY_MULTIPLIER: 0.5,     // Lines are more transparent than particles
+  CONNECTION_DISTANCE: 120, // Max distance for particle-to-particle lines
+  MOUSE_CONNECTION_DISTANCE: 150, // Max distance for mouse-to-particle lines
+  LINE_OPACITY_MULTIPLIER: 0.5, // Lines are more transparent than particles
 };
 
 /**
@@ -45,10 +45,10 @@ const CONFIG = {
  * @returns Calculated particle count clamped between MIN_COUNT and MAX_COUNT
  */
 const calculateParticleCount = (width: number): number => {
-  const BASE_WIDTH = 1920;  // Reference width
-  const BASE_COUNT = 160;    // Particle count at reference width
-  const MIN_COUNT = 40;      // Minimum particles (very small screens)
-  const MAX_COUNT = 250;     // Maximum particles (performance limit)
+  const BASE_WIDTH = 1920; // Reference width
+  const BASE_COUNT = 160; // Particle count at reference width
+  const MIN_COUNT = 40; // Minimum particles (very small screens)
+  const MAX_COUNT = 250; // Maximum particles (performance limit)
 
   // Linear scaling: count = (currentWidth / baseWidth) × baseCount
   const scaledCount = Math.round((width / BASE_WIDTH) * BASE_COUNT);
@@ -69,8 +69,12 @@ const initializeParticles = (width: number, height: number, count: number): Part
       y: Math.random() * height,
       vx: (Math.random() - 0.5) * (CONFIG.PARTICLE_MAX_SPEED * 2),
       vy: (Math.random() - 0.5) * (CONFIG.PARTICLE_MAX_SPEED * 2),
-      radius: CONFIG.PARTICLE_MIN_RADIUS + Math.random() * (CONFIG.PARTICLE_MAX_RADIUS - CONFIG.PARTICLE_MIN_RADIUS),
-      opacity: CONFIG.PARTICLE_MIN_OPACITY + Math.random() * (CONFIG.PARTICLE_MAX_OPACITY - CONFIG.PARTICLE_MIN_OPACITY),
+      radius:
+        CONFIG.PARTICLE_MIN_RADIUS +
+        Math.random() * (CONFIG.PARTICLE_MAX_RADIUS - CONFIG.PARTICLE_MIN_RADIUS),
+      opacity:
+        CONFIG.PARTICLE_MIN_OPACITY +
+        Math.random() * (CONFIG.PARTICLE_MAX_OPACITY - CONFIG.PARTICLE_MIN_OPACITY),
     });
   }
 
@@ -81,7 +85,7 @@ const initializeParticles = (width: number, height: number, count: number): Part
  * Update particle positions with toroidal wrapping (seamless edges)
  */
 const updateParticles = (particles: Particle[], width: number, height: number) => {
-  particles.forEach(particle => {
+  particles.forEach((particle) => {
     // Update position
     particle.x += particle.vx;
     particle.y += particle.vy;
@@ -97,11 +101,7 @@ const updateParticles = (particles: Particle[], width: number, height: number) =
 /**
  * Draw connections between nearby particles
  */
-const drawConnections = (
-  ctx: CanvasRenderingContext2D,
-  particles: Particle[],
-  color: string
-) => {
+const drawConnections = (ctx: CanvasRenderingContext2D, particles: Particle[], color: string) => {
   for (let i = 0; i < particles.length; i++) {
     for (let j = i + 1; j < particles.length; j++) {
       const p1 = particles[i];
@@ -115,7 +115,8 @@ const drawConnections = (
       // Check if within connection distance (using squared distance for performance)
       if (distSq < CONFIG.CONNECTION_DISTANCE * CONFIG.CONNECTION_DISTANCE) {
         const distance = Math.sqrt(distSq);
-        const opacity = (1 - distance / CONFIG.CONNECTION_DISTANCE) * CONFIG.LINE_OPACITY_MULTIPLIER;
+        const opacity =
+          (1 - distance / CONFIG.CONNECTION_DISTANCE) * CONFIG.LINE_OPACITY_MULTIPLIER;
 
         ctx.strokeStyle = `hsla(${color}, ${opacity})`;
         ctx.lineWidth = 1;
@@ -137,7 +138,7 @@ const drawMouseConnections = (
   mouse: MousePosition,
   color: string
 ) => {
-  particles.forEach(particle => {
+  particles.forEach((particle) => {
     const dx = mouse.x - particle.x;
     const dy = mouse.y - particle.y;
     const distSq = dx * dx + dy * dy;
@@ -159,12 +160,8 @@ const drawMouseConnections = (
 /**
  * Draw particles as circles
  */
-const drawParticles = (
-  ctx: CanvasRenderingContext2D,
-  particles: Particle[],
-  color: string
-) => {
-  particles.forEach(particle => {
+const drawParticles = (ctx: CanvasRenderingContext2D, particles: Particle[], color: string) => {
+  particles.forEach((particle) => {
     ctx.fillStyle = `hsla(${color}, ${particle.opacity})`;
     ctx.beginPath();
     ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
@@ -217,7 +214,7 @@ export function ParticleNetworkBackground() {
     // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
-      particlesRef.current.forEach(particle => {
+      particlesRef.current.forEach((particle) => {
         particle.vx *= 0.1;
         particle.vy *= 0.1;
       });

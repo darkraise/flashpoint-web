@@ -99,7 +99,7 @@ export class ConfigManager {
         infinityServerURL: 'https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/',
         externalFilePaths: [
           'https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs',
-          'https://infinity.unstable.life/Flashpoint/Legacy/htdocs/'
+          'https://infinity.unstable.life/Flashpoint/Legacy/htdocs/',
         ],
         mad4fpEnabled: false,
         mad4fpPaths: [],

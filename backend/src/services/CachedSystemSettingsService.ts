@@ -7,23 +7,62 @@ interface CacheEntry {
 }
 
 /**
- * Cached System Settings Service
- * Extends SystemSettingsService with in-memory caching for performance
+ * Cached System Settings Service (Singleton)
+ * Extends SystemSettingsService with in-memory caching for performance.
+ * Use getInstance() to get the singleton instance.
  */
 export class CachedSystemSettingsService extends SystemSettingsService {
+  private static instance: CachedSystemSettingsService | null = null;
+
   private cache: Map<string, CacheEntry> = new Map();
   private categoryCache: Map<string, CacheEntry> = new Map();
   private cacheTTL: number;
+  private cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 
   /**
+   * Get the singleton instance
+   * @param cacheTTL Cache time-to-live in milliseconds (default: 60000 = 1 minute)
+   *                 Only used on first call, ignored on subsequent calls
+   */
+  static getInstance(cacheTTL: number = 60000): CachedSystemSettingsService {
+    if (!CachedSystemSettingsService.instance) {
+      CachedSystemSettingsService.instance = new CachedSystemSettingsService(cacheTTL);
+    }
+    return CachedSystemSettingsService.instance;
+  }
+
+  /**
+   * Reset the singleton instance (useful for testing)
+   */
+  static resetInstance(): void {
+    if (CachedSystemSettingsService.instance) {
+      CachedSystemSettingsService.instance.dispose();
+      CachedSystemSettingsService.instance = null;
+    }
+  }
+
+  /**
+   * Private constructor - use getInstance() instead
    * @param cacheTTL Cache time-to-live in milliseconds (default: 60000 = 1 minute)
    */
-  constructor(cacheTTL: number = 60000) {
+  private constructor(cacheTTL: number = 60000) {
     super();
     this.cacheTTL = cacheTTL;
 
     // Start cache cleanup interval (every 5 minutes)
-    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    this.cleanupIntervalId = setInterval(() => this.cleanup(), 5 * 60 * 1000);
+  }
+
+  /**
+   * Stop the cleanup interval and release resources
+   * Call this when disposing the service instance
+   */
+  dispose(): void {
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = null;
+    }
+    this.clearCache();
   }
 
   /**
@@ -42,7 +81,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     if (value !== null) {
       this.cache.set(key, {
         value,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }
 
@@ -64,7 +103,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
 
     this.categoryCache.set(category, {
       value,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
 
     return value;
@@ -137,7 +176,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
       keyCount: this.cache.size,
       categoryCount: this.categoryCache.size,
       hitRate: 0, // Would need hit/miss tracking for accurate calculation
-      size: this.estimateCacheSize()
+      size: this.estimateCacheSize(),
     };
   }
 

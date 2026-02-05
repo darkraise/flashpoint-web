@@ -1,6 +1,7 @@
 # Icons
 
-Lucide React v0.358.0 - 358+ beautifully crafted SVG icons. All icons are tree-shakeable, customizable, and support light/dark themes.
+Lucide React v0.358.0 - 358+ beautifully crafted SVG icons. All icons are
+tree-shakeable, customizable, and support light/dark themes.
 
 ## Basic Usage
 
@@ -24,14 +25,14 @@ function Example() {
 
 Use Tailwind sizing classes:
 
-| Size | Class | Pixels | Use |
-|------|-------|--------|-----|
-| xs | `h-3 w-3` | 12px | Tiny indicators |
-| sm | `h-4 w-4` | 16px | Buttons, badges |
-| base | `h-5 w-5` | 20px | **Most common** |
-| md | `h-6 w-6` | 24px | Navigation, hero |
-| lg | `h-8 w-8` | 32px | Large displays |
-| xl | `h-12 w-12` | 48px | Extra large |
+| Size | Class       | Pixels | Use              |
+| ---- | ----------- | ------ | ---------------- |
+| xs   | `h-3 w-3`   | 12px   | Tiny indicators  |
+| sm   | `h-4 w-4`   | 16px   | Buttons, badges  |
+| base | `h-5 w-5`   | 20px   | **Most common**  |
+| md   | `h-6 w-6`   | 24px   | Navigation, hero |
+| lg   | `h-8 w-8`   | 32px   | Large displays   |
+| xl   | `h-12 w-12` | 48px   | Extra large      |
 
 ## Icon Colors
 
@@ -62,6 +63,7 @@ Use Tailwind sizing classes:
 ```
 
 **Common Props:**
+
 - `size` - Number (defaults to 24)
 - `color` - CSS color string
 - `strokeWidth` - Number (defaults to 2)
@@ -70,14 +72,14 @@ Use Tailwind sizing classes:
 
 ## Common Icon Categories
 
-**User & Account:** User, UserCircle, Settings, LogIn, LogOut
-**Navigation:** Menu, X, ChevronLeft, ChevronRight, Home, Search
-**Actions:** Plus, Minus, Edit, Trash, Save, Download, Copy, Share
-**Media:** Play, Pause, Volume2, Maximize, Film, Image
-**Feedback:** Check, CheckCircle, X, XCircle, AlertCircle, AlertTriangle, Info, Loader2
-**Social:** Heart, Star, ThumbsUp, Bell, Mail, Share2
-**Gaming:** Gamepad2, Joystick, Trophy, Award, Target
-**Theme:** Sun, Moon, Monitor, Palette, Eye, Grid, List
+- **User & Account:** User, UserCircle, Settings, LogIn, LogOut
+- **Navigation:** Menu, X, ChevronLeft, ChevronRight, Home, Search
+- **Actions:** Plus, Minus, Edit, Trash, Save, Download, Copy, Share
+- **Media:** Play, Pause, Volume2, Maximize, Film, Image
+- **Feedback:** Check, CheckCircle, X, XCircle, AlertCircle, AlertTriangle, Info, Loader2
+- **Social:** Heart, Star, ThumbsUp, Bell, Mail, Share2
+- **Gaming:** Gamepad2, Joystick, Trophy, Award, Target
+- **Theme:** Sun, Moon, Monitor, Palette, Eye, Grid, List
 
 See [lucide.dev](https://lucide.dev) for all 358+ icons.
 
@@ -277,7 +279,8 @@ Always label icon-only buttons:
 ## Best Practices
 
 1. **Consistent Sizing** - Use standard sizes (h-4 w-4, h-5 w-5, h-6 w-6)
-2. **Semantic Colors** - Match colors to meaning (green for success, red for error)
+2. **Semantic Colors** - Match colors to meaning (green for success, red for
+   error)
 3. **Import Only What You Need** - Tree-shakeable imports for smaller bundle
 4. **Align Properly** - Use `flex items-center` for vertical alignment
 
@@ -285,4 +288,5 @@ Always label icon-only buttons:
 
 Browse all icons at [lucide.dev](https://lucide.dev)
 
-Next: [Responsive Design](./responsive-design.md) - Breakpoints and mobile-first patterns
+Next: [Responsive Design](./responsive-design.md) - Breakpoints and mobile-first
+patterns

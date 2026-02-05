@@ -58,9 +58,7 @@ export function MaintenancePage() {
 
         {/* Title */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Under Maintenance
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Under Maintenance</h1>
           <p className="text-muted-foreground text-lg">
             We're currently performing system maintenance to improve your experience.
           </p>
@@ -69,49 +67,36 @@ export function MaintenancePage() {
         {/* Message */}
         <div className="bg-muted/50 rounded-lg p-6 space-y-3">
           <p className="text-sm text-muted-foreground">
-            The application is temporarily unavailable while we make important updates.
-            We apologize for any inconvenience.
+            The application is temporarily unavailable while we make important updates. We apologize
+            for any inconvenience.
           </p>
-          <p className="text-sm font-medium">
-            Please check back shortly.
-          </p>
+          <p className="text-sm font-medium">Please check back shortly.</p>
         </div>
 
         {/* User info */}
-        {user && (
+        {user ? (
           <div className="text-sm text-muted-foreground">
             Logged in as: <span className="font-medium">{user.username}</span>
           </div>
-        )}
+        ) : null}
 
         {/* Actions */}
         <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => window.location.reload()}
-          >
+          <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
             Refresh Page
           </Button>
 
-          {!user && (
-            <Button
-              className="w-full"
-              onClick={() => navigate('/login')}
-            >
+          {!user ? (
+            <Button className="w-full" onClick={() => navigate('/login')}>
               Login
             </Button>
-          )}
+          ) : null}
 
-          {user && (
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={handleLogout}
-            >
+          {user ? (
+            <Button variant="ghost" className="w-full" onClick={handleLogout}>
               Logout
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

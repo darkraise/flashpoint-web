@@ -41,7 +41,7 @@ export const useUIStore = create<UIState>()(
       setViewMode: (mode) => set({ viewMode: mode }),
       setSelectedGame: (id) => set({ selectedGameId: id }),
       setCardSize: (size) => set({ cardSize: size }),
-      setListColumns: (columns) => set({ listColumns: columns })
+      setListColumns: (columns) => set({ listColumns: columns }),
     }),
     {
       name: 'flashpoint-ui-settings',
@@ -50,8 +50,8 @@ export const useUIStore = create<UIState>()(
         sidebarCollapsed: state.sidebarCollapsed,
         cardSize: state.cardSize,
         viewMode: state.viewMode,
-        listColumns: state.listColumns
-      })
+        listColumns: state.listColumns,
+      }),
     }
   )
 );

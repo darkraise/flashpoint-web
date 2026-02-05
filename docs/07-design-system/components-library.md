@@ -1,15 +1,18 @@
 # Components Library
 
-Shadcn UI components copied directly into the codebase for full customization without npm dependencies. All components are fully typed with TypeScript and support light/dark themes.
+Shadcn UI components copied directly into the codebase for full customization
+without npm dependencies. All components are fully typed with TypeScript and
+support light/dark themes.
 
-**Installation Approach:** Copy-paste components from Shadcn instead of npm packages.
+**Installation Approach:** Copy-paste components from Shadcn instead of npm
+packages.
 
 ## Form Components
 
 ### Button
 
-6 variants: default, destructive, outline, secondary, ghost, link
-4 sizes: default (h-10), sm (h-9), lg (h-11), icon (h-10 w-10)
+6 variants: default, destructive, outline, secondary, ghost, link 4 sizes:
+default (h-10), sm (h-9), lg (h-11), icon (h-10 w-10)
 
 ```tsx
 import { Button } from '@/components/ui/button';
@@ -45,7 +48,13 @@ import { Textarea } from '@/components/ui/textarea';
 ### Select
 
 ```tsx
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 <Select>
   <SelectTrigger className="w-48">
@@ -55,7 +64,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
     <SelectItem value="option1">Option 1</SelectItem>
     <SelectItem value="option2">Option 2</SelectItem>
   </SelectContent>
-</Select>
+</Select>;
 ```
 
 ### Checkbox, Radio, Switch
@@ -87,12 +96,25 @@ import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '@/components/ui/form';
 
-const schema = z.object({ username: z.string().min(3), email: z.string().email() });
+const schema = z.object({
+  username: z.string().min(3),
+  email: z.string().email(),
+});
 
 function MyForm() {
-  const form = useForm({ resolver: zodResolver(schema), defaultValues: { username: '', email: '' } });
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: { username: '', email: '' },
+  });
 
   return (
     <Form {...form}>
@@ -122,7 +144,14 @@ function MyForm() {
 ### Card
 
 ```tsx
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
 
 <Card>
   <CardHeader>
@@ -131,7 +160,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
   </CardHeader>
   <CardContent>Content</CardContent>
   <CardFooter>Actions</CardFooter>
-</Card>
+</Card>;
 ```
 
 ### Separator, Scroll Area, Collapsible
@@ -154,7 +183,14 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 ### Table
 
 ```tsx
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table';
 
 <Table>
   <TableHeader>
@@ -164,14 +200,14 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
     </TableRow>
   </TableHeader>
   <TableBody>
-    {games.map(game => (
+    {games.map((game) => (
       <TableRow key={game.id}>
         <TableCell>{game.title}</TableCell>
         <TableCell>{game.platform}</TableCell>
       </TableRow>
     ))}
   </TableBody>
-</Table>
+</Table>;
 ```
 
 ### Badge
@@ -187,7 +223,8 @@ import { Badge } from '@/components/ui/badge';
 <Badge variant="tag">Action</Badge>
 ```
 
-**Platform Colors:** Flash (green), HTML5 (blue), Shockwave (purple), Java (orange), Unity (slate)
+**Platform Colors:** Flash (green), HTML5 (blue), Shockwave (purple), Java
+(orange), Unity (slate)
 
 ### Avatar, Skeleton, Tooltip, Popover
 
@@ -222,7 +259,13 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 ### Dropdown Menu
 
 ```tsx
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 <DropdownMenu>
   <DropdownMenuTrigger>Menu</DropdownMenuTrigger>
@@ -231,7 +274,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
     <DropdownMenuSeparator />
     <DropdownMenuItem>Log out</DropdownMenuItem>
   </DropdownMenuContent>
-</DropdownMenu>
+</DropdownMenu>;
 ```
 
 ### Toggle, Toggle Group
@@ -253,7 +296,15 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 ### Dialog
 
 ```tsx
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 <Dialog>
   <DialogTrigger>Open</DialogTrigger>
@@ -267,13 +318,23 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
       <Button>Confirm</Button>
     </DialogFooter>
   </DialogContent>
-</Dialog>
+</Dialog>;
 ```
 
 ### Alert Dialog
 
 ```tsx
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 
 <AlertDialog>
   <AlertDialogTrigger variant="destructive">Delete</AlertDialogTrigger>
@@ -287,13 +348,19 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
       <AlertDialogAction>Delete</AlertDialogAction>
     </AlertDialogFooter>
   </AlertDialogContent>
-</AlertDialog>
+</AlertDialog>;
 ```
 
 ### Sheet
 
 ```tsx
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 <Sheet>
   <SheetTrigger>Open</SheetTrigger>
@@ -302,7 +369,7 @@ import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/co
       <SheetTitle>Title</SheetTitle>
     </SheetHeader>
   </SheetContent>
-</Sheet>
+</Sheet>;
 ```
 
 ## Feedback
@@ -334,7 +401,11 @@ import { toast } from 'sonner';
 toast.success('Saved!');
 toast.error('Failed', { description: 'Details here' });
 toast.info('Update available');
-toast.promise(saveGame(), { loading: 'Saving...', success: 'Saved!', error: 'Failed' });
+toast.promise(saveGame(), {
+  loading: 'Saving...',
+  success: 'Saved!',
+  error: 'Failed',
+});
 ```
 
 ## Custom Components
@@ -342,7 +413,14 @@ toast.promise(saveGame(), { loading: 'Saving...', success: 'Saved!', error: 'Fai
 ### Pagination
 
 ```tsx
-import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationNext } from '@/components/ui/pagination';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationLink,
+  PaginationNext,
+} from '@/components/ui/pagination';
 
 <Pagination>
   <PaginationContent>
@@ -350,13 +428,15 @@ import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, Pagi
       <PaginationPrevious href="#" />
     </PaginationItem>
     <PaginationItem>
-      <PaginationLink href="#" isActive>1</PaginationLink>
+      <PaginationLink href="#" isActive>
+        1
+      </PaginationLink>
     </PaginationItem>
     <PaginationItem>
       <PaginationNext href="#" />
     </PaginationItem>
   </PaginationContent>
-</Pagination>
+</Pagination>;
 ```
 
 ### Platform Icon
@@ -371,12 +451,16 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 ## Best Practices
 
 1. **Use Semantic Components** - Prefer Card/Button over generic divs
-2. **Use asChild Prop** - For polymorphic components: `<Button asChild><Link>Browse</Link></Button>`
-3. **Controlled vs Uncontrolled** - Use state for complex logic, uncontrolled for simple cases
-4. **Accessibility** - Always add labels, ARIA attributes, and sr-only text for icon-only buttons
+2. **Use asChild Prop** - For polymorphic components:
+   `<Button asChild><Link>Browse</Link></Button>`
+3. **Controlled vs Uncontrolled** - Use state for complex logic, uncontrolled
+   for simple cases
+4. **Accessibility** - Always add labels, ARIA attributes, and sr-only text for
+   icon-only buttons
 
 ---
 
-See [Shadcn UI Docs](https://ui.shadcn.com) for complete component API reference.
+See [Shadcn UI Docs](https://ui.shadcn.com) for complete component API
+reference.
 
 Next: [Icons](./icons.md) - Lucide icons usage

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { config } from '../config';
@@ -45,7 +46,11 @@ export class PlaylistService {
 
             // Extract game IDs from playlist (they're objects with gameId property)
             const gameIds = Array.isArray(playlist.games)
-              ? playlist.games.map((g: unknown) => typeof g === 'string' ? g : (g as {gameId?: string}).gameId).filter(Boolean)
+              ? playlist.games
+                  .map((g: unknown) =>
+                    typeof g === 'string' ? g : (g as { gameId?: string }).gameId
+                  )
+                  .filter(Boolean)
               : [];
 
             playlists.push({
@@ -55,7 +60,7 @@ export class PlaylistService {
               author: playlist.author,
               library: playlist.library,
               icon: playlist.icon,
-              gameIds
+              gameIds,
             });
           } catch (error) {
             logger.warn(`Failed to parse playlist file: ${file}`, error);
@@ -85,22 +90,24 @@ export class PlaylistService {
           const playlistId = playlist.id || path.basename(file, '.json');
 
           if (playlistId === id) {
-            // Fetch full game data for games in playlist
-            const games: Game[] = [];
+            // Extract game IDs from playlist
+            const gameIds: string[] = [];
 
             if (playlist.games && Array.isArray(playlist.games)) {
               for (const playlistGame of playlist.games) {
                 // Playlist games are objects with gameId property, not just strings
-                const gameId = typeof playlistGame === 'string' ? playlistGame : playlistGame.gameId;
+                const gameId =
+                  typeof playlistGame === 'string' ? playlistGame : playlistGame.gameId;
 
                 if (gameId) {
-                  const game = await this.gameService.getGameById(gameId);
-                  if (game) {
-                    games.push(game);
-                  }
+                  gameIds.push(gameId);
                 }
               }
             }
+
+            // Batch fetch all games at once (avoid N+1 query pattern)
+            // getGamesByIds returns games in the same order as input IDs
+            const games = await this.gameService.getGamesByIds(gameIds);
 
             return {
               id: playlistId,
@@ -109,7 +116,7 @@ export class PlaylistService {
               author: playlist.author,
               library: playlist.library,
               icon: playlist.icon,
-              games
+              games,
             };
           }
         }
@@ -135,7 +142,7 @@ export class PlaylistService {
         description: data.description || '',
         author: data.author || 'Unknown',
         library: data.library || 'arcade',
-        games: []
+        games: [],
       };
 
       // Write playlist file
@@ -151,7 +158,10 @@ export class PlaylistService {
     }
   }
 
-  async addGamesToPlaylist(playlistId: string, data: AddGamesToPlaylistDto): Promise<Playlist | null> {
+  async addGamesToPlaylist(
+    playlistId: string,
+    data: AddGamesToPlaylistDto
+  ): Promise<Playlist | null> {
     try {
       const playlistsPath = config.flashpointPlaylistsPath;
       const files = await fs.readdir(playlistsPath);
@@ -168,14 +178,14 @@ export class PlaylistService {
           if (id === playlistId) {
             // Get existing game IDs
             const existingGameIds = Array.isArray(playlist.games)
-              ? playlist.games.map((g: any) => typeof g === 'string' ? g : g.gameId)
+              ? playlist.games.map((g: any) => (typeof g === 'string' ? g : g.gameId))
               : [];
 
             // Add new game IDs (avoid duplicates)
-            const newGameIds = data.gameIds.filter(gameId => !existingGameIds.includes(gameId));
+            const newGameIds = data.gameIds.filter((gameId) => !existingGameIds.includes(gameId));
 
             // Convert to playlist game format
-            const newGames = newGameIds.map(gameId => ({ gameId }));
+            const newGames = newGameIds.map((gameId) => ({ gameId }));
 
             playlist.games = [...(playlist.games || []), ...newGames];
 
@@ -197,7 +207,10 @@ export class PlaylistService {
     }
   }
 
-  async removeGamesFromPlaylist(playlistId: string, data: AddGamesToPlaylistDto): Promise<Playlist | null> {
+  async removeGamesFromPlaylist(
+    playlistId: string,
+    data: AddGamesToPlaylistDto
+  ): Promise<Playlist | null> {
     try {
       const playlistsPath = config.flashpointPlaylistsPath;
       const files = await fs.readdir(playlistsPath);
@@ -264,11 +277,6 @@ export class PlaylistService {
   }
 
   private generateUUID(): string {
-    // Simple UUID v4 generator
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
+    return crypto.randomUUID();
   }
 }

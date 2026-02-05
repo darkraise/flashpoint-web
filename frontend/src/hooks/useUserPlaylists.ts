@@ -189,9 +189,7 @@ export function useAddGamesToUserPlaylist() {
       // Update playlists list cache
       queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
         return old.map((playlist) =>
-          playlist.id === variables.id
-            ? { ...playlist, gameCount: response.gameCount }
-            : playlist
+          playlist.id === variables.id ? { ...playlist, gameCount: response.gameCount } : playlist
         );
       });
 
@@ -275,9 +273,7 @@ export function useRemoveGamesFromUserPlaylist() {
       // Update playlists list cache
       queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
         return old.map((playlist) =>
-          playlist.id === variables.id
-            ? { ...playlist, gameCount: response.gameCount }
-            : playlist
+          playlist.id === variables.id ? { ...playlist, gameCount: response.gameCount } : playlist
         );
       });
 
@@ -316,11 +312,7 @@ export function useReorderUserPlaylistGames() {
 
     onMutate: async ({ id, gameIdOrder }) => {
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
-      const previousGames = queryClient.getQueryData<Game[]>([
-        'user-playlist',
-        id,
-        'games',
-      ]);
+      const previousGames = queryClient.getQueryData<Game[]>(['user-playlist', id, 'games']);
 
       // Optimistically reorder
       if (previousGames) {
@@ -335,10 +327,7 @@ export function useReorderUserPlaylistGames() {
 
     onError: (err: unknown, variables, context) => {
       if (context?.previousGames) {
-        queryClient.setQueryData(
-          ['user-playlist', variables.id, 'games'],
-          context.previousGames
-        );
+        queryClient.setQueryData(['user-playlist', variables.id, 'games'], context.previousGames);
       }
       const message = getErrorMessage(err) || 'Failed to reorder games';
       showToast(message, 'error');
@@ -404,11 +393,7 @@ export function useEnableSharing() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
 
-  return useMutation<
-    ShareLinkData,
-    unknown,
-    { id: number; options?: EnableSharingOptions }
-  >({
+  return useMutation<ShareLinkData, unknown, { id: number; options?: EnableSharingOptions }>({
     mutationFn: ({ id, options }) => userPlaylistsApi.enableSharing(id, options),
 
     onSuccess: (_, variables) => {
@@ -483,11 +468,7 @@ export function useCloneSharedPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
 
-  return useMutation<
-    UserPlaylist,
-    unknown,
-    { shareToken: string; newTitle?: string }
-  >({
+  return useMutation<UserPlaylist, unknown, { shareToken: string; newTitle?: string }>({
     mutationFn: ({ shareToken, newTitle }) =>
       sharedPlaylistsApi.clonePlaylist(shareToken, newTitle),
 

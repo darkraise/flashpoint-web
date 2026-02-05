@@ -1,10 +1,12 @@
 # Frontend Architecture
 
-This document describes the architectural patterns, design decisions, and technical implementation details of the Flashpoint Web frontend.
+This document describes the architectural patterns, design decisions, and
+technical implementation details of the Flashpoint Web frontend.
 
 ## Architecture Overview
 
-The frontend follows a modern React architecture with clear separation of concerns:
+The frontend follows a modern React architecture with clear separation of
+concerns:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -77,6 +79,7 @@ The application uses a **three-tier state management approach**:
 All server-side data (games, playlists, users) is managed by TanStack Query:
 
 **Benefits:**
+
 - Automatic caching with configurable stale times
 - Background refetching
 - Request deduplication
@@ -89,12 +92,12 @@ All server-side data (games, playlists, users) is managed by TanStack Query:
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,  // 5 minutes
+      staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 10 * 60 * 1000, // 10 minutes
       refetchOnWindowFocus: false,
-      retry: 1
-    }
-  }
+      retry: 1,
+    },
+  },
 });
 ```
 
@@ -106,7 +109,7 @@ export function useGames(filters: GameFilters) {
   return useQuery({
     queryKey: ['games', filters],
     queryFn: () => gamesApi.search(filters),
-    staleTime: 5 * 60 * 1000
+    staleTime: 5 * 60 * 1000,
   });
 }
 ```
@@ -116,6 +119,7 @@ export function useGames(filters: GameFilters) {
 Client-side UI state (authentication, theme, sidebar) uses Zustand:
 
 **Benefits:**
+
 - Minimal boilerplate
 - No providers needed
 - Built-in TypeScript support
@@ -142,11 +146,15 @@ persist(
         // Guest sessions use sessionStorage
         // Authenticated sessions use localStorage
       },
-      setItem: (name, value) => { /* ... */ },
-      removeItem: (name) => { /* ... */ }
-    }))
+      setItem: (name, value) => {
+        /* ... */
+      },
+      removeItem: (name) => {
+        /* ... */
+      },
+    })),
   }
-)
+);
 ```
 
 #### Tier 3: URL State (React Router)
@@ -154,6 +162,7 @@ persist(
 Filter state and pagination are stored in URL search params:
 
 **Benefits:**
+
 - Shareable URLs
 - Browser back/forward support
 - No client-side state management needed
@@ -221,9 +230,9 @@ Routes are defined in `App.tsx` with nested routing structure:
 ```typescript
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireAuth?: boolean;            // Default: true
-  requirePermission?: string;       // Optional permission check
-  requireAnyPermission?: string[];  // Any of these permissions
+  requireAuth?: boolean; // Default: true
+  requirePermission?: string; // Optional permission check
+  requireAnyPermission?: string[]; // Any of these permissions
   requireAllPermissions?: string[]; // All of these permissions
 }
 ```
@@ -244,8 +253,8 @@ Centralized API client in `lib/api.ts`:
 const api = axios.create({
   baseURL: '/api',
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 ```
 
@@ -254,15 +263,13 @@ const api = axios.create({
 Automatically adds JWT token to all requests:
 
 ```typescript
-api.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 ```
 
 #### Response Interceptor
@@ -331,7 +338,8 @@ All types are defined in `src/types/`:
 
 #### Code Splitting
 
-**Route-level lazy loading** - All views use React.lazy for optimal bundle splitting:
+**Route-level lazy loading** - All views use React.lazy for optimal bundle
+splitting:
 
 ```typescript
 // App.tsx - Lazy load all views
@@ -377,25 +385,31 @@ export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
   if (prevProps.game.id !== nextProps.game.id) return false;
 
   // Or if favorite status changed
-  const prevIsFavorited = prevProps.favoriteGameIds?.has(prevProps.game.id) ?? false;
-  const nextIsFavorited = nextProps.favoriteGameIds?.has(nextProps.game.id) ?? false;
+  const prevIsFavorited =
+    prevProps.favoriteGameIds?.has(prevProps.game.id) ?? false;
+  const nextIsFavorited =
+    nextProps.favoriteGameIds?.has(nextProps.game.id) ?? false;
   if (prevIsFavorited !== nextIsFavorited) return false;
 
   // Or if button visibility changed
-  if (prevProps.showFavoriteButton !== nextProps.showFavoriteButton ||
-      prevProps.showRemoveButton !== nextProps.showRemoveButton) return false;
+  if (
+    prevProps.showFavoriteButton !== nextProps.showFavoriteButton ||
+    prevProps.showRemoveButton !== nextProps.showRemoveButton
+  )
+    return false;
 
   return true; // Don't re-render
 });
 ```
 
-**Impact**: In a 50-card grid, only 1 card re-renders when favoriting instead of all 50 (49 prevented renders = 98% reduction)
+**Impact**: In a 50-card grid, only 1 card re-renders when favoriting instead of
+all 50 (49 prevented renders = 98% reduction)
 
 **useMemo()** for computed values:
 
 ```typescript
 const filteredGames = useMemo(
-  () => games.filter(game => game.platform === selectedPlatform),
+  () => games.filter((game) => game.platform === selectedPlatform),
   [games, selectedPlatform]
 );
 ```
@@ -403,9 +417,12 @@ const filteredGames = useMemo(
 **useCallback()** for event handlers:
 
 ```typescript
-const handleFavorite = useCallback((gameId: string) => {
-  favoriteMutation.mutate(gameId);
-}, [favoriteMutation]);
+const handleFavorite = useCallback(
+  (gameId: string) => {
+    favoriteMutation.mutate(gameId);
+  },
+  [favoriteMutation]
+);
 ```
 
 #### Image Optimization
@@ -445,6 +462,7 @@ try {
 ```
 
 **Benefits**:
+
 - Type-safe error handling
 - Consistent error message extraction
 - Handles Axios errors, Error objects, and unknown types
@@ -492,7 +510,7 @@ All API calls are wrapped in custom hooks:
 export function useGames(filters: GameFilters) {
   return useQuery({
     queryKey: ['games', filters],
-    queryFn: () => gamesApi.search(filters)
+    queryFn: () => gamesApi.search(filters),
   });
 }
 
@@ -539,8 +557,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:3100',
-      '/proxy': 'http://localhost:3100'
-    }
+      '/proxy': 'http://localhost:3100',
+    },
   },
   build: {
     outDir: 'dist',
@@ -548,12 +566,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu']
-        }
-      }
-    }
-  }
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+        },
+      },
+    },
+  },
 });
 ```
 
@@ -564,6 +582,7 @@ npm run build
 ```
 
 Outputs:
+
 - Minified JavaScript bundles
 - Code-split chunks
 - Optimized CSS

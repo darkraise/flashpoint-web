@@ -68,13 +68,16 @@ export class LegacyServer {
    * Build all path candidates in priority order
    * Replicates the path resolution algorithm from Go's ServeLegacy()
    */
-  private buildPathCandidates(relPath: string, urlPath: string): Array<{ path: string; type: string }> {
+  private buildPathCandidates(
+    relPath: string,
+    urlPath: string
+  ): Array<{ path: string; type: string }> {
     const candidates: Array<{ path: string; type: string }> = [];
 
     // 1. Exact file paths (with and without query string)
     candidates.push({
       path: path.join(this.settings.legacyHTDOCSPath, relPath),
-      type: 'exact'
+      type: 'exact',
     });
 
     // If URL has query string, try without it
@@ -82,7 +85,7 @@ export class LegacyServer {
     if (pathWithoutQuery !== relPath) {
       candidates.push({
         path: path.join(this.settings.legacyHTDOCSPath, pathWithoutQuery),
-        type: 'exact-no-query'
+        type: 'exact-no-query',
       });
     }
 
@@ -90,13 +93,13 @@ export class LegacyServer {
     for (const override of this.settings.legacyOverridePaths) {
       candidates.push({
         path: path.join(this.settings.legacyHTDOCSPath, override, relPath),
-        type: `override:${override}`
+        type: `override:${override}`,
       });
 
       if (pathWithoutQuery !== relPath) {
         candidates.push({
           path: path.join(this.settings.legacyHTDOCSPath, override, pathWithoutQuery),
-          type: `override:${override}-no-query`
+          type: `override:${override}-no-query`,
         });
       }
     }
@@ -105,13 +108,13 @@ export class LegacyServer {
     if (this.isScriptUrl(urlPath)) {
       candidates.push({
         path: path.join(this.settings.legacyCGIBINPath, relPath),
-        type: 'cgi-bin'
+        type: 'cgi-bin',
       });
 
       if (pathWithoutQuery !== relPath) {
         candidates.push({
           path: path.join(this.settings.legacyCGIBINPath, pathWithoutQuery),
-          type: 'cgi-bin-no-query'
+          type: 'cgi-bin-no-query',
         });
       }
     }
@@ -120,14 +123,14 @@ export class LegacyServer {
     for (const ext of INDEX_EXTENSIONS) {
       candidates.push({
         path: path.join(this.settings.legacyHTDOCSPath, relPath, `index.${ext}`),
-        type: `index:${ext}`
+        type: `index:${ext}`,
       });
 
       // Index files in override paths
       for (const override of this.settings.legacyOverridePaths) {
         candidates.push({
           path: path.join(this.settings.legacyHTDOCSPath, override, relPath, `index.${ext}`),
-          type: `index-override:${override}:${ext}`
+          type: `index-override:${override}:${ext}`,
         });
       }
     }
@@ -170,7 +173,7 @@ export class LegacyServer {
     return {
       data,
       contentType,
-      source: 'local-htdocs'
+      source: 'local-htdocs',
     };
   }
 

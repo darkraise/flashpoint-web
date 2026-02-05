@@ -23,7 +23,12 @@ export function ThemePicker() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="border-primary data-[state=open]:border-transparent" title="Theme settings">
+        <Button
+          variant="outline"
+          size="icon"
+          className="border-primary data-[state=open]:border-transparent"
+          title="Theme settings"
+        >
           <Palette className="h-5 w-5" />
           <span className="sr-only">Theme settings</span>
         </Button>
@@ -89,9 +94,9 @@ export function ThemePicker() {
                   title={colorPalette[color].label}
                   aria-label={`Select ${colorPalette[color].label} theme`}
                 >
-                  {isSelected && (
+                  {isSelected ? (
                     <Check className="absolute inset-0 m-auto h-5 w-5 text-white drop-shadow-lg" />
-                  )}
+                  ) : null}
                 </button>
               );
             })}

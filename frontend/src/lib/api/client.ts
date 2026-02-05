@@ -55,20 +55,42 @@ apiClient.interceptors.request.use(
 // ===================================
 
 /**
+ * Token refresh queue to prevent race conditions when multiple
+ * requests receive 401 errors simultaneously
+ */
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
+
+/**
  * Handles response errors and automatic token refresh
  *
  * Features:
  * - Network error notifications
  * - 404 error notifications
  * - 500+ server error notifications
- * - Automatic token refresh on 401 errors
+ * - Automatic token refresh on 401 errors with queue support
  * - Retry failed requests after token refresh
  * - Logout on refresh failure
+ * - Prevents duplicate refresh requests via isRefreshing flag
  */
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Handle request cancellation - don't show errors for aborted requests
+    if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
+      return Promise.reject(error);
+    }
 
     // Handle network errors (no response from server)
     if (!error.response) {
@@ -96,7 +118,10 @@ apiClient.interceptors.response.use(
       const errorCode = error.response.data?.code;
 
       // Handle shared access token errors differently
-      if (errorCode === 'SHARED_ACCESS_INVALID' || originalRequest.headers?.Authorization?.startsWith('SharedAccess ')) {
+      if (
+        errorCode === 'SHARED_ACCESS_INVALID' ||
+        originalRequest.headers?.Authorization?.startsWith('SharedAccess ')
+      ) {
         useSharedAccessStore.getState().clearToken();
         const { toast } = await import('sonner');
         toast.error('Your shared access has expired. Return to the playlist to continue browsing.');
@@ -113,7 +138,18 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // If a token refresh is already in progress, wait for it
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((newToken) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            resolve(apiClient(originalRequest));
+          });
+        });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         const refreshToken = useAuthStore.getState().refreshToken;
@@ -133,6 +169,9 @@ apiClient.interceptors.response.use(
         // Update the access token in the store
         useAuthStore.getState().updateAccessToken(data.accessToken);
 
+        // Notify all waiting requests of the new token
+        onTokenRefreshed(data.accessToken);
+
         // Update the authorization header and retry the original request
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return apiClient(originalRequest);
@@ -143,6 +182,8 @@ apiClient.interceptors.response.use(
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

@@ -49,9 +49,7 @@ export function validateIconsNoDuplicates(): {
   const expectedIconCount = 600;
 
   if (totalIcons !== expectedIconCount) {
-    warnings.push(
-      `Icon count mismatch: Expected ${expectedIconCount}, got ${totalIcons}`
-    );
+    warnings.push(`Icon count mismatch: Expected ${expectedIconCount}, got ${totalIcons}`);
   }
 
   // Check for invalid icons (components that are null or undefined)

@@ -1,6 +1,7 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { GameService, Game } from './GameService';
 import { logger } from '../utils/logger';
+import { AppError } from '../middleware/errorHandler';
 
 export interface Favorite {
   id: number;
@@ -16,6 +17,9 @@ export interface FavoriteGame extends Game {
 export class FavoritesService {
   private userDb: typeof UserDatabaseService;
   private gameService: GameService;
+
+  // Maximum items allowed in batch operations
+  private static readonly MAX_BATCH_SIZE = 100;
 
   constructor() {
     this.userDb = UserDatabaseService;
@@ -128,7 +132,7 @@ export class FavoritesService {
       ORDER BY added_at DESC
     `;
 
-    const params: any[] = [userId];
+    const params: (number | string)[] = [userId];
 
     if (limit !== undefined) {
       // Validate limit is a positive integer
@@ -194,15 +198,19 @@ export class FavoritesService {
       query += ` ORDER BY added_at ${effectiveSortOrder.toUpperCase()}`;
     }
 
+    const params: (number | string)[] = [userId];
+
     if (limit !== undefined) {
-      query += ` LIMIT ${limit}`;
+      query += ` LIMIT ?`;
+      params.push(limit);
       if (offset !== undefined) {
-        query += ` OFFSET ${offset}`;
+        query += ` OFFSET ?`;
+        params.push(offset);
       }
     }
 
     const stmt = db.prepare(query);
-    const favorites = stmt.all(userId) as Array<{ game_id: string; added_at: string }>;
+    const favorites = stmt.all(...params) as Array<{ game_id: string; added_at: string }>;
 
     if (favorites.length === 0) {
       return [];
@@ -219,7 +227,7 @@ export class FavoritesService {
         if (game) {
           return {
             ...game,
-            addedAt: fav.added_at
+            addedAt: fav.added_at,
           };
         }
         return null;
@@ -241,6 +249,14 @@ export class FavoritesService {
    * Batch add favorites
    */
   addFavoritesBatch(userId: number, gameIds: string[]): { added: number } {
+    // Validate batch size
+    if (gameIds.length > FavoritesService.MAX_BATCH_SIZE) {
+      throw new AppError(
+        400,
+        `Maximum of ${FavoritesService.MAX_BATCH_SIZE} items per batch operation`
+      );
+    }
+
     const db = this.userDb.getDatabase();
 
     const stmt = db.prepare(`
@@ -270,6 +286,14 @@ export class FavoritesService {
    * Batch remove favorites
    */
   removeFavoritesBatch(userId: number, gameIds: string[]): { removed: number } {
+    // Validate batch size
+    if (gameIds.length > FavoritesService.MAX_BATCH_SIZE) {
+      throw new AppError(
+        400,
+        `Maximum of ${FavoritesService.MAX_BATCH_SIZE} items per batch operation`
+      );
+    }
+
     const db = this.userDb.getDatabase();
 
     const stmt = db.prepare(`

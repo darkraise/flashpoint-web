@@ -1,10 +1,12 @@
 # MIME Types
 
-The game-service supports 199+ MIME types for legacy web content, ensuring proper Content-Type headers for all file formats used in Flashpoint games.
+The game-service supports 199+ MIME types for legacy web content, ensuring
+proper Content-Type headers for all file formats used in Flashpoint games.
 
 ## Overview
 
 Accurate MIME type detection is critical for:
+
 - Browser rendering (HTML, CSS, JavaScript)
 - Plugin activation (Flash, Shockwave, Unity)
 - Media playback (audio, video)
@@ -35,11 +37,13 @@ export function getMimeType(extension: string): string {
 ```
 
 **Priority order**:
+
 1. Custom (Flashpoint legacy formats) - 199 types
 2. Standard (modern web formats) - 33 types
 3. Default (unknown types) - application/octet-stream
 
-**Rationale**: Custom types take priority because legacy formats (Flash, Director) may conflict with modern web standards.
+**Rationale**: Custom types take priority because legacy formats (Flash,
+Director) may conflict with modern web standards.
 
 ## Custom MIME Types
 
@@ -102,7 +106,8 @@ tgf: 'chemical/x-mdl-tgf',
 xyz: 'chemical/x-xyz',                  // XYZ coordinates
 ```
 
-**Use cases**: Chemistry education software, molecular visualization, scientific simulations
+**Use cases**: Chemistry education software, molecular visualization, scientific
+simulations
 
 ### Image Formats (18 types)
 
@@ -227,7 +232,8 @@ xar: 'application/vnd.xara',
 xpg: 'text/x-xpg',
 ```
 
-**Use cases**: Flash games, Java applets, Unity games, Silverlight apps, 3D viewers
+**Use cases**: Flash games, Java applets, Unity games, Silverlight apps, 3D
+viewers
 
 ### Compressed Formats (3 types)
 
@@ -419,6 +425,7 @@ res.end(fileData);
 ### Browser-Rendered Content
 
 Types that browsers render natively:
+
 - `text/html` - HTML pages
 - `text/css` - Stylesheets
 - `text/javascript` - Scripts
@@ -429,6 +436,7 @@ Types that browsers render natively:
 ### Plugin-Required Content
 
 Types that require browser plugins:
+
 - `application/x-shockwave-flash` - Flash
 - `application/x-director` - Shockwave
 - `application/java-archive` - Java
@@ -438,6 +446,7 @@ Types that require browser plugins:
 ### Download-Only Content
 
 Types that trigger downloads:
+
 - `application/octet-stream` - Binary files
 - `application/zip` - Archives
 - `application/pdf` - Documents (unless viewer installed)
@@ -453,20 +462,24 @@ res.setHeader('Content-Type', getMimeType(ext));
 res.setHeader('X-Content-Type-Options', 'nosniff');
 ```
 
-**Risk**: Browsers may misinterpret file types if Content-Type is wrong or missing.
+**Risk**: Browsers may misinterpret file types if Content-Type is wrong or
+missing.
 
 ### Script Execution
 
 Be cautious with script MIME types:
+
 - `text/javascript` - Executed by browser
 - `text/html` - May contain inline scripts
 - `application/x-php` - Never send without execution
 
-**Rule**: Never serve server-side scripts with executable MIME types unless intentional.
+**Rule**: Never serve server-side scripts with executable MIME types unless
+intentional.
 
 ### Default Fallback
 
 Unknown file types default to `application/octet-stream`:
+
 - Forces browser to download
 - Prevents execution
 - Safe fallback for unknown content
@@ -571,6 +584,7 @@ if (CUSTOM_MIME_TYPES[ext]) {
 ```
 
 **Benchmarks**:
+
 - Lookup time: <0.01ms
 - Memory overhead: ~50KB for all types
 - No performance impact on file serving
@@ -587,6 +601,7 @@ if (CUSTOM_MIME_TYPES[ext]) {
 ## References
 
 - IANA Media Types: https://www.iana.org/assignments/media-types/
-- MDN MIME Types: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
+- MDN MIME Types:
+  https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
 - Flashpoint proxySettings.json MIME types
 - Apache MIME types database

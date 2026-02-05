@@ -1,20 +1,26 @@
 # Activities API
 
-Audit logs and activity statistics. All endpoints require `activities.read` permission and `enableStatistics` feature flag.
+Audit logs and activity statistics. All endpoints require `activities.read`
+permission and `enableStatistics` feature flag.
 
 ## List Activity Logs
 
 `GET /api/activities` - Requires `activities.read` permission
 
-Query params: `page` (default: 1), `limit` (default: 50, max: 100), `userId`, `username`, `action`, `resource`, `startDate`, `endDate`, `sortBy` (createdAt|username|action|resource|ipAddress, default: createdAt), `sortOrder` (asc|desc, default: desc)
+Query params: `page` (default: 1), `limit` (default: 50, max: 100), `userId`,
+`username`, `action`, `resource`, `startDate`, `endDate`, `sortBy`
+(createdAt|username|action|resource|ipAddress, default: createdAt), `sortOrder`
+(asc|desc, default: desc)
 
-Returns paginated array with id, userId, username, action, resource, resourceId, details, ipAddress, userAgent, createdAt.
+Returns paginated array with id, userId, username, action, resource, resourceId,
+details, ipAddress, userAgent, createdAt.
 
 ## Get Activity Statistics
 
 `GET /api/activities/stats` - Requires `activities.read` permission
 
-Query params: `timeRange` (24h|7d|30d, default: 24h) or custom `startDate`/`endDate`
+Query params: `timeRange` (24h|7d|30d, default: 24h) or custom
+`startDate`/`endDate`
 
 ```json
 {
@@ -38,33 +44,42 @@ Returns array with date, sessions, totalMinutes, uniqueGames for each day.
 
 ## Get Top Actions
 
-`GET /api/activities/top-actions?limit=10&timeRange=24h` - Requires `activities.read` permission
+`GET /api/activities/top-actions?limit=10&timeRange=24h` - Requires
+`activities.read` permission
 
-Query params: `limit` (default: 10, max: 50), `timeRange` (24h|7d|30d, default: 24h)
+Query params: `limit` (default: 10, max: 50), `timeRange` (24h|7d|30d, default:
+24h)
 
-Returns array with action, count, percentage, category, topResource, exampleActivity.
+Returns array with action, count, percentage, category, topResource,
+exampleActivity.
 
 ## Get Activity Breakdown
 
-`GET /api/activities/breakdown?groupBy=resource&limit=10` - Requires `activities.read` permission
+`GET /api/activities/breakdown?groupBy=resource&limit=10` - Requires
+`activities.read` permission
 
-Query params: `groupBy` (resource|user|ip, default: resource), `limit` (default: 10, max: 50), `timeRange` (24h|7d|30d, default: 24h)
+Query params: `groupBy` (resource|user|ip, default: resource), `limit` (default:
+10, max: 50), `timeRange` (24h|7d|30d, default: 24h)
 
-Returns array grouped by specified criteria with key, count, percentage, metadata.
+Returns array grouped by specified criteria with key, count, percentage,
+metadata.
 
 ## Activity Actions
 
 Common recorded actions:
 
-**Authentication:** auth.login, auth.login.failed, auth.logout, auth.register, auth.password.change, auth.token.refresh
+**Authentication:** auth.login, auth.login.failed, auth.logout, auth.register,
+auth.password.change, auth.token.refresh
 
 **Games:** games.launch, games.view, games.search
 
-**Playlists:** playlists.create, playlists.view, playlists.update, playlists.delete, playlists.add_game, playlists.remove_game
+**Playlists:** playlists.create, playlists.view, playlists.update,
+playlists.delete, playlists.add_game, playlists.remove_game
 
 **Users:** users.create, users.view, users.update, users.delete, users.settings
 
-**Roles & Permissions:** roles.create, roles.update, roles.delete, permissions.assign, permissions.revoke
+**Roles & Permissions:** roles.create, roles.update, roles.delete,
+permissions.assign, permissions.revoke
 
 ## Best Practices
 

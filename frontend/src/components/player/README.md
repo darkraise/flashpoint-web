@@ -1,14 +1,17 @@
 # Game Player Components
 
-This directory contains reusable components for playing Flash (SWF) and HTML5 games.
+This directory contains reusable components for playing Flash (SWF) and HTML5
+games.
 
 ## Components
 
 ### `GamePlayer`
 
-A flexible, reusable game player component that can render Flash (via Ruffle) or HTML5 games. Can be embedded in pages, dialogs, or any other container.
+A flexible, reusable game player component that can render Flash (via Ruffle) or
+HTML5 games. Can be embedded in pages, dialogs, or any other container.
 
 **Features:**
+
 - Supports Flash (SWF) and HTML5 games
 - Optional fullscreen mode
 - Player controls (fullscreen toggle)
@@ -91,23 +94,24 @@ function GameSidebar() {
 
 **Props:**
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `title` | `string` | Required | Game title for display |
-| `platform` | `string` | Required | Platform (Flash, HTML5, etc.) |
-| `contentUrl` | `string?` | - | Content URL for the game |
-| `launchCommand` | `string?` | - | Launch command (if any) |
-| `canPlayInBrowser` | `boolean` | Required | Whether the game can be played in browser |
-| `allowFullscreen` | `boolean` | `true` | Enable fullscreen mode |
-| `initialFullscreen` | `boolean` | `false` | Start in fullscreen |
-| `onFullscreenChange` | `(isFullscreen: boolean) => void` | - | Callback when fullscreen changes |
-| `className` | `string` | `''` | Custom class name |
-| `showControls` | `boolean` | `true` | Show player controls |
-| `height` | `string` | `'calc(100vh - 220px)'` | Container height (CSS value) |
+| Prop                 | Type                              | Default                 | Description                               |
+| -------------------- | --------------------------------- | ----------------------- | ----------------------------------------- |
+| `title`              | `string`                          | Required                | Game title for display                    |
+| `platform`           | `string`                          | Required                | Platform (Flash, HTML5, etc.)             |
+| `contentUrl`         | `string?`                         | -                       | Content URL for the game                  |
+| `launchCommand`      | `string?`                         | -                       | Launch command (if any)                   |
+| `canPlayInBrowser`   | `boolean`                         | Required                | Whether the game can be played in browser |
+| `allowFullscreen`    | `boolean`                         | `true`                  | Enable fullscreen mode                    |
+| `initialFullscreen`  | `boolean`                         | `false`                 | Start in fullscreen                       |
+| `onFullscreenChange` | `(isFullscreen: boolean) => void` | -                       | Callback when fullscreen changes          |
+| `className`          | `string`                          | `''`                    | Custom class name                         |
+| `showControls`       | `boolean`                         | `true`                  | Show player controls                      |
+| `height`             | `string`                          | `'calc(100vh - 220px)'` | Container height (CSS value)              |
 
 ### `RufflePlayer`
 
-Low-level component for rendering Flash SWF files using Ruffle emulator. Used internally by `GamePlayer` but can be used directly for advanced use cases.
+Low-level component for rendering Flash SWF files using Ruffle emulator. Used
+internally by `GamePlayer` but can be used directly for advanced use cases.
 
 **Example:**
 
@@ -129,7 +133,9 @@ function MyFlashPlayer() {
 
 ## Example: Full Dialog Implementation
 
-See `components/dialogs/GamePlayerDialog.tsx` for a complete example of using `GamePlayer` in a dialog with:
+See `components/dialogs/GamePlayerDialog.tsx` for a complete example of using
+`GamePlayer` in a dialog with:
+
 - ESC key to close
 - Header with game info
 - Close button
@@ -149,4 +155,5 @@ GamePlayerDialog (Example Dialog)
       └─ iframe (HTML5)
 ```
 
-The `GamePlayer` component is designed to be platform-agnostic and context-agnostic, making it easy to use anywhere in the application.
+The `GamePlayer` component is designed to be platform-agnostic and
+context-agnostic, making it easy to use anywhere in the application.

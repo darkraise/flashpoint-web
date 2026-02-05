@@ -4,7 +4,8 @@ Comprehensive documentation for the Ruffle Flash emulator component.
 
 ## Overview
 
-Ruffle is a Flash Player emulator written in Rust and compiled to WebAssembly. It allows Flash (.swf) content to run in modern browsers without plugins.
+Ruffle is a Flash Player emulator written in Rust and compiled to WebAssembly.
+It allows Flash (.swf) content to run in modern browsers without plugins.
 
 **Location:** `frontend/src/components/player/RufflePlayer.tsx`
 
@@ -51,12 +52,12 @@ console.log('✅ Ruffle files copied to public/ruffle/');
 
 ```typescript
 export interface RufflePlayerProps {
-  swfUrl: string;                    // URL to .swf file
-  width?: string | number;           // Player width (default: '100%')
-  height?: string | number;          // Player height (default: '100%')
-  className?: string;                // Additional CSS classes
-  onLoadError?: (error: Error) => void;    // Error callback
-  onLoadSuccess?: () => void;        // Success callback
+  swfUrl: string; // URL to .swf file
+  width?: string | number; // Player width (default: '100%')
+  height?: string | number; // Player height (default: '100%')
+  className?: string; // Additional CSS classes
+  onLoadError?: (error: Error) => void; // Error callback
+  onLoadSuccess?: () => void; // Success callback
 }
 ```
 
@@ -64,22 +65,22 @@ export interface RufflePlayerProps {
 
 ```typescript
 player.config = {
-  autoplay: 'auto',              // Auto-start playback
-  backgroundColor: '#000000',     // Black background
-  letterbox: 'on',               // Add letterboxing for aspect ratio
-  unmuteOverlay: 'visible',      // Show unmute button if needed
-  contextMenu: true,             // Enable right-click menu
-  showSwfDownload: false,        // Hide download option
+  autoplay: 'auto', // Auto-start playback
+  backgroundColor: '#000000', // Black background
+  letterbox: 'on', // Add letterboxing for aspect ratio
+  unmuteOverlay: 'visible', // Show unmute button if needed
+  contextMenu: true, // Enable right-click menu
+  showSwfDownload: false, // Hide download option
   upgradeToHttps: window.location.protocol === 'https:',
   warnOnUnsupportedContent: true,
-  logLevel: 'error',             // Only log errors
-  publicPath: '/ruffle/',        // Path to Ruffle files
-  scale: 'showAll',              // Show all content, maintain aspect
-  forceScale: true,              // Prevent runtime scale changes
-  quality: 'high',               // High quality rendering
+  logLevel: 'error', // Only log errors
+  publicPath: '/ruffle/', // Path to Ruffle files
+  scale: 'showAll', // Show all content, maintain aspect
+  forceScale: true, // Prevent runtime scale changes
+  quality: 'high', // High quality rendering
   allowScriptAccess: 'sameDomain',
-  salign: '',                    // Center alignment
-  wmode: 'opaque',               // Opaque mode
+  salign: '', // Center alignment
+  wmode: 'opaque', // Opaque mode
 };
 ```
 
@@ -88,22 +89,26 @@ player.config = {
 Ruffle supports multiple scale modes:
 
 ### showAll (Default)
+
 - Shows entire content
 - Maintains aspect ratio
 - Adds letterboxing if needed
 - **Best for most games**
 
 ### noscale
+
 - No scaling
 - 1:1 pixel mapping
 - May cut off content
 
 ### exactfit
+
 - Scales to fill container
 - Ignores aspect ratio
 - May distort content
 
 ### noborder
+
 - Scales to fill container
 - Maintains aspect ratio
 - Crops content if needed
@@ -113,6 +118,7 @@ Ruffle supports multiple scale modes:
 The component implements a robust cleanup strategy to prevent memory leaks:
 
 ### 1. Mount Flag
+
 ```typescript
 let mounted = true;
 
@@ -127,6 +133,7 @@ useEffect(() => {
 ```
 
 ### 2. Initialization Lock
+
 ```typescript
 const isInitializingRef = useRef(false);
 
@@ -139,14 +146,16 @@ isInitializingRef.current = true;
 ```
 
 ### 3. Delay Before Initialization
+
 ```typescript
 // Wait for any previous cleanup to complete
-await new Promise(resolve => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 
 if (!mounted) return;
 ```
 
 ### 4. Cleanup Existing Player
+
 ```typescript
 if (rufflePlayerRef.current) {
   const oldPlayer = rufflePlayerRef.current;
@@ -159,11 +168,12 @@ if (rufflePlayerRef.current) {
   }
 
   // Wait for Ruffle's internal cleanup
-  await new Promise(resolve => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 200));
 }
 ```
 
 ### 5. Unmount Cleanup
+
 ```typescript
 return () => {
   mounted = false;
@@ -191,6 +201,7 @@ return () => {
 ## Loading States
 
 ### Loading UI
+
 ```typescript
 {isLoading && (
   <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10">
@@ -204,6 +215,7 @@ return () => {
 ```
 
 ### Error UI
+
 ```typescript
 {error && (
   <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-10">
@@ -249,15 +261,19 @@ function FlashGame() {
 ## Common Issues
 
 ### Issue: Game doesn't scale properly
+
 **Solution:** Use `scale: 'showAll'` and `forceScale: true`
 
 ### Issue: Multiple player instances
+
 **Solution:** Component includes cleanup delays and initialization locks
 
 ### Issue: Memory leaks on navigation
+
 **Solution:** Component destroys player and clears container on unmount
 
 ### Issue: Black screen on load
+
 **Solution:** Check browser console for errors, ensure SWF URL is correct
 
 ## Browser Console Logging
@@ -284,6 +300,7 @@ The component includes extensive logging for debugging:
 ## Ruffle Limitations
 
 Not all Flash content is supported:
+
 - Some ActionScript 3 features are incomplete
 - 3D content may have issues
 - Video playback may be limited

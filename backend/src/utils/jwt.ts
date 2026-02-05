@@ -18,7 +18,7 @@ export interface JWTPayload {
  */
 export function generateAccessToken(payload: JWTPayload): string {
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn as string | number
+    expiresIn: config.jwtExpiresIn as string | number,
   } as jwt.SignOptions);
 }
 
@@ -38,7 +38,16 @@ export function generateRefreshToken(): string {
  */
 export function verifyToken(token: string): JWTPayload {
   try {
-    return jwt.verify(token, config.jwtSecret) as JWTPayload;
+    const payload = jwt.verify(token, config.jwtSecret, {
+      algorithms: ['HS256'],
+    }) as JWTPayload & { type?: string };
+
+    // Reject shared access tokens used as regular auth tokens
+    if (payload.type === 'shared_access') {
+      throw new Error('Invalid token type');
+    }
+
+    return payload;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       throw new Error('Token expired');
@@ -79,7 +88,9 @@ export function generateSharedAccessToken(payload: Omit<SharedAccessPayload, 'ty
  * @throws Error if token is invalid, expired, or wrong type
  */
 export function verifySharedAccessToken(token: string): SharedAccessPayload {
-  const payload = jwt.verify(token, config.jwtSecret) as SharedAccessPayload;
+  const payload = jwt.verify(token, config.jwtSecret, {
+    algorithms: ['HS256'],
+  }) as SharedAccessPayload;
   if (payload.type !== 'shared_access') {
     throw new Error('Invalid token type');
   }

@@ -1,10 +1,13 @@
 # Database Migrations
 
-This document describes the database migration system for the user database (`user.db`).
+This document describes the database migration system for the user database
+(`user.db`).
 
 ## Overview
 
-The migration system uses a **registry-based approach** to track which migrations have been applied to the database. This ensures consistent schema evolution across all installations.
+The migration system uses a **registry-based approach** to track which
+migrations have been applied to the database. This ensures consistent schema
+evolution across all installations.
 
 ## Architecture
 
@@ -25,7 +28,8 @@ CREATE TABLE migrations (
 
 ### Migration Files
 
-Migration files are located in `backend/src/migrations/` and follow the naming convention:
+Migration files are located in `backend/src/migrations/` and follow the naming
+convention:
 
 ```
 XXX_description.sql
@@ -38,44 +42,53 @@ XXX_description.sql
 
 ### Current Active Migrations
 
-| File | Description |
-|------|-------------|
-| `bootstrap.sql` | Creates the migrations registry table |
+| File                      | Description                                            |
+| ------------------------- | ------------------------------------------------------ |
+| `bootstrap.sql`           | Creates the migrations registry table                  |
 | `001_complete_schema.sql` | Complete database schema with all tables and seed data |
 
 ### Archived Migrations
 
-Historical migration files (001-016 from the old system) are archived in `backend/src/migrations/archived/` for reference. These files are **no longer executed** but document the evolution of the database schema.
+Historical migration files (001-016 from the old system) are archived in
+`backend/src/migrations/archived/` for reference. These files are **no longer
+executed** but document the evolution of the database schema.
 
 ## How It Works
 
 ### Startup Flow
 
-When the backend starts, `UserDatabaseService.initialize()` performs these steps:
+When the backend starts, `UserDatabaseService.initialize()` performs these
+steps:
 
 1. **Bootstrap** - Creates the `migrations` table if it doesn't exist
-2. **Detect Existing State** - For backward compatibility, detects if the database already has tables and marks migrations as applied
-3. **Run Migrations** - Scans the migrations directory and runs any migrations not yet in the registry
-4. **Record Execution** - Logs each migration with timestamp, checksum, and execution time
+2. **Detect Existing State** - For backward compatibility, detects if the
+   database already has tables and marks migrations as applied
+3. **Run Migrations** - Scans the migrations directory and runs any migrations
+   not yet in the registry
+4. **Record Execution** - Logs each migration with timestamp, checksum, and
+   execution time
 
 ### Backward Compatibility
 
-The system automatically detects existing databases (from the old migration system) and marks the consolidated migrations as applied:
+The system automatically detects existing databases (from the old migration
+system) and marks the consolidated migrations as applied:
 
 ```typescript
 // Checks for existing tables and seed data
-if (tables.some(t => t.name === 'users')) {
+if (tables.some((t) => t.name === 'users')) {
   markApplied('001_complete_schema', 'Detected existing schema and seed data');
 }
 ```
 
-This ensures a smooth transition from the old ad-hoc migration system to the new registry-based system.
+This ensures a smooth transition from the old ad-hoc migration system to the new
+registry-based system.
 
 ## Adding New Migrations
 
 ### Step 1: Create Migration File
 
-Create a new SQL file in `backend/src/migrations/` with the next sequential number:
+Create a new SQL file in `backend/src/migrations/` with the next sequential
+number:
 
 ```bash
 # Example: Adding a new feature
@@ -150,18 +163,21 @@ Once a migration has been applied to any database:
 - **Never** rename the file
 - **Never** delete the file
 
-If you need to make changes, create a **new migration** that modifies the schema.
+If you need to make changes, create a **new migration** that modifies the
+schema.
 
 ### 3. Use Descriptive Names
 
 Migration names should clearly indicate what they do:
 
 ✅ Good:
+
 - `003_add_user_badges.sql`
 - `004_remove_deprecated_settings.sql`
 - `005_add_game_tags_index.sql`
 
 ❌ Bad:
+
 - `003_changes.sql`
 - `004_fix.sql`
 - `005_update.sql`
@@ -274,11 +290,13 @@ WHERE field NOT LIKE 'new_format%';  -- Idempotent check
 
 ### Migration Fails on Existing Database
 
-**Symptom:** Migration runs successfully on fresh database but fails on existing database.
+**Symptom:** Migration runs successfully on fresh database but fails on existing
+database.
 
 **Cause:** Non-idempotent SQL (e.g., `CREATE TABLE` without `IF NOT EXISTS`)
 
 **Solution:** Add idempotency checks:
+
 ```sql
 CREATE TABLE IF NOT EXISTS ...
 INSERT OR IGNORE INTO ...
@@ -289,6 +307,7 @@ INSERT OR IGNORE INTO ...
 **Symptom:** Migration is in the file system but not in `migrations` table.
 
 **Diagnosis:**
+
 ```sql
 -- Check what migrations are registered
 SELECT name, applied_at FROM migrations ORDER BY applied_at;
@@ -297,13 +316,15 @@ SELECT name, applied_at FROM migrations ORDER BY applied_at;
 ls backend/src/migrations/*.sql
 ```
 
-**Solution:** The migration may not have run yet. Restart the backend to trigger migration execution.
+**Solution:** The migration may not have run yet. Restart the backend to trigger
+migration execution.
 
 ### Checksum Mismatch
 
 **Symptom:** Migration was applied but someone modified the SQL file.
 
 **Detection:**
+
 ```sql
 SELECT name, checksum FROM migrations WHERE name = '003_my_migration';
 ```
@@ -311,6 +332,7 @@ SELECT name, checksum FROM migrations WHERE name = '003_my_migration';
 Then compute the checksum of the current file and compare.
 
 **Solution:**
+
 1. If the change was intentional, create a new migration with the corrected SQL
 2. If the change was accidental, restore the original SQL from git history
 3. Never modify applied migrations
@@ -322,6 +344,7 @@ Then compute the checksum of the current file and compare.
 **Cause:** Another process (e.g., Flashpoint Launcher) has the database locked.
 
 **Solution:**
+
 1. Close the Flashpoint Launcher
 2. Ensure no other backend processes are running
 3. Restart the backend
@@ -381,7 +404,8 @@ If you need to roll back a migration:
 
 ### Reset Migration Registry
 
-**Warning:** This should only be done on development databases, never in production.
+**Warning:** This should only be done on development databases, never in
+production.
 
 ```sql
 -- Delete all migration records
@@ -413,7 +437,8 @@ DROP TABLE migrations;
 
 ## References
 
-- Migration Registry Implementation: `backend/src/services/UserDatabaseService.ts`
+- Migration Registry Implementation:
+  `backend/src/services/UserDatabaseService.ts`
 - Migration Files: `backend/src/migrations/`
 - Archived Migrations: `backend/src/migrations/archived/`
 - Database Schema Reference: `docs/12-reference/database-schema-reference.md`

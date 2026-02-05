@@ -9,7 +9,7 @@ export function GameListSkeleton() {
     1: 'grid grid-cols-1 gap-2',
     2: 'grid grid-cols-1 md:grid-cols-2 gap-2',
     3: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2',
-    4: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2'
+    4: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2',
   };
 
   // Show 20 skeleton items

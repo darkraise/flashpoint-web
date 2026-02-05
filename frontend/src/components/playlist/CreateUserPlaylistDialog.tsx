@@ -92,8 +92,7 @@ export function CreateUserPlaylistDialog({
       }
     } catch (error) {
       toast.error(
-        getErrorMessage(error) ||
-          `Failed to ${isEditing ? 'update' : 'create'} playlist`
+        getErrorMessage(error) || `Failed to ${isEditing ? 'update' : 'create'} playlist`
       );
     }
   };
@@ -108,9 +107,7 @@ export function CreateUserPlaylistDialog({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? 'Edit Playlist' : 'Create New Playlist'}
-          </DialogTitle>
+          <DialogTitle>{isEditing ? 'Edit Playlist' : 'Create New Playlist'}</DialogTitle>
           <DialogDescription>
             {isEditing
               ? 'Update your playlist details below.'
@@ -167,10 +164,7 @@ export function CreateUserPlaylistDialog({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={createPlaylist.isPending || updatePlaylist.isPending}
-            >
+            <Button type="submit" disabled={createPlaylist.isPending || updatePlaylist.isPending}>
               {createPlaylist.isPending || updatePlaylist.isPending
                 ? isEditing
                   ? 'Updating...'

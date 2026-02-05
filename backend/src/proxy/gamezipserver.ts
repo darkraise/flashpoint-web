@@ -187,7 +187,10 @@ export class GameZipServer {
    * Handle GET /* - Serve file from mounted ZIPs
    * Supports proxy-style requests: GET http://domain.com/path HTTP/1.1
    */
-  private async handleFileRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  private async handleFileRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse
+  ): Promise<void> {
     if (!req.url) {
       this.sendError(res, 400, 'Bad Request: No URL');
       return;
@@ -233,7 +236,9 @@ export class GameZipServer {
     const contentType = mimeLookup(ext) || 'application/octet-stream';
 
     // Send file
-    logger.info(`[GameZipServer] ✓ Serving from ZIP ${result.mountId}: ${relPath} (${result.data.length} bytes)`);
+    logger.info(
+      `[GameZipServer] ✓ Serving from ZIP ${result.mountId}: ${relPath} (${result.data.length} bytes)`
+    );
 
     // CORS headers
     if (this.settings.allowCrossDomain) {
@@ -258,7 +263,7 @@ export class GameZipServer {
   private readBody(req: http.IncomingMessage): Promise<string> {
     return new Promise((resolve, reject) => {
       let body = '';
-      req.on('data', chunk => {
+      req.on('data', (chunk) => {
         body += chunk.toString();
       });
       req.on('end', () => {
