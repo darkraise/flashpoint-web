@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { logger } from '@/lib/logger';
 import type { RufflePlayer as RufflePlayerType } from '@ruffle-rs/ruffle';
 
+declare global {
+  interface Window {
+    RufflePlayer?: {
+      newest(): { createPlayer(): RufflePlayerType } | null;
+    };
+  }
+}
+
 export interface RufflePlayerProps {
   swfUrl: string;
   width?: string | number;
@@ -53,8 +61,9 @@ export function RufflePlayer({
         setIsLoading(true);
         setError(null);
 
-        // Give Ruffle time to clean up from previous instance (especially after navigation)
-        // This ensures Ruffle's internal registry is fully cleared
+        // Delay to ensure previous Ruffle instance is fully destroyed before creating new one.
+        // Ruffle's cleanup is asynchronous and there's no completion callback or readiness API.
+        // This prevents race conditions where a new player is created before the old one finishes cleanup.
         logger.debug('[Ruffle] Waiting for any previous cleanup to complete...');
         await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -78,7 +87,9 @@ export function RufflePlayer({
               oldPlayer.remove();
             }
 
-            // Give Ruffle additional time to clean up internal state
+            // Additional delay for Ruffle's internal state cleanup to complete.
+            // Ruffle manages internal registries and workers that require async cleanup.
+            // Without this delay, creating a new player too quickly can cause conflicts.
             logger.debug('[Ruffle] Waiting for cleanup to complete...');
             await new Promise((resolve) => setTimeout(resolve, 200));
           } catch (err) {
@@ -92,7 +103,7 @@ export function RufflePlayer({
         }
 
         // Load Ruffle script from self-hosted location (only if not already loaded)
-        if (!(window as any).RufflePlayer) {
+        if (!window.RufflePlayer) {
           const existingScript = document.querySelector('script[src="/ruffle/ruffle.js"]');
 
           if (!existingScript) {
@@ -110,11 +121,13 @@ export function RufflePlayer({
 
         if (!mounted) return;
 
-        // Wait for Ruffle to initialize
+        // Wait for Ruffle to initialize after script load.
+        // RufflePlayer registers itself asynchronously on window after script execution.
+        // This delay ensures the global API is fully available before attempting to use it.
         await new Promise((resolve) => setTimeout(resolve, 200));
 
         // Access Ruffle from window
-        const RufflePlayer = (window as any).RufflePlayer;
+        const RufflePlayer = window.RufflePlayer;
 
         if (!RufflePlayer) {
           throw new Error(
@@ -257,20 +270,7 @@ export function RufflePlayer({
         }
       }
     };
-  }, [swfUrl]); // Only depend on swfUrl - callbacks are stable or for logging only
-
-  // Update scale mode when it changes (requires reloading the SWF)
-  useEffect(() => {
-    if (rufflePlayerRef.current && scaleMode) {
-      const player = rufflePlayerRef.current;
-      if (player.config) {
-        player.config.scale = scaleMode;
-        player.config.forceScale = true;
-        logger.debug('[Ruffle] Scale mode updated to:', scaleMode);
-        // Note: Scale mode changes may require reloading the SWF to take effect
-      }
-    }
-  }, [scaleMode]);
+  }, [swfUrl, scaleMode]); // Depend on both swfUrl and scaleMode - reinitializes player when either changes
 
   return (
     <div className={`ruffle-player-container relative h-full overflow-hidden ${className}`}>
@@ -286,7 +286,11 @@ export function RufflePlayer({
       />
 
       {isLoading ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10">
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10"
+          role="status"
+          aria-label="Loading Flash game"
+        >
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
             <p className="text-white">Loading Flash game...</p>
@@ -296,7 +300,7 @@ export function RufflePlayer({
       ) : null}
 
       {error ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-10" role="alert">
           <div className="text-center max-w-md p-6">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
             <h3 className="text-xl font-bold text-white mb-2">Failed to Load Game</h3>

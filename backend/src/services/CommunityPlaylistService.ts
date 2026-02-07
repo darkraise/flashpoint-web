@@ -10,10 +10,13 @@ const PLAYLISTS_WIKI_URL = 'https://flashpointarchive.org/datahub/Playlists';
 
 /**
  * Allowed domains for community playlist downloads (SSRF protection)
+ * Consolidated list used by both service and route validation
  */
-const ALLOWED_DOWNLOAD_DOMAINS = [
+export const ALLOWED_DOWNLOAD_DOMAINS = [
   'flashpointarchive.org',
   'www.flashpointarchive.org',
+  'download.flashpointarchive.org',
+  'fpfss.unstable.life',
   'github.com',
   'raw.githubusercontent.com',
   'gist.githubusercontent.com',
@@ -38,9 +41,17 @@ export interface CommunityPlaylistsResponse {
   lastFetched: string;
 }
 
+export interface PlaylistData {
+  id: string;
+  title: string;
+  description?: string;
+  games: Array<{ gameId: string; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
 export interface DownloadResult {
   success: boolean;
-  playlist?: any;
+  playlist?: PlaylistData;
   error?: string;
   conflict?: boolean;
 }
@@ -212,7 +223,8 @@ export class CommunityPlaylistService {
 
     // Process all headers and tables in sequence
     $('h2, h3, table.wikitable').each((i, elem) => {
-      const tagName = (elem as any).name;
+      const tagName = elem.type === 'tag' ? elem.name : null;
+      if (!tagName) return;
 
       if (tagName === 'h2') {
         // This is a main category header
@@ -312,26 +324,37 @@ export class CommunityPlaylistService {
   /**
    * Validate that the downloaded playlist has the required structure
    */
-  private validatePlaylistStructure(data: any): boolean {
+  private validatePlaylistStructure(data: unknown): boolean {
+    if (!data || typeof data !== 'object') return false;
+    const obj = data as Record<string, unknown>;
+    // UUID validation regex for path traversal protection
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     // Must have required fields
-    if (!data.id || typeof data.id !== 'string') {
+    if (!obj.id || typeof obj.id !== 'string') {
       logger.warn('[CommunityPlaylist] Validation failed: missing or invalid id');
       return false;
     }
 
-    if (!data.title || typeof data.title !== 'string') {
+    // Validate ID format to prevent path traversal
+    if (!UUID_REGEX.test(obj.id)) {
+      logger.warn('[CommunityPlaylist] Validation failed: id is not a valid UUID format');
+      return false;
+    }
+
+    if (!obj.title || typeof obj.title !== 'string') {
       logger.warn('[CommunityPlaylist] Validation failed: missing or invalid title');
       return false;
     }
 
     // Games array must exist and be valid
-    if (!Array.isArray(data.games)) {
+    if (!Array.isArray(obj.games)) {
       logger.warn('[CommunityPlaylist] Validation failed: games is not an array');
       return false;
     }
 
     // Each game entry must have gameId
-    for (const game of data.games) {
+    for (const game of obj.games) {
       if (typeof game !== 'object' || !game.gameId) {
         logger.warn('[CommunityPlaylist] Validation failed: game entry missing gameId');
         return false;

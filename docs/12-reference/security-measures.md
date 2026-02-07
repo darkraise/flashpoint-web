@@ -53,6 +53,41 @@ requirePermission('games.play');
 - ✅ Password validation with Zod schemas
 - ✅ No password storage in plaintext
 
+### Guest Access Validation
+
+**Status**: ✅ **Hardened** (2026-02-07)
+
+**Implementation**: `backend/src/middleware/auth.ts` and
+`frontend/src/store/auth.ts`
+
+- ✅ Guest users (id=0) excluded from shared access bypass in
+  `validateSharedGameAccess`
+- ✅ Guest permissions restricted to read-only: `games.read`,
+  `playlists.read` only
+- ✅ `games.play` removed from guest role (requires authentication)
+
+### Data Integrity (Transaction Safety)
+
+**Status**: ✅ **Hardened** (2026-02-07)
+
+**Implementation**: Multiple backend services
+
+All operations with TOCTOU (Time-of-Check-Time-of-Use) race conditions now
+wrapped in database transactions:
+
+- `AuthService.register()` — uniqueness checks + INSERT in single transaction
+- `UserService.createUser()` — uniqueness checks + INSERT in single transaction
+- `SystemSettingsService.updateCategory()` — multi-setting updates in single
+  transaction
+- `UserPlaylistService.cloneSharedPlaylist()` — playlist creation + game inserts
+  in single transaction
+
+**Protection**:
+
+- ✅ Prevents duplicate user registration under concurrent requests
+- ✅ Ensures atomic multi-row updates (all-or-nothing)
+- ✅ Uses `better-sqlite3` synchronous transaction API for correctness
+
 ---
 
 ## Rate Limiting
@@ -123,13 +158,117 @@ const registerSchema = z.object({
 - ✅ Type-safe request validation
 - ✅ Automatic 400 Bad Request responses
 
+### Extended Zod Validation (2026-02-07)
+
+**Status**: ✅ **Expanded** (2026-02-07)
+
+Additional routes now use Zod validation for request bodies and query parameters:
+
+- **community-playlists.ts**: `downloadUrl` validated with
+  `z.string().url().max(2000)` to prevent extremely long URLs
+- **shared-playlists.ts**: `newTitle` validated with
+  `z.string().min(1).max(255).optional()` for title updates
+- **cache.ts**: `cacheType` validated with
+  `z.enum(['gameSearch', 'permissions', 'all']).optional()` to restrict cache
+  invalidation targets
+- **activities.ts**: `timeRange` validated against allowlist `['24h', '7d',
+  '30d']` to prevent invalid time range parameters
+
+**Protection**:
+
+- ✅ Prevents malformed request bodies from reaching service layer
+- ✅ Restricts query/body values to explicit allowlists
+- ✅ Returns 400 Bad Request with validation errors
+- ✅ Consistent validation patterns across all endpoints
+
+### Route ID Parameter Validation
+
+**Status**: ✅ **Hardened** (2026-02-06)
+
+**Implementation**: All route files handling `/:id` parameters
+
+Route ID parameters are now validated with `isNaN()` guard after `parseInt()`:
+
+```typescript
+// users.ts, roles.ts, etc.
+const id = parseInt(req.params.id, 10);
+if (isNaN(id)) {
+  return res.status(400).json({ error: 'Invalid ID' });
+}
+
+// Safe to use in queries
+const user = UserDatabaseService.get('SELECT * FROM users WHERE id = ?', [id]);
+```
+
+**Protection**:
+
+- ✅ Prevents NaN parameters from reaching SQL queries
+- ✅ Returns 400 Bad Request instead of misleading 404
+- ✅ Provides clear error feedback to API consumers
+
+### Query Parameter Limits
+
+**Status**: ✅ **Hardened** (2026-02-06)
+
+**Implementation**: Query parameters capped to prevent excessive queries
+
+**Affected Endpoints**:
+
+- `users.ts`: `limit` capped at 100
+- `favorites.ts`: `limit` capped at 100
+- `games.ts`: `/random` library param validated with Zod enum
+- `playlists.ts`: Request bodies validated with Zod schemas
+- `auth.ts`: Zod validation errors aggregate all messages
+
+**Pattern**:
+
+```typescript
+const limit = Math.min(req.query.limit ? parseInt(req.query.limit as string) : 10, 100);
+const games = GameService.getGames(limit);
+```
+
+**Protection**:
+
+- ✅ Prevents clients from requesting `limit=999999` and dumping entire tables
+- ✅ Reduces database load and query execution time
+- ✅ Protects against unintentional DoS attacks
+
+### Zod Error Aggregation
+
+**Status**: ✅ **Hardened** (2026-02-06)
+
+**Implementation**: `backend/src/routes/auth.ts`
+
+Authentication endpoints now aggregate all Zod validation errors instead of showing only the first:
+
+```typescript
+// BEFORE: Only first error shown
+res.status(400).json({ error: 'Username is required' });
+
+// AFTER: All validation errors aggregated
+res.status(400).json({
+  error: 'Validation failed',
+  details: [
+    'Username is required',
+    'Password must be at least 6 characters',
+    'Email is invalid'
+  ]
+});
+```
+
+**Protection**:
+
+- ✅ Provides complete feedback for form validation
+- ✅ Helps API consumers fix all issues at once
+- ✅ Reduces round-trip API calls
+
 ### Path Traversal Prevention
 
 **Status**: ✅ **Comprehensive Protection Implemented** (2026-01-29)
 
-**Centralized Security Utilities**: `game-service/src/utils/pathSecurity.ts`
+**Centralized Security Utilities**: `backend/src/game/utils/pathSecurity.ts`
 
-The game-service now has comprehensive directory traversal protection through
+The backend game module has comprehensive directory traversal protection through
 centralized validation utilities:
 
 **1. Path Sanitization & Validation**:
@@ -154,30 +293,31 @@ sanitizeUrlPath(urlPath: string): string
 
 **Implementation Coverage**:
 
-**Legacy Server** (`game-service/src/legacy-server.ts`):
+**Legacy Server** (`backend/src/game/legacy-server.ts`):
 
 - ✅ URL path sanitization at entry point
 - ✅ Path validation before all file access
-- ✅ Separate validation for htdocs and cgi-bin paths
+- ✅ Separate validation for htdocs and CGI paths
 
-**GameZip Server** (`game-service/src/gamezipserver.ts`):
+**GameZip Server** (`backend/src/game/gamezipserver.ts`):
 
 - ✅ URL path sanitization in file requests
 - ✅ Mount ID validation (prevents path separators)
 - ✅ ZIP path validation (ensures files within games directory)
 
-**Test Coverage**: 17 tests (all passing) in `pathSecurity.test.ts`
+**Test Coverage**: 17 tests (all passing) in `backend/src/game/utils/pathSecurity.test.ts`
 
 **For detailed information**: See
-`docs/13-security/directory-traversal-protection.md`
+`docs/13-security/directory-traversal-protection.md` (now covers backend game
+module)
 
 ---
 
-## DoS Protection
+## DoS & Resource Exhaustion Protection
 
 ### Request Body Size Limits
 
-**Game Service**: `game-service/src/gamezipserver.ts:307-324`
+**Backend Game Module**: `backend/src/game/gamezipserver.ts`
 
 ```typescript
 private readBody(req: http.IncomingMessage, maxSize: number = 1024 * 1024): Promise<string> {
@@ -198,7 +338,7 @@ private readBody(req: http.IncomingMessage, maxSize: number = 1024 * 1024): Prom
 
 ### ZIP Manager Memory Protection
 
-**Implementation**: `game-service/src/zip-manager.ts:20-36`
+**Implementation**: `backend/src/game/zip-manager.ts`
 
 ```typescript
 private mountedZips = new LRUCache<string, MountedZip>({
@@ -215,6 +355,44 @@ private mountedZips = new LRUCache<string, MountedZip>({
 - Prevents unlimited ZIP mounts
 - Automatic cleanup of old mounts
 - Resource leak prevention
+
+### ZIP Entry Size Limits
+
+**Status**: ✅ **Implemented** (2026-02-06)
+
+**Implementation**: `backend/src/game/zip-manager.ts`
+
+```typescript
+const MAX_ZIP_ENTRY_SIZE = 50 * 1024 * 1024; // 50MB per entry
+```
+
+**Protection**:
+
+- Prevents memory exhaustion from oversized ZIP entries
+- Blocks decompression bombs
+- Enforced during ZIP mounting
+
+### Rate Limiting on Resource-Intensive Endpoints
+
+**Status**: ✅ **Implemented** (2026-02-06)
+
+**Error Reporting** (`backend/src/routes/errors.ts`):
+
+```typescript
+router.post('/', rateLimitStrict, ...) // Strict rate limiting
+```
+
+**Updates** (`backend/src/routes/updates.ts`):
+
+```typescript
+router.get('/', rateLimitStandard, ...) // Standard rate limiting
+```
+
+**Protection**:
+
+- Prevents abuse of error submission endpoint
+- Prevents excessive update check requests
+- Reduces server resource consumption
 
 ---
 
@@ -290,9 +468,9 @@ cors({
 - ✅ Credentials allowed for authenticated requests
 - ✅ Protects sensitive API endpoints
 
-### Game Service (Permissive - Justified)
+### Backend Game Content Routes (Permissive - Justified)
 
-**Implementation**: `game-service/src/utils/cors.ts`
+**Implementation**: `backend/src/game/` routes (`/game-proxy/*`, `/game-zip/*`)
 
 ```typescript
 res.setHeader('Access-Control-Allow-Origin', '*');
@@ -303,6 +481,7 @@ res.setHeader('Access-Control-Allow-Origin', '*');
 - Serves public, read-only game content
 - No sensitive data exposure
 - Supports game embedding use cases
+- Integrated into the same backend service as restrictive API routes
 
 ---
 
@@ -326,7 +505,101 @@ const game = DatabaseService.get('SELECT * FROM game WHERE id = ?', [id]);
 
 ---
 
-## Error Handling
+## SSRF (Server-Side Request Forgery) Prevention
+
+### DNS Rebinding Prevention
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/services/GameDataDownloader.ts`
+
+Pre-checks DNS resolution for non-IP hostnames before connecting, blocking
+private/internal addresses:
+
+```typescript
+// Resolve hostname and check for private IPs
+const addr = await dns.lookup(hostname);
+if (isPrivateAddress(addr.address)) {
+  throw new Error('Download blocked: resolves to private address');
+}
+```
+
+**Protection**:
+
+- ✅ Prevents DNS rebinding attacks where public hostnames resolve to internal
+  IPs
+- ✅ Blocks downloads from 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12,
+  192.168.0.0/16
+- ✅ Check performed before connection, not after
+
+### Community Playlists Domain Allowlist
+
+**Status**: ✅ **Implemented** (2026-02-06)
+
+**Implementation**: `backend/src/routes/community-playlists.ts`
+
+```typescript
+const ALLOWED_DOWNLOAD_DOMAINS = [
+  'flashpointarchive.org',
+  '*.flashpointarchive.org',
+];
+
+// Domain validation before request
+if (!validateDomain(url, ALLOWED_DOWNLOAD_DOMAINS)) {
+  return res.status(400).json({ error: 'Invalid domain' });
+}
+```
+
+**Security Features**:
+
+- ✅ Whitelist of allowed domains for playlist downloads
+- ✅ HTTPS enforcement for downloads
+- ✅ Prevents internal network access (e.g., 127.0.0.1, internal IPs)
+
+**Consolidated Constants** (2026-02-07):
+
+The domain allowlist is now a single exported constant from
+`CommunityPlaylistService.ts`, eliminating duplication between the route and
+service files. This creates a single source of truth for allowed domains across
+the application.
+
+```typescript
+// CommunityPlaylistService.ts
+export const ALLOWED_DOWNLOAD_DOMAINS = [
+  'flashpointarchive.org',
+  '*.flashpointarchive.org',
+];
+```
+
+This pattern prevents inconsistencies where the route validation might differ
+from the service-level validation.
+
+### Game Data Download Redirect Limits
+
+**Status**: ✅ **Implemented** (2026-02-06)
+
+**Implementation**: `backend/src/game/services/GameDataDownloader.ts`
+
+```typescript
+private maxRedirects = 5; // Maximum redirect chain length
+```
+
+**Redirect Handling**:
+
+```typescript
+// Drain response body on redirect/error to prevent connection leaks
+response.resume();
+```
+
+**Protection**:
+
+- Limits redirect chains to 5 hops (prevents infinite redirect loops)
+- Drains response bodies to prevent resource leaks
+- Prevents redirect-based SSRF attacks
+
+---
+
+## Error Handling & Information Disclosure Prevention
 
 ### Centralized Error Handler
 
@@ -355,11 +628,195 @@ res.status(500).json({
 });
 ```
 
+### Async Error Handler Wrapper
+
+**Status**: ✅ **Hardened** (2026-02-06)
+
+**Implementation**: `backend/src/routes/system-settings.ts` and other route files
+
+All async route handlers are now wrapped with `asyncHandler` to prevent unhandled promise rejections:
+
+```typescript
+// BEFORE: Uncaught rejections if error thrown in async handler
+router.get('/', async (req, res) => {
+  const result = await someService.getResult(); // If rejects, crashes server
+  res.json(result);
+});
+
+// AFTER: Error caught and passed to error handler middleware
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const result = await someService.getResult();
+    res.json(result);
+  })
+);
+```
+
+**Implementation**:
+
+```typescript
+function asyncHandler(fn: Function) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+```
+
+**Protection**:
+
+- ✅ Prevents unhandled promise rejections from crashing server
+- ✅ Errors reach centralized error handler
+- ✅ Consistent error responses to clients
+
+**Middleware Coverage** (2026-02-07):
+
+asyncHandler now also wraps middleware functions:
+
+- `authenticate` middleware in `backend/src/middleware/auth.ts`
+- `optionalAuth` middleware in `backend/src/middleware/auth.ts`
+- All game content route handlers: `game-zip.ts`, `game-proxy.ts`, `github.ts`
+
+This ensures middleware errors are also caught and handled properly instead of
+propagating as unhandled rejections.
+
+### Sensitive Log Sanitization
+
+**Status**: ✅ **Hardened** (2026-02-06)
+
+**Implementation**: `backend/src/routes/auth.ts`
+
+Username input is now sanitized before logging to prevent leaking sensitive data:
+
+```typescript
+private sanitizeUsername(username: unknown): string {
+  if (typeof username !== 'string') {
+    return 'unknown';
+  }
+  // Truncate long usernames to prevent log injection
+  return username.substring(0, 50);
+}
+
+// In login handler
+logger.warn(`[Auth] Login attempt failed for user: ${this.sanitizeUsername(req.body.username)}`);
+```
+
+**Protection**:
+
+- ✅ Prevents username PII exposure in logs
+- ✅ Truncates long inputs to prevent log injection
+- ✅ Safe fallback for non-string values
+
+### Download Endpoint Error Messages & SSE Handling
+
+**Status**: ✅ **Hardened** (2026-02-06)
+
+**Implementation**: `backend/src/routes/downloads.ts`
+
+**Error Response Sanitization**:
+
+Error responses no longer leak internal implementation details to clients:
+
+```typescript
+// ✗ Before: Error: File not found at /D/Flashpoint/Data/Games/abc123.zip
+// ✓ After: { error: 'File not found' }
+```
+
+**Server-Sent Events (SSE) Error Handling**:
+
+SSE endpoint now properly checks `res.headersSent` before attempting to send error responses:
+
+```typescript
+// BEFORE: Errors crash if headers already sent
+try {
+  // SSE streaming operations
+} catch (error) {
+  res.status(500).json({ error: 'Server error' }); // Crashes if headers sent!
+}
+
+// AFTER: Check headers before responding
+try {
+  // SSE streaming operations
+} catch (error) {
+  if (res.headersSent) {
+    // Headers already sent, write SSE error event
+    res.write(`data: {"error": "Server error"}\n\n`);
+    res.end();
+  } else {
+    // Headers not sent, use normal response
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+```
+
+**Protection**:
+
+- ✅ Prevents attackers from discovering system paths
+- ✅ Prevents crashes when headers already sent
+- ✅ Graceful error handling for streaming responses
+
+### Health Endpoint Information Disclosure
+
+**Status**: ✅ **Hardened** (2026-02-06)
+
+**Implementation**: `backend/src/server.ts`
+
+Health endpoint (`/health`) no longer exposes sensitive information:
+
+```typescript
+// ✗ Before: { status: 'ok', flashpointPath: '/D/Flashpoint' }
+// ✓ After: { status: 'ok' }
+```
+
+**Protection**: Prevents disclosure of system paths to unauthorized users
+
+### Additional Code Quality Improvements
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Low-Priority Security Enhancements**:
+
+- **headersSent guard in proxy-request-handler**: The `sendError()` method in `proxy-request-handler.ts` now checks `res.headersSent` before attempting to send error responses, preventing "Cannot set headers after they are sent" errors in streaming scenarios.
+- **Private visibility on internal methods**: `findActiveDownload()` in `gamezipserver.ts` is now `private` - it was only used internally but was publicly accessible. `PRIVATE_IP_RANGES` in `GameDataDownloader.ts` is now `static readonly`.
+- **Removed unnecessary exports**: Internal-only constants like `CUSTOM_MIME_TYPES` no longer exported, reducing the public API surface. Convenience re-exports removed from service index files.
+
 ---
 
-## Frontend Security
+## XSS Prevention
 
-### XSS Prevention
+### Backend Game Module HTML Escaping
+
+**Status**: ✅ **Implemented** (2026-02-06)
+
+**Implementation**: `backend/src/game/gamezipserver.ts`
+
+The GameZip server dynamically generates HTML loading pages with user-controlled
+data (progress values, source names, elapsed time). All interpolated values are
+now escaped using a centralized `escapeHtml()` utility:
+
+```typescript
+private escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+```
+
+**Protected Values**:
+
+- Progress percentages and values
+- Download source names
+- Elapsed time and status messages
+
+**Prevention**: Blocks XSS attacks through HTML injection in dynamically
+generated loading pages
+
+### Frontend Security
 
 **React Built-in Protection**:
 
@@ -369,15 +826,31 @@ res.status(500).json({
 
 ### Token Storage
 
-**Current Implementation**: `frontend/src/store/auth.ts`
+**Current Implementation**: `frontend/src/store/auth.ts` and `backend/src/middleware/auth.ts`
 
-**Location**: localStorage
+**Refresh Tokens**: HTTP-only cookies
 
-**Note**: Documented trade-off
+- ✅ Protected from XSS attacks (JavaScript cannot access)
+- ✅ Cookie name: `fp_refresh`
+- ✅ Cookie path: `/api/auth` (scoped to auth routes only)
+- ✅ Expiry: 30 days
+- ✅ Secure flag: enabled in production (HTTPS only)
+- ✅ SameSite: `lax` (provides CSRF protection)
+- ✅ Automatically sent with requests via `withCredentials: true` on axios client
 
-- Vulnerable to XSS attacks
-- Acceptable for low-risk application
-- Consider HttpOnly cookies for higher security requirements
+**Access Tokens**: Memory-only (Zustand store)
+
+- ✅ Never persisted to localStorage
+- ✅ Lost on page reload (recovered via `/api/auth/refresh` cookie)
+- ✅ Prevents XSS persistence attacks
+
+**Session Recovery on Page Reload**:
+
+1. Frontend initializes auth store (access token is empty)
+2. Frontend makes `GET /api/auth/refresh` (cookie sent automatically)
+3. Backend validates refresh token from cookie
+4. Backend returns new access token (no cookie refresh needed)
+5. Frontend stores access token in memory
 
 ### Type Safety
 
@@ -386,6 +859,115 @@ res.status(500).json({
 - ✅ No implicit `any` types
 - ✅ Null/undefined checks
 - ✅ Type-safe API calls
+
+---
+
+## Authentication on Protected Endpoints
+
+### Game Management Endpoints
+
+**Status**: ✅ **Implemented** (2026-02-06)
+
+**Protected Endpoints** (`backend/src/routes/game-zip.ts`):
+
+- **POST /game-zip/mount** - Mount a ZIP file (requires `settings.update`)
+- **POST /game-zip/unmount** - Unmount a ZIP file (requires `settings.update`)
+- **GET /game-zip/list** - List mounted ZIPs (requires `settings.update`)
+
+**Authentication Middleware**:
+
+```typescript
+router.post('/mount', authenticate, requirePermission('settings.update'), ...);
+router.post('/unmount', authenticate, requirePermission('settings.update'), ...);
+router.get('/list', authenticate, requirePermission('settings.update'), ...);
+```
+
+**Exception**: File-serving route (`GET /*`) remains unauthenticated
+
+- **Reason**: Game content must load in iframes without authentication
+- **Security**: No sensitive data exposed (public game files only)
+
+---
+
+## CGI & Legacy Content Security
+
+### CGI Symlink Bypass Prevention
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/cgi/cgi-executor.ts`
+
+CGI script path validation now resolves symlinks before checking path
+boundaries:
+
+```typescript
+// Resolve symlinks before validation
+const realPath = await fs.realpath(scriptPath);
+const validPath = sanitizeAndValidatePath(cgiBaseDir, realPath);
+```
+
+**Protection**:
+
+- ✅ Prevents symlink-based path traversal (symlink pointing outside allowed
+  directory)
+- ✅ Uses `fs.realpath()` to resolve all symbolic links before validation
+- ✅ Validates the resolved path stays within allowed CGI directory
+
+### CGI Environment Variable Allowlist
+
+**Status**: ✅ **Implemented** (2026-02-06)
+
+**Implementation**: `backend/src/game/cgi/cgi-executor.ts`
+
+CGI scripts no longer receive unrestricted environment variables. Using an
+allowlist instead of a denylist:
+
+```typescript
+private static readonly ALLOWED_ENV_VARS = new Set([
+  'REQUEST_METHOD',
+  'REQUEST_URI',
+  'QUERY_STRING',
+  'CONTENT_TYPE',
+  'CONTENT_LENGTH',
+  'HTTP_HOST',
+  'HTTP_USER_AGENT',
+  'REMOTE_ADDR',
+  'PATH_INFO',
+  'PATH_TRANSLATED',
+  // ... more safe variables
+]);
+```
+
+**Protection**:
+
+- ✅ CGI scripts only receive necessary variables
+- ✅ Prevents leakage of sensitive env vars (API keys, paths, tokens)
+- ✅ Blocks information disclosure attacks
+
+### HTTP Header Filtering for CGI
+
+**Status**: ✅ **Implemented** (2026-02-06)
+
+**Implementation**: `backend/src/game/cgi/cgi-executor.ts`
+
+```typescript
+private static readonly ALLOWED_CGI_HEADERS = new Set([
+  'accept',
+  'accept-encoding',
+  'accept-language',
+  'content-type',
+  'content-length',
+  'user-agent',
+  'referer',
+  // ... more safe headers
+]);
+```
+
+**Protection**:
+
+- ✅ Filters HTTP headers passed to CGI scripts
+- ✅ Prevents header injection attacks
+- ✅ Blocks sensitive header propagation
 
 ---
 
@@ -433,25 +1015,42 @@ res.status(500).json({
 - [x] Authentication (JWT)
 - [x] Authorization (RBAC)
 - [x] Password hashing (bcrypt)
-- [x] Rate limiting (login, registration)
-- [x] Input validation (Zod schemas)
+- [x] Rate limiting (login, registration, errors, updates)
+- [x] Input validation (Zod schemas, route ID parameters, query limits)
 - [x] SQL injection prevention (parameterized queries)
 - [x] Path traversal prevention (comprehensive, with 17 test cases)
-- [x] DoS protection (request size limits, LRU cache)
-- [x] Sensitive data sanitization in logs
+- [x] DoS protection (request size limits, LRU cache, ZIP entry limits)
+- [x] Sensitive data sanitization in logs (username truncation)
 - [x] Activity logging
-- [x] Error handling (centralized)
-- [x] CORS configuration (restrictive for backend)
+- [x] Error handling (centralized, no information leakage, async handlers)
+- [x] CORS configuration (restrictive for backend, dynamic)
 - [x] Graceful shutdown
+- [x] XSS prevention (HTML escaping in generated templates)
+- [x] SSRF prevention (domain allowlist, redirect limits)
+- [x] Authentication on game management endpoints
+- [x] CGI environment variable allowlist
+- [x] HTTP header filtering for CGI
+- [x] Health endpoint hardening (no path disclosure)
+- [x] SSE error handling (headers check before responding)
+- [x] DNS rebinding prevention (private IP check before download)
+- [x] Symlink bypass prevention (realpath before path validation)
+- [x] Guest access hardening (read-only permissions, shared access check)
+- [x] TOCTOU race condition prevention (database transactions)
+- [x] SSE write-after-close prevention (closed flag guard)
+- [x] AbortSignal listener cleanup (memory leak prevention)
+- [x] Downloaded file path re-validation (post-download directory check)
+- [x] Extended Zod validation on request bodies (community playlists, shared
+  playlists, cache, activities)
+- [x] asyncHandler on all async middleware (authenticate, optionalAuth)
+- [x] Consolidated domain allowlists (single source of truth)
 
 ### ⚠️ Recommended Enhancements
 
-- [ ] HttpOnly cookies for refresh tokens (instead of localStorage)
 - [ ] Content Security Policy headers
 - [ ] Database indexes (requires Flashpoint Archive coordination)
 - [ ] Security headers (Helmet middleware)
 - [ ] HTTPS in production
-- [ ] Rate limiting on all endpoints (currently only auth)
+- [ ] Rate limiting on additional endpoints (CDN fallback, external requests)
 
 ---
 
@@ -464,5 +1063,8 @@ res.status(500).json({
 
 ---
 
-**Last Updated**: 2026-01-29 **Review Status**: Comprehensive (Enhanced path
-traversal protection)
+**Last Updated**: 2026-02-07 **Review Status**: Comprehensive (All critical, high,
+and medium-severity fixes implemented: HTTP-only cookies, DNS rebinding, symlink
+bypass, TOCTOU transactions, guest hardening, resource cleanup, SSE safety,
+downloaded file validation, extended Zod validation, asyncHandler middleware,
+consolidated domain allowlists)

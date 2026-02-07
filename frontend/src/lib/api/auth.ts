@@ -5,7 +5,6 @@ import type {
   LoginResponse,
   RegisterResponse,
   User,
-  AuthTokens,
 } from '@/types/auth';
 
 /**
@@ -34,16 +33,18 @@ export const authApi = {
   /**
    * Logout and invalidate refresh token
    */
-  logout: async (refreshToken: string): Promise<{ success: boolean; message: string }> => {
-    const { data } = await apiClient.post('/auth/logout', { refreshToken });
+  logout: async (): Promise<{ success: boolean; message: string }> => {
+    const { data } = await apiClient.post('/auth/logout');
     return data;
   },
 
   /**
    * Refresh access token using refresh token
    */
-  refreshToken: async (refreshToken: string): Promise<AuthTokens> => {
-    const { data } = await apiClient.post<AuthTokens>('/auth/refresh', { refreshToken });
+  refreshToken: async (): Promise<{ accessToken: string; expiresIn: number }> => {
+    const { data } = await apiClient.post<{ accessToken: string; expiresIn: number }>(
+      '/auth/refresh'
+    );
     return data;
   },
 
@@ -52,6 +53,17 @@ export const authApi = {
    */
   getMe: async (): Promise<User> => {
     const { data } = await apiClient.get<User>('/auth/me');
+    return data;
+  },
+
+  /**
+   * Check if initial setup is required
+   * Public endpoint that returns setup status
+   */
+  getSetupStatus: async (): Promise<{ needsSetup: boolean; message: string }> => {
+    const { data } = await apiClient.get<{ needsSetup: boolean; message: string }>(
+      '/auth/setup-status'
+    );
     return data;
   },
 };

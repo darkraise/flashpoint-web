@@ -18,9 +18,9 @@ graph TB
         Databases[(SQLite DBs)]
     end
 
-    subgraph "Game Service :22500/:22501"
-        Proxy[HTTP Proxy]
-        ZipServer[ZIP Server]
+    subgraph "Backend Game Module"
+        Proxy[HTTP Proxy<br/>/game-proxy/*]
+        ZipServer[ZIP Server<br/>/game-zip/*]
     end
 
     Components -->|Use| Hooks
@@ -31,11 +31,10 @@ graph TB
     Routes -->|Business Logic| Services
     Services -->|Query| Databases
 
-    APIClient -.Direct HTTP.-> Proxy
     Components -.Load Games.-> Proxy
 
-    Routes -.Delegate Files.-> Proxy
-    Routes -.Mount ZIPs.-> ZipServer
+    Routes -->|Internal Routes| Proxy
+    Routes -->|Internal Routes| ZipServer
 
     style APIClient fill:#61dafb,stroke:#333,stroke-width:2px
     style Routes fill:#90ee90,stroke:#333,stroke-width:2px
@@ -84,66 +83,67 @@ sequenceDiagram
     end
 
 ---
-title: Backend to Game Service Communication
+title: Backend Internal Game Module Communication
 ---
 sequenceDiagram
-    participant Backend
-    participant HTTPClient
-    participant GameService
-    participant ProxyServer
+    participant Backend Routes
+    participant GameDataService
+    participant GameModule
     participant ZipServer
 
-    Note over Backend,GameService: ZIP Mounting Request
+    Note over Backend Routes,GameModule: ZIP Mounting Request
 
-    Backend->>HTTPClient: Prepare mount request
-    HTTPClient->>ZipServer: POST http://localhost:22501/mount
-    Note over HTTPClient,ZipServer: {<br/>  gameId: "abc-123",<br/>  zipPath: "D:/.../.zip"<br/>}
+    Backend Routes->>GameDataService: getGameData(gameId)
+    GameDataService->>GameModule: Call internal mount function
+    GameModule->>ZipServer: Mount ZIP internally
+    Note over GameModule,ZipServer: {<br/>  gameId: "abc-123",<br/>  zipPath: "D:/.../.zip"<br/>}
 
     ZipServer->>ZipServer: Validate and mount ZIP
-    ZipServer-->>HTTPClient: {success: true, mountPoint}
-    HTTPClient-->>Backend: Mount result
+    ZipServer-->>GameModule: {success: true, mountPoint}
+    GameModule-->>GameDataService: Mount result
+    GameDataService-->>Backend Routes: Mount result
 
-    Note over Backend,GameService: File Serving (Delegation)
+    Note over Backend Routes,GameModule: File Serving (Internal)
 
-    Backend->>Backend: Construct proxy URL
-    Note over Backend: contentUrl = http://localhost:22500/{url}
+    Backend Routes->>Backend Routes: Construct proxy URL
+    Note over Backend Routes: contentUrl = http://localhost:3100/game-proxy/{url}
 
-    Backend-->>Frontend: Return contentUrl in response
-    Note over Frontend: Frontend directly loads<br/>files from game service
+    Backend Routes-->>Frontend: Return contentUrl in response
+    Note over Frontend: Frontend directly loads<br/>files from backend game module
 
 ---
-title: Frontend Direct Communication with Game Service
+title: Frontend Communication with Backend Game Module
 ---
 sequenceDiagram
     participant Browser
     participant Ruffle
-    participant ProxyServer
+    participant Backend
     participant FileSystem
     participant ZipServer
 
     Browser->>Ruffle: Load game in Ruffle player
     Ruffle->>Ruffle: Parse contentUrl
 
-    Ruffle->>ProxyServer: GET http://localhost:22500/http://example.com/game.swf
+    Ruffle->>Backend: GET http://localhost:3100/game-proxy/http://example.com/game.swf
 
-    ProxyServer->>ProxyServer: Parse requested URL
-    ProxyServer->>FileSystem: Check local files
+    Backend->>Backend: Parse requested URL
+    Backend->>FileSystem: Check local files
 
     alt File found locally
-        FileSystem-->>ProxyServer: File bytes
-        ProxyServer-->>Ruffle: Response with CORS headers
+        FileSystem-->>Backend: File bytes
+        Backend-->>Ruffle: Response with CORS headers
     else File in ZIP
-        ProxyServer->>ZipServer: Request file from mounted ZIP
+        Backend->>ZipServer: Request file from mounted ZIP
         ZipServer->>ZipServer: Read from ZIP archive
-        ZipServer-->>ProxyServer: File bytes
-        ProxyServer-->>Ruffle: Response with CORS headers
+        ZipServer-->>Backend: File bytes
+        Backend-->>Ruffle: Response with CORS headers
     end
 
     Ruffle->>Ruffle: Execute game
 
     loop Asset loading
-        Ruffle->>ProxyServer: GET /assets/image.png
-        ProxyServer-->>Ruffle: Asset bytes
+        Ruffle->>Backend: GET /game-proxy/assets/image.png
+        Backend-->>Ruffle: Asset bytes
     end
 
 ---
@@ -178,12 +178,12 @@ sequenceDiagram
             Frontend->>Frontend: Show error toast
         end
 
-    else Game service unavailable
-        Frontend->>GameService: Load game file
-        GameService-->>Frontend: Connection refused
+    else Game module unavailable
+        Frontend->>Backend: Load game file
+        Backend-->>Frontend: Connection refused
 
         Frontend->>Frontend: Show fallback UI
-        Note over Frontend: "Game service unavailable<br/>Please try again later"
+        Note over Frontend: "Game loading unavailable<br/>Please try again later"
 
     else Token expired
         APIClient->>Backend: Request with expired token

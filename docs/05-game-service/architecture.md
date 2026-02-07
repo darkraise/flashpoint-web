@@ -1,13 +1,13 @@
-# Game Service Architecture
+# Game Content Module Architecture
 
 This document describes the architectural design and implementation patterns of
-the Flashpoint Game Service.
+the integrated Game Content Module.
 
 ## System Overview
 
-The game-service is designed as a standalone microservice that handles all game
-content delivery, replacing the original Go-based FlashpointGameServer with a
-TypeScript/Node.js implementation.
+The game content module is integrated into the backend Express application,
+replacing the original standalone game-service with TypeScript/Node.js
+implementations of game content delivery components.
 
 ### Design Principles
 
@@ -19,69 +19,80 @@ TypeScript/Node.js implementation.
 4. **Performance**: Streaming, connection pooling, and caching for optimal speed
 5. **Compatibility**: 199+ MIME types and HTML polyfills for legacy content
 
-## Dual-Server Architecture
+## Integrated Architecture
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                      Game Service Process                       │
-│                                                                 │
-│  ┌──────────────────────────┐  ┌──────────────────────────┐   │
-│  │   HTTP Proxy Server      │  │    GameZip Server        │   │
-│  │      Port 22500          │  │      Port 22501          │   │
-│  ├──────────────────────────┤  ├──────────────────────────┤   │
-│  │ ProxyRequestHandler      │  │ GameZipServer            │   │
-│  │      ↓                   │  │      ↓                   │   │
-│  │ LegacyServer             │  │ ZipManager               │   │
-│  │      ↓                   │  │      ↓                   │   │
-│  │ - Local htdocs           │  │ - node-stream-zip        │   │
-│  │ - Override paths         │  │ - In-memory ZIP index    │   │
-│  │ - External CDN           │  │ - Streaming access       │   │
-│  │ - Local cache            │  │                          │   │
-│  └──────────────────────────┘  └──────────────────────────┘   │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐ │
-│  │              Shared Components                           │ │
-│  ├──────────────────────────────────────────────────────────┤ │
-│  │ ConfigManager | MimeTypes | Logger | HTMLInjector       │ │
-│  └──────────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│              Backend Application (Port 3100)                     │
+│                                                                  │
+│  ┌────────────────────────┐  ┌────────────────────────────┐    │
+│  │   Game Proxy Router    │  │    GameZip Server          │    │
+│  │   /game-proxy/*        │  │    (Singleton, Direct API) │    │
+│  ├────────────────────────┤  ├────────────────────────────┤    │
+│  │ ProxyRequestHandler    │  │ GameZipServer              │    │
+│  │      ↓                 │  │      ↓                     │    │
+│  │ LegacyServer           │  │ ZipManager                 │    │
+│  │      ↓                 │  │      ↓                     │    │
+│  │ - Local htdocs         │  │ - node-stream-zip          │    │
+│  │ - Override paths       │  │ - In-memory ZIP index      │    │
+│  │ - External CDN         │  │ - Streaming access         │    │
+│  │ - Local cache          │  │                            │    │
+│  └────────────────────────┘  └────────────────────────────┘    │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │              Shared Components                         │    │
+│  ├────────────────────────────────────────────────────────┤    │
+│  │ ConfigManager | MimeTypes | Logger | HTMLInjector     │    │
+│  └────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────┐    │
+│  │              Services                                  │    │
+│  ├────────────────────────────────────────────────────────┤    │
+│  │ PreferencesService | GameDataDownloader               │    │
+│  └────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### Why Two Servers?
+### Architecture Changes from Standalone Service
 
-1. **Different Request Patterns**:
-   - Proxy server: High-throughput, varied content types, fallback logic
-   - GameZip server: API-driven, mount/unmount operations, direct ZIP access
+1. **No Separate HTTP Servers**:
+   - Proxy runs as Express router, not standalone HTTP server
+   - GameZip uses direct method calls instead of HTTP endpoints
+   - Both use backend's port 3100
 
-2. **Independent Scaling**:
-   - Each server can be configured with different timeouts
-   - GameZip can fail gracefully without affecting proxy server
-   - Future: Can run on different hosts if needed
+2. **Single-Process Design**:
+   - Simplifies deployment (one Docker container)
+   - Shared memory for configuration and caching
+   - Unified logging and error handling
 
-3. **Clear Separation**:
-   - Proxy: Content delivery with external fallbacks
-   - GameZip: ZIP management and streaming
+3. **Direct API Integration**:
+   - ProxyRequestHandler calls ZipManager directly
+   - Backend calls GameZip methods: `mountZip()`, `unmountZip()`, etc.
+   - No network latency between components
 
 ## Component Architecture
 
-### 1. HTTP Proxy Server (Port 22500)
+### 1. Game Proxy Router (/game-proxy/*)
 
-**Purpose**: Serve legacy web content with intelligent fallback chain
+**Purpose**: Serve legacy web content with intelligent fallback chain (Express
+router)
+
+**Location**: `backend/src/game/`
 
 **Components**:
 
-- `http-proxy-server.ts`: Express server setup and configuration
+- `proxy-router.ts`: Express route handler
 - `proxy-request-handler.ts`: Request routing and response handling
 - `legacy-server.ts`: Fallback chain implementation
 
 **Request Flow**:
 
 ```
-Request
+Request: /game-proxy/http://domain.com/file.swf
   ↓
 Parse URL (proxy-style or standard)
   ↓
-Try GameZip Server (if available)
+Try GameZip Server (direct call)
   ↓
 Try LegacyServer fallback chain
   ↓
@@ -96,29 +107,33 @@ Return response with CORS headers
 - Automatic subdomain variation matching (www, core, cdn, etc.)
 - External CDN fallback with local caching
 - HTML polyfill injection for game compatibility
+- Integrated with backend's middleware and logging
 
-### 2. GameZip Server (Port 22501)
+### 2. GameZip Server (Singleton, Direct API)
 
 **Purpose**: Mount and serve files from ZIP archives without extraction
 
+**Location**: `backend/src/game/`
+
 **Components**:
 
-- `gamezipserver.ts`: GameZip server implementation
+- `gamezipserver.ts`: GameZip server implementation (singleton)
 - `zip-manager.ts`: ZIP mounting, indexing, and file access
 
-**API Endpoints**:
+**Direct API Methods**:
+
+```typescript
+// Called directly by backend, not via HTTP
+mountZip(id: string, params: MountParams): Promise<void>
+unmountZip(id: string): Promise<boolean>
+listMounts(): Array<MountInfo>
+findFile(relPath: string): Promise<FileData | null>
+```
+
+**Request Flow** (Backend calling GameZip):
 
 ```
-POST   /mount/:id        Mount a ZIP file
-DELETE /mount/:id        Unmount a ZIP file
-GET    /mounts           List all mounted ZIPs
-GET    /*                Serve file from mounted ZIP
-```
-
-**Request Flow**:
-
-```
-Mount Request
+Backend calls: gameZipServer.mountZip('game-123', {...})
   ↓
 Verify ZIP exists
   ↓
@@ -128,9 +143,9 @@ Store in ZipManager map
   ↓
 Return success
 
-File Request
+Proxy requesting file:
   ↓
-Parse URL for hostname + path
+Call: gameZipServer.findFile(relPath)
   ↓
 Search all mounted ZIPs
   ↓
@@ -147,10 +162,13 @@ Return with MIME type + CORS
 - Multi-ZIP search with path variation handling
 - Streaming for large files
 - Automatic unmount on shutdown
+- Single-process memory sharing (no network overhead)
 
 ### 3. Configuration Manager
 
 **Purpose**: Centralized configuration from environment and proxySettings.json
+
+**Location**: `backend/src/game/config.ts`
 
 **Sources** (in priority order):
 
@@ -169,11 +187,31 @@ class ConfigManager {
 
 **Settings Managed**:
 
-- Server ports
 - File paths (htdocs, games, CGI)
 - External fallback URLs
 - Performance tuning (chunk size, timeouts)
 - Feature flags (CORS, Brotli, CGI)
+
+**Shared Constants**:
+
+The configuration module exports shared constants used across the game service:
+
+```typescript
+// config.ts
+export const MAX_BUFFERED_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
+// Used in gamezipserver.ts, zip-manager.ts, legacy-server.ts
+```
+
+This eliminates magic number duplication and ensures consistent size limits across
+all components.
+
+**Error Differentiation**: Config loading now distinguishes between missing files
+(ENOENT, logged as warning) and corrupted JSON (SyntaxError, logged as error).
+Both fall back to defaults but with appropriate severity levels for debugging
+configuration issues.
+
+**Initialization**: Called by backend on startup via `backend/src/server.ts`
 
 ### 4. Legacy Server (Fallback Chain)
 
@@ -238,6 +276,38 @@ For a request to `mochibot.com/file.swf`, try:
 This handles cases where Flashpoint stores files with subdomain prefixes but
 games request without them.
 
+**Hostname Variation Optimization** (2026-02-07):
+
+Subdomain variations now skip prefixes that already exist on the hostname to prevent
+redundant candidates. For example, `www.example.com` won't generate
+`www.www.example.com` as a variation candidate. This reduces the number of path
+candidates checked and improves lookup performance.
+
+**Negative Lookup Cache Management** (2026-02-07):
+
+The `LegacyServer` includes a static `clearCache()` method for clearing the
+negative lookup cache during shutdown or database reloads. The cache uses FIFO
+eviction at 5000 entries to bound memory usage while still providing performance
+benefits for repeated requests to missing files.
+
+**External Source URL Safety**
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/legacy-server.ts`
+
+External source URL resolution now uses the `URL` constructor to prevent path traversal:
+
+```typescript
+// SAFE: URL constructor handles path resolution correctly
+const resolved = new URL(relPath, normalizedBase);
+if (!resolved.href.startsWith(normalizedBase)) {
+  throw new Error('URL escapes base');
+}
+```
+
+**Negative Cache Fix**: Only ENOENT errors are cached in the not-found cache. Validation failures and transient errors are not cached, preventing permanent 404s for valid files.
+
 ### 5. ZIP Manager
 
 **Purpose**: Manage ZIP mounting and provide file access without extraction
@@ -290,17 +360,43 @@ constructor() {
 1. Check if already mounted (prevent duplicates)
 2. Verify ZIP file exists on disk
 3. Create StreamZip.async instance
-4. Store in Map with metadata (id, path, mount time)
-5. Log file count for debugging
+4. Build entry index: Set<string> of all entry names
+5. Store in Map with metadata (id, path, mount time, entryIndex)
+6. Log file count for debugging
 ```
+
+**Entry Index Optimization**:
+
+At mount time, ZipManager builds a `Set<string>` of all entry names in the ZIP
+for O(1) lookup performance:
+
+```typescript
+// Build index at mount time
+const entryIndex = new Set<string>();
+const entries = await zip.entries();
+for (const [name] of entries) {
+  entryIndex.add(name.toLowerCase());
+}
+
+// Store with the mounted ZIP
+mountedZips.set(id, { zip, entryIndex, ... });
+```
+
+**Benefits**:
+
+- O(1) entry existence checks (vs sequential `entryData()` calls)
+- Eliminates unnecessary ZIP I/O for non-existent files
+- Faster failure paths (404 responses)
+- Minimal memory overhead (one string set per ZIP)
 
 **File Access**:
 
 ```
-1. Normalize file path (remove leading slash)
+1. Normalize file path (remove leading slash, lowercase)
 2. Look up mounted ZIP by ID
-3. Call zip.entryData(path) - streams from ZIP
-4. Return Buffer directly (no temp files)
+3. Check entryIndex.has(normalizedPath) - O(1) lookup
+4. If found: Call zip.entryData(path) - streams from ZIP
+5. Return Buffer directly (no temp files)
 ```
 
 **Multi-ZIP Search**:
@@ -313,11 +409,133 @@ Try path variations in order:
   - Legacy/htdocs/{relPath} (full path)
 
 For each variation:
-  Search all mounted ZIPs
-  Return first match
+  Search all mounted ZIPs:
+    Check entryIndex.has() - O(1) lookup
+    If found: Load and return immediately
+Return null if not found in any ZIP
 ```
 
-### 6. MIME Type System
+### 6. PreferencesService
+
+**Purpose**: Read Flashpoint preferences.json and expose gameDataSources for
+auto-downloading game ZIPs.
+
+**Location**: `backend/src/game/services/PreferencesService.ts`
+
+**Architecture**:
+
+```typescript
+class PreferencesService {
+  private preferences: FlashpointPreferences | null = null;
+  private lastLoadTime: number = 0;
+  private readonly CACHE_TTL = 60 * 1000; // 1 minute
+
+  static initialize(flashpointPath: string): PreferencesService;
+  static getInstance(): PreferencesService;
+  async loadPreferences(): Promise<FlashpointPreferences>;
+  async getGameDataSources(): Promise<GameDataSource[]>;
+  async getDataPacksFolderPath(): Promise<string>;
+  invalidateCache(): void;
+}
+```
+
+**Configuration Format** (`preferences.json`):
+
+```json
+{
+  "gameDataSources": [
+    {
+      "type": "raw",
+      "name": "Flashpoint Project",
+      "arguments": ["https://download.flashpointarchive.org/gib-roms/Games/"]
+    }
+  ],
+  "dataPacksFolderPath": "Data/Games"
+}
+```
+
+**Key Features**:
+
+- 60-second cache with automatic reload
+- Singleton pattern for consistent state
+- Matches Flashpoint Launcher's preferences format
+- Falls back to empty sources if file missing
+
+### 7. GameDataDownloader
+
+**Purpose**: Download game data ZIPs from configured sources when not present
+locally.
+
+**Location**: `backend/src/game/services/GameDataDownloader.ts`
+
+**Architecture**:
+
+```typescript
+class GameDataDownloader {
+  static getInstance(): GameDataDownloader;
+  getFilename(gameId: string, dateAdded: string): string;
+  async download(params: GameDataDownloadParams, onProgress?: DownloadProgressCallback): Promise<DownloadResult>;
+  async exists(gameId: string, dateAdded: string, targetDir?: string): Promise<boolean>;
+  async getFilePath(gameId: string, dateAdded: string, targetDir?: string): Promise<string>;
+}
+```
+
+**Download Process**:
+
+```
+1. Generate filename: {gameId}-{timestamp}.zip
+2. Get sources from PreferencesService
+3. For each source:
+   ├─ Build URL: baseUrl + filename
+   ├─ Download to temp file ({filename}.temp)
+   ├─ Retry up to 3 times with exponential backoff
+   ├─ Verify SHA256 hash (if provided)
+   ├─ Move temp to final location
+   └─ Return success
+4. If all sources fail, return error summary
+```
+
+**Key Features**:
+
+- Sequential source fallback (like Flashpoint Launcher)
+- SHA256 verification for integrity
+- Retry logic with exponential backoff (1s, 2s, 4s)
+- Temp file handling (atomic writes)
+- Progress callbacks for UI updates
+- 5-minute timeout, 500MB max file size
+
+**DNS Rebinding SSRF Prevention**
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/services/GameDataDownloader.ts`
+
+Before connecting to download sources, DNS resolution is checked to block private addresses:
+
+```typescript
+const addr = await dns.lookup(hostname);
+if (isPrivateAddress(addr.address)) {
+  throw new Error('Blocked: resolves to private address');
+}
+```
+
+Blocks 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, and ::1.
+
+**Filename Generation**:
+
+Matches Flashpoint Launcher's `getGameDataFilename()`:
+
+```typescript
+getFilename(gameId: string, dateAdded: string): string {
+  const cleanDate = dateAdded.includes('T')
+    ? dateAdded
+    : `${dateAdded} +0000 UTC`;
+  const timestamp = new Date(cleanDate).getTime();
+  return `${gameId}-${timestamp}.zip`;
+}
+```
+
+### 8. MIME Type System
 
 **Purpose**: Provide accurate content-type headers for 199+ file types
 
@@ -348,11 +566,11 @@ getMimeType(ext: string): string {
 - VRML (.wrl) → model/vrml
 - Chemical formats (.pdb, .mol) → chemical/x-\*
 
-### 7. CORS Utilities
+### 9. CORS Utilities
 
 **Purpose**: Centralized CORS header management
 
-**Location**: `game-service/src/utils/cors.ts`
+**Location**: `backend/src/game/utils/cors.ts`
 
 **Benefits**:
 
@@ -413,7 +631,7 @@ justified because:
 See `docs/12-reference/cors-security-decision.md` for detailed security
 rationale.
 
-### 8. HTML Polyfill Injector
+### 10. HTML Polyfill Injector
 
 **Purpose**: Inject compatibility polyfills into HTML files for game engines
 
@@ -457,22 +675,22 @@ needsUnityPolyfills(html: string): boolean {
 
 ## Data Flow
 
-### Complete Request Flow (Proxy Server)
+### Complete Request Flow (Proxy Router)
 
 ```
 1. Frontend requests game content
-   GET http://localhost:22500/http://www.example.com/game.swf
+   GET http://localhost:3100/game-proxy/http://www.example.com/game.swf
 
-2. Proxy server receives request
+2. Backend proxy router receives request
    - Method: GET
-   - URL: http://www.example.com/game.swf
+   - URL path: /game-proxy/http://www.example.com/game.swf
 
 3. ProxyRequestHandler.handleRequest()
    - Parse URL: hostname=www.example.com, path=/game.swf
 
-4. Try GameZip server (port 22501)
-   - Make internal request: http://localhost:22501/http://www.example.com/game.swf
-   - If 200: Return file immediately
+4. Try GameZip server (direct method call)
+   - Call: gameZipServer.findFile('www.example.com/game.swf')
+   - If found: Return file immediately
    - If not found: Continue to legacy server
 
 5. LegacyServer.serveLegacy()
@@ -506,49 +724,51 @@ needsUnityPolyfills(html: string): boolean {
 
 ```
 1. Backend mounts ZIP for game
-   POST http://localhost:22501/mount/game-123
-   Body: {"zipPath": "D:/Flashpoint/Data/Games/Flash/G/game.zip"}
+   Call: gameZipServer.mountZip('game-123', {
+     zipPath: 'D:/Flashpoint/Data/Games/Flash/G/game.zip',
+     gameId: 'game-123',
+     dateAdded: '2024-01-15T10:30:00.000Z',
+     sha256: 'ABC123...'
+   })
 
-2. GameZipServer.handleMount()
+2. GameZipServer.mountZip()
    - Extract mount ID: game-123
-   - Parse body: zipPath
-   - Call zipManager.mount(id, zipPath)
+   - Call zipManager.mount(id, zipPath, params)
 
 3. ZipManager.mount()
+   - Check if already mounted
+   - If not: trigger auto-download if ZIP not found locally
    - Verify ZIP exists
    - Create StreamZip instance
    - Store in Map: mountedZips.set('game-123', {...})
    - Return success
 
-4. Frontend requests file from mounted ZIP
-   GET http://localhost:22501/http://www.example.com/game.swf
+4. Proxy requests file from mounted ZIP
+   Call: gameZipServer.findFile('www.example.com/game.swf')
 
-5. GameZipServer.handleFileRequest()
-   - Parse URL: hostname=www.example.com, path=/game.swf
-   - Build relPath: www.example.com/game.swf
-   - Call zipManager.findFile(relPath)
-
-6. ZipManager.findFile()
+5. ZipManager.findFile()
    - Try path variations:
      a. content/www.example.com/game.swf
      b. htdocs/www.example.com/game.swf
      c. www.example.com/game.swf
-   - For each variation, search all mounted ZIPs
+   - For each variation, search all mounted ZIPs:
+     - Check entryIndex.has() - O(1) lookup
+     - If found: Load file
    - Found in 'game-123': content/www.example.com/game.swf
 
-7. ZipManager.getFile()
+6. ZipManager.getFile()
    - Access mounted ZIP
    - Call zip.entryData('content/www.example.com/game.swf')
    - Stream file data into Buffer
    - Return {data: Buffer, mountId: 'game-123'}
 
-8. Process response
+7. Process response
    - Detect MIME type from extension: .swf
    - If HTML: Inject polyfills
    - Add CORS headers
    - Add X-Source: gamezipserver:game-123
 
-9. Send to client
+8. Send to client
    - Status: 200
    - Content-Type: application/x-shockwave-flash
    - X-Source: gamezipserver:game-123
@@ -574,29 +794,215 @@ Future improvements:
 
 **Memory**:
 
-- ZIP indexes are loaded into memory
-- Large ZIPs (>1GB) take ~500MB RAM for index
-- Solution: Lazy loading, LRU cache for ZIP handles
+- ZIP entry indexes: ~100KB per 10,000 files
+- Large ZIPs (>1GB) take ~5-50MB RAM for index
+- Solution: Lazy loading, LRU cache for ZIP handles, bounded at 100 ZIPs
 
 **CPU**:
 
 - MIME type lookup: O(1) hash map
 - Path candidates: O(n) where n = variations
-- ZIP search: O(m × p) where m = mounted ZIPs, p = path variations
-- Solution: Cache results, reduce variations
+- ZIP search: O(m) × O(1) = O(m) where m = mounted ZIPs (via entry index)
+- Solution: Entry index optimizations eliminate sequential I/O
 
 **Network**:
 
-- External downloads: 45s timeout
-- Concurrent limit: 10 requests
-- Keep-alive: 65s
-- Solution: Increase timeouts for slow connections
+- External downloads: 15s timeout (reduced from 45s)
+- Download concurrency: Limited to 3 simultaneous downloads
+- Keep-alive: 65s TCP timeout, 66s header timeout, 120s total timeout
+- Connection pool: 500 max connections, 10 per host with axios
+- Solution: Adaptive timeouts, connection pooling
 
 **Disk I/O**:
 
 - ZIP reads: Random access via node-stream-zip
+- Stream cleanup: Destroyed on client disconnect (`res.on('close')`)
 - Local cache: Sequential writes
-- Solution: SSD recommended, RAM disk for cache
+- Solution: SSD recommended, RAM disk for cache, bounded resource cleanup
+
+## Code Quality & Security Improvements (Second Pass Review)
+
+The following medium and low severity fixes were implemented to improve code
+quality and maintainability:
+
+### HTML Injection & Logging
+- `htmlInjector.ts` now uses project logger instead of `console.log`
+- Dead code branch removed from polyfill injection logic
+- Improves consistency with logging across the module
+
+### PreferencesService Initialization
+- Logs warning on re-initialization with different path
+- Prevents silent configuration changes that could affect game downloads
+- Helps identify configuration issues during development
+
+### Schema Validation
+- Hostname schema minimum length corrected to 2 (matches regex requirement)
+- Enforces consistency between validation rules and runtime expectations
+
+### Regex Pattern Fixes
+- `pathSecurity.ts` regex patterns no longer use `/g` flag with `test()`
+- Prevents stateful matching bugs that could skip validation on consecutive calls
+- Single-flag patterns are checked per call, not maintained across calls
+
+### Code Cleanup
+- Unused exports removed from:
+  - `mimeTypes.ts` - Cleaning up unused MIME type exports
+  - `validation/schemas.ts` - Removing unused Zod schema exports
+  - `utils/cors.ts` - Removing unused utility functions
+  - `utils/pathSecurity.ts` - Removing unused security utilities
+- Reduces module surface area and maintenance burden
+
+### Download Validation
+- `GameDataDownloader.getFilename()` now validates timestamps
+- Rejects NaN timestamps to prevent corrupted filenames
+- Ensures valid download filename format
+
+### Resource Leak Prevention
+- `GameDataDownloader` destroys response stream on size limit
+- Prevents resource leaks when downloads exceed maximum size
+- Proper cleanup when download constraints are violated
+
+### DRY Principle
+- `GameDataService` uses `GameDataDownloader.getFilename()` instead of duplicating logic
+- Centralizes filename generation, preventing consistency issues
+
+### Additional Low-Priority Improvements (2026-02-07)
+
+**Error Handling & Streaming Safety**:
+- `proxy-request-handler` `sendError()` now guards against `headersSent` to prevent write-after-headers errors in streaming scenarios
+- `collectRequestBody` now uses `settled` flag to prevent double resolve/reject when both `end` and `error` events fire
+
+**Visibility & Encapsulation**:
+- `findActiveDownload` in `gamezipserver.ts` is now private (was publicly accessible but only used internally)
+- `PRIVATE_IP_RANGES` in `GameDataDownloader.ts` is now `static readonly`
+
+**Module Boundaries**:
+- Removed unused imports and convenience re-exports from service index files for cleaner module boundaries
+- Internal-only constants like `CUSTOM_MIME_TYPES` no longer exported, reducing public API surface
+
+## Security Hardening
+
+The game content module implements multiple defense-in-depth security measures:
+
+### Authentication & Authorization
+
+- Game-zip management endpoints require JWT authentication
+- `settings.update` permission required for mount/unmount operations
+- Mount IDs validated via Zod schema (no path traversal characters)
+
+### XSS Prevention
+
+- HTML polyfills injected only in final `sendResponse()` (prevents double
+  injection)
+- Download loading page values escaped via `escapeHtml()` function:
+  - Progress percentages
+  - Source names from gameDataSources
+  - Elapsed time values
+  - File size displays
+
+### File Size & Memory Protection
+
+- ZIP entry size limits: Files exceeding 50MB rejected to prevent memory
+  exhaustion
+- Request body size limits: Maximum 1MB for ZIP mount requests
+- Response size limits: Maximum 100MB for external CDN downloads
+
+### Race Condition Prevention
+
+- `mountingInProgress` Set prevents concurrent mount race conditions
+- Duplicate mount requests return immediately instead of creating redundant
+  file handles
+
+### ZIP Handle Leak Prevention
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/zip-manager.ts`
+
+ZIP file handles are now properly closed when mount operations fail after opening:
+
+```typescript
+const zip = new StreamZip.async({ file: zipPath });
+try {
+  const entries = await zip.entries();
+  // Build entry index...
+  mountedZips.set(id, { zip, entryIndex, ... });
+} catch (error) {
+  await zip.close(); // Prevent file handle leak
+  throw error;
+}
+```
+
+### Graceful Shutdown Safety
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/zip-manager.ts`
+
+A `shuttingDown` flag prevents new mounts during shutdown and `unmountAll()` waits for in-progress mounts:
+
+```typescript
+private shuttingDown = false;
+
+async mount(id, zipPath) {
+  if (this.shuttingDown) throw new Error('Server shutting down');
+  // ... mount logic
+}
+
+async unmountAll() {
+  this.shuttingDown = true;
+  // Wait up to 10s for in-progress mounts to complete
+  await waitForInProgressMounts(10000);
+  // Close all mounted ZIPs
+}
+```
+
+### Download & Redirect Security
+
+- Maximum 5 redirects allowed for external downloads (prevents SSRF chains)
+- Response bodies properly drained before following redirects
+- Timeout enforcement: 15 seconds for external downloads
+- User-Agent header added to external requests for tracking
+
+### Downloaded File Path Re-validation
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/gamezipserver.ts`
+
+After downloading a game ZIP, the file path is re-validated to ensure it stays within the target directory:
+
+```typescript
+const resolvedPath = path.resolve(result.filePath);
+if (!resolvedPath.startsWith(path.resolve(targetPath))) {
+  throw new Error('Downloaded file outside target directory');
+}
+```
+
+### CGI Symlink Bypass Prevention
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/cgi/cgi-executor.ts`
+
+CGI script paths are resolved via `fs.realpath()` before security validation, preventing symlink-based directory escapes:
+
+```typescript
+const realPath = await fs.realpath(scriptPath);
+const validPath = sanitizeAndValidatePath(cgiBaseDir, realPath);
+```
+
+### Path Validation
+
+- ZIP mount paths validated to stay within `Data/Games/` directory
+- No absolute path escapes or directory traversal sequences allowed
+- Path normalization prevents Unicode/encoding attacks
+
+### Error Message Sanitization
+
+- Internal error details removed from responses (prevents path/version leakage)
+- Sanitized via `sanitizeErrorMessage()` in logs and responses
+- External CDN responses validated: 200-only accepted
 
 ## Error Handling
 
@@ -748,16 +1154,60 @@ Prevents attacks like:
 - Preflight requests handled (OPTIONS)
 - Max-Age: 86400 (24 hours)
 
+### collectRequestBody Double-Settlement Fix
+
+**Status**: ✅ **Implemented** (2026-02-07)
+
+**Implementation**: `backend/src/game/proxy-request-handler.ts`
+
+The `collectRequestBody` function now uses a `settled` flag to prevent double resolve/reject of its Promise, which could occur when both `end` and `error` events fire:
+
+```typescript
+private async collectRequestBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let body = '';
+
+    req.on('data', (chunk) => {
+      body += chunk.toString();
+    });
+
+    req.on('end', () => {
+      if (!settled) {
+        settled = true;
+        resolve(body);
+      }
+    });
+
+    req.on('error', (error) => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    });
+  });
+}
+```
+
+This prevents unhandled promise rejections when both events fire in rapid succession.
+
 ## Monitoring and Observability
 
 ### Logging Strategy
 
 **Levels**:
 
-- DEBUG: Path candidates, ZIP searches, file access
+- DEBUG: Path candidates, ZIP searches, file access, **per-request file lookups**
+  (downgraded from INFO in 2026-02-07)
 - INFO: Requests, mounts, file serves, sources
 - WARN: Fallback attempts, missing files
 - ERROR: Server errors, mount failures, fatal errors
+
+**Per-Request Logging** (2026-02-07):
+
+Granular per-file file lookups are now logged at DEBUG level instead of INFO
+to reduce log noise on high-traffic servers while still providing detailed
+information when debugging specific issues.
 
 **Log Format**:
 

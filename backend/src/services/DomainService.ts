@@ -85,27 +85,14 @@ export class DomainService {
 
   /**
    * Validate and normalize a hostname
+   * Note: Route-level Zod validation performs comprehensive checks.
+   * This method provides basic sanitization only.
    */
   private validateHostname(hostname: string): string {
     const trimmed = hostname.trim().toLowerCase();
 
     if (!trimmed) {
       throw new AppError(400, 'Hostname cannot be empty');
-    }
-
-    // Reject protocol prefixes
-    if (/^https?:\/\//i.test(trimmed)) {
-      throw new AppError(400, 'Hostname must not include a protocol (http:// or https://)');
-    }
-
-    // Reject path, query, or fragment
-    if (/[/?#]/.test(trimmed)) {
-      throw new AppError(400, 'Hostname must not include a path, query string, or fragment');
-    }
-
-    // Basic hostname validation: allow alphanumeric, dots, hyphens, colons (for port)
-    if (!/^[a-z0-9._-]+(:[0-9]+)?$/i.test(trimmed)) {
-      throw new AppError(400, 'Invalid hostname format');
     }
 
     return trimmed;

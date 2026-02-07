@@ -162,7 +162,8 @@ PermissionCache.invalidateUser(5);
 
 ### invalidateRole(roleId: number): void
 
-Remove role's permission cache entry.
+Remove role's permission cache entry AND propagate invalidation to all users
+with that role.
 
 **Parameters:**
 
@@ -180,6 +181,61 @@ Remove role's permission cache entry.
 await roleService.updateRolePermissions(2, [1, 2, 3]);
 PermissionCache.invalidateRole(2);
 ```
+
+**How it works:**
+
+When a role's permissions change, this method:
+
+1. Clears the specific role's cache entry: `rolePermissionsCache.delete(roleId)`
+2. **Clears the entire user permissions cache**: `userPermissionsCache.clear()`
+
+**Why clear all user cache entries:**
+
+- Clearing just the role cache entry isn't enough
+- Users with that role have cached permissions from the old role permissions
+- Next request would still use the old cached user permissions
+- By clearing the entire user cache, all users must refetch permissions on
+  their next request
+- This ensures all users with the changed role immediately get fresh
+  permissions
+
+**Role Invalidation Propagation:**
+
+The propagation ensures permission changes immediately cascade to all affected
+users:
+
+1. **Role permission changes** → `invalidateRole(roleId)` called
+2. **Role cache entry cleared** → Next role permission lookup queries database
+3. **All user cache cleared** → Every user must refetch permissions on next
+   request
+4. **New permissions fetched** → Database queries include new role permissions
+5. **Cache repopulated** → Users get fresh permissions immediately
+
+**Performance impact:**
+
+- Temporary increase in database queries as users refetch permissions
+- Cache hits resume within seconds as users re-populate the cache
+- Trade-off: Ensures permission changes are immediately visible
+
+**Alternative: More granular invalidation:**
+
+If performance becomes an issue with large user bases:
+
+```typescript
+// Could track users by role and only invalidate those
+const usersWithRole = this.db.all(
+  'SELECT id FROM users WHERE role_id = ?',
+  [roleId]
+);
+for (const user of usersWithRole) {
+  PermissionCache.invalidateUser(user.id);
+}
+```
+
+But for now, the simpler approach of clearing all user cache is more
+reliable.
+
+
 
 ### clearAll(): void
 

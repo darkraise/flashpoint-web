@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { JobScheduler } from '../services/JobScheduler';
 import { JobExecutionService } from '../services/JobExecutionService';
 import { CachedSystemSettingsService } from '../services/CachedSystemSettingsService';
@@ -18,7 +19,7 @@ router.get(
   '/',
   authenticate,
   requirePermission('settings.update'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const jobs = JobScheduler.getAllJobsEnriched();
       res.json(jobs);
@@ -26,7 +27,28 @@ router.get(
       logger.error('Failed to get jobs:', error);
       res.status(500).json({ error: { message: 'Failed to retrieve jobs' } });
     }
-  }
+  })
+);
+
+// ===================================
+// GET ALL EXECUTION LOGS
+// ===================================
+router.get(
+  '/logs/all',
+  authenticate,
+  requirePermission('settings.update'),
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+      const offset = Math.max(0, parseInt(req.query.offset as string, 10) || 0);
+
+      const result = executionService.getAllLogs(limit, offset);
+      res.json({ ...result, limit, offset });
+    } catch (error) {
+      logger.error('Failed to get all logs:', error);
+      res.status(500).json({ error: { message: 'Failed to retrieve logs' } });
+    }
+  })
 );
 
 // ===================================
@@ -36,7 +58,7 @@ router.get(
   '/:jobId',
   authenticate,
   requirePermission('settings.update'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
       const job = JobScheduler.getJobStatusEnriched(jobId);
@@ -50,7 +72,7 @@ router.get(
       logger.error(`Failed to get job ${req.params.jobId}:`, error);
       res.status(500).json({ error: { message: 'Failed to retrieve job' } });
     }
-  }
+  })
 );
 
 // ===================================
@@ -61,7 +83,7 @@ router.patch(
   authenticate,
   requirePermission('settings.update'),
   logActivity('jobs.update', 'job'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
       const { enabled } = req.body;
@@ -103,7 +125,7 @@ router.patch(
         error: { message: error instanceof Error ? error.message : 'Failed to update job' },
       });
     }
-  }
+  })
 );
 
 // ===================================
@@ -114,7 +136,7 @@ router.post(
   authenticate,
   requirePermission('settings.update'),
   logActivity('jobs.start', 'job'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
       JobScheduler.startJob(jobId);
@@ -126,7 +148,7 @@ router.post(
         message: error instanceof Error ? error.message : 'Failed to start job',
       });
     }
-  }
+  })
 );
 
 // ===================================
@@ -137,7 +159,7 @@ router.post(
   authenticate,
   requirePermission('settings.update'),
   logActivity('jobs.stop', 'job'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
       JobScheduler.stopJob(jobId);
@@ -149,7 +171,7 @@ router.post(
         message: error instanceof Error ? error.message : 'Failed to stop job',
       });
     }
-  }
+  })
 );
 
 // ===================================
@@ -160,7 +182,7 @@ router.post(
   authenticate,
   requirePermission('settings.update'),
   logActivity('jobs.trigger', 'job'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
       const userId = req.user!.id.toString();
@@ -180,7 +202,7 @@ router.post(
       logger.error(`Failed to trigger job ${req.params.jobId}:`, error);
       res.status(500).json({ success: false, message });
     }
-  }
+  })
 );
 
 // ===================================
@@ -190,11 +212,11 @@ router.get(
   '/:jobId/logs',
   authenticate,
   requirePermission('settings.update'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
       const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-      const offset = parseInt(req.query.offset as string) || 0;
+      const offset = Math.max(0, parseInt(req.query.offset as string, 10) || 0);
 
       const result = executionService.getJobLogs(jobId, limit, offset);
       res.json({ ...result, limit, offset });
@@ -202,28 +224,7 @@ router.get(
       logger.error(`Failed to get logs for job ${req.params.jobId}:`, error);
       res.status(500).json({ error: { message: 'Failed to retrieve job logs' } });
     }
-  }
-);
-
-// ===================================
-// GET ALL EXECUTION LOGS
-// ===================================
-router.get(
-  '/logs/all',
-  authenticate,
-  requirePermission('settings.update'),
-  async (req: Request, res: Response) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
-      const offset = parseInt(req.query.offset as string) || 0;
-
-      const result = executionService.getAllLogs(limit, offset);
-      res.json({ ...result, limit, offset });
-    } catch (error) {
-      logger.error('Failed to get all logs:', error);
-      res.status(500).json({ error: { message: 'Failed to retrieve logs' } });
-    }
-  }
+  })
 );
 
 export default router;

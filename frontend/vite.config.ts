@@ -118,6 +118,14 @@ export default defineConfig({
         target: 'http://localhost:3100',
         changeOrigin: true,
       },
+      '/game-proxy': {
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
+      '/game-zip': {
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
     },
   },
   optimizeDeps: {

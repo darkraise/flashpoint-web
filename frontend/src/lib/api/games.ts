@@ -16,9 +16,10 @@ export const gamesApi = {
   /**
    * Search games with filters and pagination
    */
-  search: async (filters: GameFilters): Promise<PaginatedResult<Game>> => {
+  search: async (filters: GameFilters, signal?: AbortSignal): Promise<PaginatedResult<Game>> => {
     const { data } = await apiClient.get<PaginatedResult<Game>>('/games', {
       params: filters,
+      signal,
     });
     return data;
   },
@@ -74,8 +75,24 @@ export const gamesApi = {
     id: string,
     gameDataId?: number
   ): Promise<{ success: boolean; message: string; gameDataId: number; sha256: string }> => {
-    const { data } = await apiClient.post(`/games/${id}/download`, { gameDataId });
+    const { data } = await apiClient.post<{
+      success: boolean;
+      message: string;
+      gameDataId: number;
+      sha256: string;
+    }>(`/games/${id}/download`, { gameDataId });
     return data;
+  },
+
+  /**
+   * Get most played games globally
+   */
+  getMostPlayed: async (limit = 20): Promise<Game[]> => {
+    const { data } = await apiClient.get<{ success: boolean; data: Game[]; total: number }>(
+      '/games/most-played',
+      { params: { limit } }
+    );
+    return data.data;
   },
 
   /**

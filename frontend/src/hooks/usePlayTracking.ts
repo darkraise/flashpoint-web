@@ -1,17 +1,19 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { playTrackingApi } from '../lib/api';
-import { useAuthStore } from '../store/auth';
+import { playTrackingApi } from '@/lib/api';
+import { useAuthStore } from '@/store/auth';
 import { useFeatureFlags } from './useFeatureFlags';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { logger } from '@/lib/logger';
 
 /**
  * Hook for tracking play sessions
  */
 export function usePlaySession(gameId: string | null, gameTitle: string | null) {
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const previousGameIdRef = useRef<string | null>(null);
   const hasStartedSessionRef = useRef(false);
+  const isMountedRef = useRef(false);
   const { isAuthenticated, isGuest } = useAuthStore();
   const { enableStatistics } = useFeatureFlags();
 
@@ -20,6 +22,7 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
       playTrackingApi.startSession(gameId, gameTitle),
     onSuccess: (data) => {
       sessionIdRef.current = data.sessionId;
+      setSessionId(data.sessionId);
       logger.debug('[PlaySession] Started session:', data.sessionId, 'for game:', gameId);
     },
     onError: (error) => {
@@ -28,11 +31,18 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
     },
   });
 
+  // Keep stable reference to mutation function
+  const startMutationRef = useRef(startMutation.mutate);
+  useEffect(() => {
+    startMutationRef.current = startMutation.mutate;
+  }, [startMutation.mutate]);
+
   const endMutation = useMutation({
     mutationFn: (sessionId: string) => playTrackingApi.endSession(sessionId),
     onSuccess: () => {
       logger.debug('[PlaySession] Ended session:', sessionIdRef.current);
       sessionIdRef.current = null;
+      setSessionId(null);
     },
     onError: (error) => {
       logger.error('[PlaySession] Failed to end play session:', error);
@@ -77,43 +87,63 @@ export function usePlaySession(gameId: string | null, gameTitle: string | null) 
           .then(() => {
             previousGameIdRef.current = gameId;
             hasStartedSessionRef.current = true;
-            startMutation.mutate({ gameId, gameTitle });
+            startMutationRef.current({ gameId, gameTitle });
           })
           .catch((error) => {
             logger.error('[PlaySession] Failed to end previous session:', error);
             // Start new session anyway
             previousGameIdRef.current = gameId;
             hasStartedSessionRef.current = true;
-            startMutation.mutate({ gameId, gameTitle });
+            startMutationRef.current({ gameId, gameTitle });
           });
       } else {
         // No previous session or same game, just start
         logger.debug('[PlaySession] Starting new session');
         previousGameIdRef.current = gameId;
         hasStartedSessionRef.current = true;
-        startMutation.mutate({ gameId, gameTitle });
+        startMutationRef.current({ gameId, gameTitle });
       }
     }
   }, [enableStatistics, isAuthenticated, isGuest, gameId, gameTitle, startMutation.isPending]);
 
-  // End session on unmount
+  // End session on unmount - with StrictMode guard
   useEffect(() => {
+    isMountedRef.current = true;
+    let cleanupTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
     return () => {
-      if (sessionIdRef.current) {
-        logger.debug('[PlaySession] Component unmounting, ending session:', sessionIdRef.current);
-        playTrackingApi.endSession(sessionIdRef.current).catch((error) => {
-          logger.error('[PlaySession] Failed to end play session on cleanup:', error);
+      isMountedRef.current = false;
+      const currentSessionId = sessionIdRef.current;
+      if (!currentSessionId) return;
+
+      // Use a small timeout to allow StrictMode remount to cancel the cleanup
+      cleanupTimeoutId = setTimeout(() => {
+        if (!isMountedRef.current) {
+          logger.debug('[PlaySession] Component unmounting, ending session:', currentSessionId);
+          playTrackingApi.endSession(currentSessionId).catch((error) => {
+            logger.error('[PlaySession] Failed to end play session on cleanup:', error);
+          });
+          // Reset refs on unmount
+          hasStartedSessionRef.current = false;
+          previousGameIdRef.current = null;
+        }
+      }, 100);
+
+      // Ensure timeout is cleared if component remounts quickly (StrictMode)
+      if (cleanupTimeoutId) {
+        const timeoutToCleanup = cleanupTimeoutId;
+        queueMicrotask(() => {
+          if (isMountedRef.current) {
+            clearTimeout(timeoutToCleanup);
+          }
         });
-        // Reset refs on unmount
-        hasStartedSessionRef.current = false;
-        previousGameIdRef.current = null;
       }
     };
   }, []);
 
   return {
-    sessionId: sessionIdRef.current,
-    isTracking: !!sessionIdRef.current,
+    sessionId,
+    isTracking: !!sessionId,
     endSession: () => {
       if (sessionIdRef.current) {
         endMutation.mutate(sessionIdRef.current);

@@ -5,7 +5,6 @@ import tagsRouter from './tags';
 import playlistsRouter from './playlists';
 import communityPlaylistsRouter from './community-playlists';
 import proxyRouter from './proxy';
-import gameFilesRouter from './game-files';
 import updatesRouter from './updates';
 import statisticsRouter from './statistics';
 import downloadsRouter from './downloads';
@@ -84,9 +83,6 @@ export function setupRoutes(app: Express): void {
   app.use('/api/updates', updatesRouter);
   app.use('/api/statistics', statisticsRouter);
   app.use('/api/database', databaseRouter);
-
-  // Game files proxy with automatic fallback
-  app.use('/game-files', gameFilesRouter);
 
   app.use('/proxy', proxyRouter);
 

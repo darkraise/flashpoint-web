@@ -170,18 +170,19 @@ frontend/
 
 ## Vite Configuration
 
-Dev server proxies `/api/*` to backend:
+Dev server proxies both API and game content to backend:
 
 ```typescript
 server: {
   proxy: {
     '/api': 'http://localhost:3100',
-    '/proxy': 'http://localhost:22500'
+    '/game-proxy': 'http://localhost:3100',
+    '/game-zip': 'http://localhost:3100'
   }
 }
 ```
 
-In production, Nginx proxies API requests to the backend container.
+In production, Nginx proxies all requests to the backend container.
 
 ## Common Commands
 

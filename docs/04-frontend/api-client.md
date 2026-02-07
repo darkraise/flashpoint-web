@@ -18,8 +18,13 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Enable cookie-based auth (refresh token)
 });
 ```
+
+**Important:** `withCredentials: true` enables automatic cookie handling. The
+backend sets the refresh token in an HTTP-only cookie during login, and the
+browser automatically includes it in requests.
 
 ## Interceptors
 
@@ -51,8 +56,9 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = useAuthStore.getState().refreshToken;
-        const tokens = await authApi.refreshToken(refreshToken);
+        // Refresh token is sent automatically via withCredentials (HTTP-only cookie)
+        // No need to manually send refresh token
+        const tokens = await authApi.refreshToken();
 
         useAuthStore.getState().updateAccessToken(tokens.accessToken);
         originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
@@ -68,6 +74,10 @@ api.interceptors.response.use(
   }
 );
 ```
+
+**Note:** The refresh token is stored in an HTTP-only cookie (sent automatically
+by the browser when `withCredentials: true`). The `refreshToken()` method takes
+no parameters and relies on the cookie being present.
 
 ## API Modules
 
@@ -89,10 +99,14 @@ gamesApi.cancelDownload(id: string)
 ```typescript
 authApi.login(credentials: LoginCredentials): Promise<LoginResponse>
 authApi.register(userData: RegisterData): Promise<RegisterResponse>
-authApi.logout(refreshToken: string): Promise<void>
-authApi.refreshToken(refreshToken: string): Promise<AuthTokens>
+authApi.logout(): Promise<void>
+authApi.refreshToken(): Promise<AuthTokens>
 authApi.getMe(): Promise<User>
 ```
+
+**Note:** `logout()` and `refreshToken()` no longer take parameters. The refresh
+token is automatically sent via HTTP-only cookie when `withCredentials: true`
+is set on the axios instance.
 
 ### playlistsApi
 

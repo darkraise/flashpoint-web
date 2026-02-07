@@ -162,15 +162,19 @@ export class UserDatabaseService {
           const checksum = this.computeChecksum(sql);
           const start = Date.now();
 
-          // Execute migration
-          this.db!.exec(sql);
+          // Wrap migration execution and registry insert in a single transaction
+          const runMigration = this.db!.transaction(() => {
+            this.db!.exec(sql);
 
-          // Record migration in registry
+            const executionTime = Date.now() - start;
+            this.db!.prepare(
+              'INSERT INTO migrations (name, applied_at, checksum, execution_time_ms) VALUES (?, ?, ?, ?)'
+            ).run(name, new Date().toISOString(), checksum, executionTime);
+          });
+
+          runMigration();
+
           const executionTime = Date.now() - start;
-          this.db!.prepare(
-            'INSERT INTO migrations (name, applied_at, checksum, execution_time_ms) VALUES (?, ?, ?, ?)'
-          ).run(name, new Date().toISOString(), checksum, executionTime);
-
           logger.info(`[UserDB] Migration completed: ${name} (${executionTime}ms)`);
         } else {
           logger.debug(`[UserDB] Migration already applied: ${name}`);

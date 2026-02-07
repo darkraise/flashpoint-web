@@ -41,15 +41,37 @@ export class PerformanceMetrics {
   // Configuration
   private static readonly MAX_DATA_POINTS = 10000; // Keep last 10k measurements
   private static readonly RETENTION_MS = 24 * 60 * 60 * 1000; // 24 hours
+  private static readonly MAX_UNIQUE_ENDPOINTS = 1000; // Prevent unbounded memory growth
+
+  /**
+   * Normalize path by replacing dynamic segments with :id
+   * Prevents memory growth from parametric routes like /api/games/:id
+   */
+  private static normalizePath(path: string): string {
+    // Replace UUID segments: /api/games/550e8400-e29b-41d4-a716-446655440000 -> /api/games/:id
+    return (
+      path
+        .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
+        // Replace numeric IDs: /api/users/123 -> /api/users/:id
+        .replace(/\/\d+(?=\/|$)/g, '/:id')
+    );
+  }
 
   /**
    * Record API endpoint response time
    */
   static recordEndpoint(path: string, method: string, durationMs: number): void {
-    const key = `${method} ${path}`;
+    const normalizedPath = this.normalizePath(path);
+    const key = `${method} ${normalizedPath}`;
 
     if (!this.endpointMetrics.has(key)) {
       this.endpointMetrics.set(key, []);
+    }
+
+    // Evict oldest entry if we exceed max unique endpoints
+    if (this.endpointMetrics.size > this.MAX_UNIQUE_ENDPOINTS) {
+      const firstKey = this.endpointMetrics.keys().next().value;
+      if (firstKey) this.endpointMetrics.delete(firstKey);
     }
 
     const metrics = this.endpointMetrics.get(key)!;

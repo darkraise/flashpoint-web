@@ -1,6 +1,19 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { logger } from '../utils/logger';
 
+interface JobExecutionRow {
+  id: number;
+  job_id: string;
+  job_name: string;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  duration_seconds: number | null;
+  message: string | null;
+  error_details: string | null;
+  triggered_by: string;
+}
+
 export interface JobExecutionLog {
   id: number;
   jobId: string;
@@ -79,7 +92,7 @@ export class JobExecutionService {
        ORDER BY started_at DESC
        LIMIT ? OFFSET ?`,
       [jobId, limit, offset]
-    ) as any[];
+    ) as JobExecutionRow[];
 
     return {
       data: logs.map(this.mapToJobExecutionLog),
@@ -101,7 +114,7 @@ export class JobExecutionService {
        ORDER BY started_at DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]
-    ) as any[];
+    ) as JobExecutionRow[];
 
     return {
       data: logs.map(this.mapToJobExecutionLog),
@@ -119,7 +132,7 @@ export class JobExecutionService {
        ORDER BY started_at DESC
        LIMIT 1`,
       [jobId]
-    ) as any;
+    ) as JobExecutionRow | undefined;
 
     return log ? this.mapToJobExecutionLog(log) : null;
   }
@@ -140,17 +153,17 @@ export class JobExecutionService {
     return result.changes;
   }
 
-  private mapToJobExecutionLog(row: any): JobExecutionLog {
+  private mapToJobExecutionLog(row: JobExecutionRow): JobExecutionLog {
     return {
       id: row.id,
       jobId: row.job_id,
       jobName: row.job_name,
-      status: row.status,
+      status: row.status as 'running' | 'success' | 'failed',
       startedAt: row.started_at,
-      completedAt: row.completed_at,
-      durationSeconds: row.duration_seconds,
-      message: row.message,
-      errorDetails: row.error_details,
+      completedAt: row.completed_at || undefined,
+      durationSeconds: row.duration_seconds || undefined,
+      message: row.message || undefined,
+      errorDetails: row.error_details || undefined,
       triggeredBy: row.triggered_by,
     };
   }

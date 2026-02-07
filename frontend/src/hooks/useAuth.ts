@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { authApi } from '../lib/api';
-import { useAuth as useAuthContext } from '../contexts/AuthContext';
-import { LoginCredentials, RegisterData } from '../types/auth';
-import { logger } from '../lib/logger';
+import { authApi } from '@/lib/api';
+import { useAuth as useAuthContext } from '@/contexts/AuthContext';
+import { LoginCredentials, RegisterData } from '@/types/auth';
+import { logger } from '@/lib/logger';
 
 /**
  * Hook for login mutation

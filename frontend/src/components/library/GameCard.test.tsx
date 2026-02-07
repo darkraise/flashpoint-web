@@ -267,7 +267,6 @@ describe('GameCard', () => {
       };
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
       useAuthStore.getState().setAuth(mockUser, mockTokens);

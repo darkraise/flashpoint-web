@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { activitiesApi } from '../lib/api';
+import { activitiesApi } from '@/lib/api';
 import {
   ActivityFilters,
   TimeRange,
@@ -8,7 +8,7 @@ import {
   ActivityTrendResponse,
   TopActionsResponse,
   ActivityBreakdownResponse,
-} from '../types/auth';
+} from '@/types/auth';
 
 /**
  * Hook to fetch activity logs with pagination and filters

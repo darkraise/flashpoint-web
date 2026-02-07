@@ -169,6 +169,16 @@ if (settings.enableBrotli && filePath.endsWith('.br')) {
 - Decompressed: `file.js`
 - MIME: `text/javascript`
 
+## Dynamic Configuration Loading
+
+Settings are now fetched fresh via `ConfigManager.getSettings()` at the start of
+each `serveLegacy()` call instead of being captured once at construction. This
+ensures that configuration changes (such as enabling/disabling Brotli, updating
+external URLs, or changing override paths) take effect immediately without
+requiring a server restart.
+
+**Benefit**: Admin users can update proxy settings via the UI without downtime.
+
 ## Error Handling
 
 **File Not Found:** If no source has the file, returns 404 after all sources
@@ -223,10 +233,11 @@ Typically only 1-3 paths checked before finding file.
 ```bash
 FLASHPOINT_PATH=D:/Flashpoint
 # Note: HTDOCS path derived as $FLASHPOINT_PATH/Legacy/htdocs
-EXTERNAL_FALLBACK_URLS=https://infinity.flashpointarchive.org/...,https://backup.example.com/...
 ```
 
 ### proxySettings.json
+
+External fallback URLs are configured here (not via environment variables):
 
 ```json
 {
@@ -247,8 +258,8 @@ EXTERNAL_FALLBACK_URLS=https://infinity.flashpointarchive.org/...,https://backup
 mkdir -p "D:/Flashpoint/Legacy/htdocs/test.com"
 echo "Hello World" > "D:/Flashpoint/Legacy/htdocs/test.com/index.html"
 
-# Request file
-curl http://localhost:22500/http://test.com/index.html
+# Request file via backend
+curl http://localhost:3100/game-proxy/http://test.com/index.html
 
 # Expected: Hello World
 ```
@@ -266,8 +277,44 @@ All paths normalized to prevent directory traversal:
 ### External CDN
 
 - HTTPS enforced
-- Timeouts prevent DoS
+- Timeouts prevent DoS (15 second timeout)
 - User-Agent header for tracking
+- Maximum 5 redirects allowed (prevents SSRF chains)
+- Response bodies properly drained before following redirects
+
+## Timeout Management
+
+The `tryExternalSource()` method properly manages timeouts for external requests:
+
+```typescript
+private async tryExternalSource(baseUrl: string, relPath: string) {
+  // Create abort controller for timeout enforcement
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => {
+    abortController.abort();
+  }, EXTERNAL_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await axiosInstance.get(fullUrl, {
+      signal: abortController.signal,
+      timeout: EXTERNAL_REQUEST_TIMEOUT_MS,
+      maxRedirects: EXTERNAL_REQUEST_MAX_REDIRECTS,  // 5 max
+      // ... other options
+    });
+
+    // CRITICAL: Clear timeout on success path, not just on error
+    clearTimeout(timeoutId);
+    return { data: Buffer.from(response.data), contentType };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    // ... error handling
+  }
+}
+```
+
+**Timeout Leak Prevention**: The timeout is properly cleared on the success path,
+not just on error. Without this, successful responses could leave dangling
+timeouts that would still fire even though the request completed.
 
 ## Related Documentation
 

@@ -39,6 +39,7 @@ const LIMITS = {
 router.use(requireFeature('enableStatistics'));
 
 // All routes require authentication and games.play permission
+// Note: authenticate middleware guarantees req.user is populated
 router.use(authenticate);
 router.use(requirePermission('games.play'));
 
@@ -56,11 +57,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const { gameId, gameTitle } = startPlaySessionSchema.parse(req.body);
 
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
-    const sessionId = await playTrackingService.startPlaySession(req.user.id, gameId, gameTitle);
+    const sessionId = await playTrackingService.startPlaySession(req.user!.id, gameId, gameTitle);
 
     // Store sessionId for activity logging
     res.locals.sessionId = sessionId;
@@ -82,7 +79,7 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const { sessionId } = endPlaySessionSchema.parse(req.body);
 
-    await playTrackingService.endPlaySession(sessionId);
+    await playTrackingService.endPlaySession(sessionId, req.user!.id);
 
     res.json({
       success: true,
@@ -98,11 +95,7 @@ router.post(
 router.get(
   '/stats',
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
-    const stats = await playTrackingService.getUserStats(req.user.id);
+    const stats = await playTrackingService.getUserStats(req.user!.id);
 
     res.json(stats);
   })
@@ -115,17 +108,13 @@ router.get(
 router.get(
   '/game-stats',
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
     const limit = Math.min(
       parseInt(req.query.limit as string) || LIMITS.GAME_STATS_DEFAULT,
       LIMITS.GAME_STATS_MAX
     );
-    const offset = parseInt(req.query.offset as string) || 0;
+    const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
 
-    const stats = await playTrackingService.getUserGameStats(req.user.id, limit, offset);
+    const stats = await playTrackingService.getUserGameStats(req.user!.id, limit, offset);
 
     res.json({
       data: stats,
@@ -142,17 +131,13 @@ router.get(
 router.get(
   '/history',
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
     const limit = Math.min(
       parseInt(req.query.limit as string) || LIMITS.HISTORY_DEFAULT,
       LIMITS.HISTORY_MAX
     );
-    const offset = parseInt(req.query.offset as string) || 0;
+    const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
 
-    const history = await playTrackingService.getUserPlayHistory(req.user.id, limit, offset);
+    const history = await playTrackingService.getUserPlayHistory(req.user!.id, limit, offset);
 
     res.json({
       data: history,
@@ -169,16 +154,12 @@ router.get(
 router.get(
   '/top-games',
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
     const limit = Math.min(
       parseInt(req.query.limit as string) || LIMITS.TOP_GAMES_DEFAULT,
       LIMITS.TOP_GAMES_MAX
     );
 
-    const topGames = await playTrackingService.getTopGames(req.user.id, limit);
+    const topGames = await playTrackingService.getTopGames(req.user!.id, limit);
 
     res.json(topGames);
   })
@@ -191,16 +172,12 @@ router.get(
 router.get(
   '/activity-over-time',
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
     const days = Math.min(
       parseInt(req.query.days as string) || LIMITS.ACTIVITY_DAYS_DEFAULT,
       LIMITS.ACTIVITY_DAYS_MAX
     );
 
-    const activity = await playTrackingService.getPlayActivityOverTime(req.user.id, days);
+    const activity = await playTrackingService.getPlayActivityOverTime(req.user!.id, days);
 
     res.json(activity);
   })
@@ -213,16 +190,12 @@ router.get(
 router.get(
   '/games-distribution',
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
     const limit = Math.min(
       parseInt(req.query.limit as string) || LIMITS.GAMES_DISTRIBUTION_DEFAULT,
       LIMITS.GAMES_DISTRIBUTION_MAX
     );
 
-    const distribution = await playTrackingService.getGamesDistribution(req.user.id, limit);
+    const distribution = await playTrackingService.getGamesDistribution(req.user!.id, limit);
 
     res.json(distribution);
   })

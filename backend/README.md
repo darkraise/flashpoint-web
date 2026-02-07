@@ -6,7 +6,7 @@ Node.js/Express API server for the Flashpoint Archive web application.
 
 - RESTful API for game metadata
 - Direct SQLite database access (read-only)
-- Proxy to Flashpoint Game Server
+- Integrated game content serving (proxy + ZIP)
 - Image and logo serving
 - Playlist management
 - Platform and tag endpoints
@@ -45,6 +45,7 @@ See `../../api-specification.md` for complete API documentation.
 src/
 ├── routes/          # Express route handlers
 ├── services/        # Business logic layer
+├── game/            # Integrated game service (proxy, ZIP, CGI)
 ├── middleware/      # Express middleware
 ├── utils/           # Helper functions
 ├── config.ts        # Configuration management
@@ -83,7 +84,6 @@ Optional:
 
 - `PORT` - Server port (default: 3100)
 - `NODE_ENV` - Environment (development/production)
-- `GAME_SERVER_URL` - Game Server URL (default: http://localhost:22500)
 - `DOMAIN` - Frontend origin (default: http://localhost:5173)
 
 See `.env.example` for all options.

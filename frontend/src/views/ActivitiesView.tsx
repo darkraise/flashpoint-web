@@ -1,8 +1,8 @@
 import { memo } from 'react';
-import { ActivityTable } from '../components/activities/ActivityTable';
-import { ActivityDashboard } from '../components/activities/dashboard/ActivityDashboard';
-import { ActivityErrorBoundary } from '../components/error/ActivityErrorBoundary';
-import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { ActivityTable } from '@/components/activities/ActivityTable';
+import { ActivityDashboard } from '@/components/activities/dashboard/ActivityDashboard';
+import { ActivityErrorBoundary } from '@/components/error/ActivityErrorBoundary';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { Activity } from 'lucide-react';
 
 // Memoize header to prevent re-renders

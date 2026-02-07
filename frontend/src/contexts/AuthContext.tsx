@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/auth';
 import { authApi } from '../lib/api';
+import { apiClient } from '../lib/api/client';
 import { LoginCredentials, RegisterData } from '../types/auth';
 import { PublicSettings } from '../types/settings';
-import axios from 'axios';
 import { logger } from '../lib/logger';
 
 interface AuthContextType {
@@ -24,8 +24,14 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { setAuth, setGuestMode, clearAuth, refreshToken, updateAccessToken, setMaintenanceMode } =
-    useAuthStore();
+  const {
+    setAuth,
+    setGuestMode,
+    clearAuth,
+    isAuthenticated,
+    updateAccessToken,
+    setMaintenanceMode,
+  } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -46,8 +52,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // Fallback: if not in cache, fetch it (shouldn't happen with prefetch)
-      logger.warn('[AuthContext] Cache miss! Making direct axios call to /api/settings/public');
-      const response = await axios.get('/api/settings/public');
+      logger.warn('[AuthContext] Cache miss! Making authenticated API call to /settings/public');
+      const response = await apiClient.get('/settings/public');
       const isMaintenanceActive = response.data.app?.maintenanceMode === true;
       setMaintenanceMode(isMaintenanceActive);
       return isMaintenanceActive;
@@ -127,10 +133,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const logout = useCallback(async () => {
     try {
-      const token = refreshToken;
-      if (token) {
-        await authApi.logout(token);
-      }
+      await authApi.logout();
     } catch (error) {
       logger.error('Logout error:', error);
     } finally {
@@ -146,19 +149,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearAuth();
       navigate('/login');
     }
-  }, [refreshToken, clearAuth, navigate, queryClient]);
+  }, [clearAuth, navigate, queryClient]);
 
   /**
    * Refresh access token function
    */
   const refreshAccessToken = useCallback(async () => {
     try {
-      const token = refreshToken;
-      if (!token) {
-        throw new Error('No refresh token available');
-      }
-
-      const tokens = await authApi.refreshToken(token);
+      const tokens = await authApi.refreshToken();
       updateAccessToken(tokens.accessToken);
     } catch (error) {
       logger.error('Token refresh failed:', error);
@@ -167,14 +165,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearAuth();
       throw error;
     }
-  }, [refreshToken, updateAccessToken, clearAuth]);
+  }, [updateAccessToken, clearAuth]);
+
+  /**
+   * On page reload: if authenticated but no access token (memory-only), refresh via cookie
+   */
+  useEffect(() => {
+    const state = useAuthStore.getState();
+    if (state.isAuthenticated && !state.accessToken) {
+      refreshAccessToken()
+        .then(async () => {
+          // Refresh user data to ensure permissions are server-authoritative
+          try {
+            const user = await authApi.getMe();
+            useAuthStore.getState().updateUser(user);
+          } catch (error) {
+            logger.error('Failed to refresh user data:', error);
+          }
+        })
+        .catch(() => {
+          clearAuth();
+          navigate('/login');
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Set up token refresh interval (refresh every 50 minutes)
    * Access tokens expire in 1 hour, so we refresh 10 minutes before expiry
    */
   useEffect(() => {
-    if (!refreshToken) return;
+    if (!isAuthenticated) return;
 
     const refreshInterval = setInterval(
       () => {
@@ -186,7 +208,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
 
     return () => clearInterval(refreshInterval);
-  }, [refreshToken, refreshAccessToken]);
+  }, [isAuthenticated, refreshAccessToken]);
 
   const value: AuthContextType = {
     login,

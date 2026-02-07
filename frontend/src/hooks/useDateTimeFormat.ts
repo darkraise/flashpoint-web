@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { logger } from '@/lib/logger';
 import { usersApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
@@ -26,41 +27,50 @@ export function useDateTimeFormat() {
   /**
    * Format a date using the application's date format
    */
-  const formatDate = (date: Date | string | number): string => {
-    const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-    try {
-      return dateFnsFormat(dateObj, dateFormat);
-    } catch (error) {
-      logger.error('Error formatting date:', error);
-      return String(date);
-    }
-  };
+  const formatDate = useCallback(
+    (date: Date | string | number): string => {
+      const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+      try {
+        return dateFnsFormat(dateObj, dateFormat);
+      } catch (error) {
+        logger.error('Error formatting date:', error);
+        return String(date);
+      }
+    },
+    [dateFormat]
+  );
 
   /**
    * Format a time using the application's time format
    */
-  const formatTime = (date: Date | string | number): string => {
-    const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-    try {
-      return dateFnsFormat(dateObj, timeFormat);
-    } catch (error) {
-      logger.error('Error formatting time:', error);
-      return String(date);
-    }
-  };
+  const formatTime = useCallback(
+    (date: Date | string | number): string => {
+      const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+      try {
+        return dateFnsFormat(dateObj, timeFormat);
+      } catch (error) {
+        logger.error('Error formatting time:', error);
+        return String(date);
+      }
+    },
+    [timeFormat]
+  );
 
   /**
    * Format a date and time using both application's formats
    */
-  const formatDateTime = (date: Date | string | number): string => {
-    const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
-    try {
-      return dateFnsFormat(dateObj, `${dateFormat} ${timeFormat}`);
-    } catch (error) {
-      logger.error('Error formatting datetime:', error);
-      return String(date);
-    }
-  };
+  const formatDateTime = useCallback(
+    (date: Date | string | number): string => {
+      const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+      try {
+        return dateFnsFormat(dateObj, `${dateFormat} ${timeFormat}`);
+      } catch (error) {
+        logger.error('Error formatting datetime:', error);
+        return String(date);
+      }
+    },
+    [dateFormat, timeFormat]
+  );
 
   return {
     dateFormat,

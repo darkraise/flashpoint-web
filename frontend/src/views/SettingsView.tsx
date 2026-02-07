@@ -40,7 +40,7 @@ const tabContentVariants = {
 export function SettingsView() {
   const [activeTab, setActiveTab] = useState('general');
   const { user } = useAuthStore();
-  const isAdmin = user?.permissions.includes('settings.update');
+  const isAdmin = user?.permissions.includes('settings.update') ?? false;
 
   // Fetch Ruffle version for non-admin users
   const { data: ruffleVersion, isLoading: isLoadingRuffleVersion } = useQuery({

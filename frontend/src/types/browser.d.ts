@@ -23,10 +23,3 @@ interface Navigator {
   mozConnection?: NetworkInformation;
   webkitConnection?: NetworkInformation;
 }
-
-/**
- * Extended Window interface for legacy browser detection
- */
-interface Window {
-  opera?: string;
-}

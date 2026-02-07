@@ -75,10 +75,9 @@ export class DownloadManager {
     this.activeDownloads.set(gameDataId, controller);
 
     // Chain external abort signal if provided
+    const onExternalAbort = () => controller.abort();
     if (abortSignal) {
-      abortSignal.addEventListener('abort', () => {
-        controller.abort();
-      });
+      abortSignal.addEventListener('abort', onExternalAbort);
     }
 
     try {
@@ -215,6 +214,9 @@ export class DownloadManager {
       );
     } finally {
       // Clean up
+      if (abortSignal) {
+        abortSignal.removeEventListener('abort', onExternalAbort);
+      }
       this.activeDownloads.delete(gameDataId);
     }
   }
@@ -248,6 +250,18 @@ export class DownloadManager {
     const writer = fs.createWriteStream(destPath);
 
     return new Promise((resolve, reject) => {
+      const onAbort = () => {
+        response.data.destroy();
+        writer.destroy();
+        reject(new Error('Download cancelled'));
+      };
+
+      abortSignal.addEventListener('abort', onAbort);
+
+      const cleanup = () => {
+        abortSignal.removeEventListener('abort', onAbort);
+      };
+
       response.data.on('data', (chunk: Buffer) => {
         downloadedBytes += chunk.length;
         onProgress?.(downloadedBytes, totalBytes);
@@ -258,22 +272,19 @@ export class DownloadManager {
       });
 
       writer.on('finish', () => {
+        cleanup();
         resolve();
       });
 
       writer.on('error', (error) => {
+        cleanup();
         reject(new Error(`Failed to write file: ${error.message}`));
       });
 
       response.data.on('error', (error: Error) => {
+        cleanup();
         writer.destroy();
         reject(new Error(`Download stream error: ${error.message}`));
-      });
-
-      abortSignal.addEventListener('abort', () => {
-        response.data.destroy();
-        writer.destroy();
-        reject(new Error('Download cancelled'));
       });
 
       response.data.pipe(writer);

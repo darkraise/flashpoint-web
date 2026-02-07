@@ -2,11 +2,11 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { User, AuthTokens } from '../types/auth';
 import { useThemeStore } from './theme';
+import { logger } from '@/lib/logger';
 
 interface AuthState {
   user: User | null;
   accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isGuest: boolean;
   isMaintenanceMode: boolean;
@@ -31,7 +31,6 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isGuest: false,
       isMaintenanceMode: false,
@@ -40,7 +39,6 @@ export const useAuthStore = create<AuthState>()(
         set({
           user,
           accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
           isAuthenticated: true,
           isGuest: false,
         });
@@ -49,7 +47,7 @@ export const useAuthStore = create<AuthState>()(
         if (user.role !== 'guest') {
           const themeStore = useThemeStore.getState();
           themeStore.loadThemeFromServer().catch((error) => {
-            console.debug('Failed to load theme settings after login:', error);
+            logger.debug('Failed to load theme settings after login:', error);
           });
         }
       },
@@ -61,12 +59,11 @@ export const useAuthStore = create<AuthState>()(
           username: 'Guest',
           email: 'guest@flashpoint.local',
           role: 'guest',
-          permissions: ['games.read', 'playlists.read', 'games.play'],
+          permissions: ['games.read', 'playlists.read'],
         };
         set({
           user: guestUser,
           accessToken: null,
-          refreshToken: null,
           isAuthenticated: false,
           isGuest: true,
         });
@@ -76,7 +73,6 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           accessToken: null,
-          refreshToken: null,
           isAuthenticated: false,
           isGuest: false,
         });
@@ -157,6 +153,12 @@ export const useAuthStore = create<AuthState>()(
           sessionStorage.removeItem(name);
         },
       })),
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+        isGuest: state.isGuest,
+        isMaintenanceMode: state.isMaintenanceMode,
+      }),
     }
   )
 );

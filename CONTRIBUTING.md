@@ -70,10 +70,8 @@ npm run install:all
 
 # Copy environment files
 cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-cp game-service/.env.example game-service/.env
 
-# Edit .env files with your Flashpoint paths
+# Edit .env file with your Flashpoint path
 # See docs/08-development/setup-guide.md for details
 
 # Start development servers
@@ -89,7 +87,6 @@ npm run typecheck
 # Run tests
 cd backend && npm test
 cd ../frontend && npm test
-cd ../game-service && npm test
 ```
 
 For detailed setup instructions, see
@@ -397,9 +394,8 @@ Update documentation when you:
 docs/
 ├── 01-overview/        # Project introduction
 ├── 02-architecture/    # System design
-├── 03-backend/         # Backend service docs
+├── 03-backend/         # Backend service docs (including game content serving)
 ├── 04-frontend/        # Frontend service docs
-├── 05-game-service/    # Game service docs
 ├── 06-api-reference/   # API documentation
 ├── 07-design-system/   # UI/UX guidelines
 ├── 08-development/     # Development guides
@@ -419,11 +415,12 @@ docs/
 
 ```
 flashpoint-web/
-├── backend/           # Express REST API
+├── backend/           # Express REST API with game content serving
 │   ├── src/
 │   │   ├── routes/    # API route handlers
 │   │   ├── services/  # Business logic
 │   │   ├── middleware/# Express middleware
+│   │   ├── game/      # Game content serving (proxy, ZIP mounting)
 │   │   └── utils/     # Utility functions
 │   └── package.json
 │
@@ -434,12 +431,6 @@ flashpoint-web/
 │   │   ├── lib/       # API client & utilities
 │   │   ├── hooks/     # Custom hooks
 │   │   └── store/     # State management
-│   └── package.json
-│
-├── game-service/      # Game file server
-│   ├── src/
-│   │   ├── servers/   # HTTP servers
-│   │   └── utils/     # Utilities
 │   └── package.json
 │
 ├── docs/              # Documentation
@@ -472,15 +463,14 @@ Contributors are recognized in:
 
 ## Quick Reference
 
-| Task                 | Command                   |
-| -------------------- | ------------------------- |
+| Task                | Command                   |
+| ------------------- | ------------------------- |
 | Install dependencies | `npm run install:all`     |
-| Start dev servers    | `npm run dev`             |
-| Type check           | `npm run typecheck`       |
-| Format code          | `npm run format`          |
-| Run backend tests    | `cd backend && npm test`  |
-| Run frontend tests   | `cd frontend && npm test` |
-| Build all            | `npm run build`           |
+| Start dev servers   | `npm run dev`             |
+| Type check          | `npm run typecheck`       |
+| Format code         | `npm run format`          |
+| Run backend tests   | `cd backend && npm test`  |
+| Build all           | `npm run build`           |
 
 ---
 

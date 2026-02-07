@@ -12,10 +12,11 @@ flows.
 
 Topics covered:
 
-- Three-service architecture overview (Frontend, Backend, Game Service)
+- Two-service architecture overview (Frontend, Backend with integrated game serving)
 - Technology stack and rationale
 - Service responsibilities and boundaries
 - Database architecture (flashpoint.sqlite and user.db)
+- Game content serving architecture (integrated in backend)
 - Security architecture (JWT, RBAC)
 - File system layout
 - Scalability considerations
@@ -28,13 +29,13 @@ system.
 
 ### 2. [Service Communication](./service-communication.md)
 
-**Inter-service communication patterns and protocols**
+**Communication patterns and protocols between Frontend and Backend**
 
 Topics covered:
 
 - Frontend ↔ Backend communication (REST API)
-- Backend ↔ Game Service communication (internal APIs)
-- Frontend ↔ Game Service communication (direct file loading)
+- Integrated game file serving in backend
+- Backend game routes (`/game-proxy/*` and `/game-zip/*`)
 - API endpoints by domain
 - Authentication token flow
 - Request/response formats
@@ -233,12 +234,12 @@ Express middleware chains handle cross-cutting concerns:
 - Single deployment
 - Consistent tooling
 
-### Why Three Services?
+### Why Two Services?
 
 - Clear separation of concerns
-- Independent scaling
-- Backend doesn't block on file I/O
-- Game service can be replicated
+- Frontend focuses on UI and client-side state
+- Backend handles all business logic and content serving
+- Simplified deployment (2 containers instead of 3)
 - Easier to reason about
 
 ## Common Workflows

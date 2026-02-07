@@ -3,6 +3,7 @@ import { Clock, GamepadIcon, TrendingUp, BarChart3 } from 'lucide-react';
 import { useUserStats } from '../../hooks/usePlayTracking';
 import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
 import { ChartErrorBoundary } from './ChartErrorBoundary';
+import { formatDuration } from '@/lib/cron-utils';
 
 // Lazy load chart components to reduce initial bundle size
 const PlaytimeChart = lazy(() =>
@@ -24,19 +25,6 @@ function ChartSkeleton({ height = 'h-80' }: { height?: string }) {
       </div>
     </div>
   );
-}
-
-function formatPlaytime(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds}s`;
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m`;
-  } else {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
 }
 
 export function UserStatsPanel() {
@@ -85,7 +73,7 @@ export function UserStatsPanel() {
     {
       icon: Clock,
       label: 'Total Playtime',
-      value: formatPlaytime(stats.totalPlaytimeSeconds),
+      value: formatDuration(stats.totalPlaytimeSeconds),
       color: 'text-green-400',
       bgColor: 'bg-green-500/10',
     },

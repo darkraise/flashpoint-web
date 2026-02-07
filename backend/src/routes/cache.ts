@@ -47,23 +47,34 @@ router.post(
   asyncHandler(async (req, res) => {
     const { cacheType } = req.body;
 
+    // Validate cacheType
+    const validCacheTypes = ['gameSearch', 'permissions', 'all'];
+    if (cacheType && !validCacheTypes.includes(cacheType)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid cacheType. Must be one of: gameSearch, permissions, all',
+      });
+    }
+
     const results: Record<string, boolean> = {};
 
-    if (!cacheType || cacheType === 'gameSearch') {
-      GameSearchCache.clearCache();
-      results.gameSearch = true;
-    }
-
-    if (!cacheType || cacheType === 'permissions') {
-      PermissionCache.clearAll();
-      results.permissions = true;
-    }
-
-    if (!cacheType || cacheType === 'all') {
-      GameSearchCache.clearCache();
-      PermissionCache.clearAll();
-      results.gameSearch = true;
-      results.permissions = true;
+    // Use switch to fix mutually exclusive cache clearing logic
+    switch (cacheType) {
+      case 'gameSearch':
+        GameSearchCache.clearCache();
+        results.gameSearch = true;
+        break;
+      case 'permissions':
+        PermissionCache.clearAll();
+        results.permissions = true;
+        break;
+      default:
+        // Clear all caches when cacheType is 'all' or undefined
+        GameSearchCache.clearCache();
+        PermissionCache.clearAll();
+        results.gameSearch = true;
+        results.permissions = true;
+        break;
     }
 
     res.json({

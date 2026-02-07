@@ -1,4 +1,4 @@
-import { useMemo, ReactNode } from 'react';
+import { useMemo, ReactNode, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGames } from '@/hooks/useGames';
 import { useFavoriteGameIds } from '@/hooks/useFavorites';
@@ -14,7 +14,7 @@ import { PaginationWithInfo } from '@/components/ui/pagination';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { GameFilters } from '@/types/game';
-import { BreadcrumbContext } from './GameCard';
+import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 
 interface GameBrowseLayoutProps {
   title: string;
@@ -46,26 +46,29 @@ export function GameBrowseLayout({
     [favoriteGameIdsArray]
   );
 
-  // Build filters from URL params
-  const filters: GameFilters = {
-    search: searchParams.get('search') || undefined,
-    platform: searchParams.get('platform') || platform || undefined,
-    series: searchParams.get('series') || undefined,
-    developers: searchParams.get('developers') || undefined,
-    publishers: searchParams.get('publishers') || undefined,
-    playModes: searchParams.get('playModes') || undefined,
-    languages: searchParams.get('languages') || undefined,
-    library,
-    tags: searchParams.get('tags') || undefined,
-    yearFrom: searchParams.get('yearFrom')
-      ? parseInt(searchParams.get('yearFrom')!, 10)
-      : undefined,
-    yearTo: searchParams.get('yearTo') ? parseInt(searchParams.get('yearTo')!, 10) : undefined,
-    sortBy: searchParams.get('sortBy') || 'title',
-    sortOrder: (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc',
-    page: parseInt(searchParams.get('page') || '1', 10),
-    limit: 50,
-  };
+  // Build filters from URL params - memoize to prevent unnecessary recalculations
+  const filters: GameFilters = useMemo(
+    () => ({
+      search: searchParams.get('search') || undefined,
+      platform: searchParams.get('platform') || platform || undefined,
+      series: searchParams.get('series') || undefined,
+      developers: searchParams.get('developers') || undefined,
+      publishers: searchParams.get('publishers') || undefined,
+      playModes: searchParams.get('playModes') || undefined,
+      languages: searchParams.get('languages') || undefined,
+      library,
+      tags: searchParams.get('tags') || undefined,
+      yearFrom: searchParams.get('yearFrom')
+        ? parseInt(searchParams.get('yearFrom')!, 10)
+        : undefined,
+      yearTo: searchParams.get('yearTo') ? parseInt(searchParams.get('yearTo')!, 10) : undefined,
+      sortBy: searchParams.get('sortBy') || 'title',
+      sortOrder: (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc',
+      page: parseInt(searchParams.get('page') || '1', 10),
+      limit: 50,
+    }),
+    [searchParams, platform, library]
+  );
 
   // Compute dynamic page title based on active filters
   const pageTitle = useMemo(() => {
@@ -128,9 +131,9 @@ export function GameBrowseLayout({
     }
 
     if (filters.series) {
-      filters.series.split(',').forEach((series, index) => {
+      filters.series.split(',').forEach((series) => {
         chips.push({
-          id: `series-${index}`,
+          id: `series-${encodeURIComponent(series.trim())}`,
           label: 'Series',
           value: series,
           category: 'Series',
@@ -139,9 +142,9 @@ export function GameBrowseLayout({
     }
 
     if (filters.developers) {
-      filters.developers.split(',').forEach((dev, index) => {
+      filters.developers.split(',').forEach((dev) => {
         chips.push({
-          id: `developers-${index}`,
+          id: `developers-${encodeURIComponent(dev.trim())}`,
           label: 'Developer',
           value: dev,
           category: 'Developer',
@@ -150,9 +153,9 @@ export function GameBrowseLayout({
     }
 
     if (filters.publishers) {
-      filters.publishers.split(',').forEach((pub, index) => {
+      filters.publishers.split(',').forEach((pub) => {
         chips.push({
-          id: `publishers-${index}`,
+          id: `publishers-${encodeURIComponent(pub.trim())}`,
           label: 'Publisher',
           value: pub,
           category: 'Publisher',
@@ -161,9 +164,9 @@ export function GameBrowseLayout({
     }
 
     if (filters.playModes) {
-      filters.playModes.split(',').forEach((mode, index) => {
+      filters.playModes.split(',').forEach((mode) => {
         chips.push({
-          id: `playModes-${index}`,
+          id: `playModes-${encodeURIComponent(mode.trim())}`,
           label: 'Play Mode',
           value: mode,
           category: 'Play Mode',
@@ -172,9 +175,9 @@ export function GameBrowseLayout({
     }
 
     if (filters.languages) {
-      filters.languages.split(',').forEach((lang, index) => {
+      filters.languages.split(',').forEach((lang) => {
         chips.push({
-          id: `languages-${index}`,
+          id: `languages-${encodeURIComponent(lang.trim())}`,
           label: 'Language',
           value: lang,
           category: 'Language',
@@ -183,9 +186,9 @@ export function GameBrowseLayout({
     }
 
     if (filters.tags) {
-      filters.tags.split(',').forEach((tag, index) => {
+      filters.tags.split(',').forEach((tag) => {
         chips.push({
-          id: `tags-${index}`,
+          id: `tags-${encodeURIComponent(tag.trim())}`,
           label: 'Tag',
           value: tag,
           category: 'Tag',
@@ -196,80 +199,51 @@ export function GameBrowseLayout({
     return chips;
   }, [filters, platform]);
 
-  const handleRemoveChip = (chipId: string) => {
-    const newParams = new URLSearchParams(searchParams);
+  const handleRemoveChip = useCallback(
+    (chipId: string) => {
+      const newParams = new URLSearchParams(searchParams);
 
-    if (chipId === 'search') {
-      newParams.delete('search');
-    } else if (chipId === 'platform') {
-      newParams.delete('platform');
-    } else if (chipId.startsWith('series-')) {
-      const remaining = filters.series
-        ?.split(',')
-        .filter((_, i) => chipId !== `series-${i}`)
-        .join(',');
-      if (remaining) {
-        newParams.set('series', remaining);
+      // Handle search separately
+      if (chipId === 'search') {
+        newParams.delete('search');
+      } else if (chipId === 'platform') {
+        newParams.delete('platform');
       } else {
-        newParams.delete('series');
-      }
-    } else if (chipId.startsWith('developers-')) {
-      const remaining = filters.developers
-        ?.split(',')
-        .filter((_, i) => chipId !== `developers-${i}`)
-        .join(',');
-      if (remaining) {
-        newParams.set('developers', remaining);
-      } else {
-        newParams.delete('developers');
-      }
-    } else if (chipId.startsWith('publishers-')) {
-      const remaining = filters.publishers
-        ?.split(',')
-        .filter((_, i) => chipId !== `publishers-${i}`)
-        .join(',');
-      if (remaining) {
-        newParams.set('publishers', remaining);
-      } else {
-        newParams.delete('publishers');
-      }
-    } else if (chipId.startsWith('playModes-')) {
-      const remaining = filters.playModes
-        ?.split(',')
-        .filter((_, i) => chipId !== `playModes-${i}`)
-        .join(',');
-      if (remaining) {
-        newParams.set('playModes', remaining);
-      } else {
-        newParams.delete('playModes');
-      }
-    } else if (chipId.startsWith('languages-')) {
-      const remaining = filters.languages
-        ?.split(',')
-        .filter((_, i) => chipId !== `languages-${i}`)
-        .join(',');
-      if (remaining) {
-        newParams.set('languages', remaining);
-      } else {
-        newParams.delete('languages');
-      }
-    } else if (chipId.startsWith('tags-')) {
-      const remaining = filters.tags
-        ?.split(',')
-        .filter((_, i) => chipId !== `tags-${i}`)
-        .join(',');
-      if (remaining) {
-        newParams.set('tags', remaining);
-      } else {
-        newParams.delete('tags');
-      }
-    }
+        // Data-driven approach for multi-value fields
+        const paramMap: Record<string, { param: string; value: string | undefined }> = {
+          'series-': { param: 'series', value: filters.series },
+          'developers-': { param: 'developers', value: filters.developers },
+          'publishers-': { param: 'publishers', value: filters.publishers },
+          'playModes-': { param: 'playModes', value: filters.playModes },
+          'languages-': { param: 'languages', value: filters.languages },
+          'tags-': { param: 'tags', value: filters.tags },
+        };
 
-    newParams.delete('page'); // Reset to page 1
-    setSearchParams(newParams);
-  };
+        // Find which prefix matches
+        const prefix = Object.keys(paramMap).find((p) => chipId.startsWith(p));
+        if (prefix) {
+          const { param, value } = paramMap[prefix];
+          const decodedValue = decodeURIComponent(chipId.replace(prefix, ''));
+          const remaining = value
+            ?.split(',')
+            .filter((v) => v.trim() !== decodedValue)
+            .join(',');
 
-  const handleClearAllFilters = () => {
+          if (remaining) {
+            newParams.set(param, remaining);
+          } else {
+            newParams.delete(param);
+          }
+        }
+      }
+
+      newParams.delete('page'); // Reset to page 1
+      setSearchParams(newParams);
+    },
+    [searchParams, filters, setSearchParams]
+  );
+
+  const handleClearAllFilters = useCallback(() => {
     const newParams = new URLSearchParams();
     // Keep sort params if they exist
     const sortBy = searchParams.get('sortBy');
@@ -277,20 +251,26 @@ export function GameBrowseLayout({
     if (sortBy) newParams.set('sortBy', sortBy);
     if (sortOrder) newParams.set('sortOrder', sortOrder);
     setSearchParams(newParams);
-  };
+  }, [searchParams, setSearchParams]);
 
-  const handlePageChange = (newPage: number) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set('page', newPage.toString());
-    setSearchParams(newParams);
-  };
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('page', newPage.toString());
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
 
-  const handleSortChange = (key: 'sortBy' | 'sortOrder', value: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set(key, value);
-    newParams.delete('page'); // Reset to page 1
-    setSearchParams(newParams);
-  };
+  const handleSortChange = useCallback(
+    (key: 'sortBy' | 'sortOrder', value: string) => {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set(key, value);
+      newParams.delete('page'); // Reset to page 1
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

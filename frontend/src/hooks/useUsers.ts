@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi } from '../lib/api';
-import { CreateUserData, UpdateUserData, ChangePasswordData } from '../types/auth';
+import { usersApi } from '@/lib/api';
+import { CreateUserData, UpdateUserData, ChangePasswordData } from '@/types/auth';
 import { useDialog } from '@/contexts/DialogContext';
 import { getErrorMessage } from '@/types/api-error';
 

@@ -479,7 +479,7 @@ export class MetadataSyncService {
       )
       .join(', ');
 
-    const values: any[] = [];
+    const values: (string | number | null)[] = [];
     sortedGames.forEach((game) => {
       values.push(
         game.id,
@@ -553,7 +553,13 @@ export class MetadataSyncService {
         ruffleSupport = excluded.ruffleSupport
     `;
 
-    await DatabaseService.run(sql, values);
+    // Wrap in a transaction for atomicity - a partial upsert would leave the
+    // database in an inconsistent state (some games updated, others not).
+    const db = DatabaseService.getDatabase();
+    db.transaction(() => {
+      const stmt = db.prepare(sql);
+      stmt.run(values);
+    })();
     logger.debug(`[MetadataSync] Upserted ${sortedGames.length} games`);
   }
 

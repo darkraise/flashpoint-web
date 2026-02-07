@@ -7,6 +7,7 @@ import { PermissionCache } from '../services/PermissionCache';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { JobScheduler } from '../services/JobScheduler';
 import { logger } from '../utils/logger';
 import { CategorySettings } from '../types/settings';
@@ -44,24 +45,18 @@ router.get(
   authenticate,
   requirePermission('settings.update'),
   logActivity('settings.list', 'system_settings'),
-  async (req: Request, res: Response) => {
-    try {
-      const allSettings = systemSettings.getAll();
-      res.json(allSettings);
-    } catch (error) {
-      logger.error('Failed to get all settings:', error);
-      res.status(500).json({
-        error: { message: 'Failed to retrieve settings' },
-      });
-    }
-  }
+  asyncHandler(async (req: Request, res: Response) => {
+    const allSettings = systemSettings.getAll();
+    res.json(allSettings);
+  })
 );
 
 // ===================================
 // GET PUBLIC SETTINGS (No Auth Required)
 // ===================================
-router.get('/public', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/public',
+  asyncHandler(async (req: Request, res: Response) => {
     const publicSettings: Record<
       string,
       Record<string, unknown>
@@ -91,13 +86,120 @@ router.get('/public', async (req: Request, res: Response) => {
     }
 
     res.json(publicSettings);
-  } catch (error) {
-    logger.error('Failed to get public settings:', error);
-    res.status(500).json({
-      error: { message: 'Failed to retrieve public settings' },
+  })
+);
+
+// ===================================
+// GET CACHE STATISTICS (Admin Only)
+// ===================================
+router.get(
+  '/_cache/stats',
+  authenticate,
+  requirePermission('settings.update'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const stats = systemSettings.getCacheStats();
+    res.json(stats);
+  })
+);
+
+// ===================================
+// CLEAR CACHE (Admin Only)
+// ===================================
+router.post(
+  '/_cache/clear',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('settings.cache_clear', 'system_settings'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { category } = req.body;
+
+    if (category) {
+      systemSettings.clearCategoryCache(category);
+    } else {
+      systemSettings.clearCache();
+    }
+
+    res.json({ message: 'Cache cleared successfully' });
+  })
+);
+
+// ===================================
+// GET PERMISSION CACHE STATISTICS (Admin Only)
+// ===================================
+router.get(
+  '/_cache/permissions/stats',
+  authenticate,
+  requirePermission('settings.update'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const stats = PermissionCache.getStats();
+    res.json({
+      ...stats,
+      description: {
+        userCacheSize: 'Number of cached user permissions',
+        roleCacheSize: 'Number of cached role permissions',
+        totalSize: 'Total cached entries',
+        ttl: {
+          userPermissions: '5 minutes',
+          rolePermissions: '10 minutes',
+        },
+      },
     });
-  }
+  })
+);
+
+// Validation schema for permission cache clear
+const clearPermissionCacheSchema = z.object({
+  type: z.enum(['all', 'user', 'role', 'users', 'roles']),
+  id: z.number().int().positive().optional(),
 });
+
+// ===================================
+// CLEAR PERMISSION CACHE (Admin Only)
+// ===================================
+router.post(
+  '/_cache/permissions/clear',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('settings.permission_cache_clear', 'system_settings'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const validation = clearPermissionCacheSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid request body',
+          details: validation.error.errors,
+        },
+      });
+    }
+
+    const { type, id } = validation.data;
+
+    if (type === 'user' && id) {
+      PermissionCache.invalidateUser(Number(id));
+      res.json({ message: `User ${id} permission cache cleared successfully` });
+    } else if (type === 'role' && id) {
+      PermissionCache.invalidateRole(Number(id));
+      res.json({ message: `Role ${id} permission cache cleared successfully` });
+    } else if (type === 'users') {
+      PermissionCache.invalidateAllUsers();
+      res.json({ message: 'All user permission caches cleared successfully' });
+    } else if (type === 'roles') {
+      PermissionCache.invalidateAllRoles();
+      res.json({ message: 'All role permission caches cleared successfully' });
+    } else if (type === 'all') {
+      PermissionCache.clearAll();
+      res.json({ message: 'All permission caches cleared successfully' });
+    } else {
+      res.status(400).json({
+        error: {
+          message:
+            'Invalid request. Specify type: "user", "role", "users", "roles", or "all". For "user" or "role", provide an id.',
+        },
+      });
+    }
+  })
+);
 
 // ===================================
 // GET CATEGORY SETTINGS (Admin Only)
@@ -106,20 +208,13 @@ router.get(
   '/:category',
   authenticate,
   requirePermission('settings.read'),
-  async (req: Request, res: Response) => {
-    try {
-      const { category } = req.params;
-      const categorySettings = systemSettings.getCategory(category);
+  asyncHandler(async (req: Request, res: Response) => {
+    const { category } = req.params;
+    const categorySettings = systemSettings.getCategory(category);
 
-      // Return settings (empty object if category has no settings yet)
-      res.json(categorySettings);
-    } catch (error) {
-      logger.error(`Failed to get ${req.params.category} settings:`, error);
-      res.status(500).json({
-        error: { message: 'Failed to retrieve settings' },
-      });
-    }
-  }
+    // Return settings (empty object if category has no settings yet)
+    res.json(categorySettings);
+  })
 );
 
 // ===================================
@@ -134,47 +229,32 @@ router.patch(
   authenticate,
   requirePermission('settings.update'),
   logActivity('settings.update', 'system_settings'),
-  async (req: Request, res: Response) => {
-    try {
-      const { category } = req.params;
-      const validation = updateCategorySchema.safeParse(req.body);
+  asyncHandler(async (req: Request, res: Response) => {
+    const { category } = req.params;
+    const validation = updateCategorySchema.safeParse(req.body);
 
-      if (!validation.success) {
-        return res.status(400).json({
-          error: {
-            message: 'Invalid request body',
-            details: validation.error.errors,
-          },
-        });
-      }
-
-      const settings = validation.data;
-      const userId = req.user!.id;
-
-      // Update settings (validation happens in service)
-      systemSettings.updateCategory(category, settings, userId);
-
-      // Update job scheduler if jobs settings changed
-      updateJobScheduler(category, settings);
-
-      // Return updated settings
-      const updated = systemSettings.getCategory(category);
-      res.json(updated);
-    } catch (error) {
-      logger.error(`Failed to update ${req.params.category} settings:`, error);
-
-      // Check if it's a validation error
-      if (error instanceof Error && error.message.includes('must be')) {
-        return res.status(400).json({
-          error: { message: error.message },
-        });
-      }
-
-      res.status(500).json({
-        error: { message: 'Failed to update settings' },
+    if (!validation.success) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid request body',
+          details: validation.error.errors,
+        },
       });
     }
-  }
+
+    const settings = validation.data;
+    const userId = req.user!.id;
+
+    // Update settings (validation happens in service)
+    systemSettings.updateCategory(category, settings, userId);
+
+    // Update job scheduler if jobs settings changed
+    updateJobScheduler(category, settings);
+
+    // Return updated settings
+    const updated = systemSettings.getCategory(category);
+    res.json(updated);
+  })
 );
 
 // ===================================
@@ -184,26 +264,19 @@ router.get(
   '/:category/:key',
   authenticate,
   requirePermission('settings.read'),
-  async (req: Request, res: Response) => {
-    try {
-      const { category, key } = req.params;
-      const fullKey = `${category}.${key}`;
-      const value = systemSettings.get(fullKey);
+  asyncHandler(async (req: Request, res: Response) => {
+    const { category, key } = req.params;
+    const fullKey = `${category}.${key}`;
+    const value = systemSettings.get(fullKey);
 
-      if (value === null) {
-        return res.status(404).json({
-          error: { message: `Setting '${fullKey}' not found` },
-        });
-      }
-
-      res.json({ value });
-    } catch (error) {
-      logger.error(`Failed to get setting ${req.params.category}.${req.params.key}:`, error);
-      res.status(500).json({
-        error: { message: 'Failed to retrieve setting' },
+    if (value === null) {
+      return res.status(404).json({
+        error: { message: `Setting '${fullKey}' not found` },
       });
     }
-  }
+
+    res.json({ value });
+  })
 );
 
 // ===================================
@@ -218,168 +291,30 @@ router.patch(
   authenticate,
   requirePermission('settings.update'),
   logActivity('settings.update', 'system_settings'),
-  async (req: Request, res: Response) => {
-    try {
-      const { category, key } = req.params;
-      const fullKey = `${category}.${key}`;
-      const validation = updateSettingSchema.safeParse(req.body);
+  asyncHandler(async (req: Request, res: Response) => {
+    const { category, key } = req.params;
+    const fullKey = `${category}.${key}`;
+    const validation = updateSettingSchema.safeParse(req.body);
 
-      if (!validation.success) {
-        return res.status(400).json({
-          error: {
-            message: 'Invalid request body',
-            details: validation.error.errors,
-          },
-        });
-      }
-
-      const { value } = validation.data;
-      const userId = req.user!.id;
-
-      // Update setting (validation happens in service)
-      systemSettings.set(fullKey, value, userId);
-
-      // Return updated value
-      const updated = systemSettings.get(fullKey);
-      res.json({ value: updated });
-    } catch (error) {
-      logger.error(`Failed to update setting ${req.params.category}.${req.params.key}:`, error);
-
-      // Check if it's a validation error
-      if (error instanceof Error && error.message.includes('must be')) {
-        return res.status(400).json({
-          error: { message: error.message },
-        });
-      }
-
-      res.status(500).json({
-        error: { message: 'Failed to update setting' },
-      });
-    }
-  }
-);
-
-// ===================================
-// GET CACHE STATISTICS (Admin Only)
-// ===================================
-router.get(
-  '/_cache/stats',
-  authenticate,
-  requirePermission('settings.update'),
-  async (req: Request, res: Response) => {
-    try {
-      const stats = systemSettings.getCacheStats();
-      res.json(stats);
-    } catch (error) {
-      logger.error('Failed to get cache stats:', error);
-      res.status(500).json({
-        error: { message: 'Failed to retrieve cache statistics' },
-      });
-    }
-  }
-);
-
-// ===================================
-// CLEAR CACHE (Admin Only)
-// ===================================
-router.post(
-  '/_cache/clear',
-  authenticate,
-  requirePermission('settings.update'),
-  logActivity('settings.cache_clear', 'system_settings'),
-  async (req: Request, res: Response) => {
-    try {
-      const { category } = req.body;
-
-      if (category) {
-        systemSettings.clearCategoryCache(category);
-      } else {
-        systemSettings.clearCache();
-      }
-
-      res.json({ message: 'Cache cleared successfully' });
-    } catch (error) {
-      logger.error('Failed to clear cache:', error);
-      res.status(500).json({
-        error: { message: 'Failed to clear cache' },
-      });
-    }
-  }
-);
-
-// ===================================
-// GET PERMISSION CACHE STATISTICS (Admin Only)
-// ===================================
-router.get(
-  '/_cache/permissions/stats',
-  authenticate,
-  requirePermission('settings.update'),
-  async (req: Request, res: Response) => {
-    try {
-      const stats = PermissionCache.getStats();
-      res.json({
-        ...stats,
-        description: {
-          userCacheSize: 'Number of cached user permissions',
-          roleCacheSize: 'Number of cached role permissions',
-          totalSize: 'Total cached entries',
-          ttl: {
-            userPermissions: '5 minutes',
-            rolePermissions: '10 minutes',
-          },
+    if (!validation.success) {
+      return res.status(400).json({
+        error: {
+          message: 'Invalid request body',
+          details: validation.error.errors,
         },
       });
-    } catch (error) {
-      logger.error('Failed to get permission cache stats:', error);
-      res.status(500).json({
-        error: { message: 'Failed to retrieve permission cache statistics' },
-      });
     }
-  }
-);
 
-// ===================================
-// CLEAR PERMISSION CACHE (Admin Only)
-// ===================================
-router.post(
-  '/_cache/permissions/clear',
-  authenticate,
-  requirePermission('settings.update'),
-  logActivity('settings.permission_cache_clear', 'system_settings'),
-  async (req: Request, res: Response) => {
-    try {
-      const { type, id } = req.body;
+    const { value } = validation.data;
+    const userId = req.user!.id;
 
-      if (type === 'user' && id) {
-        PermissionCache.invalidateUser(Number(id));
-        res.json({ message: `User ${id} permission cache cleared successfully` });
-      } else if (type === 'role' && id) {
-        PermissionCache.invalidateRole(Number(id));
-        res.json({ message: `Role ${id} permission cache cleared successfully` });
-      } else if (type === 'users') {
-        PermissionCache.invalidateAllUsers();
-        res.json({ message: 'All user permission caches cleared successfully' });
-      } else if (type === 'roles') {
-        PermissionCache.invalidateAllRoles();
-        res.json({ message: 'All role permission caches cleared successfully' });
-      } else if (type === 'all') {
-        PermissionCache.clearAll();
-        res.json({ message: 'All permission caches cleared successfully' });
-      } else {
-        res.status(400).json({
-          error: {
-            message:
-              'Invalid request. Specify type: "user", "role", "users", "roles", or "all". For "user" or "role", provide an id.',
-          },
-        });
-      }
-    } catch (error) {
-      logger.error('Failed to clear permission cache:', error);
-      res.status(500).json({
-        error: { message: 'Failed to clear permission cache' },
-      });
-    }
-  }
+    // Update setting (validation happens in service)
+    systemSettings.set(fullKey, value, userId);
+
+    // Return updated value
+    const updated = systemSettings.get(fullKey);
+    res.json({ value: updated });
+  })
 );
 
 export default router;

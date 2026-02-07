@@ -144,6 +144,36 @@ After the migration runs, verify it was recorded:
 SELECT * FROM migrations ORDER BY applied_at DESC LIMIT 1;
 ```
 
+## Transaction Safety
+
+**IMPORTANT: Migrations run inside transactions for atomicity.**
+
+Each migration execution is wrapped in a better-sqlite3 `db.transaction()`:
+
+```typescript
+const transaction = this.db!.transaction(() => {
+  this.db!.exec(migrationSQL); // Execute migration SQL
+  this.recordMigration(name, sql); // Record in registry
+});
+
+transaction(); // Execute atomically - both succeed or both fail
+```
+
+**What this prevents:**
+
+- ❌ SQL executes but migration not recorded (orphaned changes)
+- ❌ Migration recorded but SQL never executed (wrong schema)
+- ❌ Database left in inconsistent half-migrated state
+
+**What this guarantees:**
+
+- ✅ Either both SQL and registry insert complete
+- ✅ Or both are rolled back to pre-migration state
+- ✅ No intermediate states possible
+- ✅ Clean recovery from migration failures
+
+
+
 ## Best Practices
 
 ### 1. Idempotency is Required

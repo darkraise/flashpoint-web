@@ -9,7 +9,7 @@ import { authSettingsApi, systemSettingsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { logger } from '@/lib/logger';
-import { getApiErrorMessage } from '@/utils/errorUtils';
+import { getErrorMessage } from '@/types/api-error';
 import {
   Form,
   FormControl,
@@ -76,7 +76,7 @@ export function LoginForm() {
       await login(values, from);
     } catch (error) {
       logger.error('Login error:', error);
-      setError(getApiErrorMessage(error, 'Login failed. Please check your credentials.'));
+      setError(getErrorMessage(error) || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +139,7 @@ export function LoginForm() {
               Welcome Back
             </h1>
             <p className="text-sm text-muted-foreground text-center">
-              Sign in to access Flashpoint Archive
+              Log in to access Flashpoint Archive
             </p>
           </div>
 
@@ -153,7 +153,7 @@ export function LoginForm() {
               <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
               <AlertDescription className="ml-2">
                 <strong className="font-semibold">Setup Complete!</strong> Your administrator
-                account has been created successfully. Please sign in to continue.
+                account has been created successfully. Please log in to continue.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -240,10 +240,10 @@ export function LoginForm() {
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="inline-block h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      Signing in...
+                      Logging in...
                     </span>
                   ) : (
-                    'Sign In'
+                    'Log In'
                   )}
                 </Button>
 

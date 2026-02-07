@@ -136,13 +136,13 @@ export class FavoritesService {
 
     if (limit !== undefined) {
       // Validate limit is a positive integer
-      const safeLimit = Math.max(1, Math.min(parseInt(String(limit), 10) || 50, 1000));
+      const safeLimit = Math.max(1, Math.min(limit ?? 50, 1000));
       query += ` LIMIT ?`;
       params.push(safeLimit);
 
       if (offset !== undefined) {
         // Validate offset is a non-negative integer
-        const safeOffset = Math.max(0, parseInt(String(offset), 10) || 0);
+        const safeOffset = Math.max(0, offset ?? 0);
         query += ` OFFSET ?`;
         params.push(safeOffset);
       }
@@ -220,10 +220,13 @@ export class FavoritesService {
     const gameIds = favorites.map((f) => f.game_id);
     const games = await this.gameService.getGamesByIds(gameIds);
 
+    // Build Map for O(1) lookup (was O(N²) with .find() in loop)
+    const gamesMap = new Map(games.map((g) => [g.id, g]));
+
     // Merge game data with addedAt timestamps
     const favoriteGames: FavoriteGame[] = favorites
       .map((fav) => {
-        const game = games.find((g) => g.id === fav.game_id);
+        const game = gamesMap.get(fav.game_id);
         if (game) {
           return {
             ...game,

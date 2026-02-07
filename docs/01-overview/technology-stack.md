@@ -31,17 +31,6 @@ experience, and ecosystem maturity.
 | Shadcn UI      | Latest  | Component library         |
 | Ruffle         | 0.2.0   | Flash emulator            |
 
-### Game Service Technologies
-
-| Technology      | Version | Purpose               |
-| --------------- | ------- | --------------------- |
-| Node.js         | 20+     | JavaScript runtime    |
-| Express         | 4.18    | HTTP server           |
-| TypeScript      | 5.3     | Type safety           |
-| node-stream-zip | 1.15    | ZIP archive streaming |
-| Axios           | 1.6     | HTTP client           |
-| Winston         | 3.11    | Logging               |
-
 ---
 
 ## Backend Stack
@@ -63,6 +52,8 @@ JavaScript runtime built on Chrome's V8 engine.
 - Database operations
 - File watching (hot-reload)
 - Background jobs
+- Game file serving and proxying
+- ZIP archive mounting and streaming
 
 ### Express (v4.18)
 
@@ -120,6 +111,26 @@ const stmt = fpDb.prepare(
   'SELECT * FROM game WHERE title LIKE ? AND platform = ?'
 );
 const games = stmt.all(`%${search}%`, platform);
+```
+
+### node-stream-zip (v1.15)
+
+Zero-dependency ZIP file streaming library integrated into backend.
+
+**Why chosen:**
+
+- Streaming (no extraction required)
+- Memory efficient random access
+- Fast direct reads
+- Simple API
+
+**Use:**
+
+```typescript
+const zip = new StreamZip.async({ file: '/path/to/game.zip' });
+const entry = await zip.entry(filePath);
+const stream = await zip.stream(entry.name);
+stream.pipe(res);
 ```
 
 ### JWT & bcrypt
@@ -251,28 +262,6 @@ Flash Player emulator written in Rust, compiled to WebAssembly.
 
 ---
 
-## Game Service Stack
-
-### node-stream-zip (v1.15)
-
-Zero-dependency ZIP file streaming library.
-
-**Why chosen:**
-
-- Streaming (no extraction required)
-- Memory efficient random access
-- Fast direct reads
-- Simple API
-
-**Usage:**
-
-```typescript
-const zip = new StreamZip.async({ file: '/path/to/game.zip' });
-const entry = await zip.entry(filePath);
-const stream = await zip.stream(entry.name);
-stream.pipe(res);
-```
-
 ---
 
 ## Development Tools
@@ -393,18 +382,15 @@ For each technology, evaluated:
 - Average response: <50ms
 - Game search: <100ms
 - Database queries: <10ms (indexed)
+- File streaming: Wire speed
+- ZIP file access: <50ms
+- CDN fallback: 200-500ms (network dependent)
 
 **Frontend:**
 
 - First contentful paint: <1s
 - Time to interactive: <2s
 - Game grid render: <100ms (virtualized)
-
-**Game Service:**
-
-- File streaming: Wire speed
-- ZIP file access: <50ms
-- CDN fallback: 200-500ms (network dependent)
 
 ---
 

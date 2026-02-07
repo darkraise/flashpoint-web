@@ -490,10 +490,11 @@ Unknown file types default to `application/octet-stream`:
 
 ```bash
 # Create test file
-echo "test" > test.swf
+mkdir -p "D:/Flashpoint/Legacy/htdocs/test.com"
+echo "test" > "D:/Flashpoint/Legacy/htdocs/test.com/test.swf"
 
-# Request file
-curl -I http://localhost:22500/test.swf
+# Request file via backend
+curl -I http://localhost:3100/game-proxy/http://test.com/test.swf
 
 # Expected headers:
 # Content-Type: application/x-shockwave-flash
@@ -503,34 +504,34 @@ curl -I http://localhost:22500/test.swf
 
 ```bash
 # Flash
-curl -I http://localhost:22500/file.swf
+curl -I http://localhost:3100/game-proxy/http://test.com/file.swf
 # Expected: application/x-shockwave-flash
 
 # Director
-curl -I http://localhost:22500/file.dcr
+curl -I http://localhost:3100/game-proxy/http://test.com/file.dcr
 # Expected: application/x-director
 
 # Unity
-curl -I http://localhost:22500/file.unity3d
+curl -I http://localhost:3100/game-proxy/http://test.com/file.unity3d
 # Expected: application/vnd.unity
 
 # HTML
-curl -I http://localhost:22500/file.html
+curl -I http://localhost:3100/game-proxy/http://test.com/file.html
 # Expected: text/html
 
 # JavaScript
-curl -I http://localhost:22500/file.js
+curl -I http://localhost:3100/game-proxy/http://test.com/file.js
 # Expected: text/javascript
 
 # Image
-curl -I http://localhost:22500/file.png
+curl -I http://localhost:3100/game-proxy/http://test.com/file.png
 # Expected: image/png
 ```
 
 ### Test Unknown Type
 
 ```bash
-curl -I http://localhost:22500/file.unknown
+curl -I http://localhost:3100/game-proxy/http://test.com/file.unknown
 # Expected: application/octet-stream
 ```
 

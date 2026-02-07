@@ -22,7 +22,6 @@ describe('Auth Store', () => {
 
       expect(state.user).toBeNull();
       expect(state.accessToken).toBeNull();
-      expect(state.refreshToken).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isGuest).toBe(false);
       expect(state.isMaintenanceMode).toBe(false);
@@ -41,7 +40,6 @@ describe('Auth Store', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'access-token-123',
-        refreshToken: 'refresh-token-456',
         expiresIn: 3600,
       };
 
@@ -50,7 +48,6 @@ describe('Auth Store', () => {
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockUser);
       expect(state.accessToken).toBe(mockTokens.accessToken);
-      expect(state.refreshToken).toBe(mockTokens.refreshToken);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isGuest).toBe(false);
     });
@@ -66,7 +63,6 @@ describe('Auth Store', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'access-token',
-        refreshToken: 'refresh-token',
         expiresIn: 3600,
       };
 
@@ -93,7 +89,6 @@ describe('Auth Store', () => {
       expect(state.user?.role).toBe('guest');
       expect(state.user?.username).toBe('Guest');
       expect(state.accessToken).toBeNull();
-      expect(state.refreshToken).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isGuest).toBe(true);
     });
@@ -134,7 +129,6 @@ describe('Auth Store', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 
@@ -146,7 +140,6 @@ describe('Auth Store', () => {
       const state = useAuthStore.getState();
       expect(state.user).toBeNull();
       expect(state.accessToken).toBeNull();
-      expect(state.refreshToken).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isGuest).toBe(false);
     });
@@ -162,7 +155,6 @@ describe('Auth Store', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 
@@ -192,7 +184,6 @@ describe('Auth Store', () => {
 
       const initialTokens: AuthTokens = {
         accessToken: 'old-token',
-        refreshToken: 'refresh-token',
         expiresIn: 3600,
       };
 
@@ -203,7 +194,6 @@ describe('Auth Store', () => {
 
       const state = useAuthStore.getState();
       expect(state.accessToken).toBe(newAccessToken);
-      expect(state.refreshToken).toBe(initialTokens.refreshToken); // Unchanged
       expect(state.user).toEqual(mockUser); // Unchanged
     });
   });
@@ -220,7 +210,6 @@ describe('Auth Store', () => {
 
       const tokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 
@@ -264,7 +253,6 @@ describe('Auth Store', () => {
 
       const tokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 

@@ -11,7 +11,7 @@ export function HomeView() {
   const { data: publicSettings } = usePublicSettings();
 
   // Get configured hours from backend (default to 24 if not set)
-  const recentHours = publicSettings?.app?.homeRecentHours || 24;
+  const recentHours = publicSettings?.app?.homeRecentHours ?? 24;
 
   // Format time period for display
   const timePeriod = useMemo(() => {
@@ -61,7 +61,7 @@ export function HomeView() {
       <HomeSection
         title="Most Played Games"
         description="Games with the highest play counts from the community"
-        games={mostPlayed?.data || []}
+        games={mostPlayed || []}
         isLoading={loadingMostPlayed}
         viewAllHref="/browse?sortBy=title&sortOrder=asc"
         favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}

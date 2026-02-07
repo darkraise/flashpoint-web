@@ -5,7 +5,7 @@ export interface Game {
   alternateTitles?: string;
   series?: string;
   developer: string;
-  publisher: string;
+  publisher?: string;
   platformName?: string;
   platformsStr?: string;
   platformId?: number;
@@ -92,4 +92,6 @@ export interface GameLaunchData {
   applicationPath?: string;
   playMode?: string;
   canPlayInBrowser: boolean;
+  /** True when the game ZIP is being downloaded in the background */
+  downloading?: boolean;
 }

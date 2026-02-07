@@ -419,10 +419,10 @@ Create test HTML file:
 </html>
 ```
 
-Request file:
+Request file via backend proxy:
 
 ```bash
-curl http://localhost:22500/test-unity.html
+curl http://localhost:3100/game-proxy/http://test.com/test-unity.html
 ```
 
 Expected output (excerpt):
@@ -463,10 +463,10 @@ Create test HTML file:
 </html>
 ```
 
-Request file:
+Request file via backend proxy:
 
 ```bash
-curl http://localhost:22500/test-regular.html
+curl http://localhost:3100/game-proxy/http://test.com/test-regular.html
 ```
 
 Expected output (excerpt):
@@ -487,7 +487,7 @@ Expected output (excerpt):
 ### Test Non-HTML File
 
 ```bash
-curl http://localhost:22500/test.swf
+curl http://localhost:3100/game-proxy/http://test.com/test.swf
 ```
 
 Expected: No polyfills injected (binary file returned as-is)

@@ -32,13 +32,12 @@ Response:
   "status": "healthy",
   "timestamp": "2026-01-30T12:00:00.000Z",
   "uptime": 3600,
-  "database": {
-    "flashpoint": "connected",
-    "user": "connected"
+  "databases": {
+    "flashpoint": { "connected": true },
+    "user": { "connected": true }
   },
-  "gameService": {
-    "proxy": "reachable",
-    "gamezip": "reachable"
+  "services": {
+    "gameService": { "status": "integrated" }
   }
 }
 ```
@@ -54,24 +53,6 @@ healthcheck:
   start_period: 10s
 ```
 
-**Game Service:**
-
-```yaml
-healthcheck:
-  test:
-    [
-      'CMD',
-      'wget',
-      '--quiet',
-      '--tries=1',
-      '--spider',
-      'http://localhost:22500/',
-    ]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-  start_period: 30s
-```
 
 ## Check Health Status
 
@@ -109,18 +90,12 @@ frontend:
   depends_on:
     backend:
       condition: service_healthy
-
-backend:
-  depends_on:
-    game-service:
-      condition: service_healthy
 ```
 
 **Sequence:**
 
-1. Game Service → health check → healthy (30s)
-2. Backend → health check → healthy (40s)
-3. Frontend → health check → healthy (10s)
+1. Backend → health check → healthy (40s)
+2. Frontend → health check → healthy (10s)
 
 ## Troubleshooting
 
@@ -152,7 +127,7 @@ docker inspect flashpoint-backend --format='{{range .State.Health.Log}}{{.ExitCo
 3. **Port conflicts**: Ensure ports are available
 
    ```bash
-   netstat -tulpn | grep -E '(3100|80|22500|22501)'
+   netstat -tulpn | grep -E '(3100|80)'
    ```
 
 4. **Resource constraints**: Check memory usage

@@ -166,7 +166,7 @@ Get current authenticated user information.
 **Guest (priority: 0):**
 
 - games.read, playlists.read
-- Read-only access only
+- Read-only access only (no games.play — playing requires authentication)
 
 ## Permissions
 
@@ -179,10 +179,19 @@ Complete permission list in
 
 ```bash
 JWT_SECRET=your-secret-key-here        # Change in production
-JWT_EXPIRES_IN=1h                       # Token expiration
-REFRESH_TOKEN_EXPIRES_IN=30d            # Refresh token expiration
+JWT_EXPIRES_IN=1h                       # Access token expiration
+REFRESH_TOKEN_EXPIRES_IN=30d            # Refresh token expiration (cookie TTL)
 DOMAIN=http://localhost:5173           # Frontend URL
 ```
+
+**Cookie Configuration (Backend):**
+
+- Cookie name: `fp_refresh`
+- Path: `/api/auth` (scoped to auth routes only)
+- Max-Age: 30 days (same as REFRESH_TOKEN_EXPIRES_IN)
+- Secure: true in production (HTTPS only)
+- HttpOnly: true (prevents JavaScript access)
+- SameSite: lax (CSRF protection)
 
 **Auth Settings (Database):**
 
@@ -201,11 +210,19 @@ DOMAIN=http://localhost:5173           # Frontend URL
 
 **Token Security:**
 
-- Access tokens expire in 1 hour
-- Refresh tokens expire in 30 days
+- Access tokens: 1 hour expiry, stored in memory only
+- Refresh tokens: 30 days expiry, stored in HTTP-only cookies
 - Tokens use HS256 algorithm
+- Automatic token refresh via cookie on page reload
 - Automatic refresh token revocation on refresh
 - Bulk token revocation available (admin)
+
+**Cookie Security:**
+
+- Refresh token cookies protected from XSS via HttpOnly flag
+- CSRF protection via SameSite=lax
+- Cookie scoped to /api/auth path (prevents leakage to other routes)
+- Secure flag enforced in production (HTTPS only)
 
 **Rate Limiting:**
 
@@ -218,8 +235,24 @@ DOMAIN=http://localhost:5173           # Frontend URL
 
 - IP address and user agent tracked per session
 - Activity logging for audit trail
-- Tokens stored in localStorage (client-side)
-- HTTPS recommended for production
+- Refresh tokens stored in HTTP-only cookies (XSS-resistant)
+- Access tokens stored in memory only (lost on page reload)
+- Session recovery via cookie on page reload
+- HTTPS required in production (for secure cookie flag)
+
+### Shared Access Validation
+
+Guest users (id=0) are explicitly excluded from shared access bypass checks.
+The `validateSharedGameAccess` middleware verifies `req.user.id !== 0` before
+granting access, preventing unauthenticated users from accessing shared
+resources meant for specific authenticated users.
+
+### Session Recovery & Permission Refresh
+
+After token refresh (including on page reload), the frontend calls
+`GET /api/auth/me` to refresh user permissions from the server. This ensures
+permissions are always server-authoritative and prevents stale cached
+permissions from granting inappropriate access.
 
 ## Common Use Cases
 
@@ -293,14 +326,16 @@ await mutation.mutateAsync({
 
 ## Best Practices
 
-1. Always use HTTPS in production
+1. **Always use HTTPS in production** - Required for secure cookie flag
 2. Change JWT_SECRET from default in production
-3. Implement token rotation on refresh
+3. Token rotation on refresh is automatic (old token revoked)
 4. Monitor login attempts for suspicious activity
 5. Regular cleanup of expired tokens and old login attempts
 6. Use strong passwords
 7. Enable email verification for production
 8. Audit activity logs regularly
+9. Frontend must use `withCredentials: true` on axios client
+10. Frontend must call `/api/auth/refresh` on app initialization for session recovery
 
 ## Troubleshooting
 

@@ -1,5 +1,6 @@
 import { Game } from '@/types/game';
-import { GameCard, BreadcrumbContext } from './GameCard';
+import { GameCard } from './GameCard';
+import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 import { useUIStore } from '@/store/ui';
 
 interface GameGridProps {
@@ -24,7 +25,7 @@ export function GameGrid({
   const cardSize = useUIStore((state) => state.cardSize);
 
   if (games.length === 0) {
-    return <div className="text-center py-12 text-gray-400">No games found</div>;
+    return <div className="text-center py-12 text-muted-foreground">No games found</div>;
   }
 
   // Dynamic grid classes based on card size

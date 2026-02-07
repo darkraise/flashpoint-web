@@ -79,19 +79,34 @@ function GamePlayerView() {
   const { data: launchData } = useGameLaunchData(gameId);
 
   return (
-    <GamePlayer
-      title={game.title}
-      platform={game.platformName}
-      contentUrl={launchData.contentUrl}
-      launchCommand={launchData.launchCommand}
-      canPlayInBrowser={launchData.canPlayInBrowser}
-      allowFullscreen={true}
-      showControls={true}
-      height="calc(100vh - 220px)"
-    />
+    <>
+      {launchData?.downloading ? (
+        <div className="flex items-center justify-center h-full bg-black">
+          <div className="text-center">
+            <Download size={48} className="text-blue-500 mx-auto mb-4 animate-bounce" />
+            <h3 className="text-xl font-bold mb-2 text-white">Downloading Game Data...</h3>
+            <p className="text-gray-400 text-sm">Files are being downloaded automatically...</p>
+          </div>
+        </div>
+      ) : (
+        <GamePlayer
+          title={game.title}
+          platform={game.platformName}
+          contentUrl={launchData.contentUrl}
+          launchCommand={launchData.launchCommand}
+          canPlayInBrowser={launchData.canPlayInBrowser}
+          allowFullscreen={true}
+          showControls={true}
+          height="calc(100vh - 220px)"
+        />
+      )}
+    </>
   );
 }
 ```
+
+**Note:** Download status is handled by parent view (GamePlayerView), not GamePlayer itself.
+See [Download Flow](#download-flow) below.
 
 ### Implementation Details
 
@@ -114,12 +129,31 @@ if (!canPlayInBrowser) {
 }
 ```
 
-#### Flash Game Rendering
+#### Flash Game Rendering with SWF Extraction
+
+Flash games with HTML wrapper pages are automatically resolved before passing
+to Ruffle:
 
 ```typescript
-{platform === 'Flash' && contentUrl ? (
+const useResolvedContentUrl = (platform: string, contentUrl?: string) => {
+  const [resolvedUrl, setResolvedUrl] = useState<string | undefined>(contentUrl);
+
+  useEffect(() => {
+    if (platform === 'Flash' && contentUrl?.endsWith('.html')) {
+      // Fetch HTML, extract SWF using regex patterns, resolve relative paths
+      resolveSwfFromHtml(contentUrl).then(setResolvedUrl);
+    }
+  }, [platform, contentUrl]);
+
+  return resolvedUrl;
+};
+
+// In component:
+const resolvedUrl = useResolvedContentUrl(platform, contentUrl);
+
+{platform === 'Flash' && resolvedUrl ? (
   <RufflePlayer
-    swfUrl={contentUrl}
+    swfUrl={resolvedUrl}
     width="100%"
     height="100%"
     className="w-full h-full"
@@ -132,6 +166,18 @@ if (!canPlayInBrowser) {
   />
 ) : /* ... */}
 ```
+
+**SWF Extraction Patterns (9 total):**
+
+1. Embed tags: `<embed src="...\.swf">`
+2. Object tags: `<object data="...\.swf">`
+3. Param movie: `<param name="movie" value="...\.swf">`
+4. Param src: `<param name="src" value="...\.swf">`
+5. SWFObject v1: `swf = new SWFObject("...\.swf")`
+6. SWFObject v2: `.addVariable("...")`
+7. Adobe AC_FL_RunContent
+8. Generic quotes: `"([^"]*\.swf)"`
+9. Relative/absolute path resolution via URL constructor
 
 #### HTML5 Game Rendering
 
@@ -261,6 +307,19 @@ Flash emulator component using Ruffle WebAssembly.
 ### Location
 
 `D:\Repositories\Personal\flashpoint-web\frontend\src\components\player\RufflePlayer.tsx`
+
+### SWF URL Resolution
+
+RufflePlayer accepts the `swfUrl` prop after it has been resolved by the parent
+GamePlayer component. For Flash games with HTML wrapper pages:
+
+- Parent component detects HTML content URLs
+- Fetches the HTML wrapper
+- Extracts the actual SWF URL using regex patterns
+- Passes resolved `.swf` URL to RufflePlayer
+
+This allows RufflePlayer to focus purely on SWF playback without worrying about
+wrapper page handling.
 
 ### Props
 
@@ -579,8 +638,135 @@ console.log('[Ruffle] Waiting for cleanup to complete...');
 - Use Performance tab for memory leaks
 - Inspect iframe content for HTML5 games
 
+## Content URL Format
+
+Content URLs are now relative paths served by the integrated backend game
+server:
+
+```
+/game-proxy/[relativePath]    # Legacy htdocs or game files
+/game-zip/[zipId]/[path]      # Files within mounted ZIP archives
+```
+
+Example URLs:
+
+```
+/game-proxy/Games/HTML5/example-game/index.html
+/game-proxy/Flash/sample.swf
+/game-zip/12345/games/example/index.html
+```
+
+The backend serves game content directly with appropriate CORS headers and MIME
+type detection.
+
+## Navigation in GamePlayerView
+
+GamePlayerView now includes breadcrumbs navigation (previously had none):
+
+### Breadcrumb Trail
+
+The breadcrumb trail shows contextual navigation:
+
+- **Home → [Context] → Game Title → Play**
+- Reads `PlayerBreadcrumbContext` from React Router navigation state
+- Passed from `GameDetailView` when user clicks "Play"
+- Context examples: "Browse", "Favorites", "Playlist: [Name]", "Search Results"
+
+### Fallback Navigation
+
+When accessed via direct URL (no navigation state):
+
+- **Browse → Game → Play**
+- Fallback context is "Browse"
+
+### Shared Access
+
+For shared playlists accessed via share link:
+
+- **Shared → Playlist → Game → Play**
+- Special "Shared" context indicates external access
+
+### Fullscreen Behavior
+
+- Breadcrumbs hidden in fullscreen mode (same behavior as old back button)
+- Controls remain visible until fullscreen is activated
+- ESC key exits fullscreen and restores breadcrumbs
+
+### Implementation
+
+```typescript
+// In GameDetailView - pass context to player
+const handlePlayClick = () => {
+  navigate(`/games/${game.id}/play`, {
+    state: {
+      playerContext: {
+        type: 'browse' | 'favorites' | 'playlist' | 'search',
+        label: contextLabel, // e.g., "Favorites" or "Playlist: Best Games"
+        gameTitle: game.title,
+      },
+    },
+  });
+};
+
+// In GamePlayerView - read context and build breadcrumbs
+const location = useLocation();
+const context = location.state?.playerContext as PlayerBreadcrumbContext | undefined;
+
+const breadcrumbItems: BreadcrumbItem[] = [
+  { label: 'Home', href: '/' },
+  { label: context?.label ?? 'Browse', href: context?.href ?? '/games' },
+  { label: context?.gameTitle ?? game?.title ?? 'Game', href: `/games/${id}` },
+  { label: 'Play' },
+];
+```
+
+### Visual Design
+
+- Rounded bar with `bg-muted/50` background
+- Integrated back button with vertical divider
+- Pill-style breadcrumb items with hover states
+- Responsive to fullscreen mode changes
+
+## Download Flow
+
+Game downloads are coordinated at the view level (GamePlayerView), not in GamePlayer itself:
+
+1. **Fetch Launch Data:** `useGameLaunchData` hook calls `GET /api/games/:id/launch`
+2. **Download Status:** Backend returns `{ downloading: true }` if game ZIP is being downloaded
+3. **Poll for Completion:** Frontend polls every 2 seconds using TanStack Query's conditional `refetchInterval`
+4. **Show UI:** GamePlayerView shows download progress while `downloading` is true
+5. **Auto-Play:** When download completes, `downloading` becomes false and GamePlayer renders
+
+```typescript
+// In GamePlayerView
+const { data: launchData } = useGameLaunchData(id!);
+
+// This hook uses conditional polling:
+// - Polls every 2 seconds if downloading
+// - No polling when download is complete
+useQuery({
+  queryKey: ['game', id, 'launch'],
+  queryFn: () => gamesApi.getGameLaunchData(id!),
+  refetchInterval: (query) => query.state.data?.downloading ? 2000 : false,
+});
+
+// Show download UI or player based on status
+{launchData?.downloading ? (
+  <DownloadingUI />
+) : (
+  <GamePlayer {...playerProps} />
+)}
+```
+
+**Benefits:**
+- Parent view controls download flow, not player
+- Clean separation of concerns
+- Player focuses on rendering content
+- Polling only happens when needed
+
 ## Further Reading
 
 - [GamePlayerView Documentation](../views-routing.md#gameplayerview)
-- [Game Service Documentation](../../05-game-service/README.md)
+- [State Management - TanStack Query](../state-management/react-query.md)
+- [Backend Game Service Documentation](../../03-backend/README.md)
 - [Ruffle Documentation](https://ruffle.rs/demo/)

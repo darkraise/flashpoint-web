@@ -57,6 +57,14 @@ export function LazyImage({
   const [isInView, setIsInView] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const onLoadRef = useRef(onLoad);
+  const onErrorRef = useRef(onError);
+
+  // Keep callback refs up to date
+  useEffect(() => {
+    onLoadRef.current = onLoad;
+    onErrorRef.current = onError;
+  }, [onLoad, onError]);
 
   useEffect(() => {
     // Check if IntersectionObserver is supported
@@ -99,25 +107,34 @@ export function LazyImage({
   }, [rootMargin, threshold]);
 
   useEffect(() => {
-    if (!isInView) return;
+    if (!isInView || !src) return;
 
     // Image is in view, start loading
     const img = new Image();
+    let cancelled = false;
 
     img.onload = () => {
-      setImageSrc(src);
-      setIsLoaded(true);
-      setImageError(false);
-      onLoad?.();
+      if (!cancelled) {
+        setImageSrc(src);
+        setIsLoaded(true);
+        setImageError(false);
+        onLoadRef.current?.();
+      }
     };
 
     img.onerror = () => {
-      setImageError(true);
-      onError?.();
+      if (!cancelled) {
+        setImageError(true);
+        onErrorRef.current?.();
+      }
     };
 
     img.src = src;
-  }, [isInView, src, onLoad, onError]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInView, src]);
 
   // Error state
   if (imageError && fallback) {
@@ -185,6 +202,14 @@ export function LazyBackgroundImage({
   const [bgImage, setBgImage] = useState<string>('');
   const [isInView, setIsInView] = useState(false);
   const divRef = useRef<HTMLDivElement>(null);
+  const onLoadRef = useRef(onLoad);
+  const onErrorRef = useRef(onError);
+
+  // Keep callback refs up to date
+  useEffect(() => {
+    onLoadRef.current = onLoad;
+    onErrorRef.current = onError;
+  }, [onLoad, onError]);
 
   useEffect(() => {
     if (!('IntersectionObserver' in window)) {
@@ -219,13 +244,13 @@ export function LazyBackgroundImage({
     const img = new Image();
     img.onload = () => {
       setBgImage(src);
-      onLoad?.();
+      onLoadRef.current?.();
     };
     img.onerror = () => {
-      onError?.();
+      onErrorRef.current?.();
     };
     img.src = src;
-  }, [isInView, src, onLoad, onError]);
+  }, [isInView, src]);
 
   return (
     <div

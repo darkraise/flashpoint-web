@@ -124,7 +124,9 @@ class JobSchedulerService {
 
     // Run asynchronously (don't await)
     // runJobWithLogging will handle execution logging
-    this.runJobWithLogging(jobId, triggeredBy);
+    this.runJobWithLogging(jobId, triggeredBy).catch((error) => {
+      logger.error(`[JobScheduler] Unexpected error in triggered job ${jobId}:`, error);
+    });
   }
 
   /**

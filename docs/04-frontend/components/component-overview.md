@@ -42,6 +42,13 @@ Located in `components/auth/`
 
 Located in `components/common/`
 
+- **Breadcrumbs** - Navigation bar with integrated back button and contextual breadcrumb trail
+  - Now acts as a navigation bar instead of just breadcrumbs
+  - Integrated back button with vertical divider separator
+  - Props: `items` (breadcrumb trail), `showBackButton` (default: true)
+  - Visual: rounded bar with `bg-muted/50`, pill-style breadcrumb items
+  - Exports types: `BreadcrumbContext`, `PlayerBreadcrumbContext`, `BreadcrumbItem`
+  - `BreadcrumbContext` moved from `GameCard.tsx` to `Breadcrumbs.tsx` for centralization
 - **FormattedDate** - Reusable date/time formatting component with user
   preferences
 - **CardSizeControl** - Control for adjusting card size in grid views
@@ -88,6 +95,8 @@ Located in `components/layout/`
 Located in `components/library/` and `components/game/`
 
 - **GameCard** - Card view for individual games
+  - Keyboard accessible: `role="link"`, `tabIndex={0}`, and `onKeyDown` handler for Enter/Space keys
+  - `AddToPlaylistModal` now conditionally renders only when open (prevents 50+ hidden modals in grid)
 - **GameGrid** - Responsive grid layout for game cards
 - **GameList** - List view for games
 - **GameListItem** - Individual list item
@@ -99,7 +108,11 @@ Located in `components/library/` and `components/game/`
 Located in `components/player/`
 
 - **GamePlayer** - Universal game player wrapper
+  - Debug logging moved to `useEffect` to prevent re-renders on every log
+  - Game launch only proceeds once player is mounted
 - **RufflePlayer** - Flash game emulator component
+  - Proper TypeScript type declarations for `window.RufflePlayer` (no `any` casts)
+  - Supports scale modes: exactfit, noborder, showall (default), noscale
 
 ### UI Components
 

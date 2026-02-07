@@ -47,7 +47,7 @@ cd flashpoint-web
 ```bash
 npm run install:all
 
-# This runs npm install in root, backend/, frontend/, and game-service/
+# This runs npm install in root, backend/, and frontend/
 ```
 
 ### 3. Configure Backend
@@ -65,7 +65,6 @@ JWT_SECRET=change-this-in-production
 
 # Optional
 DOMAIN=http://localhost:5173
-GAME_SERVICE_HOST=localhost
 LOG_LEVEL=info
 NODE_ENV=development
 ```
@@ -73,22 +72,7 @@ NODE_ENV=development
 **Note:** All paths (database, images, logos, htdocs, games) are automatically
 derived from `FLASHPOINT_PATH`.
 
-### 4. Configure Game Service
-
-```bash
-cd game-service
-cp .env.example .env
-```
-
-Edit `game-service/.env`:
-
-```bash
-FLASHPOINT_PATH=D:/Flashpoint
-LOG_LEVEL=info
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
-```
-
-### 5. Verify Setup
+### 4. Verify Setup
 
 ```bash
 npm run typecheck   # Type check all services
@@ -107,7 +91,6 @@ npm run dev
 # Expected output:
 # [backend]     Server running on port 3100
 # [frontend]    Local: http://localhost:5173/
-# [game-service] Proxy: http://localhost:22500, GameZip: http://localhost:22501
 ```
 
 ### Option B: Individual Services
@@ -118,9 +101,6 @@ npm run dev:backend
 
 # Terminal 2: Frontend
 npm run dev:frontend
-
-# Terminal 3: Game Service
-npm run dev:game-service
 ```
 
 ### Verify Services
@@ -131,9 +111,6 @@ curl http://localhost:3100/health  # Should return {"status":"ok"}
 
 # Frontend
 # Open http://localhost:5173 in browser
-
-# Game Service
-curl http://localhost:22500/health
 ```
 
 ---
@@ -182,7 +159,7 @@ curl http://localhost:22500/health
 
 1. Set Node interpreter to Node 20+
 2. Enable ESLint (File > Settings > ESLint)
-3. Create run configurations for backend, frontend, game-service
+3. Create run configurations for backend and frontend
 
 ---
 
@@ -241,22 +218,13 @@ See [Common Pitfalls](./common-pitfalls.md) for more issues.
 
 ### Backend (.env)
 
-| Variable            | Required | Default               |
-| ------------------- | -------- | --------------------- |
-| `FLASHPOINT_PATH`   | Yes      | -                     |
-| `JWT_SECRET`        | Yes\*    | -                     |
-| `DOMAIN`            | No       | http://localhost:5173 |
-| `GAME_SERVICE_HOST` | No       | localhost             |
-| `LOG_LEVEL`         | No       | info                  |
-| `NODE_ENV`          | No       | development           |
-
-### Game Service (.env)
-
-| Variable                 | Required | Default |
-| ------------------------ | -------- | ------- |
-| `FLASHPOINT_PATH`        | Yes      | -       |
-| `LOG_LEVEL`              | No       | info    |
-| `EXTERNAL_FALLBACK_URLS` | No       | -       |
+| Variable          | Required | Default               |
+| ----------------- | -------- | --------------------- |
+| `FLASHPOINT_PATH` | Yes      | -                     |
+| `JWT_SECRET`      | Yes\*    | -                     |
+| `DOMAIN`          | No       | http://localhost:5173 |
+| `LOG_LEVEL`       | No       | info                  |
+| `NODE_ENV`        | No       | development           |
 
 ### Frontend
 
@@ -282,12 +250,10 @@ No environment variables required for local development.
 - [ ] Repository cloned
 - [ ] Dependencies installed (`npm run install:all`)
 - [ ] Backend .env configured
-- [ ] Game Service .env configured
 - [ ] All services type check pass (`npm run typecheck`)
 - [ ] All services build successfully (`npm run build`)
 - [ ] Backend starts successfully
 - [ ] Frontend accessible at http://localhost:5173
-- [ ] Game Service running
 - [ ] Can browse and play games
 
 ---

@@ -102,6 +102,14 @@ Close database connection and stop file watching.
 DatabaseService.close();
 ```
 
+**Called by**:
+
+- Graceful shutdown handler in `server.ts` (SIGTERM/SIGINT)
+- Ensures all database connections properly closed before process exit
+
+**Important**: Database connections are closed during graceful shutdown to
+prevent resource leaks and ensure in-flight queries complete.
+
 ## Usage Examples
 
 ### Game Queries
@@ -216,6 +224,43 @@ this.watcher = fs.watch(config.flashpointDbPath, (eventType) => {
 **Debouncing**: Waits 500ms after last change to prevent excessive reloads
 during Launcher operations.
 
+### Atomic Database Swap Pattern
+
+**Critical for Thread Safety**: The `syncAndReload()` and `forceSync()` methods
+use an atomic swap pattern to prevent race conditions during hot-reload:
+
+```typescript
+// CORRECT: Atomic swap pattern
+const newDb = new BetterSqlite3(config.flashpointDbPath);
+const oldDb = this.db;
+this.db = newDb; // Atomic reference swap
+oldDb.close(); // Close old connection
+```
+
+**Why this matters:**
+
+- Opens the new database connection FIRST
+- Atomically swaps the reference (single operation)
+- Then closes the old connection
+- Prevents a window where `this.db = null` could cause 500 errors for
+  concurrent requests
+
+**What was wrong (before fix):**
+
+```typescript
+// WRONG: Race condition window
+this.db.close(); // Closes connection
+this.db = null; // Window here where concurrent requests fail!
+this.db = new BetterSqlite3(config.flashpointDbPath); // Then reconnects
+```
+
+**Impact:**
+
+- Concurrent requests during reload could get `Cannot read property 'prepare'
+  of null` errors
+- Users could see 500 errors briefly during Flashpoint Launcher updates
+- With atomic swap, there's no window where `this.db` is null
+
 ### Edge Cases
 
 **Launcher Lock**: When Flashpoint Launcher is updating, reload waits 500ms then
@@ -246,6 +291,26 @@ error state until file restored.
 - Minimal overhead (native fs.watch)
 - Debouncing prevents excessive reloads
 - Modification time check prevents unnecessary work
+
+### Journal Mode and Checkpointing
+
+**Implementation**: `backend/src/services/DatabaseService.ts`
+
+The `save()` method no longer runs WAL checkpoint operations because the database
+is configured with `journal_mode = DELETE` (not WAL):
+
+```typescript
+// Journal mode: DELETE (not WAL)
+// No need for checkpoint operations
+this.db.pragma('journal_mode = delete');
+```
+
+**Why**:
+
+- WAL (Write-Ahead Logging) not required for single-process SQLite
+- DELETE mode simpler for read-mostly workloads
+- Checkpoint operations (sync) would block readers
+- No performance benefit in our single-process architecture
 
 ## Troubleshooting
 

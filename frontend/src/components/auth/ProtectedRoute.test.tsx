@@ -61,7 +61,6 @@ describe('ProtectedRoute', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 
@@ -123,7 +122,6 @@ describe('ProtectedRoute', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 
@@ -254,7 +252,6 @@ describe('ProtectedRoute', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 
@@ -290,7 +287,6 @@ describe('ProtectedRoute', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 
@@ -329,7 +325,6 @@ describe('ProtectedRoute', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 
@@ -365,7 +360,6 @@ describe('ProtectedRoute', () => {
 
       const mockTokens: AuthTokens = {
         accessToken: 'token',
-        refreshToken: 'refresh',
         expiresIn: 3600,
       };
 

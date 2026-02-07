@@ -50,7 +50,7 @@ export function PlaylistsView() {
       await deletePlaylist.mutateAsync(playlistToDelete.id);
       toast.success('Playlist deleted successfully');
       setPlaylistToDelete(null);
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete playlist');
     }
   };

@@ -4,22 +4,24 @@
 
 ## Overview
 
-The game-service has been hardened against directory traversal attacks through
-comprehensive path validation and sanitization utilities.
+The backend game module (formerly separate game-service) has been hardened
+against directory traversal attacks through comprehensive path validation and
+sanitization utilities.
 
 ## Problem
 
-Previous implementation allowed potential directory traversal attacks in two
-areas:
+The game module (now integrated into backend) had potential directory traversal
+vulnerabilities in two areas:
 
-1. **Legacy Server**: Used `path.join()` and `path.normalize()` but didn't
-   validate resolved paths
-2. **GameZip Server**: Had partial validation but lacked URL path sanitization
+1. **Legacy Server** (`backend/src/game/legacy-server.ts`): Used `path.join()`
+   and `path.normalize()` but didn't validate resolved paths
+2. **GameZip Server** (`backend/src/game/gamezipserver.ts`): Had partial
+   validation but lacked URL path sanitization
 
 ## Solution
 
 Implemented centralized path security utilities in
-`game-service/src/utils/pathSecurity.ts`:
+`backend/src/game/utils/pathSecurity.ts`:
 
 ### 1. Path Sanitization and Validation
 
@@ -65,20 +67,20 @@ sanitizeUrlPath(urlPath: string): string
 
 ## Implementation
 
-### Legacy Server Changes
+### Legacy Server Changes (`backend/src/game/legacy-server.ts`)
 
 1. **Added URL path sanitization** at request entry point
 2. **Added path validation** before file access
-3. **Created validation method** for candidate types
+3. **Created validation method** for htdocs and CGI paths
 
-### GameZip Server Changes
+### GameZip Server Changes (`backend/src/game/gamezipserver.ts`)
 
 1. **Added URL path sanitization** in file request handler
 2. **Existing mount validation** (already present)
 
 ## Test Coverage
 
-**File:** `game-service/src/utils/pathSecurity.test.ts`
+**File:** `backend/src/game/utils/pathSecurity.test.ts`
 
 - 17 test cases covering all security scenarios
 - All tests passing
@@ -147,12 +149,39 @@ All blocked attempts logged with:
 3. **Alerting**: Send notifications for sustained attack patterns
 4. **Audit Log**: Separate security audit log for compliance
 
+## Related Security Measures
+
+As part of the comprehensive 2026-02-06 security review, several complementary
+hardening measures were implemented alongside directory traversal protection:
+
+### XSS Prevention in Game Loading Pages
+
+The GameZip server now escapes all HTML-interpolated values (progress, source
+names, elapsed time) using a centralized `escapeHtml()` utility. See
+`docs/12-reference/security-measures.md` (XSS Prevention section).
+
+### CGI Environment Variable Allowlist
+
+CGI scripts now receive only whitelisted environment variables, preventing
+information disclosure through environment leakage. See
+`docs/12-reference/security-measures.md` (CGI Security Hardening section).
+
+### SSRF Prevention for Game Data Downloads
+
+Game data downloads now enforce domain allowlists and redirect limits to prevent
+server-side request forgery. See `docs/12-reference/security-measures.md` (SSRF
+Prevention section).
+
+---
+
 ## Related Files
 
-- `game-service/src/utils/pathSecurity.ts` - Security utilities
-- `game-service/src/utils/pathSecurity.test.ts` - Test suite
-- `game-service/src/legacy-server.ts` - Legacy server implementation
-- `game-service/src/gamezipserver.ts` - GameZip server implementation
+- `backend/src/game/utils/pathSecurity.ts` - Security utilities
+- `backend/src/game/utils/pathSecurity.test.ts` - Test suite
+- `backend/src/game/legacy-server.ts` - Legacy server implementation
+- `backend/src/game/gamezipserver.ts` - GameZip server implementation
+- `backend/src/game/cgi/cgi-executor.ts` - CGI environment & header filtering
+- `backend/src/game/services/GameDataDownloader.ts` - SSRF/redirect protection
 
 ## References
 
@@ -160,3 +189,5 @@ All blocked attempts logged with:
   [Path Traversal](https://owasp.org/www-community/attacks/Path_Traversal)
 - **CWE-22**: Directory Traversal
 - **Phase**: Phase 1 - Security (Critical priority fix)
+- **Related Review**: 2026-02-06 comprehensive code review (critical & high
+  severity fixes)

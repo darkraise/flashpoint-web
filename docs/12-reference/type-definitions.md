@@ -60,6 +60,7 @@ export interface GameFilters {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+  signal?: AbortSignal; // Optional abort signal for request cancellation
 }
 
 // Filter options with counts
@@ -96,6 +97,8 @@ export interface GameLaunchData {
   applicationPath?: string;
   playMode?: string;
   canPlayInBrowser: boolean;
+  /** True when the game ZIP is being downloaded in the background */
+  downloading?: boolean;
 }
 ```
 
@@ -129,8 +132,8 @@ export interface User {
 // JWT token pair
 export interface AuthTokens {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
+  // refreshToken is stored in HTTP-only cookie, not included in response
 }
 
 // Login credentials
@@ -327,10 +330,10 @@ interface UIState {
 // Auth State (Zustand)
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
+  accessToken: string | null; // Memory-only, not persisted
   isAuthenticated: boolean;
   isGuest: boolean;
+  isMaintenanceMode: boolean;
   setAuth: (user: User, tokens: AuthTokens) => void;
   setGuestMode: () => void;
   clearAuth: () => void;
@@ -435,6 +438,55 @@ interface ValidationErrorResponse {
   message: string;
   fields?: Record<string, string[]>;
 }
+```
+
+## Global Type Augmentations
+
+### Ruffle Flash Emulator
+
+The Ruffle Flash emulator is loaded via `<script>` tag and extends the global Window object. Type augmentation enables full TypeScript support:
+
+```typescript
+// Declared in src/types/ruffle.d.ts
+declare global {
+  interface Window {
+    RufflePlayer: {
+      newest: () => RufflePlayerFactory;
+    };
+  }
+}
+
+interface RufflePlayerFactory {
+  create: (options: RuffleCreateOptions) => RuffleInstance;
+}
+
+interface RuffleCreateOptions {
+  allowScriptAccess?: boolean;
+  allowNetworking?: string;
+  allowFullScreen?: boolean;
+  wmode?: 'direct' | 'opaque' | 'transparent' | 'window';
+  scale?: 'exactfit' | 'noScaling' | 'noborder' | 'showAll';
+  [key: string]: any;
+}
+
+interface RuffleInstance {
+  play(): void;
+  pause(): void;
+  stop(): void;
+  destroy(): void;
+}
+```
+
+**Usage in components:**
+
+```typescript
+// Full type safety with autocomplete
+const ruffle = window.RufflePlayer.newest().create({
+  allowScriptAccess: true,
+  scale: 'noborder',
+});
+
+ruffle.play(); // ✅ Type-safe
 ```
 
 ## Utility Types

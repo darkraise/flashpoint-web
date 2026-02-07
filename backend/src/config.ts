@@ -27,6 +27,7 @@ function getJwtSecret(): string {
 
   // In development, generate a random secret and warn
   const devSecret = `INSECURE-DEV-ONLY-${crypto.randomBytes(32).toString('hex')}`;
+  // NOTE: console.warn used intentionally - logger not yet initialized at config load time
   console.warn('\n⚠️  WARNING: Using auto-generated JWT secret for development.');
   console.warn('   In production, set JWT_SECRET environment variable.\n');
 
@@ -95,27 +96,12 @@ export const config = {
   flashpointPlaylistsPath: `${flashpointPath}/Data/Playlists`,
   flashpointGamesPath: `${flashpointPath}/Data/Games`,
 
-  // Game Service URLs (external service, not built-in)
-  // Internal URLs: Used for backend-to-game-service communication within Docker
-  // Ports hardcoded (22500/22501) - only host is configurable (localhost for dev, game-service for docker)
-  gameServerUrl: `http://${process.env.GAME_SERVICE_HOST || 'localhost'}:22500`,
-  gameServiceGameZipUrl: `http://${process.env.GAME_SERVICE_HOST || 'localhost'}:22501`,
-  gameServerHttpPort: 22501,
-
-  // External Game Service URL: Used for URLs returned to the browser
-  // In Docker: Use relative paths through nginx proxy (/game-proxy)
-  // In local dev: Use direct localhost URLs (http://localhost:22500)
-  // Can be overridden with GAME_SERVICE_EXTERNAL_URL env var
-  gameServiceExternalUrl:
-    process.env.GAME_SERVICE_EXTERNAL_URL ||
-    (process.env.NODE_ENV === 'production' ? '/game-proxy' : `http://localhost:22500`),
-
   // Frontend domain (used for CORS and share URL generation)
   domain: process.env.DOMAIN || 'http://localhost:5173',
 
   // Rate limiting
-  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),
-  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '', 10) || 60000,
+  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '', 10) || 100,
 
   // Logging
   // In Docker (production): defaults to /app/logs/backend.log
@@ -135,10 +121,10 @@ export const config = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
 
   // Security
-  bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10),
+  bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '', 10) || 10,
 
   // Home Page Configuration
-  homeRecentHours: parseInt(process.env.HOME_RECENT_HOURS || '24', 10),
+  homeRecentHours: parseInt(process.env.HOME_RECENT_HOURS || '', 10) || 24,
 
   // Local Database Copy (for network storage optimization)
   // When enabled, copies flashpoint.sqlite to local storage for faster access
@@ -147,8 +133,8 @@ export const config = {
   localDbPath: '/app/data/flashpoint.sqlite', // Only used when enableLocalDbCopy is true
 
   // SQLite Performance Tuning
-  sqliteCacheSize: parseInt(process.env.SQLITE_CACHE_SIZE || '-64000', 10), // Negative = KB, -64000 = 64MB
-  sqliteMmapSize: parseInt(process.env.SQLITE_MMAP_SIZE || '268435456', 10), // 256MB default
+  sqliteCacheSize: parseInt(process.env.SQLITE_CACHE_SIZE || '', 10) || -64000, // Negative = KB, -64000 = 64MB
+  sqliteMmapSize: parseInt(process.env.SQLITE_MMAP_SIZE || '', 10) || 268435456, // 256MB default
 
   // Cache Pre-warming
   enableCachePrewarm: process.env.ENABLE_CACHE_PREWARM !== 'false', // Enabled by default

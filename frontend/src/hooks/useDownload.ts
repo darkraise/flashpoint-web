@@ -36,6 +36,10 @@ export function useDownload(gameId: string) {
         const result = await gamesApi.downloadGame(gameId, gameDataId);
 
         // Connect to SSE endpoint for progress updates with authentication
+        // NOTE: Raw fetch() is used here instead of apiClient because axios does not support
+        // SSE/ReadableStream. The token is manually attached from the auth store.
+        // If the token expires during a long download, the SSE connection will need to be
+        // re-established. See CLAUDE.md "Frontend API Guidelines" for the general policy.
         const abortController = new AbortController();
         abortControllerRef.current = abortController;
 
@@ -93,6 +97,9 @@ export function useDownload(gameId: string) {
           }
         };
 
+        // processStream is intentionally fire-and-forget - it updates state via
+        // setProgress/setStatus as events arrive. The returned result from startDownload
+        // is the initial POST response, not the completion of the download.
         processStream();
 
         return result;

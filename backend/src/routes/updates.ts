@@ -7,9 +7,11 @@ import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { rateLimitStandard } from '../middleware/rateLimiter';
 import { logger } from '../utils/logger';
 
 const router = Router();
+router.use(rateLimitStandard);
 const metadataUpdateService = new MetadataUpdateService();
 const metadataSyncService = new MetadataSyncService();
 

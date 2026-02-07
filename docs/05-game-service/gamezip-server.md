@@ -1,22 +1,23 @@
-# GameZip Server (Port 22501)
+# GameZip Server
 
-The GameZip Server mounts ZIP archives in-memory and serves files directly using
-streaming, eliminating disk extraction needs.
+The GameZip Server is integrated into the backend as a singleton that mounts ZIP
+archives in-memory and serves files directly using streaming, eliminating disk
+extraction needs.
 
 ## Overview
 
 Mounts ZIP archives and serves files using `node-stream-zip` for streaming
-without extraction. This saves disk space and improves performance.
+without extraction. This saves disk space and improves performance. No longer
+runs as a separate HTTP server - now accessed via direct method calls from
+within the backend.
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────┐
-│           GameZip Server (22501)             │
+│           GameZip Server (Singleton)         │
 ├──────────────────────────────────────────────┤
-│  HTTP Server (Express)                       │
-│       ↓                                      │
-│  GameZipServer Class                         │
+│  GameZipServer Class (Direct Method API)    │
 │       ↓                                      │
 │  ZipManager (singleton)                      │
 │       ↓                                      │
@@ -24,97 +25,205 @@ without extraction. This saves disk space and improves performance.
 └──────────────────────────────────────────────┘
 ```
 
-## API Endpoints
+Called directly from:
+- Backend GameService on startup
+- Proxy router when serving game content
+- Backend routes when managing mounts
+
+## Direct API Methods
+
+Instead of HTTP endpoints, GameZip Server provides direct method calls:
 
 ### Mount ZIP Archive
 
-```http
-POST /mount/:id HTTP/1.1
-Content-Type: application/json
+```typescript
+// Called from backend
+await gameZipServer.mountZip(id: string, params: MountParams)
+```
 
-{"zipPath": "D:/Flashpoint/Data/Games/Flash/G/game.zip"}
+Parameters:
+
+```typescript
+interface MountParams {
+  zipPath: string;           // Required: Absolute path to ZIP file
+  gameId?: string;           // Optional: Game UUID (enables auto-download)
+  dateAdded?: string;        // Optional: ISO date (used for filename)
+  sha256?: string;           // Optional: Expected SHA256 hash
+}
 ```
 
 **Response:**
 
-```json
-{ "success": true, "id": "game-123", "zipPath": "..." }
+Throws on error, returns void on success.
+
+```typescript
+// Example usage
+try {
+  await gameZipServer.mountZip('game-abc123', {
+    zipPath: 'D:/Flashpoint/Data/Games/Flash/G/game.zip',
+    gameId: 'game-abc123',
+    dateAdded: '2024-01-15T10:30:00.000Z',
+    sha256: 'ABC123...'
+  });
+  console.log('ZIP mounted successfully');
+} catch (error) {
+  console.error('Mount failed:', error.message);
+}
+```
+
+**Mount Process:**
+
+On mount, the ZipManager builds an entry index for O(1) file lookups:
+
+```
+1. Check if already mounted (prevent duplicates)
+2. Verify ZIP file exists on disk
+3. Create StreamZip.async instance
+4. Build Set<string> of all entry names
+5. Store in LRU cache with metadata and entryIndex
+6. Log file count for debugging
 ```
 
 **Errors:**
 
-- `400`: Missing mount ID or zipPath
-- `500`: ZIP file not found or mount failed
+- `ZIP file not found`: Invalid zipPath, ZIP doesn't exist
+- `ZIP path outside allowed directory`: Security violation
+- `Auto-download failed`: All sources failed to download, 503 if too many downloads
+- `Corrupted ZIP`: File read error
 
-### Unmount ZIP Archive
+### Auto-Download Feature
 
-```http
-DELETE /mount/:id HTTP/1.1
+When a ZIP file doesn't exist locally but `gameId` and `dateAdded` are provided,
+the GameZip server automatically downloads it from configured `gameDataSources`
+in `preferences.json`.
+
+**Download flow:**
+
+```
+1. Check if ZIP exists locally
+   ↓ Not found
+2. Read gameDataSources from preferences.json
+3. Construct filename: {gameId}-{timestamp}.zip
+4. Try each source sequentially:
+   ├─ Download to temp file
+   ├─ Verify SHA256 (if provided)
+   ├─ Move to Data/Games/
+   └─ If failed, try next source
+5. Mount the downloaded ZIP
+6. Return success with downloaded: true
 ```
 
-**Response:**
+**Download Reliability Improvements:**
 
-```json
-{ "success": true, "id": "game-123" }
-```
+- `findActiveDownload()` now correlates downloads with hostname from the request
+  path instead of returning the first arbitrary download (ensures correct
+  download status on concurrent requests)
+- Stale download cleanup extracted to shared `cleanupStaleDownloads()` method
+  (DRY principle, shared between functions)
+- `new URL()` calls wrapped in try-catch for proper 400 error handling on
+  malformed URLs (prevents 500 errors)
 
-### List Mounted ZIPs
-
-```http
-GET /mounts HTTP/1.1
-```
-
-**Response:**
+**Configuration** (`preferences.json`):
 
 ```json
 {
-  "mounts": [
+  "gameDataSources": [
     {
-      "id": "game-123",
-      "zipPath": "D:/Flashpoint/Data/Games/Flash/G/game.zip",
-      "mountTime": "2025-01-18T10:30:00.000Z",
-      "fileCount": 0
+      "type": "raw",
+      "name": "Flashpoint Project",
+      "arguments": ["https://download.flashpointarchive.org/gib-roms/Games/"]
     }
   ]
 }
 ```
 
-### Serve File from ZIP
+This matches the Flashpoint Launcher's configuration format, so existing
+installations should work automatically.
 
-```http
-GET http://www.example.com/path/file.swf HTTP/1.1
+### Unmount ZIP Archive
+
+```typescript
+// Called from backend
+const success = await gameZipServer.unmountZip(id: string): Promise<boolean>
 ```
 
-or
+**Returns:**
 
-```http
-GET /http://www.example.com/path/file.swf HTTP/1.1
+- `true` if unmounted successfully
+- `false` if ZIP not mounted or error occurred
+
+**Example:**
+
+```typescript
+const success = await gameZipServer.unmountZip('game-123');
+if (success) {
+  console.log('ZIP unmounted');
+} else {
+  console.log('ZIP not mounted or error');
+}
 ```
 
-**Response:**
+### List Mounted ZIPs
 
-```http
-HTTP/1.1 200 OK
-Content-Type: application/x-shockwave-flash
-Content-Length: 123456
-Cache-Control: public, max-age=86400
-X-Source: gamezipserver:game-123
-Access-Control-Allow-Origin: *
+```typescript
+// Called from backend or admin API
+const mounts = gameZipServer.listMounts(): Array<MountInfo>
 ```
 
-## Request Processing
+**Returns:**
 
-### URL Format Support
+```typescript
+interface MountInfo {
+  id: string;          // Mount ID
+  zipPath: string;     // Absolute path to ZIP
+  mountTime: Date;     // When ZIP was mounted
+  fileCount: number;   // Number of files in ZIP
+}
+```
 
-GameZip supports three URL formats:
+**Example:**
 
-1. **Proxy-style**: `GET http://domain.com/path`
-2. **Path-based**: `GET /http://domain.com/path`
-3. **Standard**: `GET /path` with Host header
+```typescript
+const mounts = gameZipServer.listMounts();
+mounts.forEach(mount => {
+  console.log(`${mount.id}: ${mount.zipPath} (${mount.fileCount} files)`);
+});
+```
+
+### Find File in Mounted ZIPs
+
+```typescript
+// Called from proxy router
+const result = await gameZipServer.findFile(relPath: string): Promise<FileData | null>
+```
+
+**Returns:**
+
+```typescript
+interface FileData {
+  data: Buffer;          // File contents
+  mountId: string;       // Which ZIP it came from
+}
+```
+
+Returns `null` if file not found in any mounted ZIP.
+
+**Example:**
+
+```typescript
+const result = await gameZipServer.findFile('www.example.com/game.swf');
+if (result) {
+  console.log(`Found in ${result.mountId}, ${result.data.length} bytes`);
+}
+```
+
+## File Access Process
 
 ### Path Search Strategy
 
-For request `www.example.com/path/file.swf`, tries:
+When finding a file, GameZip searches for multiple path variations:
+
+For relative path `www.example.com/path/file.swf`, tries:
 
 1. `content/www.example.com/path/file.swf` (most common)
 2. `htdocs/www.example.com/path/file.swf` (standard)
@@ -123,37 +232,49 @@ For request `www.example.com/path/file.swf`, tries:
 
 First match wins and returns immediately.
 
-## File Serving
+### Multi-ZIP Searching with Entry Index Optimization
 
-### Streaming Access
+If multiple ZIPs are mounted, GameZip searches all of them efficiently:
 
-Files read directly from ZIP archives without extraction:
-
-```typescript
-async getFile(id: string, filePath: string): Promise<Buffer | null> {
-  const mounted = this.mountedZips.get(id);
-  if (!mounted) return null;
-  try {
-    const data = await mounted.zip.entryData(filePath);
-    return data;
-  } catch (error) {
-    return null;
-  }
-}
+```
+For each path variation:
+  For each mounted ZIP:
+    Check entryIndex.has(variation) - O(1) lookup
+    If found:
+      Call zip.entryData(variation) to read file
+      Return immediately
+Return null if not found in any ZIP
 ```
 
-**Benefits:**
+**Performance Benefits:**
 
-- No disk extraction required
-- No temporary files created
-- Direct memory buffer access
-- Fast random access
+- Entry index is a `Set<string>` built at mount time
+- O(1) existence checks eliminate sequential I/O
+- Failures return quickly (404 responses are fast)
+- Failed lookups don't trigger unnecessary ZIP reads
+
+This allows multiple game ZIPs to be mounted simultaneously with efficient searching.
+
+## Response Processing
+
+When files are found and served from GameZip:
 
 ### MIME Type Detection
 
-Detected from file extensions with 199+ supported types.
+Detected from file extensions with 199+ supported types. See
+[mime-types.md](./mime-types.md) for complete list.
+
+### HTML Polyfill Injection
+
+HTML files are automatically processed to inject compatibility polyfills:
+
+- Unity WebGL support (polyfills for older game loaders)
+- General browser compatibility shims
+- See [html-polyfills.md](./html-polyfills.md) for details
 
 ## Response Headers
+
+When serving through the proxy router, responses include:
 
 ### Standard Headers
 
@@ -173,21 +294,14 @@ Access-Control-Allow-Methods: GET, POST, OPTIONS
 Access-Control-Allow-Headers: *
 ```
 
-## HTML Polyfill Injection
-
-HTML files are automatically processed to inject compatibility polyfills:
-
-- Unity WebGL support
-- General browser compatibility shims
-
 ## Integration with Backend
 
 **Workflow:**
 
-1. Backend mounts ZIP: `POST /mount/{game.id}`
-2. Backend returns launch config with gameZip URLs
-3. Frontend loads game from proxy server
-4. Proxy checks GameZip first for fastest access
+1. Backend calls: `gameZipServer.mountZip('game-id', params)`
+2. Backend returns launch config pointing to `/game-proxy/` URLs
+3. Frontend loads game from proxy endpoint
+4. Proxy calls: `gameZipServer.findFile(relPath)`
 5. GameZip serves file from mounted ZIP
 
 ## Error Handling
@@ -207,52 +321,58 @@ HTML files are automatically processed to inject compatibility polyfills:
 
 ## Testing
 
+GameZip Server is not directly accessible via HTTP. Test through the backend:
+
 ```bash
-# Mount ZIP
-curl -X POST http://localhost:22501/mount/test-game \
-  -H "Content-Type: application/json" \
-  -d '{"zipPath": "D:/Flashpoint/Data/Games/test.zip"}'
+# Request file through backend proxy
+curl http://localhost:3100/game-proxy/http://www.example.com/test.swf
 
-# List mounts
-curl http://localhost:22501/mounts
+# Check response headers
+curl -I http://localhost:3100/game-proxy/http://www.example.com/test.swf
+```
 
-# Request file
-curl http://localhost:22501/http://www.example.com/test.swf
+For unit testing, you can test GameZip methods directly in backend tests:
 
-# Check headers
-curl -I http://localhost:22501/http://www.example.com/test.swf
+```typescript
+import { gameZipServer } from '@/game';
 
-# Unmount
-curl -X DELETE http://localhost:22501/mount/test-game
+// Mount a ZIP
+await gameZipServer.mountZip('test-game', {
+  zipPath: 'D:/Flashpoint/Data/Games/test.zip'
+});
+
+// Find a file
+const result = await gameZipServer.findFile('www.example.com/test.swf');
+
+// List mounts
+const mounts = gameZipServer.listMounts();
+
+// Unmount
+await gameZipServer.unmountZip('test-game');
 ```
 
 ## Troubleshooting
-
-### Port Already in Use
-
-```bash
-GAMEZIPSERVER_PORT=22502
-```
 
 ### ZIP Mount Fails
 
 1. Verify path is absolute
 2. Check file permissions
 3. Ensure ZIP file exists
+4. Check backend logs for mount errors
 
 ### File Not Found in ZIP
 
-1. List mounted ZIPs: `curl http://localhost:22501/mounts`
-2. Check if correct ZIP is mounted
-3. Verify file exists in ZIP (extract and check)
-4. Check ZIP structure (content/, htdocs/, or root?)
+1. Check backend logs to see which ZIP is mounted
+2. Verify file exists in ZIP (extract and check)
+3. Check ZIP structure (content/, htdocs/, or root?)
+4. Verify correct path variations are tried
 
 ### Memory Issues
 
-1. Limit number of mounted ZIPs
-2. Implement auto-unmount for inactive ZIPs
-3. Add file size limits
-4. Use streaming for large files
+1. Limit number of mounted ZIPs (max 100 default)
+2. Implement auto-unmount for inactive ZIPs (feature)
+3. Monitor backend memory usage
+4. Unmount ZIPs when not needed
 
 ## Security
 
@@ -263,6 +383,59 @@ File paths are normalized and validated to prevent directory traversal.
 ### Mount Access Control
 
 Only explicitly mounted ZIPs are accessible. No arbitrary ZIP path access.
+
+### ZIP Entry Size Limits
+
+Files larger than 50MB are rejected to prevent memory exhaustion attacks:
+
+```typescript
+const entry = entries[normalizedPath];
+if (entry && entry.size > 50 * 1024 * 1024) {
+  logger.warn(`[ZipManager] File too large to buffer: ${entry.size} bytes`);
+  return null;
+}
+```
+
+**Protection**: Prevents DoS attacks that attempt to load massive files into
+memory.
+
+### Mount Endpoint Authentication
+
+POST `/api/game-zip/mount/:id`, DELETE `/api/game-zip/mount/:id`, and
+GET `/api/game-zip/mounts` endpoints require:
+
+- Valid JWT authentication (Bearer token)
+- `settings.update` permission
+- Valid mount ID (validated via Zod schema)
+
+**Implementation**: Mount IDs must not contain path traversal sequences (`../`,
+`..\\`, or null bytes).
+
+### XSS Prevention in Download Loading Page
+
+All values interpolated into the download loading page HTML are sanitized via
+`escapeHtml()`:
+
+```typescript
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+```
+
+**Protected values**:
+
+- Progress values: `0-100`
+- Source names: From `gameDataSources` configuration
+- Elapsed time: `{hours}h {minutes}m {seconds}s`
+- File size: Human-readable format
+
+All values are escaped before rendering in the HTML template to prevent
+injection attacks.
 
 ## Performance
 
@@ -282,9 +455,9 @@ Only explicitly mounted ZIPs are accessible. No arbitrary ZIP path access.
 ## Logging
 
 ```
-[GameZipServer] POST /mount/game-123
 [ZipManager] Mounting ZIP: game-123 → D:/Flashpoint/Data/Games/game.zip
 [ZipManager] ✓ Mounted ZIP: game-123 (1234 files)
+[ZipManager] ✓ Found in game-123: content/www.example.com/game.swf
 ```
 
 ## Related Documentation

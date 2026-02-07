@@ -149,7 +149,25 @@ Abstract data access from business logic; centralized query logic.
 - Non-blocking (setImmediate)
 - Automatic cleanup (90-day retention)
 
-### 6. Play Session Tracking
+### 6. Integrated Game Content Serving
+
+**Rationale:**
+
+- Simplifies deployment (single service instead of two)
+- Removes inter-service HTTP calls (direct function calls instead)
+- Unified error handling and logging
+- Shared resource pools (database, file watchers)
+
+**Implementation:**
+
+- Game content routes (`/game-proxy/*`, `/game-zip/*`) registered before auth
+  middleware
+- Direct function calls to game server internals (gamezipserver.mountZip(),
+  legacy proxy handlers)
+- Serves legacy htdocs content, game ZIPs, and HTML5 games
+- CGI/PHP execution support for interactive content
+
+### 7. Play Session Tracking
 
 **Rationale:**
 
@@ -206,7 +224,17 @@ export class AppError extends Error {
 - Indexes on foreign keys and frequently queried columns
 - Pagination to prevent memory issues
 - Prepared statements for reusable queries
-- Selective columns (avoid SELECT \*)
+- Selective columns (avoid SELECT *)
+- Flash SWF filtering: Flash games without `.swf` launchCommands excluded from browse/search
+- Reduced column selection for list views (7 essential fields vs. full detail)
+
+**Optimization Patterns:**
+
+- **Scalar subqueries in SELECT**: Merge multiple COUNT queries into one SELECT with scalar subqueries. Example: `SELECT COUNT(*) as total, (SELECT COUNT(DISTINCT x) FROM ...) as count FROM ...` reduces roundtrips
+- **Window functions for pagination**: Use `COUNT(*) OVER()` window function to get total count in the same query as paginated results, eliminating separate COUNT query
+- **Map-based data merging**: When joining application data with external lookups, build a `Map` for O(1) lookups instead of O(N²) `.find()` loops through arrays
+- **Direct file access first**: For file-based data (playlists), try direct path access (e.g., `{id}.json`) before falling back to directory scans. O(1) fast path with O(N) fallback
+- **Parallel file I/O**: Use `Promise.allSettled()` to read multiple files concurrently instead of sequential loops
 
 ### Transaction Strategy
 

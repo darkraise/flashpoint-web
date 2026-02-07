@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { RoleTable } from '../components/roles/RoleTable';
-import { RoleForm } from '../components/roles/RoleForm';
-import { PermissionSelector } from '../components/roles/PermissionSelector';
-import { Role } from '../types/auth';
-import { RoleGuard } from '../components/common/RoleGuard';
+import { RoleTable } from '@/components/roles/RoleTable';
+import { RoleForm } from '@/components/roles/RoleForm';
+import { PermissionSelector } from '@/components/roles/PermissionSelector';
+import { Role } from '@/types/auth';
+import { RoleGuard } from '@/components/common/RoleGuard';
 import { Button } from '@/components/ui/button';
 import { Shield } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export function RolesView() {
   };
 
   const handleSuccess = () => {
-    // Query will automatically refetch due to invalidation in hooks
+    // Intentional no-op: Query will automatically refetch due to invalidation in hooks
   };
 
   return (

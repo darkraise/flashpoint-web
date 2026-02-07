@@ -1,9 +1,12 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs';
 import { DatabaseService } from '../services/DatabaseService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 const router = Router();
 
@@ -28,7 +31,7 @@ router.post(
   authenticate,
   requirePermission('settings.update'),
   logActivity('database.reload', 'database'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       logger.info('Manual database reload requested');
 
@@ -45,7 +48,7 @@ router.post(
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
-  }
+  })
 );
 
 /**
@@ -68,11 +71,8 @@ router.get(
   authenticate,
   requirePermission('settings.update'),
   logActivity('database.status', 'database'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
-      const fs = require('fs');
-      const { config } = require('../config');
-
       const isConnected = DatabaseService.isConnected();
       const stats = fs.statSync(config.flashpointDbPath);
 
@@ -91,7 +91,7 @@ router.get(
         error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
-  }
+  })
 );
 
 export default router;

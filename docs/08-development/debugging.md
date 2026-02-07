@@ -239,29 +239,6 @@ try {
 
 ---
 
-## Game Service Debugging
-
-### Enable Debug Logging
-
-```bash
-LOG_LEVEL=debug npm run dev
-```
-
-### Test Proxy
-
-```bash
-# Test proxy server
-curl http://localhost:22500/health
-
-# Test file access
-curl http://localhost:22500/file.swf
-
-# Test GameZip server
-curl http://localhost:22501/health
-```
-
----
-
 ## Common Issues
 
 ### Port Already in Use

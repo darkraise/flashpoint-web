@@ -57,7 +57,7 @@ export class AuthSettingsService {
    */
   updateSettings(data: Partial<AuthSettings>, updatedBy: number): AuthSettings {
     // Filter out non-setting fields (updatedAt, updatedBy)
-    const { updatedAt: _updatedAt, updatedBy: _, ...settingsToUpdate } = data;
+    const { updatedAt: _updatedAt, updatedBy: _updatedBy, ...settingsToUpdate } = data;
 
     if (Object.keys(settingsToUpdate).length === 0) {
       return this.getSettings();

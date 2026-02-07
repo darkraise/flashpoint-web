@@ -88,13 +88,13 @@ export function MaintenancePage() {
 
           {!user ? (
             <Button className="w-full" onClick={() => navigate('/login')}>
-              Login
+              Log In
             </Button>
           ) : null}
 
           {user ? (
             <Button variant="ghost" className="w-full" onClick={handleLogout}>
-              Logout
+              Log Out
             </Button>
           ) : null}
         </div>

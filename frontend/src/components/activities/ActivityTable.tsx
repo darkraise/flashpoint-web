@@ -5,7 +5,7 @@ import { useActivities } from '../../hooks/useActivities';
 import { useActivityFilters } from '../../hooks/useActivityFilters';
 import { useDebounce } from '../../hooks/useDebounce';
 import { ActivityFilters } from '../../types/auth';
-import { getApiErrorMessage } from '@/utils/errorUtils';
+import { getErrorMessage } from '@/types/api-error';
 import { getActionBadgeVariant } from '@/utils/activityUtils';
 import { DataTable } from '../ui/data-table';
 import { Badge } from '../ui/badge';
@@ -232,7 +232,7 @@ function ActivityTableComponent() {
   if (isError) {
     return (
       <div className="rounded-lg border border-destructive bg-destructive/10 px-4 py-3 text-destructive">
-        Error loading activity logs: {getApiErrorMessage(error, 'Unknown error')}
+        Error loading activity logs: {getErrorMessage(error)}
       </div>
     );
   }

@@ -17,8 +17,32 @@ export interface GameData {
 }
 
 /**
+ * Internal interface for database rows returned by SQL queries.
+ */
+interface GameDataRow {
+  id: number;
+  gameId: string;
+  title: string;
+  dateAdded: string;
+  sha256: string;
+  crc32: number;
+  presentOnDisk: number;
+  path: string | null;
+  size: number;
+  parameters: string | null;
+}
+
+/**
  * Service for updating the Flashpoint database after game data downloads.
- * Handles transaction safety and proper updates to both game_data and game tables.
+ *
+ * NOTE: This service intentionally writes to flashpoint.sqlite to update
+ * presentOnDisk and path fields in game_data/game tables. This matches
+ * the Flashpoint Launcher's behavior when downloading game data.
+ * better-sqlite3 handles file locking, and the backend's DatabaseService
+ * file watcher handles reloads when the Launcher makes changes.
+ *
+ * All write operations are wrapped in transactions for atomicity to prevent
+ * database inconsistencies if any step fails.
  */
 export class GameDatabaseUpdater {
   /**
@@ -53,55 +77,64 @@ export class GameDatabaseUpdater {
         relativePath,
       });
 
-      // Update game_data table
-      const updateGameDataSql = `
-        UPDATE game_data
-        SET presentOnDisk = 1, path = ?
-        WHERE id = ?
-      `;
-
-      logger.debug('Executing UPDATE on game_data', {
-        sql: updateGameDataSql,
-        params: [relativePath, gameDataId],
-      });
-
-      DatabaseService.run(updateGameDataSql, [relativePath, gameDataId]);
-
-      logger.debug('game_data UPDATE successful');
-
-      // Check if this game_data is the active data for the game
-      const gameSql = `
-        SELECT id, activeDataId
-        FROM game
-        WHERE id = ?
-      `;
-      const game = DatabaseService.get(gameSql, [gameData.gameId]);
-
-      if (game && game.activeDataId === gameDataId) {
-        // Update game table to mark active data as on disk
-        const updateGameSql = `
-          UPDATE game
-          SET activeDataOnDisk = 1
-          WHERE id = ? AND activeDataId = ?
+      // Wrap both UPDATE statements in a transaction for atomicity
+      const db = DatabaseService.getDatabase();
+      const updateTransaction = db.transaction(() => {
+        // Update game_data table
+        const updateGameDataSql = `
+          UPDATE game_data
+          SET presentOnDisk = 1, path = ?
+          WHERE id = ?
         `;
 
-        logger.debug('Executing UPDATE on game table', {
-          sql: updateGameSql,
-          params: [gameData.gameId, gameDataId],
+        logger.debug('Executing UPDATE on game_data', {
+          sql: updateGameDataSql,
+          params: [relativePath, gameDataId],
         });
 
-        DatabaseService.run(updateGameSql, [gameData.gameId, gameDataId]);
+        db.prepare(updateGameDataSql).run(relativePath, gameDataId);
 
-        logger.debug('game table UPDATE successful - activeDataOnDisk set to 1', {
-          gameId: gameData.gameId,
-        });
-      } else {
-        logger.debug('Skipping game table update - game data is not active', {
-          gameId: gameData.gameId,
-          activeDataId: game?.activeDataId,
-          requestedDataId: gameDataId,
-        });
-      }
+        logger.debug('game_data UPDATE successful');
+
+        // Check if this game_data is the active data for the game
+        const gameSql = `
+          SELECT id, activeDataId
+          FROM game
+          WHERE id = ?
+        `;
+        const game = db.prepare(gameSql).get(gameData.gameId) as
+          | { id: string; activeDataId: number }
+          | undefined;
+
+        if (game && game.activeDataId === gameDataId) {
+          // Update game table to mark active data as on disk
+          const updateGameSql = `
+            UPDATE game
+            SET activeDataOnDisk = 1
+            WHERE id = ? AND activeDataId = ?
+          `;
+
+          logger.debug('Executing UPDATE on game table', {
+            sql: updateGameSql,
+            params: [gameData.gameId, gameDataId],
+          });
+
+          db.prepare(updateGameSql).run(gameData.gameId, gameDataId);
+
+          logger.debug('game table UPDATE successful - activeDataOnDisk set to 1', {
+            gameId: gameData.gameId,
+          });
+        } else {
+          logger.debug('Skipping game table update - game data is not active', {
+            gameId: gameData.gameId,
+            activeDataId: game?.activeDataId,
+            requestedDataId: gameDataId,
+          });
+        }
+      });
+
+      // Execute the transaction
+      updateTransaction();
 
       // Save database to disk
       await this.saveDatabase();
@@ -191,7 +224,7 @@ export class GameDatabaseUpdater {
   /**
    * Map database row to GameData object.
    */
-  private static mapRowToGameData(row: any): GameData {
+  private static mapRowToGameData(row: GameDataRow): GameData {
     return {
       id: row.id,
       gameId: row.gameId,
@@ -230,18 +263,28 @@ export class GameDatabaseUpdater {
 
   /**
    * Mark game data as not downloaded (for cleanup/error scenarios).
+   * Wrapped in transaction for consistency with markAsDownloaded.
    *
    * @param gameDataId - The game_data.id
    */
   static async markAsNotDownloaded(gameDataId: number): Promise<void> {
     try {
-      const sql = `
-        UPDATE game_data
-        SET presentOnDisk = 0, path = NULL
-        WHERE id = ?
-      `;
+      const db = DatabaseService.getDatabase();
 
-      DatabaseService.run(sql, [gameDataId]);
+      // Wrap UPDATE in transaction for atomicity
+      const updateTransaction = db.transaction(() => {
+        const sql = `
+          UPDATE game_data
+          SET presentOnDisk = 0, path = NULL
+          WHERE id = ?
+        `;
+
+        db.prepare(sql).run(gameDataId);
+      });
+
+      // Execute the transaction
+      updateTransaction();
+
       await this.saveDatabase();
 
       logger.info('Marked game data as not downloaded', { gameDataId });

@@ -22,6 +22,7 @@ services:
     restart: unless-stopped
     ports:
       - "${API_PORT:-3100}:3100"
+      # Backend now includes game content serving on /game-proxy and /game-zip
     volumes:
       - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint:ro
       - ${DATA_PATH:-./data}:/app/data
@@ -31,7 +32,6 @@ services:
       - PGID=${PGID:-1000}
       - NODE_ENV=production
       - TZ=${TZ:-UTC}
-      - GAME_SERVICE_HOST=game-service
       - DOMAIN=${DOMAIN:-http://localhost:${WEB_PORT:-80}}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
@@ -43,38 +43,12 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       - OTEL_API_KEY=${OTEL_API_KEY:-}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-flashpoint-web-backend}
-    depends_on:
-      game-service:
-        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:3100/api/health"]
+      test: ["CMD", "curl", "--fail", "http://localhost:3100/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  game-service:
-    image: darkraise/flashpoint-game-service:${IMAGE_TAG:-latest}
-    container_name: flashpoint-game-service
-    restart: unless-stopped
-    ports:
-      - "${PROXY_PORT:-22500}:22500"
-      - "${GAMEZIP_PORT:-22501}:22501"
-    volumes:
-      - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint:ro
-      - ${LOGS_PATH:-./logs}:/app/logs
-    environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - NODE_ENV=production
-      - TZ=${TZ:-UTC}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:22500/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
   frontend:
     image: darkraise/flashpoint-frontend:${IMAGE_TAG:-latest}
@@ -88,11 +62,8 @@ services:
       - TZ=${TZ:-UTC}
       - BACKEND_HOST=${BACKEND_HOST:-backend}
       - BACKEND_PORT=${BACKEND_PORT:-3100}
-      - GAME_SERVICE_HOST=${GAME_SERVICE_HOST:-game-service}
     depends_on:
       backend:
-        condition: service_healthy
-      game-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/"]

@@ -5,8 +5,14 @@ import { ActivityService } from '../services/ActivityService';
 import { UserDatabaseService } from '../services/UserDatabaseService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { softAuth } from '../middleware/auth';
 import { logActivity } from '../middleware/activityLogger';
 import { logger } from '../utils/logger';
+import {
+  setRefreshTokenCookie,
+  clearRefreshTokenCookie,
+  getRefreshTokenFromCookie,
+} from '../utils/cookies';
 import { z } from 'zod';
 
 const router = Router();
@@ -61,6 +67,29 @@ const registerLimiter = rateLimit({
   },
 });
 
+// Moderate limits on token refresh
+const refreshLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // 30 refresh requests per minute per IP
+  message: {
+    error: {
+      message: 'Too many token refresh attempts from this IP, please try again later',
+      statusCode: 429,
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn(`[Security] Rate limit exceeded for token refresh from IP: ${req.ip}`);
+    res.status(429).json({
+      error: {
+        message: 'Too many token refresh attempts from this IP, please try again later',
+        statusCode: 429,
+      },
+    });
+  },
+});
+
 // Validation schemas
 const loginSchema = z.object({
   username: z.string().min(3).max(50),
@@ -71,10 +100,6 @@ const registerSchema = z.object({
   username: z.string().min(3).max(50),
   email: z.string().email(),
   password: z.string().min(6),
-});
-
-const refreshTokenSchema = z.object({
-  refreshToken: z.string(),
 });
 
 /**
@@ -104,7 +129,7 @@ router.post(
       const credentials = loginSchema.parse(req.body);
       const ipAddress = req.ip || '';
 
-      logger.info(`[Auth] Login attempt for user: ${credentials.username} from ${ipAddress}`);
+      logger.debug(`[Auth] Login attempt for user: ${credentials.username} from ${ipAddress}`);
 
       const result = await authService.login(credentials, ipAddress);
 
@@ -119,16 +144,32 @@ router.post(
       });
 
       logger.info(`[Auth] Login successful for user: ${credentials.username}`);
-      res.json(result);
+
+      // Set refresh token as HTTP-only cookie
+      setRefreshTokenCookie(res, result.tokens.refreshToken);
+
+      res.json({
+        user: result.user,
+        tokens: {
+          accessToken: result.tokens.accessToken,
+          expiresIn: result.tokens.expiresIn,
+        },
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        logger.warn(`[Auth] Validation error during login: ${error.errors[0].message}`);
-        throw new AppError(400, `Validation error: ${error.errors[0].message}`);
+        const username =
+          typeof req.body?.username === 'string' ? req.body.username.substring(0, 50) : 'unknown';
+        logger.warn(`[Auth] Validation error during login for user: ${username}`);
+        throw new AppError(
+          400,
+          `Validation error: ${error.errors.map((e) => e.message).join(', ')}`
+        );
       }
 
       // Log failed login attempt
       const ipAddress = req.ip || '';
-      const username = req.body.username || 'unknown';
+      const username =
+        typeof req.body?.username === 'string' ? req.body.username.substring(0, 50) : 'unknown';
 
       try {
         await activityService.log({
@@ -152,7 +193,7 @@ router.post(
       }
 
       // Log the error with full details before passing to error handler
-      logger.error(`[Auth] Login failed for user: ${username}`, {
+      logger.warn(`[Auth] Login failed for user: ${username}`, {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
@@ -194,14 +235,31 @@ router.post(
       });
 
       logger.info(`[Auth] Registration successful for user: ${data.username}`);
-      res.status(201).json(result);
+
+      // Set refresh token as HTTP-only cookie
+      setRefreshTokenCookie(res, result.tokens.refreshToken);
+
+      res.status(201).json({
+        user: result.user,
+        tokens: {
+          accessToken: result.tokens.accessToken,
+          expiresIn: result.tokens.expiresIn,
+        },
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        logger.warn(`[Auth] Validation error during registration: ${error.errors[0].message}`);
-        throw new AppError(400, `Validation error: ${error.errors[0].message}`);
+        const username =
+          typeof req.body?.username === 'string' ? req.body.username.substring(0, 50) : 'unknown';
+        logger.warn(`[Auth] Validation error during registration for user: ${username}`);
+        throw new AppError(
+          400,
+          `Validation error: ${error.errors.map((e) => e.message).join(', ')}`
+        );
       }
 
-      logger.error(`[Auth] Registration failed for user: ${req.body.username}`, {
+      const username =
+        typeof req.body?.username === 'string' ? req.body.username.substring(0, 50) : 'unknown';
+      logger.error(`[Auth] Registration failed for user: ${username}`, {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
@@ -217,11 +275,16 @@ router.post(
  */
 router.post(
   '/logout',
+  softAuth,
   logActivity('auth.logout', 'auth'),
   asyncHandler(async (req, res) => {
-    const { refreshToken } = refreshTokenSchema.parse(req.body);
+    const refreshToken = getRefreshTokenFromCookie(req.cookies);
 
-    await authService.logout(refreshToken);
+    if (refreshToken) {
+      await authService.logout(refreshToken);
+    }
+
+    clearRefreshTokenCookie(res);
 
     res.json({ success: true, message: 'Logged out successfully' });
   })
@@ -233,12 +296,23 @@ router.post(
  */
 router.post(
   '/refresh',
+  refreshLimiter,
   asyncHandler(async (req, res) => {
-    const { refreshToken } = refreshTokenSchema.parse(req.body);
+    const refreshToken = getRefreshTokenFromCookie(req.cookies);
+
+    if (!refreshToken) {
+      throw new AppError(401, 'No refresh token provided');
+    }
 
     const tokens = await authService.refreshToken(refreshToken);
 
-    res.json(tokens);
+    // Set new refresh token cookie (token rotation)
+    setRefreshTokenCookie(res, tokens.refreshToken);
+
+    res.json({
+      accessToken: tokens.accessToken,
+      expiresIn: tokens.expiresIn,
+    });
   })
 );
 

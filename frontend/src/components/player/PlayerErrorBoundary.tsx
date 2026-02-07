@@ -72,11 +72,12 @@ export class PlayerErrorBoundary extends Component<
             <AlertCircle size={64} className="text-red-500 mx-auto mb-6" />
             <h2 className="text-2xl font-bold mb-3">Player Error</h2>
             <p className="text-muted-foreground mb-6">
-              The game player encountered an error and had to stop. This can happen due to issues
-              with the game content, the Ruffle emulator, or browser compatibility.
+              {import.meta.env.DEV
+                ? 'The game player encountered an error and had to stop. This can happen due to issues with the game content, the Ruffle emulator, or browser compatibility.'
+                : 'The game player encountered an error. Please try reloading.'}
             </p>
 
-            {this.state.error ? (
+            {import.meta.env.DEV && this.state.error ? (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6 text-left">
                 <p className="text-sm font-mono text-destructive mb-2">
                   <strong>Error:</strong> {this.state.error.message}

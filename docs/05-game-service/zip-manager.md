@@ -244,6 +244,15 @@ async getFile(id: string, filePath: string): Promise<Buffer | null> {
 }
 ```
 
+**Performance Improvement - findFile() Refactoring:**
+
+The `findFile()` method has been optimized for single-pass lookup:
+
+- Entries are read directly without redundant delegation through `getFile()`
+- Process: index check → entry existence check → size check → read
+- Eliminates intermediate function calls and extra lookups
+- Result: Faster file discovery with fewer function invocations
+
 ### File Access Examples
 
 ```typescript
@@ -627,6 +636,13 @@ const data = await zipManager.getFile('not-mounted', 'file.swf');
 // Returns: null (not an error)
 ```
 
+**File too large**:
+
+```typescript
+const data = await zipManager.getFile('game-123', 'huge-file.bin');
+// Returns: null if file > 50MB (prevents memory exhaustion)
+```
+
 ### Unmount Errors
 
 **ZIP not mounted**:
@@ -645,26 +661,21 @@ const success = await zipManager.unmount('game-123');
 
 ## Testing
 
-### Manual Testing
+### Testing with Backend
+
+ZipManager is not directly accessible. Test through the backend proxy:
 
 ```bash
-# 1. Start game-service
-npm run dev
+# 1. Start backend
+cd backend && npm run dev
 
-# 2. Mount a ZIP
-curl -X POST http://localhost:22501/mount/test \
-  -H "Content-Type: application/json" \
-  -d '{"zipPath": "D:/Flashpoint/Data/Games/test.zip"}'
+# 2. Request file through proxy (GameZip is called internally)
+curl http://localhost:3100/game-proxy/http://www.example.com/file.swf
 
-# 3. Check mounts
-curl http://localhost:22501/mounts
-
-# 4. Request file
-curl http://localhost:22501/http://www.example.com/file.swf
-
-# 5. Unmount
-curl -X DELETE http://localhost:22501/mount/test
+# Backend logs will show ZipManager operations
 ```
+
+For unit testing, test GameZip methods directly:
 
 ### Unit Testing (Future)
 
@@ -744,18 +755,64 @@ Typical performance on modern SSD:
 - Per ZIP: 50KB - 500KB (index)
 - Per file: File size + decompression overhead
 
+## Race Condition Protection
+
+The ZIP manager prevents concurrent mount race conditions through the
+`mountingInProgress` Set:
+
+```typescript
+private mountingInProgress = new Set<string>();
+
+async mount(id: string, zipPath: string): Promise<void> {
+  // Check if already mounting
+  if (this.mountingInProgress.has(id)) {
+    logger.debug(`ZIP mount already in progress: ${id}`);
+    return;
+  }
+
+  this.mountingInProgress.add(id);
+  try {
+    // Mount the ZIP
+  } finally {
+    this.mountingInProgress.delete(id);
+  }
+}
+```
+
+**Protection**: Prevents duplicate file handles from being created when multiple
+concurrent mount requests arrive for the same ZIP. The second request returns
+immediately instead of creating redundant ZipManager entries.
+
+## ZIP Entry Size Limits
+
+The `getFile()` method checks entry size before reading to prevent memory
+exhaustion:
+
+```typescript
+const entry = entries[normalizedPath];
+if (entry && entry.size > 50 * 1024 * 1024) {
+  logger.warn(`File too large to buffer: ${normalizedPath} (${entry.size} bytes)`);
+  return null;
+}
+```
+
+**Limit**: Files exceeding 50MB are rejected.
+
+**Rationale**: Large files are buffered entirely into memory. Without limits,
+malicious or misconfigured ZIPs could exhaust available memory.
+
+**Future**: Implement streaming for large files instead of buffering.
+
 ## Future Enhancements
 
-1. **Auto-Unmount**: Unmount inactive ZIPs after timeout
+1. **Auto-Unmount**: Unmount inactive ZIPs after timeout (already implemented via
+   LRU TTL)
 2. **LRU Cache**: Cache frequently accessed files in memory
-3. **File Index**: Pre-index files on mount for O(1) lookup
+3. **Streaming API**: Stream large files instead of loading into memory
 4. **Compression Detection**: Skip decompression for stored (uncompressed) files
-5. **Streaming API**: Stream large files instead of loading into memory
-6. **Concurrent Limits**: Limit concurrent file reads
-7. **Memory Limits**: Enforce maximum memory usage
-8. **Health Monitoring**: Track memory usage, cache hit rate
-9. **Metrics**: Expose mount count, file access count, cache hit rate
-10. **Pre-Warming**: Mount popular ZIPs on startup
+5. **Health Monitoring**: Track memory usage, cache hit rate
+6. **Metrics**: Expose mount count, file access count, cache hit rate
+7. **Pre-Warming**: Mount popular ZIPs on startup
 
 ## References
 

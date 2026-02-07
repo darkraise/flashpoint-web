@@ -73,7 +73,8 @@ export function useDeletePlaylist() {
   });
 }
 
-// Hardcoded Favorites playlist ID
+// This is the well-known ID for the system favorites playlist in the Flashpoint database.
+// It is used to identify the favorites playlist among regular playlists and filter it from user-created playlists.
 export const FAVORITES_PLAYLIST_ID = 'c8f81d60-b134-4309-8985-fd184ec96dfe';
 
 export function useFavoritesPlaylist() {
@@ -89,6 +90,7 @@ export function useAddToFavorites() {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', FAVORITES_PLAYLIST_ID] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
   });
 }
@@ -102,6 +104,7 @@ export function useRemoveFromFavorites() {
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['playlist', FAVORITES_PLAYLIST_ID] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
+      queryClient.invalidateQueries({ queryKey: ['favorites'] });
     },
   });
 }

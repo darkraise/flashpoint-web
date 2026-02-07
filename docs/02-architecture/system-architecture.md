@@ -2,9 +2,11 @@
 
 ## Overview
 
-Flashpoint Web is a monorepo containing three independent microservices:
-frontend (React UI), backend (Express API), and game-service (game file proxy).
-Services communicate via HTTP with clean separation of concerns.
+Flashpoint Web is a monorepo containing **2 independent services**: frontend (React UI)
+and backend (Express API with integrated game file serving). Services communicate via HTTP
+with clean separation of concerns. The backend handles metadata, authentication, business
+logic, and game file serving with hardened resource management (connection limits, stream
+cleanup, download concurrency limits).
 
 ## Architecture Diagram
 
@@ -30,13 +32,9 @@ graph TB
         AuthSvc[AuthService]
         PlaySvc[PlayTrackingService]
         Middleware[Auth/RBAC/Logging]
-    end
-
-    subgraph "Game Service :22500/:22501"
-        ProxyServer[HTTP Proxy :22500]
-        ZipServer[GameZip Server :22501]
+        ProxyHandler[Game Proxy Handler]
         ZipManager[ZIP Manager]
-        MimeHandler[MIME Handler]
+        GameRoutes[Game Routes<br/>/game-proxy/*<br/>/game-zip/*]
     end
 
     subgraph "Data Layer"
@@ -60,6 +58,7 @@ graph TB
     Middleware --> UserSvc
     Middleware --> AuthSvc
     Middleware --> PlaySvc
+    Express --> GameRoutes
 
     GameSvc --> FlashpointDB
     UserSvc --> UserDB
@@ -67,23 +66,21 @@ graph TB
     PlaySvc --> UserDB
     PlaySvc --> FlashpointDB
 
-    Express -.proxy.-> ProxyServer
-    Express -.proxy.-> ZipServer
-
-    ProxyServer --> FileSystem
-    ProxyServer -.fallback.-> CDN
-    ZipServer --> ZipManager
+    GameRoutes --> ProxyHandler
+    GameRoutes --> ZipManager
+    ProxyHandler --> FileSystem
+    ProxyHandler -.fallback.-> CDN
     ZipManager --> FileSystem
 
     React --> Ruffle
-    Ruffle -.loads.-> ProxyServer
+    Ruffle -.loads.-> GameRoutes
 
     Vite -.dev proxy.-> Express
 
     style Browser fill:#e1f5ff
     style React fill:#61dafb
     style Express fill:#90ee90
-    style ProxyServer fill:#ffd700
+    style GameRoutes fill:#ffd700
     style FlashpointDB fill:#ff9999
     style UserDB fill:#ff9999
 ```
@@ -129,11 +126,11 @@ playlists
 
 **Architecture Pattern**: Routes → Middleware → Services → Databases
 
-### Game Service (Ports 22500, 22501)
+### Backend Game Serving (Integrated)
 
-**Purpose**: Game file serving and ZIP mounting
+**Purpose**: Game file serving and ZIP mounting (integrated into backend)
 
-**HTTP Proxy Server (22500)**:
+**Game Proxy Routes** (`/game-proxy/*`):
 
 - Serves legacy web content with fallback chain:
   1. Local htdocs directory
@@ -141,13 +138,26 @@ playlists
   3. ZIP archives
   4. External CDN fallback
   5. Local cache
+- Permissive CORS headers for cross-origin game content
+- Registered before auth/CORS middleware
+- URL sanitization to prevent directory traversal attacks
 
-**GameZip Server (22501)**:
+**Game ZIP Routes** (`/game-zip/*`):
 
 - Mounts and streams ZIP archives
 - Zero-extraction design
 - LRU cache (max 100, 30-min TTL)
 - Auto-cleanup on eviction
+- Integrated with backend service layer
+- Supports background downloads from `gameDataSources` in `preferences.json`
+
+**Resource Management** (server.ts):
+- `keepAliveTimeout: 65s` - Prevents idle connections from blocking
+- `headersTimeout: 66s` - Must exceed keepAliveTimeout
+- `timeout: 120s` - 2-minute max for any request (handles file streaming)
+- `maxConnections: 500` - Prevents connection exhaustion
+- Stream cleanup on request completion
+- Download concurrency limits (configured in preferences)
 
 ## Data Flow
 
@@ -330,17 +340,22 @@ All services run on localhost with SQLite databases.
 
 - Frontend route-based lazy loading (38% bundle reduction)
 - React.memo for component optimization (98% fewer re-renders)
-- Game Service LRU cache for ZIP mounts (prevents memory leaks)
-- Game Service request size limits (1MB max, DoS protection)
-- Backend query result caching
+- Backend LRU cache for ZIP mounts (prevents memory leaks)
+- Backend request size limits (1MB max, DoS protection)
+- Backend query result caching (5-minute TTL)
+- In-process game file serving (no inter-service HTTP overhead)
+- TanStack Query auto-polling (only when downloading, 2s interval)
+- Entry index optimization for large game databases
+- Connection pooling with timeouts
+- Stream cleanup on request completion or error
+- Background downloads don't block initial response
 
 ### Scaling Strategies (Future)
 
 **Horizontal**:
 
 - Frontend: Static hosting on CDN (Vercel, Netlify)
-- Backend: Multiple instances behind load balancer
-- Game Service: Region-specific replicas
+- Backend: Multiple instances behind load balancer with shared file storage
 
 **Vertical**:
 
@@ -430,7 +445,8 @@ consistent tooling
 
 ## Conclusion
 
-Flashpoint Web balances simplicity with scalability, maintaining clean service
-separation while enabling efficient inter-service communication. The
-three-service design allows independent scaling and deployment while keeping the
-codebase maintainable and type-safe.
+Flashpoint Web balances simplicity with scalability, maintaining clean separation
+of concerns between frontend UI and backend business logic. Game file serving is
+integrated into the backend, eliminating inter-service HTTP overhead while
+keeping the codebase maintainable and type-safe. The two-service design is
+straightforward to deploy and monitor while remaining extensible for future needs.

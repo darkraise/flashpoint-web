@@ -27,11 +27,6 @@ export const config = {
   // - logosPath: ${flashpointPath}/Data/Logos
   // - playlistsPath: ${flashpointPath}/Data/Playlists
   // - gamesPath: ${flashpointPath}/Data/Games
-
-  // Game service host (proxy and gamezip URLs derived automatically)
-  gameServiceHost: process.env.GAME_SERVICE_HOST || 'localhost',
-  // - proxyUrl: http://${gameServiceHost}:22500
-  // - gamezipUrl: http://${gameServiceHost}:22501
   // ... more config
 };
 ```
@@ -137,25 +132,6 @@ needed.
 The edition is displayed as read-only information in the Settings UI (not
 user-configurable).
 
-### Game Service Configuration
-
-#### `GAME_SERVICE_HOST`
-
-- **Type**: string
-- **Default**: `localhost`
-- **Description**: Hostname/IP of game-service for constructing proxy and
-  GameZip URLs
-- **Usage**:
-  ```bash
-  GAME_SERVICE_HOST=localhost  # Development
-  GAME_SERVICE_HOST=game-service  # Docker
-  GAME_SERVICE_HOST=192.168.1.100  # Remote
-  ```
-
-The proxy and GameZip server URLs are automatically constructed as:
-
-- Proxy: `http://${GAME_SERVICE_HOST}:22500`
-- GameZip: `http://${GAME_SERVICE_HOST}:22501`
 
 ### External Resources
 
@@ -317,9 +293,6 @@ HOST=0.0.0.0
 # All other paths are derived automatically from FLASHPOINT_PATH
 FLASHPOINT_PATH=D:/Flashpoint
 
-# Game Service
-GAME_SERVICE_HOST=localhost
-
 # Database
 USER_DB_PATH=./user.db
 
@@ -347,9 +320,6 @@ HOST=0.0.0.0
 # Flashpoint (Linux)
 # All other paths are derived automatically from FLASHPOINT_PATH
 FLASHPOINT_PATH=/mnt/flashpoint
-
-# Game Service
-GAME_SERVICE_HOST=game-service
 
 # Database
 USER_DB_PATH=/data/user.db
@@ -382,9 +352,6 @@ HOST=0.0.0.0
 # Flashpoint (mounted volume)
 # All other paths are derived automatically from FLASHPOINT_PATH
 FLASHPOINT_PATH=/flashpoint
-
-# Game Service (Docker network)
-GAME_SERVICE_HOST=game-service
 
 # Database (Docker volume)
 USER_DB_PATH=/data/user.db

@@ -2,8 +2,9 @@
 
 ## Overview
 
-Flashpoint Web uses HTTP-based communication between three services. Frontend
-communicates with backend, which proxies game file requests to game-service.
+Flashpoint Web uses HTTP-based communication between two services. Frontend
+communicates with backend via REST API. The backend handles both business logic
+and game file serving through integrated routes.
 
 ## Communication Architecture
 
@@ -17,14 +18,12 @@ graph TB
 
     subgraph "Backend :3100"
         Routes[Express Routes]
+        GameRoutes[Game Routes<br/>/game-proxy/*<br/>/game-zip/*]
         Auth[Auth Middleware]
         RBAC[RBAC Middleware]
         Services[Service Layer]
-    end
-
-    subgraph "Game Service :22500/:22501"
-        Proxy[HTTP Proxy]
-        ZipServer[GameZip Server]
+        GameProxy[Game Proxy Handler]
+        ZipManager[ZIP Manager]
     end
 
     UI --> API
@@ -34,15 +33,17 @@ graph TB
     Auth --> RBAC
     RBAC --> Services
 
-    Services -.proxy request.-> Proxy
-    Services -.proxy request.-> ZipServer
+    UI --> Interceptor
+    Interceptor -->|Game Routes<br/>No Auth| GameRoutes
+    GameRoutes --> GameProxy
+    GameRoutes --> ZipManager
 
-    Proxy -.game files.-> Interceptor
-    ZipServer -.game files.-> Interceptor
+    GameProxy -.game files.-> Interceptor
+    ZipManager -.game files.-> Interceptor
 
     style UI fill:#61dafb
     style Routes fill:#90ee90
-    style Proxy fill:#ffd700
+    style GameRoutes fill:#ffd700
 ```
 
 ## Frontend ↔ Backend Communication
@@ -127,59 +128,57 @@ PATCH /api/users/me/settings {theme_mode, primary_color}
 }
 ```
 
-## Backend ↔ Game Service Communication
+## Backend Game File Serving
 
-Backend does NOT directly proxy game files. Instead:
+Game file serving is integrated into the backend service. When a game launch is
+requested:
 
-1. Returns launch URLs pointing to game service
-2. Frontend loads content directly from game service
-3. Backend mounts ZIPs when needed via internal API
+1. Backend mounts ZIP directly in-process via GameZipManager
+2. Returns launch URLs pointing to backend game routes
+3. Frontend loads content directly from backend game routes
+4. Game routes bypass auth middleware but include permissive CORS headers
 
-**Mount Game ZIP**:
-
-```http
-POST http://localhost:22501/mount
-{ "gameId": "uuid", "zipPath": "D:/Flashpoint/Data/Games/A/uuid.zip" }
-Response: { "success": true, "mountPoint": "/gamedata/uuid" }
-```
-
-**Unmount Game ZIP**:
+**Example: Game Launch**:
 
 ```http
-POST http://localhost:22501/unmount
-{ "gameId": "uuid" }
+GET /api/games/{gameId}/launch
+Response: { "contentUrl": "http://localhost:3100/game-proxy/http://example.com/game.swf" }
 ```
 
-## Frontend ↔ Game Service Communication
+**Backend Game Routes**:
 
-Frontend loads game content **directly** from game service:
+- `GET /game-proxy/{url}` - HTTP proxy with fallback chain (htdocs → game data → ZIPs → CDN)
+- `GET /game-zip/{gameId}/{filePath}` - Stream files from mounted ZIPs
+
+## Frontend ↔ Backend Game Routes Communication
+
+Frontend loads game content **directly** from backend game routes:
 
 ```mermaid
 sequenceDiagram
     participant Frontend
     participant Backend
-    participant GameService
     participant FileSystem
 
     Frontend->>Backend: GET /api/games/{id}/launch
     Backend->>Backend: Mount ZIP if needed
-    Backend-->>Frontend: {contentUrl: "http://localhost:22500/..."}
+    Backend-->>Frontend: {contentUrl: "http://localhost:3100/game-proxy/..."}
 
-    Frontend->>GameService: GET /http://domain.com/game.swf
-    GameService->>FileSystem: Read from htdocs/ZIP
-    FileSystem-->>GameService: File bytes
-    GameService-->>Frontend: game.swf (binary)
+    Frontend->>Backend: GET /game-proxy/http://domain.com/game.swf
+    Backend->>FileSystem: Read from htdocs/ZIP
+    FileSystem-->>Backend: File bytes
+    Backend-->>Frontend: game.swf (binary)
 ```
 
-### HTTP Proxy Server (:22500)
+### Game Proxy Route (`/game-proxy/*`)
 
-**Request**: `GET /http://example.com/path/game.swf`
+**Request**: `GET /game-proxy/http://example.com/path/game.swf`
 
 **Fallback Chain**:
 
 1. Local htdocs: `D:/Flashpoint/Legacy/htdocs/example.com/path/game.swf`
 2. Game data directory
-3. Mounted ZIPs (via zip-manager)
+3. Mounted ZIPs (via ZIP manager)
 4. External CDN: `http://infinity.flashpointarchive.org/...`
 5. Cache downloaded content locally
 
@@ -191,15 +190,19 @@ Access-Control-Allow-Origin: *
 Cache-Control: public, max-age=31536000
 ```
 
-### GameZip Server (:22501)
+**Important**: This route is registered **before** auth middleware and has
+permissive CORS to allow cross-origin game content loading.
 
-**Request**: `GET /gamedata/{gameId}/path/to/file.swf`
+### Game ZIP Route (`/game-zip/*`)
+
+**Request**: `GET /game-zip/{gameId}/path/to/file.swf`
 
 - Streams files directly from ZIP (no extraction)
 - Appropriate MIME type header
 - CORS headers for cross-origin access
 - LRU cache for ZIP mounts (max 100, 30-min TTL)
 - Auto-cleanup on eviction
+- Registered before auth middleware
 
 ## Development Environment: Vite Proxy
 
@@ -214,8 +217,12 @@ export default defineConfig({
         target: 'http://localhost:3100',
         changeOrigin: true,
       },
-      '/proxy': {
-        target: 'http://localhost:22500',
+      '/game-proxy': {
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
+      '/game-zip': {
+        target: 'http://localhost:3100',
         changeOrigin: true,
       },
     },
@@ -343,7 +350,7 @@ SQLite).
 **CORS Configuration**:
 
 ```typescript
-// Backend
+// Backend - Restricted CORS for API routes
 app.use(
   cors({
     origin: process.env.DOMAIN || 'http://localhost:5173',
@@ -352,13 +359,9 @@ app.use(
   })
 );
 
-// Game Service (wide open for cross-domain content)
-app.use(
-  cors({
-    origin: '*',
-    methods: ['GET', 'HEAD', 'OPTIONS'],
-  })
-);
+// Backend - Permissive CORS for game routes (registered before general CORS)
+app.use('/game-proxy', cors({ origin: '*', methods: ['GET', 'HEAD', 'OPTIONS'] }));
+app.use('/game-zip', cors({ origin: '*', methods: ['GET', 'HEAD', 'OPTIONS'] }));
 ```
 
 **Request Validation**:

@@ -19,7 +19,7 @@ export class SystemSettingsService {
       return null;
     }
 
-    const valueToUse = row.value || row.default_value;
+    const valueToUse = row.value ?? row.default_value;
     return this.parseValue(valueToUse, row.data_type);
   }
 
@@ -38,7 +38,7 @@ export class SystemSettingsService {
       // Remove category prefix from key (e.g., 'auth.guest_access_enabled' -> 'guestAccessEnabled')
       const shortKey = row.key.replace(`${category}.`, '');
       const camelCaseKey = this.snakeToCamel(shortKey);
-      const valueToUse = row.value || row.default_value;
+      const valueToUse = row.value ?? row.default_value;
       const parsedValue = this.parseValue(valueToUse, row.data_type);
       if (parsedValue !== null) {
         settings[camelCaseKey] = parsedValue;
@@ -66,7 +66,7 @@ export class SystemSettingsService {
 
       const shortKey = row.key.replace(`${row.category}.`, '');
       const camelCaseKey = this.snakeToCamel(shortKey);
-      const valueToUse = row.value || row.default_value;
+      const valueToUse = row.value ?? row.default_value;
       const parsedValue = this.parseValue(valueToUse, row.data_type);
       if (parsedValue !== null) {
         allSettings[row.category][camelCaseKey] = parsedValue;
@@ -97,12 +97,14 @@ export class SystemSettingsService {
    * Update multiple settings in a category
    */
   updateCategory(category: string, settings: CategorySettings, updatedBy?: number): void {
-    // Use individual updates (transactions would require accessing private db property)
-    Object.entries(settings).forEach(([key, value]) => {
-      const snakeKey = this.camelToSnake(key);
-      const fullKey = `${category}.${snakeKey}`;
-      this.set(fullKey, value, updatedBy);
-    });
+    const db = UserDatabaseService.getDatabase();
+    db.transaction(() => {
+      Object.entries(settings).forEach(([key, value]) => {
+        const snakeKey = this.camelToSnake(key);
+        const fullKey = `${category}.${snakeKey}`;
+        this.set(fullKey, value, updatedBy);
+      });
+    })();
   }
 
   /**
@@ -123,7 +125,7 @@ export class SystemSettingsService {
 
       const shortKey = row.key.replace(`${row.category}.`, '');
       const camelCaseKey = this.snakeToCamel(shortKey);
-      const valueToUse = row.value || row.default_value;
+      const valueToUse = row.value ?? row.default_value;
       const parsedValue = this.parseValue(valueToUse, row.data_type);
       if (parsedValue !== null) {
         publicSettings[row.category][camelCaseKey] = parsedValue;

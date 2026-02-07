@@ -12,7 +12,7 @@ sequenceDiagram
     participant Backend
     participant GameService
     participant GameDataService
-    participant ZipServer
+    participant BackendGameModule
     participant FlashpointDB
     participant ProxyServer
     participant Ruffle
@@ -38,17 +38,17 @@ sequenceDiagram
         alt ZIP file present
             GameDataService->>GameDataService: Resolve ZIP path<br/>D:/Flashpoint/Data/Games/{letter}/{id}.zip
 
-            GameDataService->>ZipServer: POST /mount<br/>{gameId, zipPath}
-            ZipServer->>ZipServer: Check if already mounted
+            GameDataService->>BackendGameModule: Internal mount call<br/>{gameId, zipPath}
+            BackendGameModule->>BackendGameModule: Check if already mounted
 
             alt Not yet mounted
-                ZipServer->>ZipServer: fs.existsSync(zipPath)
-                ZipServer->>ZipServer: new StreamZip.async({file: zipPath})
-                ZipServer->>ZipServer: Store in mounts Map
-                Note over ZipServer: mounts.set(gameId, zipInstance)
-                ZipServer-->>GameDataService: {success: true, mountPoint}
+                BackendGameModule->>BackendGameModule: fs.existsSync(zipPath)
+                BackendGameModule->>BackendGameModule: new StreamZip.async({file: zipPath})
+                BackendGameModule->>BackendGameModule: Store in mounts Map
+                Note over BackendGameModule: mounts.set(gameId, zipInstance)
+                BackendGameModule-->>GameDataService: {success: true, mountPoint}
             else Already mounted
-                ZipServer-->>GameDataService: {success: true, cached}
+                BackendGameModule-->>GameDataService: {success: true, cached}
             end
 
             GameDataService-->>Backend: ZIP mounted
@@ -58,7 +58,7 @@ sequenceDiagram
     end
 
     Backend->>Backend: Construct contentUrl
-    Note over Backend: http://localhost:22500/{launchCommand}
+    Note over Backend: http://localhost:3100/game-proxy/{launchCommand}
 
     Backend-->>API: Launch data response
     Note over API: {<br/>  gameId,<br/>  title,<br/>  platform,<br/>  contentUrl,<br/>  canPlayInBrowser<br/>}
@@ -74,8 +74,8 @@ sequenceDiagram
 
         GamePlayerView->>Ruffle: player.load(contentUrl)
 
-        Ruffle->>ProxyServer: GET /{contentUrl}
-        Note over Ruffle,ProxyServer: Example: GET /http://example.com/game.swf
+        Ruffle->>ProxyServer: GET /game-proxy/{contentUrl}
+        Note over Ruffle,ProxyServer: Example: GET /game-proxy/http://example.com/game.swf
 
         ProxyServer->>ProxyServer: Parse URL from path
         ProxyServer->>ProxyServer: Check local htdocs
@@ -89,9 +89,9 @@ sequenceDiagram
             alt File in game data
                 ProxyServer-->>Ruffle: File bytes
             else Not in game data
-                ProxyServer->>ZipServer: Query mounted ZIPs
-                ZipServer->>ZipServer: zip.entryData(filePath)
-                ZipServer-->>ProxyServer: File from ZIP
+                ProxyServer->>BackendGameModule: Query mounted ZIPs
+                BackendGameModule->>BackendGameModule: zip.entryData(filePath)
+                BackendGameModule-->>ProxyServer: File from ZIP
                 ProxyServer-->>Ruffle: File bytes
             end
         end
@@ -101,7 +101,7 @@ sequenceDiagram
         GamePlayerView->>User: Game playing
 
         loop Asset loading
-            Ruffle->>ProxyServer: GET /assets/sprite.png
+            Ruffle->>ProxyServer: GET /game-proxy/assets/sprite.png
             ProxyServer-->>Ruffle: Asset bytes
         end
 
@@ -122,7 +122,7 @@ title: ZIP Mounting Process
 sequenceDiagram
     participant Backend
     participant GameDataService
-    participant ZipServer
+    participant BackendGameModule
     participant ZipManager
     participant FileSystem
 
@@ -134,25 +134,24 @@ sequenceDiagram
     Note over FileSystem: D:/Flashpoint/Data/Games/A/abc-123.zip
     FileSystem-->>GameDataService: Absolute path
 
-    GameDataService->>ZipServer: POST /mount
-    Note over GameDataService,ZipServer: {<br/>  gameId: "abc-123",<br/>  zipPath: "D:/.../.../abc-123.zip"<br/>}
+    GameDataService->>BackendGameModule: Internal mount call<br/>{gameId, zipPath}
 
-    ZipServer->>ZipManager: Check if mounted
+    BackendGameModule->>ZipManager: Check if mounted
 
     alt Already mounted
-        ZipManager-->>ZipServer: Mount exists
+        ZipManager-->>BackendGameModule: Mount exists
         ZipManager->>ZipManager: Update lastAccess timestamp
-        ZipServer-->>GameDataService: {success: true, cached: true}
+        BackendGameModule-->>GameDataService: {success: true, cached: true}
     else Not mounted
-        ZipServer->>FileSystem: fs.existsSync(zipPath)
+        BackendGameModule->>FileSystem: fs.existsSync(zipPath)
 
         alt File not found
-            FileSystem-->>ZipServer: false
-            ZipServer-->>GameDataService: Error: ZIP file not found
+            FileSystem-->>BackendGameModule: false
+            BackendGameModule-->>GameDataService: Error: ZIP file not found
         else File exists
-            FileSystem-->>ZipServer: true
+            FileSystem-->>BackendGameModule: true
 
-            ZipServer->>ZipManager: mount(gameId, zipPath)
+            BackendGameModule->>ZipManager: mount(gameId, zipPath)
             ZipManager->>ZipManager: new StreamZip.async({file})
             ZipManager->>ZipManager: await zip.entries()
             Note over ZipManager: Verify ZIP is valid
@@ -161,8 +160,8 @@ sequenceDiagram
             ZipManager->>ZipManager: Set lastAccess = Date.now()
             Note over ZipManager: mounts.set(gameId, zipInstance)<br/>lastAccess.set(gameId, timestamp)
 
-            ZipManager-->>ZipServer: Mount successful
-            ZipServer-->>GameDataService: {success: true, mountPoint: "/gamedata/abc-123"}
+            ZipManager-->>BackendGameModule: Mount successful
+            BackendGameModule-->>GameDataService: {success: true, mountPoint: "/game-zip/abc-123"}
         end
     end
 

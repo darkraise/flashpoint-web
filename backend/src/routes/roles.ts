@@ -68,6 +68,10 @@ router.get(
   logActivity('roles.view', 'roles'),
   asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(400, 'Invalid role ID');
+    }
+
     const role = await roleService.getRoleById(id);
 
     if (!role) {
@@ -112,6 +116,10 @@ router.patch(
   logActivity('roles.update', 'roles'),
   asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(400, 'Invalid role ID');
+    }
+
     const data = updateRoleSchema.parse(req.body);
 
     const role = await roleService.updateRole(id, data.name, data.description, data.priority);
@@ -131,6 +139,10 @@ router.put(
   logActivity('roles.update_permissions', 'roles'),
   asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(400, 'Invalid role ID');
+    }
+
     const data = updatePermissionsSchema.parse(req.body);
 
     await roleService.updateRolePermissions(id, data.permissionIds);
@@ -151,6 +163,9 @@ router.delete(
   logActivity('roles.delete', 'roles'),
   asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(400, 'Invalid role ID');
+    }
 
     await roleService.deleteRole(id);
 

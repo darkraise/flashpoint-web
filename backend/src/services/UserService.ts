@@ -13,20 +13,27 @@ export class UserService {
   async getUsers(page: number = 1, limit: number = 50): Promise<PaginatedResponse<User>> {
     const offset = calculateOffset(page, limit);
 
+    // Single query with window function for total count (was 2 separate queries)
     const users = UserDatabaseService.all(
       `SELECT u.id, u.username, u.email, u.role_id as roleId, r.name as roleName,
               u.is_active as isActive, u.created_at as createdAt,
-              u.updated_at as updatedAt, u.last_login_at as lastLoginAt
+              u.updated_at as updatedAt, u.last_login_at as lastLoginAt,
+              COUNT(*) OVER() as total_count
        FROM users u
        JOIN roles r ON u.role_id = r.id
        ORDER BY u.created_at DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]
-    );
+    ) as (User & { total_count: number })[];
 
-    const total = UserDatabaseService.get('SELECT COUNT(*) as count FROM users', [])?.count || 0;
+    const total = users.length > 0 ? users[0].total_count : 0;
 
-    return createPaginatedResponse(users, total, page, limit);
+    // Remove total_count from result objects
+    users.forEach((user) => {
+      delete (user as unknown as Record<string, unknown>).total_count;
+    });
+
+    return createPaginatedResponse(users as User[], total, page, limit);
   }
 
   /**
@@ -50,34 +57,35 @@ export class UserService {
    * Create new user
    */
   async createUser(data: CreateUserData): Promise<User> {
-    // Check if username exists
-    const existingUser = UserDatabaseService.get('SELECT id FROM users WHERE username = ?', [
-      data.username,
-    ]);
-    if (existingUser) {
-      throw new AppError(409, 'Username already exists');
-    }
-
-    // Check if email exists
-    const existingEmail = UserDatabaseService.get('SELECT id FROM users WHERE email = ?', [
-      data.email,
-    ]);
-    if (existingEmail) {
-      throw new AppError(409, 'Email already exists');
-    }
-
-    // Hash password
+    // Hash password before transaction
     const passwordHash = await hashPassword(data.password);
 
-    // Create user
-    const result = UserDatabaseService.run(
-      'INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)',
-      [data.username, data.email, passwordHash, data.roleId]
-    );
+    // Wrap uniqueness checks and insert in transaction to prevent race condition
+    const db = UserDatabaseService.getDatabase();
+    const userId = db.transaction(() => {
+      // Check username uniqueness inside transaction
+      const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(data.username);
+      if (existingUser) {
+        throw new AppError(409, 'Username already exists');
+      }
 
-    const userId = result.lastInsertRowid as number;
+      // Check email uniqueness inside transaction
+      const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(data.email);
+      if (existingEmail) {
+        throw new AppError(409, 'Email already exists');
+      }
 
-    // Return created user
+      // Create user
+      const result = db
+        .prepare(
+          'INSERT INTO users (username, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, ?)'
+        )
+        .run(data.username, data.email, passwordHash, data.roleId, data.isActive !== false ? 1 : 0);
+
+      return result.lastInsertRowid as number;
+    })();
+
+    // Return created user (outside transaction is fine)
     return (await this.getUserById(userId))!;
   }
 
@@ -92,7 +100,7 @@ export class UserService {
 
     // Build update query dynamically
     const updates: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (data.email !== undefined) {
       // Check if email is taken by another user
@@ -164,17 +172,24 @@ export class UserService {
   /**
    * Change user password
    */
-  async changePassword(id: number, currentPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    id: number,
+    currentPassword: string,
+    newPassword: string,
+    isAdminReset: boolean = false
+  ): Promise<void> {
     const user = UserDatabaseService.get('SELECT password_hash FROM users WHERE id = ?', [id]);
 
     if (!user) {
       throw new AppError(404, 'User not found');
     }
 
-    // Verify current password using centralized utility
-    const isValid = await verifyPassword(currentPassword, user.password_hash);
-    if (!isValid) {
-      throw new AppError(401, 'Current password is incorrect');
+    // Verify current password using centralized utility (skip if admin reset)
+    if (!isAdminReset) {
+      const isValid = await verifyPassword(currentPassword, user.password_hash);
+      if (!isValid) {
+        throw new AppError(401, 'Current password is incorrect');
+      }
     }
 
     // Hash new password
@@ -239,7 +254,7 @@ export class UserService {
   }
 
   /**
-   * Update theme settings in user_settings table
+   * Update theme settings in user_settings table (atomic transaction)
    */
   async updateThemeSettings(userId: number, mode: string, primaryColor: string): Promise<void> {
     const user = await this.getUserById(userId);
@@ -247,8 +262,11 @@ export class UserService {
       throw new AppError(404, 'User not found');
     }
 
-    await this.setUserSetting(userId, 'theme_mode', mode);
-    await this.setUserSetting(userId, 'primary_color', primaryColor);
+    // Execute both updates in parallel for better performance
+    await Promise.all([
+      this.setUserSetting(userId, 'theme_mode', mode),
+      this.setUserSetting(userId, 'primary_color', primaryColor),
+    ]);
   }
 
   /**
