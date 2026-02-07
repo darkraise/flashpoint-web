@@ -5,19 +5,24 @@ import { measureQueryPerformance } from '../utils/queryPerformance';
 import fs from 'fs';
 import path from 'path';
 
-// Import GameSearchCache for cache invalidation
+// Import GameSearchCache and GameService for cache invalidation on DB reload
 // Using dynamic import to avoid circular dependency
-// Type is defined here to maintain type safety while avoiding circular import
 interface GameSearchCacheType {
   clearCache: () => void;
 }
+interface GameServiceType {
+  clearFlashSwfCache: () => void;
+}
 let GameSearchCache: GameSearchCacheType | null = null;
+let GameServiceStatic: GameServiceType | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   GameSearchCache = require('./GameSearchCache').GameSearchCache as GameSearchCacheType;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  GameServiceStatic = require('./GameService').GameService as GameServiceType;
 } catch {
-  // GameSearchCache may not be available in all contexts
-  logger.debug('GameSearchCache not available for cache invalidation');
+  // May not be available in all contexts
+  logger.debug('GameSearchCache/GameService not available for cache invalidation');
 }
 
 export class DatabaseService {
@@ -310,30 +315,38 @@ export class DatabaseService {
 
       logger.info('Source database file changed, syncing...');
 
-      // Close existing database connection
-      if (this.db) {
-        this.db.close();
-        this.db = null;
-      }
-
       // If using local copy, update it from source
       if (this.isUsingLocalCopy && config.enableLocalDbCopy) {
         await this.copyDatabaseToLocal();
       }
 
-      // Reopen database connection
-      this.db = this.openDatabase(this.activeDbPath);
+      // Open new connection FIRST
+      const newDb = this.openDatabase(this.activeDbPath);
+
+      // Atomic swap: replace old connection with new one
+      const oldDb = this.db;
+      this.db = newDb;
+
+      // Close old connection after swap
+      if (oldDb) {
+        try {
+          oldDb.close();
+        } catch (closeError) {
+          logger.warn('Failed to close old database connection:', closeError);
+        }
+      }
 
       // Update modification time
       this.lastModifiedTime = stats.mtimeMs;
 
-      // Invalidate game search cache since database changed
+      // Invalidate caches since database changed
       if (GameSearchCache) {
         GameSearchCache.clearCache();
-        logger.info('Game search cache invalidated due to database reload');
       }
-
-      logger.info('Database connection reopened successfully');
+      if (GameServiceStatic) {
+        GameServiceStatic.clearFlashSwfCache();
+      }
+      logger.info('Database reloaded, caches invalidated');
     } catch (error) {
       logger.error('Failed to sync and reload database:', error);
       // Try to re-initialize if sync failed
@@ -369,25 +382,35 @@ export class DatabaseService {
     if (this.isUsingLocalCopy && config.enableLocalDbCopy) {
       logger.info('Force syncing database from source...');
 
-      // Close existing connection
-      if (this.db) {
-        this.db.close();
-        this.db = null;
-      }
-
       // Copy from source
       await this.copyDatabaseToLocal();
 
-      // Reopen connection
-      this.db = this.openDatabase(this.activeDbPath);
+      // Open new connection FIRST
+      const newDb = this.openDatabase(this.activeDbPath);
+
+      // Atomic swap: replace old connection with new one
+      const oldDb = this.db;
+      this.db = newDb;
+
+      // Close old connection after swap
+      if (oldDb) {
+        try {
+          oldDb.close();
+        } catch (closeError) {
+          logger.warn('Failed to close old database connection:', closeError);
+        }
+      }
 
       // Update modification time
       const stats = fs.statSync(this.sourceDbPath);
       this.lastModifiedTime = stats.mtimeMs;
 
-      // Invalidate cache
+      // Invalidate caches
       if (GameSearchCache) {
         GameSearchCache.clearCache();
+      }
+      if (GameServiceStatic) {
+        GameServiceStatic.clearFlashSwfCache();
       }
 
       logger.info('Force sync completed');
@@ -533,17 +556,11 @@ export class DatabaseService {
   }
 
   // Save database changes to disk
-  // Note: With better-sqlite3, changes are automatically written to disk
+  // Note: With better-sqlite3 in DELETE journal mode, changes are automatically written to disk
   // This method exists for compatibility but is essentially a no-op
   static save(): void {
-    try {
-      const db = this.getDatabase();
-      // Force a checkpoint in WAL mode to ensure all changes are written
-      db.pragma('wal_checkpoint(TRUNCATE)');
-      logger.info('Database changes flushed to disk');
-    } catch (error) {
-      logger.error('Failed to save database:', error);
-      throw error;
-    }
+    // No action needed in DELETE journal mode
+    // Changes are automatically flushed to disk
+    logger.debug('Database save called (no-op in DELETE journal mode)');
   }
 }

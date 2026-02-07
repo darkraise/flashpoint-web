@@ -169,6 +169,15 @@ export class UpdateService {
 
         let errorOutput = '';
 
+        // Store timeout handle so we can clear it when process completes
+        const timeoutHandle = setTimeout(
+          () => {
+            fpm.kill();
+            reject(new Error('Update process timed out'));
+          },
+          5 * 60 * 1000
+        );
+
         fpm.stdout?.on('data', (data) => {
           logger.info('[UpdateService] FPM Output:', data.toString());
         });
@@ -179,6 +188,7 @@ export class UpdateService {
         });
 
         fpm.on('close', (code) => {
+          clearTimeout(timeoutHandle);
           if (code === 0) {
             logger.info('[UpdateService] Updates installed successfully');
             resolve({
@@ -195,18 +205,10 @@ export class UpdateService {
         });
 
         fpm.on('error', (error) => {
+          clearTimeout(timeoutHandle);
           logger.error('[UpdateService] Failed to start FPM:', error);
           reject(error);
         });
-
-        // Timeout after 5 minutes
-        setTimeout(
-          () => {
-            fpm.kill();
-            reject(new Error('Update process timed out'));
-          },
-          5 * 60 * 1000
-        );
       });
     } catch (error) {
       logger.error('[UpdateService] Error during update installation:', error);

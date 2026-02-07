@@ -589,6 +589,36 @@ Outputs:
 - Source maps
 - Asset hashing for cache busting
 
+## Code Quality Improvements
+
+Recent improvements to frontend code quality focus on type safety, performance, correctness, and accessibility:
+
+### Type Safety
+
+- **Non-null assertions replaced**: `GamePlayerView` and `GameDetailView` now use safe defaults (`id ?? ''`) instead of non-null assertions (`id!`)
+- **RufflePlayer types**: Proper TypeScript type declarations for `window.RufflePlayer` via global type augmentation (no `any` casts)
+
+### Performance Optimizations
+
+- **useCallback for formatters**: `useDateTimeFormat` formatters wrapped in `useCallback` to prevent unnecessary re-renders in date/time formatting
+- **useCallback for relative time**: `formatRelativeTime` utility wrapped in `useCallback` in `GameDetailView`
+- **Modal conditional rendering**: `GameCard` now conditionally renders `AddToPlaylistModal` only when open (prevents 50+ hidden modal instances in grid)
+
+### Correctness & Robustness
+
+- **Request cancellation**: `gamesApi.search()` now accepts and properly passes `AbortSignal` parameter for request cancellation on component unmount
+- **Optimistic update fix**: `useFavorites` optimistic update uses snapshot of current cache instead of re-reading mutated cache
+- **useState for state**: `usePlayTracking` returns `useState`-backed values instead of refs to ensure proper React re-renders
+
+### Accessibility
+
+- **Keyboard navigation**: `GameCard` clickable areas now have proper keyboard support with `role="link"`, `tabIndex={0}`, and `onKeyDown` handlers for Enter/Space
+- **ARIA labels**: Back buttons now include descriptive `aria-label` attributes
+
+### Framework Compatibility
+
+- **Vite configuration**: `ErrorBoundary` now uses `import.meta.env.DEV` instead of `process.env.NODE_ENV` for Vite compatibility
+
 ## Testing Strategy
 
 ### Unit Tests (Future)

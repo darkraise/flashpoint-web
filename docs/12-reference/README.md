@@ -92,10 +92,10 @@ concepts:
 
 Comprehensive reference for all npm packages used across the monorepo:
 
-- **Backend Dependencies:** Express, BetterSqlite3, bcrypt, JWT, axios, winston
+- **Backend Dependencies:** Express, BetterSqlite3, bcrypt, JWT, axios, winston,
+  node-stream-zip (game module)
 - **Frontend Dependencies:** React, Vite, TanStack Query, Zustand, Tailwind CSS,
   Radix UI
-- **Game Service Dependencies:** Express, node-stream-zip, winston
 - **Shared Development Tools:** TypeScript, ESLint, tsx, concurrently
 - **License Information:** Summary of all licenses used
 - **Alternative Considerations:** Packages considered but not chosen
@@ -257,12 +257,11 @@ GAMEZIPSERVER_PORT=22501
 
 ### Port Reference
 
-| Service                | Port  | Purpose                     |
-| ---------------------- | ----- | --------------------------- |
-| Backend                | 3100  | REST API server             |
-| Frontend               | 5173  | Vite development server     |
-| Game Service - Proxy   | 22500 | HTTP proxy for game content |
-| Game Service - GameZip | 22501 | ZIP file streaming server   |
+| Service                | Port  | Purpose                           |
+| ---------------------- | ----- | --------------------------------- |
+| Backend                | 3100  | REST API + game content routes    |
+| Frontend               | 5173  | Vite development server           |
+| Game Content (Backend) | 3100  | `/game-proxy/*` and `/game-zip/*` |
 
 ---
 
@@ -320,9 +319,9 @@ When updating reference documentation:
 - [State Management](../04-frontend/state-management/zustand-stores.md)
 - [Component Overview](../04-frontend/components/component-overview.md)
 
-### Game Service
+### Backend Game Module
 
-- [Game Service Architecture](../05-game-service/architecture.md)
+- [Game Service Architecture](../05-game-service/architecture.md) (now integrated into backend)
 - [Proxy Server](../05-game-service/proxy-server.md)
 - [ZIP Manager](../05-game-service/zip-manager.md)
 

@@ -42,5 +42,7 @@ export function useGameLaunchData(id: string) {
     queryKey: ['game', id, 'launch'],
     queryFn: () => gamesApi.getLaunchData(id),
     enabled: !!id,
+    // Auto-poll every 2s while the game ZIP is being downloaded
+    refetchInterval: (query) => (query.state.data?.downloading ? 2000 : false),
   });
 }

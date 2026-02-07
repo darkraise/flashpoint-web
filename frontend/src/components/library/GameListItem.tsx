@@ -11,7 +11,7 @@ import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
-import { BreadcrumbContext } from './GameCard';
+import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 import { getGameLogoUrl } from '@/utils/gameUtils';
 
 interface GameListItemProps {
@@ -107,8 +107,8 @@ export function GameListItem({
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="secondary">{game.platformName}</Badge>
 
-              {tags.map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-xs">
                   {tag}
                 </Badge>
               ))}

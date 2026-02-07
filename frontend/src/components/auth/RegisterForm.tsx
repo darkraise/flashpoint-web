@@ -146,7 +146,7 @@ export function RegisterForm() {
                 to="/login"
                 className="inline-flex items-center justify-center text-sm text-primary font-semibold hover:underline"
               >
-                ← Back to Login
+                ← Back to Log In
               </Link>
             </div>
           </div>
@@ -340,7 +340,7 @@ export function RegisterForm() {
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
               <Link to="/login" className="text-primary font-semibold hover:underline">
-                Sign in
+                Log in
               </Link>
             </p>
           </div>

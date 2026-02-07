@@ -5,6 +5,8 @@ import { config } from '../config';
 import { logger } from '../utils/logger';
 import { GameService, Game } from './GameService';
 
+type PlaylistGameEntry = string | { gameId?: string; [key: string]: unknown };
+
 export interface Playlist {
   id: string;
   title: string;
@@ -35,36 +37,42 @@ export class PlaylistService {
       const playlistsPath = config.flashpointPlaylistsPath;
       const files = await fs.readdir(playlistsPath);
 
+      const jsonFiles = files.filter((f) => f.endsWith('.json'));
+
+      // Parallel file reads (was sequential for-of loop)
+      const results = await Promise.allSettled(
+        jsonFiles.map(async (file) => {
+          const filePath = path.join(playlistsPath, file);
+          const content = await fs.readFile(filePath, 'utf-8');
+          const playlist = JSON.parse(content);
+
+          const gameIds = Array.isArray(playlist.games)
+            ? playlist.games
+                .map((g: unknown) =>
+                  typeof g === 'string' ? g : (g as { gameId?: string }).gameId
+                )
+                .filter(Boolean)
+            : [];
+
+          return {
+            id: playlist.id || path.basename(file, '.json'),
+            title: playlist.title,
+            description: playlist.description,
+            author: playlist.author,
+            library: playlist.library,
+            icon: playlist.icon,
+            gameIds,
+          } as Playlist;
+        })
+      );
+
       const playlists: Playlist[] = [];
-
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          try {
-            const filePath = path.join(playlistsPath, file);
-            const content = await fs.readFile(filePath, 'utf-8');
-            const playlist = JSON.parse(content);
-
-            // Extract game IDs from playlist (they're objects with gameId property)
-            const gameIds = Array.isArray(playlist.games)
-              ? playlist.games
-                  .map((g: unknown) =>
-                    typeof g === 'string' ? g : (g as { gameId?: string }).gameId
-                  )
-                  .filter(Boolean)
-              : [];
-
-            playlists.push({
-              id: playlist.id || path.basename(file, '.json'),
-              title: playlist.title,
-              description: playlist.description,
-              author: playlist.author,
-              library: playlist.library,
-              icon: playlist.icon,
-              gameIds,
-            });
-          } catch (error) {
-            logger.warn(`Failed to parse playlist file: ${file}`, error);
-          }
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (result.status === 'fulfilled') {
+          playlists.push(result.value);
+        } else {
+          logger.warn(`Failed to parse playlist file: ${jsonFiles[i]}`, result.reason);
         }
       }
 
@@ -78,54 +86,63 @@ export class PlaylistService {
   async getPlaylistById(id: string): Promise<Playlist | null> {
     try {
       const playlistsPath = config.flashpointPlaylistsPath;
+
+      // Try direct file access first (O(1) instead of scanning all files)
+      const directPath = path.join(playlistsPath, `${id}.json`);
+      const playlist = await this.tryReadPlaylist(directPath, id);
+      if (playlist) return playlist;
+
+      // Fallback: scan all files (some playlists may have filename != id)
       const files = await fs.readdir(playlistsPath);
-
-      // Try to find playlist file by ID
       for (const file of files) {
-        if (file.endsWith('.json')) {
-          const filePath = path.join(playlistsPath, file);
-          const content = await fs.readFile(filePath, 'utf-8');
-          const playlist = JSON.parse(content);
-
-          const playlistId = playlist.id || path.basename(file, '.json');
-
-          if (playlistId === id) {
-            // Extract game IDs from playlist
-            const gameIds: string[] = [];
-
-            if (playlist.games && Array.isArray(playlist.games)) {
-              for (const playlistGame of playlist.games) {
-                // Playlist games are objects with gameId property, not just strings
-                const gameId =
-                  typeof playlistGame === 'string' ? playlistGame : playlistGame.gameId;
-
-                if (gameId) {
-                  gameIds.push(gameId);
-                }
-              }
-            }
-
-            // Batch fetch all games at once (avoid N+1 query pattern)
-            // getGamesByIds returns games in the same order as input IDs
-            const games = await this.gameService.getGamesByIds(gameIds);
-
-            return {
-              id: playlistId,
-              title: playlist.title,
-              description: playlist.description,
-              author: playlist.author,
-              library: playlist.library,
-              icon: playlist.icon,
-              games,
-            };
-          }
-        }
+        if (!file.endsWith('.json') || file === `${id}.json`) continue; // Already tried direct
+        const filePath = path.join(playlistsPath, file);
+        const result = await this.tryReadPlaylist(filePath, id);
+        if (result) return result;
       }
 
       return null;
     } catch (error) {
       logger.error('Error getting playlist by ID:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Try to read a playlist file and return it if its ID matches
+   */
+  private async tryReadPlaylist(filePath: string, targetId: string): Promise<Playlist | null> {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const playlist = JSON.parse(content);
+
+      const playlistId = playlist.id || path.basename(filePath, '.json');
+      if (playlistId !== targetId) return null;
+
+      // Extract game IDs from playlist
+      const gameIds: string[] = [];
+      if (playlist.games && Array.isArray(playlist.games)) {
+        for (const playlistGame of playlist.games) {
+          const gameId = typeof playlistGame === 'string' ? playlistGame : playlistGame.gameId;
+          if (gameId) gameIds.push(gameId);
+        }
+      }
+
+      // Batch fetch all games at once (avoid N+1 query pattern)
+      const games = await this.gameService.getGamesByIds(gameIds);
+
+      return {
+        id: playlistId,
+        title: playlist.title,
+        description: playlist.description,
+        author: playlist.author,
+        library: playlist.library,
+        icon: playlist.icon,
+        games,
+      };
+    } catch {
+      // File doesn't exist or invalid JSON - return null
+      return null;
     }
   }
 
@@ -163,44 +180,25 @@ export class PlaylistService {
     data: AddGamesToPlaylistDto
   ): Promise<Playlist | null> {
     try {
-      const playlistsPath = config.flashpointPlaylistsPath;
-      const files = await fs.readdir(playlistsPath);
+      const found = await this.findPlaylistFile(playlistId);
+      if (!found) return null;
 
-      // Find playlist file
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const filePath = path.join(playlistsPath, file);
-          const content = await fs.readFile(filePath, 'utf-8');
-          const playlist = JSON.parse(content);
+      const { filePath, data: playlist } = found;
 
-          const id = playlist.id || path.basename(file, '.json');
+      // Get existing game IDs
+      const existingGameIds = Array.isArray(playlist.games)
+        ? playlist.games.map((g: PlaylistGameEntry) => (typeof g === 'string' ? g : g.gameId))
+        : [];
 
-          if (id === playlistId) {
-            // Get existing game IDs
-            const existingGameIds = Array.isArray(playlist.games)
-              ? playlist.games.map((g: any) => (typeof g === 'string' ? g : g.gameId))
-              : [];
+      // Add new game IDs (avoid duplicates)
+      const newGameIds = data.gameIds.filter((gameId) => !existingGameIds.includes(gameId));
+      const newGames = newGameIds.map((gameId) => ({ gameId }));
+      playlist.games = [...(playlist.games || []), ...newGames];
 
-            // Add new game IDs (avoid duplicates)
-            const newGameIds = data.gameIds.filter((gameId) => !existingGameIds.includes(gameId));
+      await fs.writeFile(filePath, JSON.stringify(playlist, null, '\t'), 'utf-8');
+      logger.info(`Added ${newGameIds.length} games to playlist: ${playlist.title}`);
 
-            // Convert to playlist game format
-            const newGames = newGameIds.map((gameId) => ({ gameId }));
-
-            playlist.games = [...(playlist.games || []), ...newGames];
-
-            // Write updated playlist
-            await fs.writeFile(filePath, JSON.stringify(playlist, null, '\t'), 'utf-8');
-
-            logger.info(`Added ${newGameIds.length} games to playlist: ${playlist.title}`);
-
-            // Return updated playlist with full game data
-            return await this.getPlaylistById(playlistId);
-          }
-        }
-      }
-
-      return null;
+      return await this.getPlaylistById(playlistId);
     } catch (error) {
       logger.error('Error adding games to playlist:', error);
       throw error;
@@ -212,36 +210,20 @@ export class PlaylistService {
     data: AddGamesToPlaylistDto
   ): Promise<Playlist | null> {
     try {
-      const playlistsPath = config.flashpointPlaylistsPath;
-      const files = await fs.readdir(playlistsPath);
+      const found = await this.findPlaylistFile(playlistId);
+      if (!found) return null;
 
-      // Find playlist file
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const filePath = path.join(playlistsPath, file);
-          const content = await fs.readFile(filePath, 'utf-8');
-          const playlist = JSON.parse(content);
+      const { filePath, data: playlist } = found;
 
-          const id = playlist.id || path.basename(file, '.json');
+      playlist.games = (playlist.games || []).filter((g: PlaylistGameEntry) => {
+        const gameId = typeof g === 'string' ? g : g.gameId;
+        return gameId && !data.gameIds.includes(gameId);
+      });
 
-          if (id === playlistId) {
-            // Remove games
-            playlist.games = (playlist.games || []).filter((g: any) => {
-              const gameId = typeof g === 'string' ? g : g.gameId;
-              return !data.gameIds.includes(gameId);
-            });
+      await fs.writeFile(filePath, JSON.stringify(playlist, null, '\t'), 'utf-8');
+      logger.info(`Removed ${data.gameIds.length} games from playlist: ${playlist.title}`);
 
-            // Write updated playlist
-            await fs.writeFile(filePath, JSON.stringify(playlist, null, '\t'), 'utf-8');
-
-            logger.info(`Removed ${data.gameIds.length} games from playlist: ${playlist.title}`);
-
-            return await this.getPlaylistById(playlistId);
-          }
-        }
-      }
-
-      return null;
+      return await this.getPlaylistById(playlistId);
     } catch (error) {
       logger.error('Error removing games from playlist:', error);
       throw error;
@@ -250,30 +232,53 @@ export class PlaylistService {
 
   async deletePlaylist(playlistId: string): Promise<boolean> {
     try {
-      const playlistsPath = config.flashpointPlaylistsPath;
-      const files = await fs.readdir(playlistsPath);
+      const found = await this.findPlaylistFile(playlistId);
+      if (!found) return false;
 
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const filePath = path.join(playlistsPath, file);
-          const content = await fs.readFile(filePath, 'utf-8');
-          const playlist = JSON.parse(content);
-
-          const id = playlist.id || path.basename(file, '.json');
-
-          if (id === playlistId) {
-            await fs.unlink(filePath);
-            logger.info(`Deleted playlist: ${playlist.title} (${id})`);
-            return true;
-          }
-        }
-      }
-
-      return false;
+      await fs.unlink(found.filePath);
+      logger.info(`Deleted playlist: ${found.data.title} (${playlistId})`);
+      return true;
     } catch (error) {
       logger.error('Error deleting playlist:', error);
       throw error;
     }
+  }
+
+  /**
+   * Find a playlist file by ID. Tries direct {id}.json first, then scans all files.
+   * Returns file path and parsed data, or null if not found.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async findPlaylistFile(id: string): Promise<{ filePath: string; data: any } | null> {
+    const playlistsPath = config.flashpointPlaylistsPath;
+
+    // Try direct path first (O(1))
+    const directPath = path.join(playlistsPath, `${id}.json`);
+    try {
+      const content = await fs.readFile(directPath, 'utf-8');
+      const data = JSON.parse(content);
+      const playlistId = data.id || path.basename(directPath, '.json');
+      if (playlistId === id) return { filePath: directPath, data };
+    } catch {
+      // Not found at direct path
+    }
+
+    // Fallback: scan all files
+    const files = await fs.readdir(playlistsPath);
+    for (const file of files) {
+      if (!file.endsWith('.json') || file === `${id}.json`) continue;
+      const filePath = path.join(playlistsPath, file);
+      try {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const data = JSON.parse(content);
+        const playlistId = data.id || path.basename(file, '.json');
+        if (playlistId === id) return { filePath, data };
+      } catch {
+        // Skip unreadable files
+      }
+    }
+
+    return null;
   }
 
   private generateUUID(): string {

@@ -7,7 +7,7 @@ import { asyncHandler } from '../middleware/asyncHandler';
 import { sharedAccessAuth, validateSharedGameAccess } from '../middleware/auth';
 import { logActivity } from '../middleware/activityLogger';
 import { rateLimitStandard } from '../middleware/rateLimiter';
-import { config } from '../config';
+import { logger } from '../utils/logger';
 import { z } from 'zod';
 
 const router = Router();
@@ -101,6 +101,7 @@ router.get(
       limit: query.limit,
       showBroken: query.showBroken,
       showExtreme: query.showExtreme,
+      fields: 'list', // Only return essential columns for browse/search views
     });
 
     // Store result count for activity logging
@@ -123,7 +124,7 @@ router.get(
 router.get(
   '/most-played',
   asyncHandler(async (req, res) => {
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string) || 20, 50));
     const games = await gameService.getMostPlayedGames(limit);
 
     res.json({
@@ -131,6 +132,23 @@ router.get(
       data: games,
       total: games.length,
     });
+  })
+);
+
+// GET /api/games/random - Get random game
+// IMPORTANT: Must be defined BEFORE /:id to avoid being shadowed by the wildcard
+router.get(
+  '/random',
+  asyncHandler(async (req, res) => {
+    const librarySchema = z.enum(['arcade', 'theatre']).optional();
+    const library = librarySchema.parse(req.query.library);
+    const game = await gameService.getRandomGame(library);
+
+    if (!game) {
+      throw new AppError(404, 'No games found');
+    }
+
+    res.json(game);
   })
 );
 
@@ -163,25 +181,10 @@ router.get(
   '/:id/related',
   validateSharedGameAccess('id'),
   asyncHandler(async (req, res) => {
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string) || 10, 50));
     const relatedGames = await gameService.getRelatedGames(req.params.id, limit);
 
     res.json(relatedGames);
-  })
-);
-
-// GET /api/games/random - Get random game
-router.get(
-  '/random',
-  asyncHandler(async (req, res) => {
-    const library = req.query.library as string | undefined;
-    const game = await gameService.getRandomGame(library);
-
-    if (!game) {
-      throw new AppError(404, 'No games found');
-    }
-
-    res.json(game);
   })
 );
 
@@ -201,18 +204,16 @@ router.get(
       throw new AppError(404, 'Game not found');
     }
 
-    // Auto-mount ZIP file if game has game data
-    // This ensures files are available from the GameZip server
-    // Check if game has data by checking presentOnDisk field (not null means has game_data entries)
-    if (game.presentOnDisk !== null) {
-      await gameDataService.mountGameZip(game.id);
-    }
+    // Mount the game ZIP (awaited so local ZIPs are ready before we return the URL).
+    // For downloads, mountGameZip returns quickly with { mounted: false, downloading: true }.
+    const mountResult = await gameDataService.mountGameZip(game.id);
+    const downloading = mountResult.downloading || false;
 
     // Extract launch command (usually the SWF file path for Flash games)
     let launchCommand = game.launchCommand || '';
 
-    // If no launch command but has game data, query game_data table
-    if (!launchCommand && game.presentOnDisk !== null) {
+    // If no launch command, try to get path from game_data table
+    if (!launchCommand) {
       const gameDataPath = await gameService.getGameDataPath(game.id);
       if (gameDataPath) {
         launchCommand = gameDataPath;
@@ -225,15 +226,12 @@ router.get(
 
     let contentUrl = '';
     if (launchCommand) {
-      // Use the configured external game service URL
-      // In Docker: This is /game-proxy (routed through nginx)
-      // In local dev: This is http://localhost:22500 (direct access)
-      const proxyUrl = config.gameServiceExternalUrl;
+      // Game content is served via /game-proxy route (integrated in backend)
+      const proxyUrl = '/game-proxy';
 
       // Check if launch command is an absolute URL
       if (launchCommand.startsWith('http://') || launchCommand.startsWith('https://')) {
         // Use the full URL as-is with the proxy
-        // The HTTP proxy server handles proxy-style requests: GET http://domain.com/path HTTP/1.1
         contentUrl = `${proxyUrl}/${launchCommand}`;
       } else {
         // For relative paths, construct full URL with domain from source
@@ -246,8 +244,8 @@ router.get(
             const domain = sourceUrl.hostname;
 
             // Construct full URL: http://domain/path
-            const path = launchCommand.startsWith('/') ? launchCommand : `/${launchCommand}`;
-            fullUrl = `http://${domain}${path}`;
+            const urlPath = launchCommand.startsWith('/') ? launchCommand : `/${launchCommand}`;
+            fullUrl = `http://${domain}${urlPath}`;
           } catch {
             // If source is not a valid URL, assume launchCommand is already domain/path
             fullUrl = launchCommand.startsWith('http') ? launchCommand : `http://${launchCommand}`;
@@ -280,6 +278,7 @@ router.get(
       applicationPath: game.applicationPath,
       playMode: game.playMode,
       canPlayInBrowser,
+      downloading,
     });
   })
 );

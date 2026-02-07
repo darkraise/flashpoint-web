@@ -32,7 +32,6 @@ export interface UserDetails {
 
 export interface AuthTokens {
   accessToken: string;
-  refreshToken: string;
   expiresIn: number;
 }
 

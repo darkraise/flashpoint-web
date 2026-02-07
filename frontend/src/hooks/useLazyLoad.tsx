@@ -57,7 +57,7 @@ export function useLazyLoad<T extends HTMLElement = HTMLDivElement>(
     return () => {
       observer.disconnect();
     };
-  }, [rootMargin, threshold, onIntersect, isInView]);
+  }, [rootMargin, threshold, onIntersect]);
 
   return { ref, isInView };
 }

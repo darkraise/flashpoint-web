@@ -20,11 +20,6 @@ Location: `backend/.env`
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `FLASHPOINT_PATH` | Root Flashpoint directory. All other paths auto-derived. Edition (Infinity/Ultimate) auto-detected from `version.txt`. |
 
-**Game Service Host:**
-
-| Variable            | Default   | Description                    |
-| ------------------- | --------- | ------------------------------ |
-| `GAME_SERVICE_HOST` | localhost | Hostname for game-service URLs |
 
 **Authentication & Security:**
 
@@ -55,31 +50,6 @@ openssl rand -hex 64
 | `LOG_LEVEL` | info    | Level: error, warn, info, debug |
 | `LOG_FILE`  | -       | Optional log file path          |
 
-## Game Service Variables
-
-Location: `game-service/.env`
-
-**Ports:**
-
-| Variable             | Default | Description            |
-| -------------------- | ------- | ---------------------- |
-| `PROXY_PORT`         | 22500   | HTTP proxy server port |
-| `GAMEZIPSERVER_PORT` | 22501   | GameZip server port    |
-
-**Paths:**
-
-| Variable          | Description                                                     |
-| ----------------- | --------------------------------------------------------------- |
-| `FLASHPOINT_PATH` | Root Flashpoint directory (auto-derives htdocs and games paths) |
-
-**Proxy:**
-
-| Variable           | Default | Description                       |
-| ------------------ | ------- | --------------------------------- |
-| `PROXY_CHUNK_SIZE` | 8192    | File streaming chunk size (bytes) |
-
-> **Note:** External fallback URLs are configured via `proxySettings.json` in
-> the Flashpoint directory, not via environment variables.
 
 ## Frontend Variables
 
@@ -103,12 +73,10 @@ Location: `.env` in project root
 
 **Port Mapping:**
 
-| Variable       | Default | Description             |
-| -------------- | ------- | ----------------------- |
-| `WEB_PORT`     | 80      | Frontend exposed port   |
-| `API_PORT`     | 3100    | Backend exposed port    |
-| `PROXY_PORT`   | 22500   | Game proxy exposed port |
-| `GAMEZIP_PORT` | 22501   | GameZip exposed port    |
+| Variable   | Default | Description          |
+| ---------- | ------- | -------------------- |
+| `WEB_PORT` | 80      | Frontend exposed port |
+| `API_PORT` | 3100    | Backend exposed port  |
 
 **Other:**
 
@@ -148,7 +116,6 @@ NODE_ENV=development
 PORT=3100
 HOST=0.0.0.0
 FLASHPOINT_PATH=D:/Flashpoint
-GAME_SERVICE_HOST=localhost
 JWT_SECRET=development-secret-change-in-production
 DOMAIN=http://localhost:5173
 RATE_LIMIT_MAX_REQUESTS=1000
@@ -162,7 +129,6 @@ NODE_ENV=production
 PORT=3100
 HOST=127.0.0.1
 FLASHPOINT_PATH=/data/flashpoint
-GAME_SERVICE_HOST=game-service
 JWT_SECRET=CHANGE-THIS-TO-A-RANDOM-64-CHARACTER-STRING
 DOMAIN=https://flashpoint.example.com
 RATE_LIMIT_WINDOW_MS=60000

@@ -16,7 +16,7 @@ Reference for all npm packages used across the Flashpoint Web monorepo.
 | express               | ^4.18.3 | MIT          | Web framework and routing                                 |
 | express-rate-limit    | ^7.1.5  | MIT          | Rate limiting middleware (login: 5/15min, API: 100/15min) |
 | helmet                | ^7.1.0  | MIT          | Security headers (CSP, HSTS, X-Frame-Options)             |
-| http-proxy-middleware | ^2.0.6  | MIT          | Proxy game file requests to game-service                  |
+| http-proxy-middleware | ^2.0.6  | MIT          | Proxy request handling for game content routes            |
 | jsonwebtoken          | ^9.0.3  | MIT          | JWT implementation (HS256, 1hr expiration)                |
 | node-stream-zip       | ^1.15.0 | MIT          | Stream files from ZIPs without extraction                 |
 
@@ -51,16 +51,14 @@ MIT | TypeScript schema validation |
 | zod                      | ^4.3.5         | MIT            | Schema validation                                        |
 | zustand                  | ^4.5.2         | MIT            | Client state management (auth, theme, UI)                |
 
-## Game Service Dependencies
+## Backend Game Module Dependencies
 
-| Package         | Version | License      | Purpose                               |
-| --------------- | ------- | ------------ | ------------------------------------- |
-| axios           | ^1.6.8  | MIT          | HTTP client for CDN fallback requests |
-| cors            | ^2.8.5  | MIT          | CORS for cross-domain game content    |
-| dotenv          | ^16.4.5 | BSD-2-Clause | Environment configuration             |
-| express         | ^4.18.3 | MIT          | HTTP servers on ports 22500/22501     |
-| node-stream-zip | ^1.15.0 | MIT          | ZIP streaming without extraction      |
-| winston         | ^3.11.0 | MIT          | Logging with transports               |
+Game content serving is now integrated into the backend service and uses the
+following additional dependencies (already listed in Backend Dependencies):
+
+- **node-stream-zip** (^1.15.0) - ZIP streaming for mounted archives
+- **cors** (^2.8.5) - CORS headers for game content routes
+- **axios** (^1.13.2) - HTTP client for CDN fallback requests
 
 ## Development Dependencies
 
@@ -91,13 +89,6 @@ MIT | TypeScript schema validation |
 | vite                    | Frontend build tool with HMR                  |
 | vite-plugin-static-copy | Copy static assets to build output            |
 
-### Game Service
-
-| Package                                  | Purpose                |
-| ---------------------------------------- | ---------------------- |
-| @types/cors, @types/express, @types/node | TypeScript definitions |
-| tsx                                      | TypeScript runner      |
-| typescript                               | TypeScript compiler    |
 
 ## License Summary
 

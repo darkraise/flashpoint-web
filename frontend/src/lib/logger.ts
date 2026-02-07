@@ -9,7 +9,7 @@ export const logger = {
   /**
    * Debug-level logging (only in development)
    */
-  debug: (...args: any[]) => {
+  debug: (...args: unknown[]) => {
     if (isDev) {
       console.log(...args);
     }
@@ -18,7 +18,7 @@ export const logger = {
   /**
    * Info-level logging (only in development)
    */
-  info: (...args: any[]) => {
+  info: (...args: unknown[]) => {
     if (isDev) {
       console.info(...args);
     }
@@ -27,14 +27,14 @@ export const logger = {
   /**
    * Warning-level logging (always logs)
    */
-  warn: (...args: any[]) => {
+  warn: (...args: unknown[]) => {
     console.warn(...args);
   },
 
   /**
    * Error-level logging (always logs)
    */
-  error: (...args: any[]) => {
+  error: (...args: unknown[]) => {
     console.error(...args);
   },
 

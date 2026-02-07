@@ -28,10 +28,10 @@ Manages authentication state, user information, and JWT tokens.
 ```typescript
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
+  accessToken: string | null; // Memory-only, not persisted
   isAuthenticated: boolean;
   isGuest: boolean;
+  isMaintenanceMode: boolean;
 
   // Actions
   setAuth: (user: User, tokens: AuthTokens) => void;
@@ -47,6 +47,14 @@ interface AuthState {
   hasAllPermissions: (permissions: string[]) => boolean;
 }
 ```
+
+**Important:**
+
+- `accessToken` is stored in memory only (not persisted to localStorage)
+- `refreshToken` is stored in an HTTP-only cookie (handled automatically by the
+  browser)
+- Only `user`, `isAuthenticated`, `isGuest`, and `isMaintenanceMode` are
+  persisted to localStorage (via `partialize`)
 
 ### Usage
 
@@ -72,7 +80,7 @@ function MyComponent() {
 
 #### setAuth
 
-Sets authenticated user and tokens after successful login:
+Sets authenticated user and access token after successful login:
 
 ```typescript
 const { setAuth } = useAuthStore();
@@ -81,10 +89,15 @@ const handleLogin = async (credentials) => {
   const response = await authApi.login(credentials);
   setAuth(response.user, {
     accessToken: response.accessToken,
-    refreshToken: response.refreshToken,
+    expiresIn: response.expiresIn,
   });
+  // Refresh token is automatically stored in HTTP-only cookie by backend
 };
 ```
+
+**Note:** Only the access token is passed to `setAuth()`. The backend
+automatically sets the refresh token in an HTTP-only cookie during login, which
+the browser will include in all subsequent requests.
 
 #### setGuestMode
 
@@ -94,7 +107,8 @@ Enables guest mode with limited permissions:
 const { setGuestMode } = useAuthStore();
 
 setGuestMode();
-// Creates a guest user with permissions: ['games.read', 'games.play']
+// Creates a guest user with permissions: ['games.read', 'playlists.read']
+// Note: guests cannot play games (games.play requires authentication)
 ```
 
 #### clearAuth
@@ -112,14 +126,18 @@ const handleLogout = () => {
 
 #### updateAccessToken
 
-Updates the access token (used by refresh token flow):
+Updates the access token when refreshed via the axios interceptor:
 
 ```typescript
 const { updateAccessToken } = useAuthStore();
 
-// Called by axios interceptor
+// Called by axios interceptor on 401 after successful token refresh
 updateAccessToken(newAccessToken);
 ```
+
+This is called by the response interceptor when a token refresh succeeds. The
+refresh token is automatically sent via HTTP-only cookie, and the new access
+token is stored in memory only.
 
 ### Permission Helpers
 
@@ -173,10 +191,17 @@ if (hasAllPermissions(['users.read', 'users.write', 'users.delete'])) {
 
 ### Persistence Strategy
 
-The auth store uses a custom storage strategy that separates guest and
-authenticated sessions:
+The auth store uses selective persistence with the `partialize` middleware:
 
 ```typescript
+partialize: (state) => ({
+  user: state.user,
+  isAuthenticated: state.isAuthenticated,
+  isGuest: state.isGuest,
+  isMaintenanceMode: state.isMaintenanceMode,
+  // accessToken is intentionally NOT persisted (memory-only)
+});
+
 storage: createJSONStorage(() => ({
   getItem: (name) => {
     // Check sessionStorage first for guest sessions
@@ -208,13 +233,46 @@ storage: createJSONStorage(() => ({
 }));
 ```
 
+**Token Storage Strategy:**
+
+- **Access Token**: Memory-only in Zustand store, never persisted
+- **Refresh Token**: HTTP-only cookie, sent automatically by browser
+- **User Info**: Persisted to localStorage (restored on page reload)
+- **Guest Sessions**: Stored in sessionStorage only, cleared on browser close
+
 **Benefits:**
 
+- XSS attacks cannot steal access token (memory-only)
+- CSRF protection via HTTP-only cookies (auto-sent by browser)
 - Guest sessions cleared on browser close (sessionStorage)
 - Authenticated sessions persist across browser restarts (localStorage)
-- Prevents guest data from polluting localStorage
+- On page reload: if `isAuthenticated` but `accessToken` is null, the app calls
+  `/auth/refresh` to recover the session using the persisted refresh token
+  cookie
 
-### Theme Loading on Login
+### Session Recovery on Page Reload
+
+The app implements session recovery using the persisted refresh token cookie:
+
+```typescript
+// In AuthContext or root App component
+useEffect(() => {
+  const { isAuthenticated, accessToken } = useAuthStore.getState();
+
+  // If authenticated but no access token (page reload), refresh from cookie
+  if (isAuthenticated && !accessToken) {
+    authApi
+      .refreshToken()
+      .then((tokens) => {
+        useAuthStore.getState().updateAccessToken(tokens.accessToken);
+      })
+      .catch(() => {
+        // Refresh failed, clear auth
+        useAuthStore.getState().clearAuth();
+      });
+  }
+}, []);
+```
 
 After successful login, the auth store automatically loads theme settings from
 the server:
@@ -224,7 +282,6 @@ setAuth: (user: User, tokens: AuthTokens) => {
   set({
     user,
     accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
     isAuthenticated: true,
     isGuest: false,
   });
@@ -236,6 +293,16 @@ setAuth: (user: User, tokens: AuthTokens) => {
   });
 };
 ```
+
+**How it works:**
+
+1. On login: backend sets refresh token in HTTP-only cookie, user info and
+   `isAuthenticated` are persisted to localStorage
+2. On page reload: Zustand rehydrates from localStorage, checks if
+   `isAuthenticated && !accessToken`
+3. If true: calls `/auth/refresh` (cookie sent automatically), recovers access
+   token
+4. If false or refresh fails: clears auth state and shows login screen
 
 ## useThemeStore
 
@@ -438,6 +505,24 @@ window
     }
   });
 ```
+
+### Server Data Validation
+
+The theme store validates data received from the server before applying it:
+
+```typescript
+// Validates mode against allowed values
+if (!['light', 'dark', 'system'].includes(serverMode)) {
+  // Reject invalid mode, keep current
+}
+
+// Validates primaryColor against known palette
+if (!Object.keys(colorPalette).includes(serverColor)) {
+  // Reject invalid color, keep current
+}
+```
+
+This prevents crashes from malformed server responses or corrupted settings.
 
 ### Persistence
 

@@ -26,7 +26,7 @@ const updateUserSchema = z.object({
 });
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(6),
+  currentPassword: z.string().min(6).optional(),
   newPassword: z.string().min(6),
 });
 
@@ -40,7 +40,7 @@ const updateThemeSettingsSchema = z.object({
   primaryColor: z.string().min(1),
 });
 
-const updateUserSettingsSchema = z.record(z.string(), z.string());
+const updateUserSettingsSchema = z.record(z.string().max(50), z.string().max(500));
 
 /**
  * GET /api/users
@@ -52,123 +52,12 @@ router.get(
   requirePermission('users.read'),
   logActivity('users.list', 'users'),
   asyncHandler(async (req, res) => {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
     const result = await userService.getUsers(page, limit);
 
     res.json(result);
-  })
-);
-
-/**
- * GET /api/users/:id
- * Get single user by ID
- */
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('users.read'),
-  logActivity('users.view', 'users'),
-  asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
-    const user = await userService.getUserById(id);
-
-    if (!user) {
-      throw new AppError(404, 'User not found');
-    }
-
-    res.json(user);
-  })
-);
-
-/**
- * POST /api/users
- * Create new user (admin only)
- */
-router.post(
-  '/',
-  authenticate,
-  requirePermission('users.create'),
-  logActivity('users.create', 'users'),
-  asyncHandler(async (req, res) => {
-    const data = createUserSchema.parse(req.body);
-
-    const user = await userService.createUser({
-      username: data.username,
-      email: data.email,
-      password: data.password,
-      roleId: data.roleId,
-      isActive: data.isActive ?? true,
-    });
-
-    res.status(201).json(user);
-  })
-);
-
-/**
- * PATCH /api/users/:id
- * Update existing user
- */
-router.patch(
-  '/:id',
-  authenticate,
-  requirePermission('users.update'),
-  logActivity('users.update.profile', 'users', (req) => ({
-    userId: req.params.id,
-    fieldsUpdated: Object.keys(req.body),
-  })),
-  asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
-    const data = updateUserSchema.parse(req.body);
-
-    const user = await userService.updateUser(id, data);
-
-    res.json(user);
-  })
-);
-
-/**
- * DELETE /api/users/:id
- * Delete user (prevents deleting last admin)
- */
-router.delete(
-  '/:id',
-  authenticate,
-  requirePermission('users.delete'),
-  logActivity('users.delete', 'users'),
-  asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
-
-    await userService.deleteUser(id);
-
-    res.json({ success: true, message: 'User deleted successfully' });
-  })
-);
-
-/**
- * POST /api/users/:id/change-password
- * Change user password
- * Users can change their own password, admins can change any password
- */
-router.post(
-  '/:id/change-password',
-  authenticate,
-  asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
-    const data = changePasswordSchema.parse(req.body);
-
-    // Check if user is changing their own password or is an admin
-    const isOwnPassword = req.user?.id === id;
-    const isAdmin = req.user?.permissions.includes('users.update');
-
-    if (!isOwnPassword && !isAdmin) {
-      throw new AppError(403, 'Insufficient permissions');
-    }
-
-    await userService.changePassword(id, data.currentPassword, data.newPassword);
-
-    res.json({ success: true, message: 'Password changed successfully' });
   })
 );
 
@@ -286,6 +175,139 @@ router.patch(
 
     const updated = await userService.getUserSettings(userId);
     res.json(updated);
+  })
+);
+
+/**
+ * GET /api/users/:id
+ * Get single user by ID
+ */
+router.get(
+  '/:id',
+  authenticate,
+  requirePermission('users.read'),
+  logActivity('users.view', 'users'),
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(400, 'Invalid user ID');
+    }
+
+    const user = await userService.getUserById(id);
+
+    if (!user) {
+      throw new AppError(404, 'User not found');
+    }
+
+    res.json(user);
+  })
+);
+
+/**
+ * POST /api/users
+ * Create new user (admin only)
+ */
+router.post(
+  '/',
+  authenticate,
+  requirePermission('users.create'),
+  logActivity('users.create', 'users'),
+  asyncHandler(async (req, res) => {
+    const data = createUserSchema.parse(req.body);
+
+    const user = await userService.createUser({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+      roleId: data.roleId,
+      isActive: data.isActive ?? true,
+    });
+
+    res.status(201).json(user);
+  })
+);
+
+/**
+ * PATCH /api/users/:id
+ * Update existing user
+ */
+router.patch(
+  '/:id',
+  authenticate,
+  requirePermission('users.update'),
+  logActivity('users.update.profile', 'users', (req) => ({
+    userId: req.params.id,
+    fieldsUpdated: Object.keys(req.body),
+  })),
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(400, 'Invalid user ID');
+    }
+
+    const data = updateUserSchema.parse(req.body);
+
+    const user = await userService.updateUser(id, data);
+
+    res.json(user);
+  })
+);
+
+/**
+ * DELETE /api/users/:id
+ * Delete user (prevents deleting last admin)
+ */
+router.delete(
+  '/:id',
+  authenticate,
+  requirePermission('users.delete'),
+  logActivity('users.delete', 'users'),
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(400, 'Invalid user ID');
+    }
+
+    await userService.deleteUser(id);
+
+    res.json({ success: true, message: 'User deleted successfully' });
+  })
+);
+
+/**
+ * POST /api/users/:id/change-password
+ * Change user password
+ * Users can change their own password, admins can change any password
+ */
+router.post(
+  '/:id/change-password',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppError(400, 'Invalid user ID');
+    }
+
+    const data = changePasswordSchema.parse(req.body);
+
+    // Check if user is changing their own password or is an admin
+    const isOwnPassword = req.user?.id === id;
+    const isAdmin = req.user?.permissions.includes('users.update');
+
+    if (!isOwnPassword && !isAdmin) {
+      throw new AppError(403, 'Insufficient permissions');
+    }
+
+    const isAdminReset = isAdmin && !isOwnPassword;
+
+    // Require current password for non-admin password changes
+    if (!isAdminReset && !data.currentPassword) {
+      throw new AppError(400, 'Current password is required');
+    }
+
+    await userService.changePassword(id, data.currentPassword || '', data.newPassword, isAdminReset);
+
+    res.json({ success: true, message: 'Password changed successfully' });
   })
 );
 

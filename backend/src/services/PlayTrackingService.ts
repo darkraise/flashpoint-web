@@ -1,7 +1,8 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { DatabaseService } from './DatabaseService';
 import { logger } from '../utils/logger';
-import { randomBytes } from 'crypto';
+import { randomUUID } from 'crypto';
+import { AppError } from '../middleware/errorHandler';
 import {
   PlaySessionRow,
   GameStatsRow,
@@ -44,8 +45,8 @@ export class PlayTrackingService {
    */
   async startPlaySession(userId: number, gameId: string, gameTitle: string): Promise<string> {
     try {
-      // Generate unique session ID
-      const sessionId = randomBytes(16).toString('hex');
+      // Generate unique session ID (UUID format)
+      const sessionId = randomUUID();
 
       // Insert play session
       UserDatabaseService.run(
@@ -68,7 +69,7 @@ export class PlayTrackingService {
    * End a play session
    * OPTIMIZED: Single query to get session data and calculate duration, then single UPDATE
    */
-  async endPlaySession(sessionId: string): Promise<void> {
+  async endPlaySession(sessionId: string, userId?: number): Promise<void> {
     try {
       // OPTIMIZATION: Get session and calculate duration in single query
       const session = UserDatabaseService.get(
@@ -85,6 +86,11 @@ export class PlayTrackingService {
       if (!session) {
         logger.warn(`Play session not found or already ended: ${sessionId}`);
         return;
+      }
+
+      // Verify session ownership if userId provided
+      if (userId && session.user_id !== userId) {
+        throw new AppError(403, "Cannot end another user's play session");
       }
 
       const durationSeconds = session.duration_seconds || 0;
@@ -149,19 +155,16 @@ export class PlayTrackingService {
    */
   private async updateUserStats(userId: number, durationSeconds: number): Promise<void> {
     try {
-      // Count unique games played
-      const gamesPlayed =
-        UserDatabaseService.get(
-          'SELECT COUNT(DISTINCT game_id) as count FROM user_game_stats WHERE user_id = ?',
-          [userId]
-        )?.count || 0;
+      // Single query to get both aggregates (was 2 separate queries)
+      const counts = UserDatabaseService.get(
+        `SELECT
+          (SELECT COUNT(DISTINCT game_id) FROM user_game_stats WHERE user_id = ?) as games_played,
+          (SELECT COUNT(*) FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL) as total_sessions`,
+        [userId, userId]
+      ) as { games_played: number; total_sessions: number } | undefined;
 
-      // Count total sessions
-      const totalSessions =
-        UserDatabaseService.get(
-          'SELECT COUNT(*) as count FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL',
-          [userId]
-        )?.count || 0;
+      const gamesPlayed = counts?.games_played ?? 0;
+      const totalSessions = counts?.total_sessions ?? 0;
 
       // UPSERT user stats
       UserDatabaseService.run(
@@ -395,9 +398,11 @@ export class PlayTrackingService {
       );
 
       for (const session of abandoned) {
-        // Calculate estimated duration (capped at 4 hours)
+        // Calculate actual duration from session start time, capped at 4 hours
+        const startTime = new Date(session.started_at).getTime();
+        const actualSeconds = Math.floor((Date.now() - startTime) / 1000);
         const maxDuration = 4 * 60 * 60; // 4 hours in seconds
-        const duration = Math.min(maxDuration, 86400); // 24 hours max
+        const duration = Math.min(actualSeconds, maxDuration);
 
         // End the session
         UserDatabaseService.run(

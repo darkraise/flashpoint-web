@@ -135,16 +135,12 @@ export class PermissionCache {
 
   /**
    * Invalidate role permissions (when role permissions change)
-   * Also invalidates all users with this role
+   * Also invalidates all user permissions to force re-fetch
    */
   static invalidateRole(roleId: number): void {
     this.rolePermissionsCache.delete(roleId);
-    logger.info(`[PermissionCache] Invalidated cache for role ${roleId}`);
-
-    // Note: We don't invalidate all users with this role because we'd need
-    // to query the database to find them, defeating the purpose of caching.
-    // Instead, we rely on the TTL to eventually update all users.
-    // For immediate updates, consider invalidating specific users or clearing all.
+    this.userPermissionsCache.clear();
+    logger.info(`[PermissionCache] Invalidated cache for role ${roleId} and all user permissions`);
   }
 
   /**

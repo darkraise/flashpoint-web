@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { rolesApi } from '../lib/api';
-import { Role, UpdateRoleData } from '../types/auth';
+import { rolesApi } from '@/lib/api';
+import { Role, UpdateRoleData } from '@/types/auth';
 import { useDialog } from '@/contexts/DialogContext';
 import { getErrorMessage } from '@/types/api-error';
 

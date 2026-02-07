@@ -14,9 +14,10 @@ import { ViewOptions } from '@/components/common/ViewOptions';
 import { PlaylistIcon } from '@/components/playlist/PlaylistIcon';
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { useUIStore } from '@/store/ui';
-import { Info, Copy, ArrowLeft } from 'lucide-react';
+import { Info, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { getErrorMessage } from '@/types/api-error';
+import { logger } from '@/lib/logger';
 
 export function SharedPlaylistView() {
   const { shareToken } = useParams<{ shareToken: string }>();
@@ -31,7 +32,7 @@ export function SharedPlaylistView() {
   // Generate shared access token on mount (for anonymous users)
   useEffect(() => {
     if (shareToken && !isAuthenticated && !hasValidToken) {
-      generateToken(shareToken).catch(console.error);
+      generateToken(shareToken).catch(logger.error);
     }
   }, [shareToken, isAuthenticated, hasValidToken, generateToken]);
 
@@ -42,7 +43,7 @@ export function SharedPlaylistView() {
     error: playlistError,
   } = useQuery({
     queryKey: ['sharedPlaylist', shareToken],
-    queryFn: () => sharedPlaylistsApi.getByToken(shareToken!),
+    queryFn: () => sharedPlaylistsApi.getByToken(shareToken ?? ''),
     enabled: !!shareToken,
     retry: false,
   });
@@ -50,7 +51,7 @@ export function SharedPlaylistView() {
   // Fetch shared playlist games
   const { data: games = [], isLoading: isLoadingGames } = useQuery({
     queryKey: ['sharedPlaylistGames', shareToken],
-    queryFn: () => sharedPlaylistsApi.getGames(shareToken!),
+    queryFn: () => sharedPlaylistsApi.getGames(shareToken ?? ''),
     enabled: !!shareToken && !!playlist,
     retry: false,
   });
@@ -78,7 +79,7 @@ export function SharedPlaylistView() {
     try {
       await navigator.clipboard.writeText(window.location.href);
       toast.success('Link copied to clipboard');
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy link');
     }
   };
@@ -131,7 +132,7 @@ export function SharedPlaylistView() {
               <>
                 {' '}
                 <Link to="/login" className="text-primary hover:underline font-medium">
-                  Sign in
+                  Log in
                 </Link>{' '}
                 to create your own playlists.
               </>
@@ -143,17 +144,6 @@ export function SharedPlaylistView() {
           </Button>
         </AlertDescription>
       </Alert>
-
-      {/* Back Button (if authenticated) */}
-      {isAuthenticated ? (
-        <Link
-          to="/playlists"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft size={20} />
-          Back to my playlists
-        </Link>
-      ) : null}
 
       {/* Playlist Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">

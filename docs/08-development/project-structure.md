@@ -8,7 +8,6 @@ Flashpoint Web codebase organization.
 flashpoint-web/
 ├── backend/                 # REST API service (Express/TypeScript, port 3100)
 ├── frontend/                # React web application (Vite, port 5173)
-├── game-service/            # Game proxy & ZIP server (Express, ports 22500/22501)
 ├── docs/                    # Documentation (100+ files)
 ├── package.json             # Monorepo scripts & workspaces
 ├── docker-compose.yml       # Docker orchestration
@@ -16,7 +15,7 @@ flashpoint-web/
 └── README.md                # Project overview
 ```
 
-**Key:** Monorepo with independent services and centralized documentation.
+**Key:** Monorepo with two independent services and centralized documentation. Game service merged into backend.
 
 ---
 
@@ -40,6 +39,12 @@ backend/
 │   │   ├── playlists.ts         # /api/playlists/*
 │   │   ├── play-tracking.ts     # /api/play-tracking/*
 │   │   └── ... (other routes)
+│   │
+│   ├── game/                     # Game service (merged from game-service/)
+│   │   ├── handlers/             # Request handlers
+│   │   ├── services/             # Game-related services
+│   │   ├── utils/                # Game utilities
+│   │   └── ... (game-specific code)
 │   │
 │   ├── services/                 # Business logic layer
 │   │   ├── DatabaseService.ts   # Flashpoint DB (read-only)
@@ -161,44 +166,6 @@ frontend/
 
 ---
 
-## Game Service Structure
-
-```
-game-service/
-├── src/
-│   ├── index.ts                  # Entry point
-│   ├── config.ts                 # Configuration
-│   │
-│   ├── servers/                  # HTTP servers
-│   │   ├── proxy-server.ts      # Proxy (22500)
-│   │   └── gamezip-server.ts    # GameZip (22501)
-│   │
-│   ├── handlers/                 # Request handlers
-│   │   ├── proxy-handler.ts
-│   │   ├── file-handler.ts
-│   │   └── zip-handler.ts
-│   │
-│   ├── services/                 # Business logic
-│   │   ├── zip-manager.ts       # ZIP file operations
-│   │   ├── mime-types.ts        # MIME type detection
-│   │   └── cache-manager.ts     # CDN caching
-│   │
-│   └── utils/                    # Utilities
-│       ├── logger.ts
-│       ├── path-utils.ts
-│       └── url-utils.ts
-│
-├── dist/                         # Build output (git-ignored)
-├── package.json
-├── tsconfig.json
-├── .env.example
-└── README.md
-```
-
-**Key:** Two servers handle proxy (22500) and GameZip (22501).
-
----
-
 ## Documentation Structure
 
 ```
@@ -207,7 +174,6 @@ docs/
 ├── 02-architecture/              # System architecture & flows
 ├── 03-backend/                   # Backend documentation
 ├── 04-frontend/                  # Frontend documentation
-├── 05-game-service/              # Game service documentation
 │
 └── 08-development/               # Developer documentation
     ├── setup-guide.md            # Development setup
@@ -247,11 +213,6 @@ docs/
 - `postcss.config.js` - PostCSS
 - `.eslintrc.json` - ESLint rules
 
-### Game Service
-
-- `tsconfig.json` - TypeScript config
-- `.env.example` - Environment template
-
 ---
 
 ## Data Directories
@@ -277,9 +238,6 @@ D:/Flashpoint/
 backend/
 ├── user.db                      # User database
 └── logs/                        # Application logs (optional)
-
-game-service/
-└── cache/                       # CDN cache (optional)
 ```
 
 ---
@@ -316,10 +274,6 @@ import { api } from '@/lib/api';
 - assets/ - Minified JS, CSS, hashed bundles
 - ruffle/ - Ruffle emulator files
 
-### Game Service (dist/)
-
-- index.js - Entry point
-- Compiled JavaScript files
 
 ---
 

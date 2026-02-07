@@ -97,8 +97,7 @@ export function useToggleFavorite() {
       // Update stats optimistically
       queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
-        const previousIds = queryClient.getQueryData<string[]>(['favorites', 'game-ids']) || [];
-        const wasAdded = !previousIds.includes(gameId);
+        const wasAdded = !(previousIds || []).includes(gameId);
         return {
           ...old,
           totalFavorites: wasAdded
@@ -260,8 +259,7 @@ export function useBatchAddFavorites() {
       // Update stats
       queryClient.setQueryData<FavoritesStats>(['favorites', 'stats'], (old) => {
         if (!old) return old;
-        const previousIds = queryClient.getQueryData<string[]>(['favorites', 'game-ids']) || [];
-        const newIds = gameIds.filter((id) => !previousIds.includes(id));
+        const newIds = gameIds.filter((id) => !(previousIds || []).includes(id));
         return { ...old, totalFavorites: (old.totalFavorites || 0) + newIds.length };
       });
 

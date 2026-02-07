@@ -24,11 +24,11 @@ const toggleFavoriteSchema = z.object({
 });
 
 const batchAddSchema = z.object({
-  gameIds: z.array(z.string()).min(1),
+  gameIds: z.array(z.string()).min(1).max(500),
 });
 
 const batchRemoveSchema = z.object({
-  gameIds: z.array(z.string()).min(1),
+  gameIds: z.array(z.string()).min(1).max(500),
 });
 
 /**
@@ -44,8 +44,12 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+    const limit = req.query.limit
+      ? Math.min(parseInt(req.query.limit as string, 10) || 50, 100)
+      : undefined;
+    const offset = req.query.offset
+      ? Math.max(0, parseInt(req.query.offset as string, 10) || 0)
+      : undefined;
 
     const favorites = favoritesService.getUserFavorites(req.user.id, limit, offset);
     res.json(favorites);
@@ -83,10 +87,22 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
-    const sortBy = (req.query.sortBy as 'title' | 'dateAdded') || 'dateAdded';
-    const sortOrder = (req.query.sortOrder as 'asc' | 'desc') || 'desc';
+    const limit = req.query.limit
+      ? Math.min(parseInt(req.query.limit as string, 10) || 50, 100)
+      : undefined;
+    const offset = req.query.offset
+      ? Math.max(0, parseInt(req.query.offset as string, 10) || 0)
+      : undefined;
+
+    // Validate sortBy
+    const allowedSortBy = ['title', 'dateAdded'];
+    const sortBy =
+      req.query.sortBy && allowedSortBy.includes(req.query.sortBy as string)
+        ? (req.query.sortBy as 'title' | 'dateAdded')
+        : 'dateAdded';
+
+    // Validate sortOrder
+    const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc';
 
     const games = await favoritesService.getUserFavoriteGames(
       req.user.id,

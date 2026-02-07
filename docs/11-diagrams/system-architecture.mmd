@@ -25,6 +25,7 @@ graph TB
             RBACMW[RBAC]
             LoggingMW[Activity Logger]
             ErrorMW[Error Handler]
+            GameMW["Game Routes<br/>/game-proxy/*<br/>/game-zip/*"]
         end
 
         subgraph "Service Layer"
@@ -34,15 +35,14 @@ graph TB
             PlaySvc[PlayTrackingService]
             PlaylistSvc[PlaylistService]
         end
-    end
 
-    subgraph "Game Service :22500/:22501"
-        direction TB
-        ProxyServer[HTTP Proxy Server<br/>:22500]
-        ZipServer[GameZip Server<br/>:22501]
-        ZipManager[ZIP Manager]
-        MimeHandler[MIME Type Handler<br/>199+ types]
-        CDNFallback[CDN Fallback]
+        subgraph "Game Module"
+            ProxyServer[HTTP Proxy Server]
+            ZipServer[GameZip Server]
+            ZipManager[ZIP Manager]
+            MimeHandler[MIME Type Handler<br/>199+ types]
+            CDNFallback[CDN Fallback]
+        end
     end
 
     subgraph "Data Layer"
@@ -79,6 +79,7 @@ graph TB
     Express --> AuthMW
     AuthMW --> RBACMW
     RBACMW --> LoggingMW
+    LoggingMW --> GameMW
     LoggingMW --> GameSvc
     LoggingMW --> UserSvc
     LoggingMW --> AuthSvc
@@ -94,11 +95,11 @@ graph TB
     PlaylistSvc --> UserDB
     PlaylistSvc --> FlashpointDB
 
-    %% Backend to game service delegation
-    Express -.proxy delegation.-> ProxyServer
-    Express -.ZIP mount requests.-> ZipServer
+    %% Game module routes (no inter-process calls, internal)
+    GameMW --> ProxyServer
+    GameMW --> ZipServer
 
-    %% Game service components
+    %% Game module components
     ProxyServer --> MimeHandler
     ProxyServer --> HTDocs
     ProxyServer --> Games
@@ -112,7 +113,7 @@ graph TB
     Express --> Images
     Express --> Logos
 
-    %% Ruffle to game service
+    %% Ruffle to backend game module
     Ruffle -.load game files.-> ProxyServer
 
     %% Error handling
@@ -127,8 +128,7 @@ graph TB
     classDef external fill:#e1e1e1,stroke:#333,stroke-width:2px,color:#000
 
     class React,Router,TanStack,Zustand,Vite,Ruffle frontend
-    class Express,AuthMW,RBACMW,LoggingMW,ErrorMW,GameSvc,UserSvc,AuthSvc,PlaySvc,PlaylistSvc backend
-    class ProxyServer,ZipServer,ZipManager,MimeHandler,CDNFallback gameservice
+    class Express,AuthMW,RBACMW,LoggingMW,ErrorMW,GameMW,GameSvc,UserSvc,AuthSvc,PlaySvc,PlaylistSvc,ProxyServer,ZipServer,ZipManager,MimeHandler,CDNFallback backend
     class FlashpointDB,UserDB database
     class HTDocs,Images,Logos,Games filesystem
     class Browser,CDN external

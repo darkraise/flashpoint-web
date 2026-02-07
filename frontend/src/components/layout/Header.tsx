@@ -141,7 +141,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
                       </Badge>
                     </div>
                     <Button asChild size="sm">
-                      <Link to="/login">Login</Link>
+                      <Link to="/login">Log In</Link>
                     </Button>
                   </div>
                 ) : (
@@ -169,7 +169,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
-                        Logout
+                        Log Out
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -178,7 +178,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
             ) : (
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login">Login</Link>
+                  <Link to="/login">Log In</Link>
                 </Button>
                 <Button size="sm" asChild>
                   <Link to="/register">Register</Link>

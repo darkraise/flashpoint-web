@@ -1,62 +1,33 @@
 # Configuration
 
-The game-service configuration system uses environment variables and
-`proxySettings.json` to provide flexible deployment options.
+The game content module configuration is part of the backend configuration. The
+game-service is no longer a separate service, so these settings are now in
+`backend/.env`.
 
 ## Configuration Sources
 
 Configuration is loaded from three sources in priority order:
 
-1. **Environment variables** (.env file) - Highest priority
+1. **Environment variables** (backend .env file) - Highest priority
 2. **proxySettings.json** (Flashpoint standard) - Medium priority
 3. **Hardcoded defaults** - Lowest priority
 
 ```typescript
 // Priority: ENV > proxySettings.json > defaults
-const proxyPort = parseInt(process.env.PROXY_PORT || '22500');
+const chunkSize = parseInt(process.env.PROXY_CHUNK_SIZE || '8192');
 ```
 
-## Environment Variables
+## Environment Variables (backend/.env)
 
-### Server Ports
+Game content module shares the backend's configuration. All game-service-related
+variables are now in `backend/.env`.
 
-#### PROXY_PORT
-
-HTTP Proxy Server port.
-
-```bash
-PROXY_PORT=22500
-```
-
-**Default**: 22500 **Type**: Integer **Range**: 1024-65535 **Required**: No
-
-**Use case**: Change if port conflict occurs
-
-**Examples**:
-
-```bash
-PROXY_PORT=22500  # Default
-PROXY_PORT=8080   # Alternative HTTP port
-PROXY_PORT=3000   # Development port
-```
-
-#### GAMEZIPSERVER_PORT
-
-GameZip Server port.
-
-```bash
-GAMEZIPSERVER_PORT=22501
-```
-
-**Default**: 22501 **Type**: Integer **Range**: 1024-65535 **Required**: No
-
-**Use case**: Change if port conflict occurs
-
-### Flashpoint Paths
+### Flashpoint Paths (Shared with Backend)
 
 #### FLASHPOINT_PATH
 
-Flashpoint installation root directory.
+Flashpoint installation root directory. Used by both backend and game content
+module.
 
 ```bash
 FLASHPOINT_PATH=D:/Flashpoint
@@ -89,6 +60,7 @@ All other Flashpoint paths are automatically derived from `FLASHPOINT_PATH`:
 
 - HTDOCS: `${FLASHPOINT_PATH}/Legacy/htdocs`
 - Games: `${FLASHPOINT_PATH}/Data/Games`
+- CGI: `${FLASHPOINT_PATH}/Legacy/cgi-bin`
 
 You do not need to set environment variables for these paths - they are
 calculated automatically from `FLASHPOINT_PATH`.
@@ -118,6 +90,33 @@ PROXY_CHUNK_SIZE=65536   # High memory, low CPU
 
 - Smaller chunks: Lower memory, higher CPU, more I/O calls
 - Larger chunks: Higher memory, lower CPU, fewer I/O calls
+
+### Server Connection Limits
+
+Server-wide connection and timeout management:
+
+**HTTP Server Configuration:**
+
+- **keepAliveTimeout**: 65 seconds - TCP keep-alive socket timeout
+- **headersTimeout**: 66 seconds - HTTP header timeout
+- **timeout**: 120 seconds - Total request timeout
+- **maxConnections**: 500 - Maximum concurrent connections
+
+These settings are hardcoded to prevent resource exhaustion and ensure graceful
+handling of slow clients and network issues.
+
+### Download Concurrency
+
+Game data downloads are limited to prevent resource exhaustion:
+
+- **MAX_CONCURRENT_DOWNLOADS**: 3 - Maximum simultaneous downloads
+- Returns HTTP 503 if limit is exceeded during auto-download
+- Downloads are queued and retried automatically
+
+This limit prevents:
+- Excessive bandwidth usage from multiple simultaneous downloads
+- Memory exhaustion from buffering large files
+- Network saturation on the download source
 
 #### ALLOW_CROSS_DOMAIN
 
@@ -155,11 +154,19 @@ If the file is missing, defaults to:
 - `https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/`
 - `https://infinity.unstable.life/Flashpoint/Legacy/htdocs/`
 
+**External Request Configuration:**
+
+- **Timeout**: 15 seconds (EXTERNAL_REQUEST_TIMEOUT_MS)
+- **Max Retries**: 2 attempts per URL (reduced from 3)
+- **Connection Pool**: 10 sockets per host with Keep-Alive
+- **User-Agent**: Custom header identifying the proxy
+
 **Notes**:
 
 - HTTP URLs are auto-upgraded to HTTPS
 - URLs are tried in order
 - First successful response is used
+- Failed sources are skipped with exponential backoff
 
 ### Logging
 
@@ -235,6 +242,25 @@ requests to `.php`, `.php5`, `.phtml`, and `.pl` files in the `htdocs` or
 
 #### CGI Configuration (via proxySettings.json)
 
+The `PreferencesService` is a singleton that reads Flashpoint's `preferences.json`
+file. Re-initialization with a different path now logs a warning to help identify
+configuration issues. This is primarily useful during development when testing
+with different Flashpoint installations.
+
+**Re-initialization Warning**:
+
+If you call `PreferencesService.initialize()` with a different path after
+initialization, a warning is logged:
+
+```
+[PreferencesService] Warning: Re-initializing with different path
+  Previous: /path/to/flashpoint1
+  New:      /path/to/flashpoint2
+```
+
+This helps prevent silent configuration changes that could affect game data
+downloads.
+
 Additional CGI settings can be configured in `proxySettings.json`:
 
 ```json
@@ -263,6 +289,82 @@ The CGI executor implements several security measures:
    DATABASE_URL, etc.) are not passed to CGI scripts
 4. **Timeout enforcement**: Scripts are killed after the configured timeout
 5. **Size limits**: Both request body and response size are limited
+
+## preferences.json (Game Data Sources)
+
+### File Location
+
+```
+${FLASHPOINT_PATH}/preferences.json
+```
+
+**Example**: `D:/Flashpoint/preferences.json`
+
+### Purpose
+
+The `preferences.json` file is the Flashpoint Launcher's main configuration file.
+The game-service reads `gameDataSources` from this file to enable auto-downloading
+of game ZIPs when they're not present locally.
+
+### Game Data Sources Configuration
+
+```json
+{
+  "gameDataSources": [
+    {
+      "type": "raw",
+      "name": "Flashpoint Project",
+      "arguments": ["https://download.flashpointarchive.org/gib-roms/Games/"]
+    },
+    {
+      "type": "raw",
+      "name": "Backup Mirror",
+      "arguments": ["https://backup.example.com/games/"]
+    }
+  ],
+  "dataPacksFolderPath": "Data/Games"
+}
+```
+
+### Configuration Fields
+
+#### gameDataSources
+
+Array of download sources for game ZIP files.
+
+| Field       | Type     | Description                                    |
+| ----------- | -------- | ---------------------------------------------- |
+| `type`      | String   | Source type (currently only "raw" is used)     |
+| `name`      | String   | Display name for logging and error messages    |
+| `arguments` | String[] | Array with base URL as first element           |
+
+**Download URL Construction:**
+
+```
+Full URL = arguments[0] + filename
+Example: https://download.flashpointarchive.org/gib-roms/Games/ + abc123-1234567890.zip
+```
+
+**Multi-Source Fallback:**
+
+Sources are tried sequentially in array order. If one fails (network error,
+404, hash mismatch), the next source is attempted.
+
+#### dataPacksFolderPath
+
+Relative path from `FLASHPOINT_PATH` to the game data folder.
+
+**Default**: `Data/Games`
+
+**Full path**: `${FLASHPOINT_PATH}/${dataPacksFolderPath}`
+
+### Compatibility
+
+This configuration format matches the Flashpoint Launcher exactly, so existing
+Flashpoint installations should work without modification. The game-service
+reads the same `preferences.json` that the Flashpoint Launcher uses.
+
+---
 
 ## proxySettings.json
 
@@ -369,69 +471,49 @@ MAD4FP content URLs.
 
 ## Configuration Examples
 
-### Minimal Configuration
+### Minimal Configuration (backend/.env)
 
 ```bash
-# .env
 FLASHPOINT_PATH=D:/Flashpoint
 ```
 
 All other settings use defaults.
 
-### Development Configuration
+### Development Configuration (backend/.env)
 
 ```bash
-# .env
 FLASHPOINT_PATH=D:/Flashpoint
-PROXY_PORT=22500
-GAMEZIPSERVER_PORT=22501
 LOG_LEVEL=debug
 NODE_ENV=development
 ```
 
-Verbose logging for debugging.
+Verbose logging for debugging. Game content module runs on backend port 3100.
 
-### Production Configuration
+### Production Configuration (backend/.env)
 
 ```bash
-# .env
 FLASHPOINT_PATH=/opt/flashpoint
-PROXY_PORT=22500
-GAMEZIPSERVER_PORT=22501
 LOG_LEVEL=warn
 NODE_ENV=production
 ALLOW_CROSS_DOMAIN=true
 ```
 
-Optimized for production. External fallback URLs are configured via `proxySettings.json`.
+Optimized for production. External fallback URLs are configured via
+`proxySettings.json`.
 
-### Docker Configuration
+### Docker Configuration (backend/.env)
 
 ```bash
-# .env
 FLASHPOINT_PATH=/flashpoint
-PROXY_PORT=22500
-GAMEZIPSERVER_PORT=22501
 LOG_LEVEL=info
 NODE_ENV=production
 ```
 
-Mounted volume path.
+Mounted volume path. Game content module runs on same container as backend.
 
-### Custom Ports Configuration
-
-```bash
-# .env
-PROXY_PORT=8080
-GAMEZIPSERVER_PORT=8081
-```
-
-Alternative ports to avoid conflicts.
-
-### High-Performance Configuration
+### High-Performance Configuration (backend/.env)
 
 ```bash
-# .env
 PROXY_CHUNK_SIZE=65536  # 64KB chunks
 LOG_LEVEL=error          # Minimal logging
 NODE_ENV=production      # Production optimizations
@@ -439,10 +521,9 @@ NODE_ENV=production      # Production optimizations
 
 Optimized for throughput.
 
-### Secure Configuration
+### Secure Configuration (backend/.env)
 
 ```bash
-# .env
 ALLOW_CROSS_DOMAIN=false  # No CORS
 ENABLE_CGI=false          # No script execution
 LOG_LEVEL=warn            # Log security events
@@ -452,7 +533,7 @@ Maximum security (breaks most games).
 
 ## Loading Configuration
 
-### ConfigManager Class
+### ConfigManager Class (in backend/src/game/)
 
 ```typescript
 export class ConfigManager {
@@ -476,25 +557,27 @@ const proxySettings = JSON.parse(await fs.readFile(proxySettingsPath, 'utf-8'));
 
 // 2. Derive paths automatically from FLASHPOINT_PATH
 this.settings = {
-  proxyPort: parseInt(process.env.PROXY_PORT || '22500'),
   // All paths are derived automatically from flashpointPath:
   legacyHTDOCSPath: path.join(flashpointPath, 'Legacy', 'htdocs'),
   gamesPath: path.join(flashpointPath, 'Data', 'Games'),
+  cgiPath: path.join(flashpointPath, 'Legacy', 'cgi-bin'),
   // ... etc
 };
 ```
 
 ### Access Configuration
 
+Configuration is initialized in `backend/src/server.ts`:
+
 ```typescript
-import { ConfigManager } from './config';
+import { ConfigManager } from '@/game/config';
 
 // Load configuration (once on startup)
-await ConfigManager.loadConfig(flashpointPath);
+await ConfigManager.loadConfig(process.env.FLASHPOINT_PATH!);
 
 // Access settings
 const settings = ConfigManager.getSettings();
-console.log(`Proxy port: ${settings.proxyPort}`);
+console.log(`HTDOCS path: ${settings.legacyHTDOCSPath}`);
 ```
 
 ## Validation
@@ -587,18 +670,19 @@ npm test
 
 ## Docker Configuration
 
-### Environment Variables
+Game content module is deployed as part of the backend container. Configuration
+is in `backend/.env`.
+
+### Backend Service Configuration (docker-compose.yml)
 
 ```yaml
-# docker-compose.yml
 services:
-  game-service:
+  backend:
     environment:
       - FLASHPOINT_PATH=/flashpoint
-      - PROXY_PORT=22500
-      - GAMEZIPSERVER_PORT=22501
       - LOG_LEVEL=info
       - NODE_ENV=production
+      - JWT_SECRET=your-secret-here
 ```
 
 ### Volume Mounts
@@ -606,17 +690,10 @@ services:
 ```yaml
 volumes:
   - ${FLASHPOINT_HOST_PATH}:/flashpoint:ro
-  - ./game-service:/app
+  - ./backend:/app
 ```
 
-### Build Args
-
-```dockerfile
-ARG PROXY_PORT=22500
-ARG GAMEZIPSERVER_PORT=22501
-ENV PROXY_PORT=${PROXY_PORT}
-ENV GAMEZIPSERVER_PORT=${GAMEZIPSERVER_PORT}
-```
+Game content module uses the same Flashpoint volume mount as backend.
 
 ## Troubleshooting
 
@@ -626,12 +703,13 @@ ENV GAMEZIPSERVER_PORT=${GAMEZIPSERVER_PORT}
 
 **Debug steps**:
 
-1. Check .env file exists in correct location
-2. Verify dotenv is loading: `console.log(process.env.PROXY_PORT)`
+1. Check .env file exists in backend root directory (not game-service)
+2. Verify dotenv is loading: `console.log(process.env.FLASHPOINT_PATH)`
 3. Check for typos in variable names
 4. Verify file encoding (UTF-8)
+5. Restart backend to reload .env
 
-**Solution**: Ensure .env file is in game-service root directory
+**Solution**: Ensure .env file is in backend root directory with correct values
 
 ### Path Not Found
 
@@ -648,15 +726,16 @@ ENV GAMEZIPSERVER_PORT=${GAMEZIPSERVER_PORT}
 
 ### Port Conflict
 
-**Symptom**: `Port 22500 already in use`
+**Symptom**: Backend fails to start, `Port 3100 already in use`
 
 **Debug steps**:
 
-1. Find process: `netstat -ano | findstr :22500`
-2. Kill process or change port
-3. Check for multiple game-service instances
+1. Find process: `netstat -ano | findstr :3100`
+2. Kill process or change port in backend .env
+3. Check for multiple backend instances
 
-**Solution**: Change PROXY_PORT to alternative port
+**Solution**: Change backend port (not game content specific) or kill conflicting
+process
 
 ### External URLs Not Working
 

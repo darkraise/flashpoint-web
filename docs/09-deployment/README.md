@@ -76,7 +76,7 @@ monitoring and alerting, automated backups, log rotation.
 **Minimum (< 100 users):**
 
 - 2 CPU cores, 4GB RAM, 50GB storage
-- Ports: 80, 443 (public); 3100, 22500, 22501 (internal)
+- Ports: 80, 443 (public); 3100 (internal)
 
 **Recommended (100-500 users):**
 

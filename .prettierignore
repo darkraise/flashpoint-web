@@ -62,7 +62,6 @@ Thumbs.db
 !src/**/*.d.ts
 !frontend/src/**/*.d.ts
 !backend/src/**/*.d.ts
-!game-service/src/**/*.d.ts
 
 # Documentation (preserve original formatting)
 docs/

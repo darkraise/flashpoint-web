@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { CommunityPlaylistService } from '../services/CommunityPlaylistService';
+import { z } from 'zod';
+import {
+  CommunityPlaylistService,
+  ALLOWED_DOWNLOAD_DOMAINS,
+} from '../services/CommunityPlaylistService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { optionalAuth } from '../middleware/auth';
@@ -7,6 +11,11 @@ import { logActivity } from '../middleware/activityLogger';
 
 const router = Router();
 const communityPlaylistService = new CommunityPlaylistService();
+
+// Validation schema
+const downloadSchema = z.object({
+  downloadUrl: z.string().url().max(2000),
+});
 
 // GET /api/community-playlists - Fetch list of community playlists from wiki
 router.get(
@@ -39,10 +48,25 @@ router.post(
     gameCount: res.locals.gameCount || 0,
   })),
   asyncHandler(async (req, res) => {
-    const { downloadUrl } = req.body;
+    // Validate request body
+    const { downloadUrl } = downloadSchema.parse(req.body);
 
-    if (!downloadUrl) {
-      throw new AppError(400, 'downloadUrl is required');
+    try {
+      const parsedUrl = new URL(downloadUrl);
+      const isAllowed = ALLOWED_DOWNLOAD_DOMAINS.some(
+        (domain) => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith('.' + domain)
+      );
+      if (!isAllowed) {
+        throw new AppError(400, 'Download URL domain not allowed');
+      }
+      if (parsedUrl.protocol !== 'https:') {
+        throw new AppError(400, 'Only HTTPS URLs are allowed');
+      }
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw new AppError(400, 'Invalid URL');
     }
 
     const result = await communityPlaylistService.downloadPlaylist(downloadUrl);

@@ -35,21 +35,17 @@ docker-compose up -d --build
 
 - Frontend: http://localhost
 - Backend API: http://localhost:3100
-- Game Proxy: http://localhost:22500
-- GameZip: http://localhost:22501
 
 ## Container Architecture
 
-| Service      | Image                          | Port        | Purpose                 |
-| ------------ | ------------------------------ | ----------- | ----------------------- |
-| backend      | flashpoint-backend:latest      | 3100        | REST API                |
-| game-service | flashpoint-game-service:latest | 22500/22501 | Game proxy + ZIP server |
-| frontend     | flashpoint-frontend:latest     | 80          | Web UI (Nginx)          |
+| Service  | Image                      | Port | Purpose                           |
+| -------- | -------------------------- | ---- | --------------------------------- |
+| backend  | flashpoint-backend:latest  | 3100 | REST API (includes game service)  |
+| frontend | flashpoint-frontend:latest | 80   | Web UI (Nginx)                    |
 
 **Resource Recommendations:**
 
-- Backend: 1 CPU, 1GB RAM
-- Game Service: 2 CPUs, 2GB RAM
+- Backend: 2 CPUs, 2GB RAM (includes game service)
 - Frontend: 0.5 CPU, 256MB RAM
 
 ## Volume Configuration
@@ -72,18 +68,17 @@ volumes:
 
 **Port Mappings:**
 
-| Service      | Internal | Host  | Notes      |
-| ------------ | -------- | ----- | ---------- |
-| Frontend     | 8080     | 80    | Nginx      |
-| Backend      | 3100     | 3100  | API        |
-| Game (Proxy) | 22500    | 22500 | HTTP       |
-| Game (ZIP)   | 22501    | 22501 | ZIP Server |
+| Service  | Internal | Host | Notes |
+| -------- | -------- | ---- | ----- |
+| Frontend | 8080     | 80   | Nginx |
+| Backend  | 3100     | 3100 | API   |
 
 **Custom ports** via environment variables:
 
 ```bash
 export WEB_PORT=8080
 export API_PORT=8001
+export FLASHPOINT_HOST_PATH=/path/to/flashpoint
 docker-compose up -d
 ```
 
@@ -164,7 +159,6 @@ View logs:
 
 ```bash
 docker-compose logs -f backend
-docker-compose logs -f game-service
 docker-compose logs -f frontend
 ```
 
@@ -222,14 +216,11 @@ docker-compose exec backend ls -la /data/flashpoint/Data/flashpoint.sqlite
 docker-compose exec backend sqlite3 /data/flashpoint/Data/flashpoint.sqlite "SELECT COUNT(*) FROM game;"
 ```
 
-**Network issues:**
+**Service communication:**
 
 ```bash
-# Test backend to game-service
-docker-compose exec backend curl http://game-service:22500/
-
-# Inspect network
-docker network inspect flashpoint-web_flashpoint-network
+# Test backend health
+docker-compose exec backend curl http://localhost:3100/api/health
 ```
 
 ## Best Practices

@@ -11,9 +11,9 @@ Flashpoint Web uses JWT-based authentication with role-based access control
 graph TB
     subgraph "Frontend"
         LoginForm[Login Form]
-        AuthStore[Zustand Auth Store]
+        AuthStore[Zustand Auth Store<br/>Access Token Only]
         APIClient[Axios API Client]
-        LocalStorage[localStorage]
+        Cookies[HTTP-only Cookies<br/>fp_refresh]
     end
 
     subgraph "Backend"
@@ -30,15 +30,16 @@ graph TB
     end
 
     LoginForm --> AuthStore
+    AuthRoute -.Set Cookie.-> Cookies
+    AuthRoute -.accessToken.-> APIClient
     AuthStore --> APIClient
     APIClient --> AuthRoute
     AuthRoute --> AuthService
     AuthService --> UserDB
     UserDB -.return user.-> AuthService
     AuthService -.JWT tokens.-> AuthRoute
-    AuthRoute -.tokens + user.-> APIClient
+    AuthRoute -.accessToken only.-> APIClient
     APIClient --> AuthStore
-    AuthStore --> LocalStorage
 
     APIClient -.JWT Bearer.-> GameRoutes
     GameRoutes --> AuthMiddleware
@@ -48,6 +49,7 @@ graph TB
     style AuthStore fill:#61dafb
     style AuthService fill:#90ee90
     style UserDB fill:#ff9999
+    style Cookies fill:#ffd700
 ```
 
 ## 1. User Registration Flow
@@ -87,9 +89,9 @@ sequenceDiagram
 
         AuthService->>AuthService: Generate JWT tokens
         AuthService-->>Backend: {user, accessToken, refreshToken}
-        Backend-->>API: 201 Created
-        API->>AuthStore: setAuth(user, tokens)
-        AuthStore->>LocalStorage: Persist tokens
+        Backend->>Backend: Set fp_refresh HTTP-only cookie
+        Backend-->>API: 201 Created (only accessToken in body)
+        API->>AuthStore: setAuth(user, accessToken)
         AuthStore-->>RegisterForm: Success
         RegisterForm->>User: Redirect to dashboard
     end
@@ -141,12 +143,12 @@ sequenceDiagram
     else Valid credentials
         AuthService->>UserDB: SELECT user permissions
         AuthService->>AuthService: Generate JWT access token (15m expiry)
-        AuthService->>AuthService: Generate JWT refresh token (7d expiry)
+        AuthService->>AuthService: Generate JWT refresh token (30d expiry)
         AuthService-->>Backend: {user, accessToken, refreshToken}
-        Backend-->>API: 200 OK with tokens
+        Backend->>Backend: Set fp_refresh HTTP-only cookie
+        Backend-->>API: 200 OK (only accessToken in body)
 
-        API->>AuthStore: setAuth(user, tokens)
-        AuthStore->>LocalStorage: Persist auth state
+        API->>AuthStore: setAuth(user, accessToken)
         AuthStore->>ThemeStore: loadThemeFromServer()
         AuthStore-->>LoginForm: Success
         LoginForm->>User: Redirect to /browse
@@ -167,12 +169,12 @@ sequenceDiagram
   exp: 1705580100   // 15 minutes
 }
 
-// Refresh Token
+// Refresh Token (stored in HTTP-only cookie)
 {
   userId: 1,
   type: "refresh",
   iat: 1705579200,
-  exp: 1706184000   // 7 days
+  exp: 1708257600   // 30 days
 }
 ```
 
@@ -183,6 +185,7 @@ sequenceDiagram
     participant Component
     participant API Client
     participant Interceptor
+    participant AuthStore
     participant Backend
     participant AuthMiddleware
     participant RBACMiddleware
@@ -191,10 +194,13 @@ sequenceDiagram
     Component->>API Client: gamesApi.search(filters)
 
     API Client->>Interceptor: Request interceptor
+    Interceptor->>AuthStore: Get accessToken from store
     Interceptor->>Interceptor: Add Authorization header
-    Note over Interceptor: Authorization: Bearer {token}
+    Note over Interceptor: Authorization: Bearer {accessToken}
 
     Interceptor->>Backend: GET /api/games?filters
+    Note over Interceptor,Backend: Cookies sent automatically
+
     Backend->>AuthMiddleware: authenticate middleware
 
     AuthMiddleware->>AuthMiddleware: Extract & verify JWT
@@ -267,6 +273,7 @@ sequenceDiagram
     participant API Client
     participant Interceptor
     participant AuthStore
+    participant Cookies
     participant Backend
     participant AuthService
 
@@ -275,22 +282,27 @@ sequenceDiagram
     Backend-->>API Client: 401 Unauthorized
 
     API Client->>Interceptor: Response interceptor (401 check)
-    Interceptor->>AuthStore: getState().refreshToken
 
-    alt No refresh token
+    Interceptor->>Backend: POST /api/auth/refresh (empty body)
+    Note over Interceptor,Backend: Cookies (fp_refresh) sent automatically
+
+    alt No refresh token in cookie
+        Backend-->>Interceptor: 401 Unauthorized
         Interceptor->>AuthStore: clearAuth()
         Interceptor->>Component: Redirect to login
     else Has refresh token
-        Interceptor->>Backend: POST /api/auth/refresh {refreshToken}
-        Backend->>AuthService: refreshAccessToken(token)
+        Backend->>AuthService: refreshAccessToken(token from cookie)
 
         alt Invalid refresh token
             AuthService-->>Backend: 401 Unauthorized
+            Backend-->>Interceptor: 401 Unauthorized
             Interceptor->>AuthStore: clearAuth()
             Interceptor->>Component: Redirect to login
         else Valid
-            AuthService->>AuthService: Generate new tokens
-            Backend-->>Interceptor: {accessToken, refreshToken}
+            AuthService->>AuthService: Generate new accessToken
+            AuthService->>AuthService: Generate new refreshToken
+            Backend->>Cookies: Set new fp_refresh cookie
+            Backend-->>Interceptor: {accessToken, expiresIn}
             Interceptor->>AuthStore: updateAccessToken(newToken)
             Interceptor->>Interceptor: Retry original request
             Backend-->>API Client: 200 OK
@@ -311,16 +323,10 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = useAuthStore.getState().refreshToken;
-        if (!refreshToken) {
-          useAuthStore.getState().clearAuth();
-          window.location.href = '/login';
-          return Promise.reject(error);
-        }
-
-        const tokens = await authApi.refreshToken(refreshToken);
-        useAuthStore.getState().updateAccessToken(tokens.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
+        // Refresh token is sent in HTTP-only cookie automatically
+        const { data } = await authApi.refreshToken();
+        useAuthStore.getState().updateAccessToken(data.accessToken);
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         useAuthStore.getState().clearAuth();
@@ -334,6 +340,25 @@ api.interceptors.response.use(
 );
 ```
 
+**Page Reload Recovery**:
+
+When the page reloads, the access token in memory is lost, but the refresh token
+remains in the HTTP-only cookie. The frontend auth initialization sequence detects
+this and automatically calls `/auth/refresh` to recover the session:
+
+```typescript
+// During app initialization
+useEffect(() => {
+  const { isAuthenticated, accessToken } = useAuthStore.getState();
+  if (isAuthenticated && !accessToken) {
+    // Session exists (has refresh cookie) but no access token in memory
+    authApi.refreshToken().then(({ data }) => {
+      useAuthStore.getState().updateAccessToken(data.accessToken);
+    });
+  }
+}, []);
+```
+
 ## 5. Logout Flow
 
 ```mermaid
@@ -342,17 +367,19 @@ sequenceDiagram
     participant Header
     participant AuthStore
     participant API
+    participant Cookies
     participant Backend
 
     User->>Header: Click "Logout"
-    Header->>AuthStore: Get refreshToken
-    Header->>API: authApi.logout(refreshToken)
-    API->>Backend: POST /api/auth/logout
+    Header->>API: authApi.logout()
+    API->>Backend: POST /api/auth/logout (empty body)
+    Note over API,Backend: Cookies (fp_refresh) sent automatically
+    Backend->>Backend: Read refresh token from cookie
     Backend->>Backend: Invalidate refresh token
+    Backend->>Cookies: Clear fp_refresh cookie
     Backend-->>API: 200 OK
 
     API->>AuthStore: clearAuth()
-    AuthStore->>LocalStorage: Clear tokens
     AuthStore-->>Header: Success
     Header->>User: Redirect to /login
 ```
@@ -488,16 +515,25 @@ export const optionalAuth = async (req, res, next) => {
 
 **JWT Security**:
 
-- Short-lived access tokens (15 minutes)
-- Long-lived refresh tokens (7 days)
+- Short-lived access tokens (15 minutes) - held in memory only
+- Long-lived refresh tokens (30 days) - stored in HTTP-only cookies
+- Refresh tokens are rotated on each use to prevent token reuse attacks
 - Signed with random 256-bit JWT_SECRET
 - Verify algorithm: HS256
+- HTTP-only cookie prevents XSS attacks from accessing the refresh token
 
 **Rate Limiting**: 5 login attempts per 15 minutes
 
 **Input Sanitization**: Zod schema validation on all routes
 
 **HTTPS**: Secure cookies in production only
+
+**HTTP-only Cookies**: `fp_refresh` cookie is configured with:
+- `httpOnly: true` - Not accessible to JavaScript (prevents XSS)
+- `secure: true` - Only sent over HTTPS in production
+- `sameSite: 'lax'` - CSRF protection
+- `path: '/api/auth'` - Only sent to auth endpoints
+- `maxAge: 2592000000` - 30 days (in milliseconds)
 
 ## Troubleshooting
 

@@ -13,8 +13,12 @@ Query params: `search` (title/developer/publisher), `platform`, `series`,
 default: asc), `page` (default: 1), `limit` (default: 50, max: 100),
 `showBroken` (default: false), `showExtreme` (default: false)
 
-Returns paginated array with standard game fields (id, title, developer,
-publisher, platformName, releaseDate, tags, description, etc.).
+Returns paginated array with essential game fields (id, title, developer,
+platformName, library, tags, orderTitle).
+
+**Important:** Flash games without `.swf` launchCommands are excluded from
+browse/search results. Only Flash games with direct SWF launch commands appear
+in results and platform counts.
 
 ## Get Filter Options
 
@@ -22,6 +26,9 @@ publisher, platformName, releaseDate, tags, description, etc.).
 
 Returns platforms, developers, publishers, series, playModes, languages arrays
 with name/code and count.
+
+**Note:** Flash platform count reflects only games with `.swf` launchCommands
+(playable Flash games). Non-SWF Flash games are excluded from counts.
 
 ## Get Random Game
 
@@ -50,7 +57,44 @@ Error: `404 Not Found`
 `GET /api/games/:id/launch` - No auth required
 
 Returns gameId, title, platform, launchCommand, contentUrl (proxied through
-game-service), applicationPath, playMode, canPlayInBrowser.
+backend on `/game-proxy/` and `/game-zip/` routes), applicationPath, playMode,
+canPlayInBrowser, and downloading status.
+
+**Response:**
+
+```json
+{
+  "gameId": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Super Mario Flash",
+  "platform": "Flash",
+  "launchCommand": "http://uploads.ungrounded.net/396000/396724_DAplayer_V6.swf",
+  "contentUrl": "http://localhost:3100/game-proxy/http://uploads.ungrounded.net/396000/396724_DAplayer_V6.swf",
+  "applicationPath": ":http: :message:",
+  "playMode": "Single Player",
+  "canPlayInBrowser": true,
+  "downloading": false
+}
+```
+
+**Response (while downloading):**
+
+```json
+{
+  "gameId": "...",
+  "title": "Some Game",
+  "platform": "Flash",
+  "launchCommand": "...",
+  "contentUrl": "...",
+  "canPlayInBrowser": true,
+  "downloading": true
+}
+```
+
+**Notes:**
+
+- `downloading: true` indicates game ZIP is being downloaded from configured gameDataSources
+- Frontend should poll this endpoint every 2 seconds until `downloading` becomes false
+- Backend awaits the mount to complete before returning (not fire-and-forget)
 
 ## Get Related Games
 
@@ -89,6 +133,20 @@ await api.get('/games', {
 
 ## Game Data Fields
 
+**Search Results (GET /api/games):**
+
+| Field        | Type                | Description                                |
+| ------------ | ------------------- | ------------------------------------------ |
+| id           | string (uuid)       | Unique game identifier                     |
+| title        | string              | Game name                                  |
+| developer    | string              | Developer name                             |
+| platformName | string              | Platform (Flash, HTML5, etc.)              |
+| tagsStr      | string              | Semicolon-separated tags                   |
+| library      | string              | "arcade" (games) or "theatre" (animations) |
+| orderTitle   | string              | Title for sorting                          |
+
+**Game Details (GET /api/games/:id):**
+
 | Field            | Type                | Description                                |
 | ---------------- | ------------------- | ------------------------------------------ |
 | id               | string (uuid)       | Unique game identifier                     |
@@ -96,7 +154,7 @@ await api.get('/games', {
 | platformName     | string              | Platform (Flash, HTML5, etc.)              |
 | library          | string              | "arcade" (games) or "theatre" (animations) |
 | developer        | string              | Developer name                             |
-| publisher        | string              | Publisher name                             |
+| publisher        | string              | Publisher name (optional in list views)    |
 | releaseDate      | string (YYYY-MM-DD) | Original release date                      |
 | tags             | string              | Semicolon-separated tags                   |
 | description      | string              | Full description                           |
@@ -114,3 +172,4 @@ await api.get('/games', {
 - Cache results locally (important for repeated searches)
 - Check `canPlayInBrowser` before attempting to play
 - Use exact tag names from `/api/tags` endpoint
+- Note: Flash games require `.swf` launchCommands to appear in browse/search results

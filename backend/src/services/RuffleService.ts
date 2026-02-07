@@ -5,6 +5,11 @@ import AdmZip from 'adm-zip';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 
+interface GitHubAsset {
+  name: string;
+  browser_download_url: string;
+}
+
 /**
  * Service for managing Ruffle emulator versions
  */
@@ -84,7 +89,7 @@ export class RuffleService {
       }
 
       // Find web-selfhosted asset
-      const asset = release.assets.find((a: any) => a.name.includes('web-selfhosted.zip'));
+      const asset = release.assets.find((a: GitHubAsset) => a.name.includes('web-selfhosted.zip'));
 
       if (!asset) {
         throw new Error('web-selfhosted.zip not found in release');

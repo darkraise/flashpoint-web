@@ -1,7 +1,7 @@
 import { Game } from '@/types/game';
 import { GameListItem } from './GameListItem';
 import { useUIStore } from '@/store/ui';
-import { BreadcrumbContext } from './GameCard';
+import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 
 interface GameListProps {
   games: Game[];
@@ -25,7 +25,7 @@ export function GameList({
   const listColumns = useUIStore((state) => state.listColumns);
 
   if (games.length === 0) {
-    return <div className="text-center py-12 text-gray-400">No games found</div>;
+    return <div className="text-center py-12 text-muted-foreground">No games found</div>;
   }
 
   // Dynamic grid classes based on column count

@@ -173,7 +173,7 @@ export class RoleService {
     }
 
     const updates: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (name !== undefined) {
       const existing = UserDatabaseService.get('SELECT id FROM roles WHERE name = ? AND id != ?', [
@@ -224,16 +224,20 @@ export class RoleService {
       throw new AppError(403, 'Cannot modify system role permissions');
     }
 
-    // Delete existing permissions
-    UserDatabaseService.run('DELETE FROM role_permissions WHERE role_id = ?', [roleId]);
+    // Wrap delete + insert in transaction to ensure atomicity
+    const db = UserDatabaseService.getDatabase();
+    const updatePermissions = db.transaction(() => {
+      db.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(roleId);
 
-    // Insert new permissions
-    for (const permissionId of permissionIds) {
-      UserDatabaseService.run(
-        'INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)',
-        [roleId, permissionId]
+      const insert = db.prepare(
+        'INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)'
       );
-    }
+      for (const permissionId of permissionIds) {
+        insert.run(roleId, permissionId);
+      }
+    });
+
+    updatePermissions();
 
     // Invalidate permission cache for this role
     PermissionCache.invalidateRole(roleId);

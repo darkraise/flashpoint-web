@@ -13,6 +13,7 @@ const router = Router();
  * GET /api/health
  * Basic health check - publicly accessible
  * Returns minimal status information
+ * NOTE: A simpler /health endpoint also exists for load balancer checks (registered before middleware)
  */
 router.get('/', (req, res) => {
   const isHealthy = DatabaseService.isConnected() && UserDatabaseService.isConnected();
@@ -138,8 +139,8 @@ router.get(
       },
       services: {
         gameService: {
-          proxyUrl: config.gameServerUrl || 'http://localhost:22500',
-          gameZipPort: config.gameServerHttpPort || 22501,
+          status: 'integrated',
+          routes: ['/game-proxy/*', '/game-zip/*'],
         },
       },
       healthCheckDuration: `${healthCheckTime}ms`,

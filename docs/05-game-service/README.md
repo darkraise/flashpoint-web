@@ -1,25 +1,28 @@
-# Game Service
+# Game Content Module
 
-The Game Service is an independent Node.js service that provides game content
-delivery with intelligent fallback mechanisms for legacy web content and ZIP
-archive serving.
+The Game Content Module is integrated into the backend and provides game
+content delivery with intelligent fallback mechanisms for legacy web content
+and ZIP archive serving.
 
 ## Overview
 
-The game-service runs two HTTP servers:
+The game content module is now part of the backend Express application. Instead
+of running separate HTTP servers on ports 22500/22501, it provides:
 
-1. **HTTP Proxy Server** (Port 22500) - Legacy web content serving with fallback
+1. **Express Route** `/game-proxy/*` - Legacy web content serving with fallback
    chain
-2. **GameZip Server** (Port 22501) - ZIP archive streaming
+2. **GameZip Server** - ZIP mounting and serving via direct API calls (no HTTP)
+
+Both integrate into the backend's main port (3100).
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Game Service                          │
+┌──────────────────────────────────────────────────────────┐
+│              Backend (Port 3100)                         │
 ├──────────────────────┬──────────────────────────────────┤
-│  HTTP Proxy Server   │      GameZip Server              │
-│     Port 22500       │        Port 22501                │
+│  Game Proxy Router   │      GameZip Server              │
+│   /game-proxy/*      │   (Singleton, Direct-Call API)  │
 ├──────────────────────┼──────────────────────────────────┤
 │ - Legacy htdocs      │ - ZIP mounting (no extraction)   │
 │ - Game data files    │ - Streaming file access          │
@@ -40,91 +43,84 @@ The game-service runs two HTTP servers:
 
 ## Quick Start
 
-### Installation & Configuration
+The game content module is automatically part of the backend. No separate
+setup needed:
 
 ```bash
-cd game-service
+# Backend starts all services including game content module
+cd backend
 npm install
-cp .env.example .env
-# Edit .env with your Flashpoint path
-FLASHPOINT_PATH=D:/Flashpoint
-PROXY_PORT=22500
-GAMEZIPSERVER_PORT=22501
+npm run dev      # Starts on port 3100
 ```
 
-### Development
+Game content is served at:
+
+- Proxy routes: `http://localhost:3100/game-proxy/*`
+- Zip mounting API: Handled internally by backend
+
+## Configuration
+
+Game content module configuration is in `backend/.env`:
 
 ```bash
-npm run dev     # Start with hot reload
-npm run build   # Build TypeScript
-npm start       # Run production build
+FLASHPOINT_PATH=D:/Flashpoint
+LOG_LEVEL=info
 ```
+
+See [configuration.md](./configuration.md) for complete options.
 
 ## Testing
 
 ```bash
-# Test HTTP proxy
-curl http://localhost:22500/http://www.example.com/test.html
+# Test proxy via backend
+curl http://localhost:3100/game-proxy/http://www.example.com/test.html
 
-# Test GameZip server
-curl http://localhost:22501/mounts
-
-# Mount a ZIP
-curl -X POST http://localhost:22501/mount/game-123 \
-  -H "Content-Type: application/json" \
-  -d '{"zipPath": "D:/Flashpoint/Data/Games/game.zip"}'
+# GameZip server is not exposed on HTTP - it's used internally by the proxy
 ```
 
-## Service Ports
+## Request Endpoints
 
-| Port  | Service        | Purpose                          |
-| ----- | -------------- | -------------------------------- |
-| 22500 | HTTP Proxy     | Legacy web content and fallbacks |
-| 22501 | GameZip Server | ZIP archive file serving         |
+The game content module is accessed through the backend:
 
-## Environment Variables
+| Route               | Purpose                          |
+| ------------------- | -------------------------------- |
+| `/game-proxy/*`     | Legacy web content and fallbacks |
+| `/game-zip/*`       | ZIP archive file serving         |
 
-| Variable               | Default                    | Description                |
-| ---------------------- | -------------------------- | -------------------------- |
-| PROXY_PORT             | 22500                      | HTTP proxy server port     |
-| GAMEZIPSERVER_PORT     | 22501                      | GameZip server port        |
-| FLASHPOINT_PATH | D:/Flashpoint | Flashpoint installation |
-| LOG_LEVEL       | info          | Logging verbosity       |
-
-> **Note:** External fallback URLs are configured via `proxySettings.json` in
-> the Flashpoint installation directory.
+Both run on the backend's main port (3100).
 
 ## Request Flow
 
-### HTTP Proxy (Port 22500)
+### Game Proxy Router (/game-proxy/*)
 
 1. Try GameZip server (if ZIP mounted)
 2. Try local htdocs
 3. Try external CDN fallback
 4. Return 404 if not found
 
-### GameZip Server (Port 22501)
+### GameZip Server (Direct API)
 
-1. Mount ZIP via POST /mount/game-id
-2. Request file: GET /http://domain.com/path/file.swf
-3. Search mounted ZIPs for content
+1. Backend calls GameZip methods: `mountZip()`, `unmountZip()`, etc.
+2. Request via proxy router: `/game-proxy/http://domain.com/path/file.swf`
+3. GameZip searches mounted ZIPs for content
 4. Stream file directly (no extraction)
 
 ## Documentation
 
 - [architecture.md](./architecture.md) - Architecture and design patterns
-- [proxy-server.md](./proxy-server.md) - HTTP Proxy Server (port 22500)
-- [gamezip-server.md](./gamezip-server.md) - GameZip Server (port 22501)
+- [proxy-server.md](./proxy-server.md) - Proxy Router (`/game-proxy/*`)
+- [gamezip-server.md](./gamezip-server.md) - GameZip Server (Direct API)
 - [legacy-server.md](./legacy-server.md) - Legacy content serving
 - [configuration.md](./configuration.md) - Configuration reference
 
 ## Integration with Backend
 
-The backend delegates file serving to game-service:
+The game content module is fully integrated into the backend:
 
-- Backend returns launch URLs pointing to proxy server
-- Frontend loads game content from game-service URLs
-- Game-service operates independently without backend communication
+- Backend loads game content configuration on startup
+- Backend mounts ZIPs via direct API calls
+- Frontend requests game URLs from backend
+- Proxy router serves content on `/game-proxy/*` endpoints
 
 ## Security
 
@@ -135,50 +131,33 @@ The backend delegates file serving to game-service:
 
 ## Troubleshooting
 
-### Port Already in Use
-
-```bash
-# Find process using port (Windows)
-netstat -ano | findstr :22500
-
-# Kill process or change port in .env
-PROXY_PORT=22510
-```
-
 ### File Not Found
 
-1. Verify Flashpoint path is correct
+1. Verify Flashpoint path is correct in backend `.env`
 2. Check if file exists in htdocs directory
 3. Verify external fallback URLs are accessible
 4. Ensure ZIP is mounted via GameZip API
+5. Check backend logs for game content module errors
 
 ### CORS Errors
 
-- Verify `ALLOW_CROSS_DOMAIN=true` in `.env`
+- Verify `ALLOW_CROSS_DOMAIN=true` in backend `.env`
 - Check response headers: `curl -I <url>`
 - Ensure error responses include CORS headers
 
-## Docker
+## Deployment
+
+The game content module deploys as part of the backend:
 
 ```bash
-# Build
-docker-compose build game-service
+# Development
+cd backend && npm run dev
 
-# Run
-docker-compose up -d game-service
-
-# Logs
-docker-compose logs -f game-service
+# Production
+cd backend && npm run build && NODE_ENV=production npm start
 ```
 
-Set `FLASHPOINT_HOST_PATH` environment variable to point to your Flashpoint
-installation.
+Game content is served from the backend on port 3100.
 
-## Production Deployment
-
-```bash
-npm run build
-NODE_ENV=production npm start
-```
-
-Monitor logs and set up process manager (PM2, systemd).
+For Docker deployment, see the main backend documentation in
+`docs/09-deployment/`.

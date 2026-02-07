@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction } from 'express';
-import { createProxyMiddleware } from 'http-proxy-middleware';
 import { config, getExternalImageUrls } from '../config';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
@@ -55,6 +54,7 @@ async function serveFileWithFallback(
     // Try local file first
     if (fs.existsSync(localPath)) {
       logger.debug(`[Proxy] Serving local file: ${localPath}`);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
       return res.sendFile(localPath);
     }
 
@@ -93,11 +93,26 @@ async function serveFileWithFallback(
                 `[Proxy] Failed to cache image locally: ${cacheError instanceof Error ? cacheError.message : 'Unknown error'}`
               );
             }
-          })();
+          })().catch((err) => {
+            logger.warn('[Proxy] Cache write failed:', err);
+          });
 
-          // Set appropriate content type
-          const contentType = response.headers['content-type'] || 'image/jpeg';
+          // Determine content type from file extension (not from CDN response)
+          const ext = path.extname(relativePath).slice(1).toLowerCase();
+          const mimeMap: Record<string, string> = {
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            png: 'image/png',
+            gif: 'image/gif',
+            webp: 'image/webp',
+            svg: 'image/svg+xml',
+            ico: 'image/x-icon',
+            bmp: 'image/bmp',
+          };
+          const contentType = mimeMap[ext] || 'application/octet-stream';
+
           res.setHeader('Content-Type', contentType);
+          res.setHeader('X-Content-Type-Options', 'nosniff');
           res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
 
           return res.send(imageBuffer);
@@ -123,32 +138,8 @@ async function serveFileWithFallback(
   }
 }
 
-// Proxy to Flashpoint Game Server for game content
-router.use(
-  '/game',
-  createProxyMiddleware({
-    target: config.gameServerUrl,
-    changeOrigin: true,
-    pathRewrite: {
-      '^/proxy/game': '', // Remove /proxy/game prefix
-    },
-    onProxyReq: (proxyReq, req, _res) => {
-      // Add headers if needed
-      if (req.ip) {
-        proxyReq.setHeader('X-Forwarded-For', req.ip);
-      }
-    },
-    onError: (err, req, res) => {
-      logger.error('Proxy error:', err);
-      res.status(500).json({
-        error: {
-          message: 'Failed to proxy request to game server',
-          statusCode: 500,
-        },
-      });
-    },
-  })
-);
+// Note: Game content is now served directly via /game-proxy and /game-zip routes
+// (registered in server.ts before middleware). No proxy to external game-service needed.
 
 // Serve images with CDN fallback
 router.get(
