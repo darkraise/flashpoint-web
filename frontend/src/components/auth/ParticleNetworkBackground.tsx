@@ -28,8 +28,8 @@ const CONFIG = {
   PARTICLE_COUNT: 160, // Base count at 1920px reference width
   PARTICLE_MIN_RADIUS: 2,
   PARTICLE_MAX_RADIUS: 4,
-  PARTICLE_MIN_SPEED: 0.1, // Slow drift
-  PARTICLE_MAX_SPEED: 0.3,
+  PARTICLE_MIN_SPEED: 0.6, // Gentle drift
+  PARTICLE_MAX_SPEED: 1.4,
   PARTICLE_MIN_OPACITY: 0.4,
   PARTICLE_MAX_OPACITY: 0.8,
   CONNECTION_DISTANCE: 120, // Max distance for particle-to-particle lines

@@ -199,7 +199,7 @@ export class UserPlaylistService {
     }
 
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: (string | number | null)[] = [];
 
     if (data.title !== undefined) {
       updates.push('title = ?');
@@ -285,7 +285,7 @@ export class UserPlaylistService {
       WHERE playlist_id = ?
     `);
 
-    let orderIndex = (maxOrderStmt.get(playlistId) as any).maxOrder + 1;
+    let orderIndex = (maxOrderStmt.get(playlistId) as { maxOrder: number }).maxOrder + 1;
 
     // Insert games (ignore duplicates)
     const insertStmt = db.prepare(`
@@ -297,6 +297,15 @@ export class UserPlaylistService {
       for (const gameId of gameIds) {
         insertStmt.run(playlistId, gameId, orderIndex++);
       }
+
+      // Update game_count to reflect actual count
+      const countResult = db
+        .prepare('SELECT COUNT(*) as count FROM user_playlist_games WHERE playlist_id = ?')
+        .get(playlistId) as { count: number };
+      db.prepare('UPDATE user_playlists SET game_count = ? WHERE id = ?').run(
+        countResult.count,
+        playlistId
+      );
     });
 
     transaction(gameIds);
@@ -335,6 +344,15 @@ export class UserPlaylistService {
       for (const gameId of gameIds) {
         stmt.run(playlistId, gameId);
       }
+
+      // Update game_count to reflect actual count
+      const countResult = db
+        .prepare('SELECT COUNT(*) as count FROM user_playlist_games WHERE playlist_id = ?')
+        .get(playlistId) as { count: number };
+      db.prepare('UPDATE user_playlists SET game_count = ? WHERE id = ?').run(
+        countResult.count,
+        playlistId
+      );
     });
 
     transaction(gameIds);
@@ -699,41 +717,65 @@ export class UserPlaylistService {
       return null;
     }
 
-    // Create new playlist
-    const title = newTitle || `${sourcePlaylist.title} (Copy)`;
-    const newPlaylist = this.createPlaylist(userId, {
-      title,
-      description: sourcePlaylist.description || undefined,
-      icon: sourcePlaylist.icon || undefined,
-    });
+    // Wrap create + game inserts in transaction to ensure atomicity
+    const newPlaylistId = db.transaction(() => {
+      // Create new playlist
+      const title = newTitle || `${sourcePlaylist.title} (Copy)`;
+      const now = new Date().toISOString();
+      const result = db
+        .prepare(
+          `INSERT INTO user_playlists (user_id, title, description, icon, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(
+          userId,
+          title,
+          sourcePlaylist.description || null,
+          sourcePlaylist.icon || null,
+          now,
+          now
+        );
 
-    // Copy games with same order
-    const gamesStmt = db.prepare(`
-      SELECT game_id, order_index, notes
-      FROM user_playlist_games
-      WHERE playlist_id = ?
-      ORDER BY order_index
-    `);
+      const playlistId = result.lastInsertRowid as number;
 
-    const games = gamesStmt.all(sourcePlaylist.id) as {
-      game_id: string;
-      order_index: number;
-      notes: string | null;
-    }[];
-
-    if (games.length > 0) {
-      const insertStmt = db.prepare(`
-        INSERT INTO user_playlist_games (playlist_id, game_id, order_index, notes)
-        VALUES (?, ?, ?, ?)
+      // Copy games with same order
+      const gamesStmt = db.prepare(`
+        SELECT game_id, order_index, notes
+        FROM user_playlist_games
+        WHERE playlist_id = ?
+        ORDER BY order_index
       `);
 
-      for (const game of games) {
-        insertStmt.run(newPlaylist.id, game.game_id, game.order_index, game.notes);
+      const games = gamesStmt.all(sourcePlaylist.id) as {
+        game_id: string;
+        order_index: number;
+        notes: string | null;
+      }[];
+
+      if (games.length > 0) {
+        const insertStmt = db.prepare(`
+          INSERT INTO user_playlist_games (playlist_id, game_id, order_index, notes)
+          VALUES (?, ?, ?, ?)
+        `);
+
+        for (const game of games) {
+          insertStmt.run(playlistId, game.game_id, game.order_index, game.notes);
+        }
       }
-    }
 
-    logger.info(`Cloned shared playlist "${sourcePlaylist.title}" to user ${userId} as "${title}"`);
+      // Set game_count on the cloned playlist
+      db.prepare('UPDATE user_playlists SET game_count = ? WHERE id = ?').run(
+        games.length,
+        playlistId
+      );
 
-    return this.getPlaylistById(newPlaylist.id, userId);
+      return playlistId;
+    })();
+
+    logger.info(
+      `Cloned shared playlist "${sourcePlaylist.title}" to user ${userId} as "${newTitle || `${sourcePlaylist.title} (Copy)`}"`
+    );
+
+    return this.getPlaylistById(newPlaylistId, userId);
   }
 }

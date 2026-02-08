@@ -7,9 +7,11 @@ import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { asyncHandler } from '../middleware/asyncHandler';
+import { rateLimitStandard } from '../middleware/rateLimiter';
 import { logger } from '../utils/logger';
 
 const router = Router();
+router.use(rateLimitStandard);
 const metadataUpdateService = new MetadataUpdateService();
 const metadataSyncService = new MetadataSyncService();
 
@@ -125,20 +127,27 @@ router.post(
  * Get current metadata sync status and progress
  * Frontend polls this endpoint to get real-time updates
  */
-router.get('/metadata/sync/status', (req, res) => {
-  try {
-    const syncStatus = SyncStatusService.getInstance();
-    res.json(syncStatus.getStatus());
-  } catch (error) {
-    logger.error('[Updates API] Error getting sync status:', error);
-    res.status(500).json({
-      isRunning: false,
-      stage: 'error',
-      progress: 0,
-      message: 'Error getting sync status',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
+router.get(
+  '/metadata/sync/status',
+  asyncHandler(async (req, res) => {
+    try {
+      const syncStatus = SyncStatusService.getInstance();
+      const status = syncStatus.getStatus();
+      // Sanitize error messages - don't leak internal details to unauthenticated users
+      if (status.error) {
+        status.error = 'Sync failed. Check server logs for details.';
+      }
+      res.json(status);
+    } catch (error) {
+      logger.error('[Updates API] Error getting sync status:', error);
+      res.status(500).json({
+        isRunning: false,
+        stage: 'error',
+        progress: 0,
+        message: 'Error getting sync status',
+      });
+    }
+  })
+);
 
 export default router;

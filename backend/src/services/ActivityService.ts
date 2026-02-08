@@ -13,6 +13,8 @@ import { AUTH_ACTIONS, categorizeAction } from '../utils/activityUtils';
 /**
  * Generate SQL IN clause from AUTH_ACTIONS constant.
  * Keeps the constant as the single source of truth for auth action strings.
+ * SAFETY: This is safe because AUTH_ACTIONS is a hardcoded constant array
+ * (not user input). The join operation builds a static SQL fragment at module load time.
  */
 const AUTH_ACTIONS_SQL = `'${AUTH_ACTIONS.join("', '")}'`;
 

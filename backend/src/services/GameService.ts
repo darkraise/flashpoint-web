@@ -58,6 +58,8 @@ export interface Game {
   playtime?: number;
   playCounter?: number;
   archiveState?: number;
+  activeDataId?: number; // ID of the active game_data entry (null/0 = no game data)
+  activeDataOnDisk?: number; // Whether the active data is downloaded (0 = no, 1 = yes)
   logoPath?: string; // Infinity edition only
   screenshotPath?: string; // Infinity edition only
 }
@@ -71,6 +73,77 @@ export interface PaginatedResult<T> {
 }
 
 export class GameService {
+  /**
+   * Cached set of Flash game IDs that have .swf launch commands in game_data.
+   * Pre-computed once and cached with TTL to avoid per-row EXISTS subqueries
+   * which would be O(N*M) on every search (N=games, M=game_data rows).
+   *
+   * Since flashpoint.sqlite is read-only, this cache only needs to refresh
+   * when the database file is reloaded (detected via DatabaseService file watcher).
+   */
+  private static flashSwfGameIds: Set<string> | null = null;
+  private static flashSwfCacheExpiry = 0;
+  private static readonly FLASH_SWF_CACHE_TTL = 3600000; // 1 hour
+
+  /**
+   * Get the set of Flash game IDs whose game_data.launchCommand points to a .swf file.
+   * Results are cached in memory for 1 hour (read-only DB changes rarely).
+   */
+  private getFlashSwfGameIds(): Set<string> {
+    const now = Date.now();
+    if (GameService.flashSwfGameIds && now < GameService.flashSwfCacheExpiry) {
+      return GameService.flashSwfGameIds;
+    }
+
+    const startTime = performance.now();
+    const sql = `
+      SELECT DISTINCT gd.gameId
+      FROM game_data gd
+      JOIN game g ON g.id = gd.gameId
+      WHERE g.platformName = 'Flash'
+        AND (LOWER(gd.launchCommand) LIKE '%.swf' OR LOWER(gd.launchCommand) LIKE '%.swf?%')
+    `;
+
+    const rows = DatabaseService.all(sql, []) as Array<{ gameId: string }>;
+    GameService.flashSwfGameIds = new Set(rows.map((r) => r.gameId));
+    GameService.flashSwfCacheExpiry = now + GameService.FLASH_SWF_CACHE_TTL;
+
+    const duration = Math.round(performance.now() - startTime);
+    logger.info(
+      `[GameService] Cached ${GameService.flashSwfGameIds.size} Flash SWF game IDs in ${duration}ms`
+    );
+    return GameService.flashSwfGameIds;
+  }
+
+  /**
+   * Clear the Flash SWF game IDs cache.
+   * Call when the flashpoint.sqlite database is reloaded.
+   */
+  static clearFlashSwfCache(): void {
+    GameService.flashSwfGameIds = null;
+    GameService.flashSwfCacheExpiry = 0;
+    logger.debug('[GameService] Flash SWF game IDs cache cleared');
+  }
+
+  /**
+   * SQL condition to exclude Flash games without SWF launch commands.
+   * Uses EXISTS subquery against game_data table (leverages UNIQUE(gameId, dateAdded) index).
+   *
+   * Performance: ~150ms overhead per query. Acceptable for searchGames() since results
+   * are cached by GameSearchCache (5-min TTL). For aggregate queries like
+   * getPlatformOptions(), use getFlashSwfGameIds() cache instead.
+   */
+  private getFlashSwfCondition(tableAlias: string = 'g'): string {
+    return `(
+      ${tableAlias}.platformName != 'Flash'
+      OR EXISTS (
+        SELECT 1 FROM game_data gd
+        WHERE gd.gameId = ${tableAlias}.id
+        AND (LOWER(gd.launchCommand) LIKE '%.swf' OR LOWER(gd.launchCommand) LIKE '%.swf?%')
+      )
+    )`;
+  }
+
   /**
    * Check if running Infinity edition (has logoPath/screenshotPath columns)
    */
@@ -86,11 +159,13 @@ export class GameService {
     const isInfinity = this.isInfinityEdition();
 
     if (fields === 'list') {
-      // Minimal columns for list views (12 essential fields)
+      // Minimal columns for list views (7 essential fields)
+      // GameCard uses: id, title, developer, platformName
+      // GameListItem uses: id, title, developer, platformName, tagsStr
+      // library and orderTitle needed for filtering/sorting
       return `
-        g.id, g.title, g.developer, g.publisher, g.platformName,
-        g.library, g.orderTitle, g.releaseDate, g.tagsStr,
-        g.broken, g.extreme, g.series
+        g.id, g.title, g.developer, g.platformName,
+        g.tagsStr, g.library, g.orderTitle
       `;
     }
 
@@ -102,7 +177,8 @@ export class GameService {
       g.source, g.applicationPath, g.launchCommand, g.releaseDate,
       g.version, g.originalDescription, g.language,
       g.library, g.orderTitle, g.dateAdded, g.dateModified,
-      g.lastPlayed, g.playtime, g.playCounter, g.archiveState`;
+      g.lastPlayed, g.playtime, g.playCounter, g.archiveState,
+      g.activeDataId, g.activeDataOnDisk`;
 
     // Infinity edition has logoPath and screenshotPath columns
     if (isInfinity) {
@@ -133,7 +209,7 @@ export class GameService {
         WHERE 1=1
       `;
 
-      const params: any[] = [];
+      const params: unknown[] = [];
 
       // Apply filters
       if (query.platforms && query.platforms.length > 0) {
@@ -223,14 +299,22 @@ export class GameService {
         sql += ` AND (g.extreme = 0 OR g.extreme IS NULL)`;
       }
 
+      // Exclude Flash games without SWF launch commands (not web-playable)
+      sql += ` AND ${this.getFlashSwfCondition('g')}`;
+
       if (query.search) {
         sql += ` AND (
-          g.title LIKE ? OR
-          g.alternateTitles LIKE ? OR
-          g.developer LIKE ? OR
-          g.publisher LIKE ?
+          g.title LIKE ? ESCAPE '\\' OR
+          g.alternateTitles LIKE ? ESCAPE '\\' OR
+          g.developer LIKE ? ESCAPE '\\' OR
+          g.publisher LIKE ? ESCAPE '\\'
         )`;
-        const searchTerm = `%${query.search}%`;
+        // Escape LIKE wildcards in the search term
+        const escapedSearch = query.search
+          .replace(/\\/g, '\\\\')
+          .replace(/%/g, '\\%')
+          .replace(/_/g, '\\_');
+        const searchTerm = `%${escapedSearch}%`;
         params.push(searchTerm, searchTerm, searchTerm, searchTerm);
       }
 
@@ -314,14 +398,11 @@ export class GameService {
   async getGameById(id: string): Promise<Game | null> {
     try {
       const columns = this.getColumnSelection('detail');
+      // No need for LEFT JOIN - activeDataId and activeDataOnDisk are on game table
       const sql = `
-        SELECT
-          ${columns},
-          MAX(gd.presentOnDisk) as presentOnDisk
+        SELECT ${columns}
         FROM game g
-        LEFT JOIN game_data gd ON gd.gameId = g.id
         WHERE g.id = ?
-        GROUP BY g.id
       `;
 
       const game = DatabaseService.get(sql, [id]) as Game | null;
@@ -344,17 +425,34 @@ export class GameService {
 
       const columns = this.getColumnSelection('detail');
       const placeholders = ids.map(() => '?').join(', ');
+
+      // Query WITHOUT LEFT JOIN to avoid row explosion from multiple game_data entries
       const sql = `
-        SELECT
-          ${columns},
-          MAX(gd.presentOnDisk) as presentOnDisk
+        SELECT ${columns}
         FROM game g
-        LEFT JOIN game_data gd ON gd.gameId = g.id
         WHERE g.id IN (${placeholders})
-        GROUP BY g.id
       `;
 
       const games = DatabaseService.all(sql, ids) as Game[];
+
+      // Fetch presentOnDisk separately (same post-processing pattern as searchGames)
+      if (games.length > 0) {
+        const gameIds = games.map((g) => g.id);
+        const pdPlaceholders = gameIds.map(() => '?').join(', ');
+        const presentOnDiskResults = DatabaseService.all(
+          `SELECT gameId, MAX(presentOnDisk) as presentOnDisk
+           FROM game_data WHERE gameId IN (${pdPlaceholders}) GROUP BY gameId`,
+          gameIds
+        ) as Array<{ gameId: string; presentOnDisk: number }>;
+
+        const presentOnDiskMap = new Map(
+          presentOnDiskResults.map((r) => [r.gameId, r.presentOnDisk])
+        );
+
+        games.forEach((game) => {
+          game.presentOnDisk = presentOnDiskMap.get(game.id) ?? 0;
+        });
+      }
 
       // Sort games to match the order of input IDs
       const gamesMap = new Map(games.map((g) => [g.id, g]));
@@ -375,7 +473,7 @@ export class GameService {
         SELECT id
         FROM game_data
         WHERE gameId = ?
-        ORDER BY presentOnDisk DESC, id DESC
+        ORDER BY id DESC
         LIMIT 1
       `;
 
@@ -393,7 +491,7 @@ export class GameService {
         SELECT launchCommand, path, parameters
         FROM game_data
         WHERE gameId = ?
-        ORDER BY presentOnDisk DESC, id DESC
+        ORDER BY id DESC
         LIMIT 1
       `;
 
@@ -484,7 +582,7 @@ export class GameService {
         WHERE (g.broken = 0 OR g.broken IS NULL)
       `;
 
-      const params: any[] = [];
+      const params: unknown[] = [];
 
       if (library) {
         sql += ` AND g.library = ?`;
@@ -515,6 +613,7 @@ export class GameService {
   /**
    * Get all filter options for dropdowns in a single call
    * Returns: series, developers, publishers, playModes, languages, tags, platforms, yearRange
+   * Note: Methods are synchronous but wrapped in async for consistent API contract
    */
   async getFilterOptions(): Promise<{
     series: Array<{ name: string; count: number }>;
@@ -527,18 +626,15 @@ export class GameService {
     yearRange: { min: number; max: number };
   }> {
     try {
-      // Fetch all filter options in parallel for performance
-      const [series, developers, publishers, playModes, languages, tags, platforms, yearRange] =
-        await Promise.all([
-          this.getSeriesOptions(),
-          this.getDeveloperOptions(),
-          this.getPublisherOptions(),
-          this.getPlayModeOptions(),
-          this.getLanguageOptions(),
-          this.getTagOptions(),
-          this.getPlatformOptions(),
-          this.getYearRange(),
-        ]);
+      // Call synchronous methods directly (no Promise.all needed)
+      const series = this.getSeriesOptions();
+      const developers = this.getDeveloperOptions();
+      const publishers = this.getPublisherOptions();
+      const playModes = this.getPlayModeOptions();
+      const languages = this.getLanguageOptions();
+      const tags = this.getTagOptions();
+      const platforms = this.getPlatformOptions();
+      const yearRange = this.getYearRange();
 
       return {
         series,
@@ -728,8 +824,9 @@ export class GameService {
    */
   getPlatformOptions(): Array<{ name: string; count: number }> {
     try {
+      // Query all platforms without Flash SWF filter (fast, no EXISTS)
       const sql = `
-        SELECT DISTINCT platformName as name, COUNT(*) as count
+        SELECT platformName as name, COUNT(*) as count
         FROM game
         WHERE platformName IS NOT NULL AND platformName != ''
           AND (broken = 0 OR broken IS NULL)
@@ -739,6 +836,14 @@ export class GameService {
       `;
 
       const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
+
+      // Adjust Flash count using cached SWF game IDs (avoids slow EXISTS subquery)
+      const flashSwfIds = this.getFlashSwfGameIds();
+      const flashIndex = results.findIndex((r) => r.name === 'Flash');
+      if (flashIndex !== -1) {
+        results[flashIndex].count = flashSwfIds.size;
+      }
+
       return results;
     } catch (error) {
       logger.error('Error getting platform options:', error);

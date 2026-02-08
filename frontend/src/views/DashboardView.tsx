@@ -42,7 +42,9 @@ export function DashboardView() {
                     <Gamepad2 size={20} />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{statistics.totalGames.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">
+                      {(statistics.totalGames ?? 0).toLocaleString()}
+                    </p>
                     <p className="text-sm text-muted-foreground">Games</p>
                   </div>
                 </div>
@@ -56,7 +58,7 @@ export function DashboardView() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {statistics.totalAnimations.toLocaleString()}
+                      {(statistics.totalAnimations ?? 0).toLocaleString()}
                     </p>
                     <p className="text-sm text-muted-foreground">Animations</p>
                   </div>
@@ -70,7 +72,7 @@ export function DashboardView() {
                     <Layers size={20} />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{statistics.totalPlatforms}</p>
+                    <p className="text-2xl font-bold">{statistics.totalPlatforms ?? 0}</p>
                     <p className="text-sm text-muted-foreground">Platforms</p>
                   </div>
                 </div>
@@ -84,7 +86,7 @@ export function DashboardView() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">
-                      {statistics.webPlayableGames.toLocaleString()}
+                      {(statistics.webPlayableGames ?? 0).toLocaleString()}
                     </p>
                     <p className="text-sm text-muted-foreground">Web Playable Games</p>
                   </div>
@@ -98,7 +100,7 @@ export function DashboardView() {
                     <FolderOpen size={20} />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{statistics.totalPlaylists}</p>
+                    <p className="text-2xl font-bold">{statistics.totalPlaylists ?? 0}</p>
                     <p className="text-sm text-muted-foreground">Flashpoint Playlists</p>
                   </div>
                 </div>
@@ -111,7 +113,9 @@ export function DashboardView() {
                     <Tags size={20} />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{statistics.totalTags.toLocaleString()}</p>
+                    <p className="text-2xl font-bold">
+                      {(statistics.totalTags ?? 0).toLocaleString()}
+                    </p>
                     <p className="text-sm text-muted-foreground">Tags</p>
                   </div>
                 </div>

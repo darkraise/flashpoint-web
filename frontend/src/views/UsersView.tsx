@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { UserTable } from '../components/users/UserTable';
-import { UserForm } from '../components/users/UserForm';
-import { ChangePasswordDialog } from '../components/users/ChangePasswordDialog';
-import { UserDetails } from '../types/auth';
-import { RoleGuard } from '../components/common/RoleGuard';
+import { UserTable } from '@/components/users/UserTable';
+import { UserForm } from '@/components/users/UserForm';
+import { ChangePasswordDialog } from '@/components/users/ChangePasswordDialog';
+import { UserDetails } from '@/types/auth';
+import { RoleGuard } from '@/components/common/RoleGuard';
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export function UsersView() {
   };
 
   const handleSuccess = () => {
-    // Query will automatically refetch due to invalidation in hooks
+    // Intentional no-op: Query will automatically refetch due to invalidation in hooks
   };
 
   return (

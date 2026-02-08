@@ -61,13 +61,15 @@ support, play tracking, and an intuitive interface.
 
 ## Architecture
 
-Flashpoint Web consists of three independent services:
+Flashpoint Web consists of two independent services:
 
-| Service          | Port        | Description                                           |
-| ---------------- | ----------- | ----------------------------------------------------- |
-| **Backend**      | 3100        | REST API for game metadata, users, and authentication |
-| **Frontend**     | 5173        | React web application                                 |
-| **Game Service** | 22500/22501 | File serving proxy and ZIP archive server             |
+| Service      | Port | Description                                                     |
+| ------------ | ---- | --------------------------------------------------------------- |
+| **Backend**  | 3100 | REST API for metadata, users, auth, and game content serving   |
+| **Frontend** | 5173 | React web application                                           |
+
+Game content is served directly by the backend via `/game-proxy/*` and
+`/game-zip/*` routes, enabling efficient file serving and ZIP archive mounting.
 
 ## Quick Start
 
@@ -107,26 +109,9 @@ DOMAIN=http://localhost:5173
 LOG_LEVEL=info
 ```
 
-> **Note:** All database and asset paths are automatically derived from
-> `FLASHPOINT_PATH`.
-
-**2. Game Service** (`game-service/.env`)
-
-```bash
-cp game-service/.env.example game-service/.env
-```
-
-```env
-# Required
-FLASHPOINT_PATH=D:/Flashpoint
-
-# Optional
-LOG_LEVEL=info
-EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs
-```
-
-> **Note:** Frontend requires no `.env` file for local development - API calls
-> are proxied through Vite.
+> **Note:** All database, asset, and game content paths are automatically
+> derived from `FLASHPOINT_PATH`. Frontend requires no `.env` file for local
+> development - API calls are proxied through Vite.
 
 ### Run Development Servers
 
@@ -135,9 +120,8 @@ EXTERNAL_FALLBACK_URLS=http://infinity.flashpointarchive.org/Flashpoint/Legacy/h
 npm run dev
 
 # Or start individually
-npm run dev:backend     # http://localhost:3100
-npm run dev:frontend    # http://localhost:5173
-npm run dev:game-service # http://localhost:22500
+npm run dev:backend  # http://localhost:3100
+npm run dev:frontend # http://localhost:5173
 ```
 
 Open http://localhost:5173 in your browser.
@@ -165,9 +149,13 @@ docker compose -f docker-compose.dev.yml up -d --build
 docker compose logs -f
 ```
 
-**Default ports:** | Service | URL | |---------|-----| | Frontend |
-http://localhost (port 80) | | Backend API | http://localhost:3100 | | Game
-Proxy | http://localhost:22500 | | GameZip Server | http://localhost:22501 |
+**Default ports:**
+
+| Service | URL |
+| --- | --- |
+| Frontend | http://localhost (port 80) |
+| Backend API | http://localhost:3100 |
+| Game Content Routes | http://localhost:3100/game-proxy/* and /game-zip/* |
 
 See [Docker Deployment Guide](docs/09-deployment/docker-deployment.md) for
 advanced configuration.
@@ -268,21 +256,6 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - Ruffle Flash Emulator
 
 </td>
-<td align="center" width="33%">
-
-### Game Service
-
-<p>
-  <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white" alt="Express" />
-</p>
-
-- Express 4.18
-- node-stream-zip 1.15
-- Winston logging
-- CDN fallback support
-
-</td>
 </tr>
 </table>
 
@@ -315,8 +288,9 @@ npm run copy-ruffle
 
 **Games not loading:**
 
-- Ensure game-service is running (ports 22500/22501)
-- Check game-service logs: `npm run dev:game-service`
+- Ensure backend is running on port 3100
+- Check backend logs: `npm run dev:backend`
+- Verify game content routes are accessible at `/game-proxy/*` and `/game-zip/*`
 
 See [Common Pitfalls](docs/08-development/common-pitfalls.md) for more
 solutions.

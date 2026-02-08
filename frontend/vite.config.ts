@@ -21,7 +21,8 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.wasm'],
   esbuild: {
-    drop: ['console', 'debugger'],
+    drop: ['debugger'],
+    pure: ['console.log', 'console.debug'],
   },
   build: {
     // Target modern browsers for smaller bundles
@@ -115,6 +116,14 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/proxy': {
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
+      '/game-proxy': {
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
+      '/game-zip': {
         target: 'http://localhost:3100',
         changeOrigin: true,
       },

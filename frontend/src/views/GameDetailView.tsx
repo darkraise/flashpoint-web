@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGame } from '@/hooks/useGames';
 import { useDownload } from '@/hooks/useDownload';
@@ -7,27 +7,17 @@ import { useGameStats } from '@/hooks/usePlayTracking';
 import { useSharedAccessToken } from '@/hooks/useSharedAccessToken';
 import { sharedPlaylistsApi } from '@/lib/api/sharedPlaylists';
 import { useAuthStore } from '@/store/auth';
-import { ArrowLeft, Play, ImageIcon, Loader2, Clock } from 'lucide-react';
+import { Play, ImageIcon, Loader2, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
-import { BreadcrumbContext } from '@/components/library/GameCard';
+import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 import { getGameLogoUrl, getGameScreenshotUrl } from '@/utils/gameUtils';
-
-// Helper function to format duration in seconds
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (hours === 0) return `${minutes}m`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}m`;
-}
+import { logger } from '@/lib/logger';
+import { formatDuration } from '@/lib/cron-utils';
 
 export function GameDetailView() {
   const { id } = useParams<{ id: string }>();
@@ -44,7 +34,7 @@ export function GameDetailView() {
   // Generate shared access token if accessing via shareToken (for anonymous users)
   useEffect(() => {
     if (shareToken && !isAuthenticated && !hasValidToken) {
-      generateToken(shareToken).catch(console.error);
+      generateToken(shareToken).catch(logger.error);
     }
   }, [shareToken, isAuthenticated, hasValidToken, generateToken]);
 
@@ -56,18 +46,18 @@ export function GameDetailView() {
     isLoading: isLoadingGame,
     error,
     refetch,
-  } = useGame(id!, { enabled: canFetchGame });
+  } = useGame(id ?? '', { enabled: canFetchGame });
 
   // Fetch shared playlist metadata if accessed via shareToken
   const { data: sharedPlaylist } = useQuery({
     queryKey: ['sharedPlaylist', shareToken],
-    queryFn: () => sharedPlaylistsApi.getByToken(shareToken!),
+    queryFn: () => sharedPlaylistsApi.getByToken(shareToken ?? ''),
     enabled: !!shareToken,
     retry: false,
   });
 
   const isLoading = isLoadingGame || isGenerating;
-  const { progress, isDownloading, startDownload } = useDownload(id!);
+  const { progress, isDownloading, startDownload } = useDownload(id ?? '');
   const { data: gameStatsData } = useGameStats();
   const { formatDate } = useDateTimeFormat();
   const [imageError, setImageError] = useState(false);
@@ -78,22 +68,25 @@ export function GameDetailView() {
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
 
   // Helper function to format relative time
-  const formatRelativeTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+  const formatRelativeTime = useCallback(
+    (dateString: string): string => {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
-    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
-    if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
+      if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+      if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
 
-    // Format as date if older than a week
-    return formatDate(dateString);
-  };
+      // Format as date if older than a week
+      return formatDate(dateString);
+    },
+    [formatDate]
+  );
 
   // Find this game's play stats
   const currentGameStats = useMemo(() => {
@@ -111,11 +104,15 @@ export function GameDetailView() {
     setShouldAutoPlay(false);
   }, [id]);
 
-  // Handle download completion
+  // Handle download completion - refetch and wait before auto-play
+  const isRefetchingAfterDownload = useRef(false);
   useEffect(() => {
-    if (progress?.status === 'complete') {
-      // Refetch game data to update activeDataOnDisk
-      refetch();
+    if (progress?.status === 'complete' && !isRefetchingAfterDownload.current) {
+      // Refetch game data to update activeDataOnDisk, wait for completion
+      isRefetchingAfterDownload.current = true;
+      refetch().finally(() => {
+        isRefetchingAfterDownload.current = false;
+      });
     }
     if (progress?.status === 'error') {
       setDownloadError(progress.error || 'Download failed');
@@ -125,12 +122,37 @@ export function GameDetailView() {
 
   // Auto-play after download completes and game data is refetched
   useEffect(() => {
-    if (shouldAutoPlay && game && game.presentOnDisk !== 0 && !isDownloading) {
+    if (
+      shouldAutoPlay &&
+      game &&
+      game.presentOnDisk !== 0 &&
+      !isDownloading &&
+      !isRefetchingAfterDownload.current
+    ) {
       // Game is now available, auto-navigate to play page
       setShouldAutoPlay(false);
-      navigate(`/games/${game.id}/play`);
+      navigate(buildSharedGameUrl(`/games/${game.id}/play`, shareToken), {
+        state: {
+          playerBreadcrumbContext: {
+            breadcrumbContext,
+            gameTitle: game.title,
+            gameDetailHref: buildSharedGameUrl(`/games/${game.id}`, shareToken),
+            shareToken: shareToken ?? null,
+            sharedPlaylistTitle: sharedPlaylist?.title ?? null,
+            sharedPlaylistHref: shareToken ? `/playlists/shared/${shareToken}` : null,
+          },
+        },
+      });
     }
-  }, [shouldAutoPlay, game, isDownloading, navigate]);
+  }, [
+    shouldAutoPlay,
+    game,
+    isDownloading,
+    navigate,
+    shareToken,
+    breadcrumbContext,
+    sharedPlaylist,
+  ]);
 
   const handleStartDownload = async () => {
     try {
@@ -202,15 +224,6 @@ export function GameDetailView() {
           homeHref={shareToken ? '#' : '/'}
         />
 
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Go back to previous page"
-        >
-          <ArrowLeft size={20} />
-          Back
-        </button>
-
         <div className="bg-card rounded-lg p-6 space-y-6 border border-border shadow-md">
           {/* Logo and Title Section - At the top */}
           <div className="flex items-start justify-between gap-4">
@@ -278,7 +291,7 @@ export function GameDetailView() {
                       className="inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary text-white rounded-xl shadow-lg cursor-wait opacity-75 transition-all w-full sm:w-auto"
                       title="Preparing game..."
                     >
-                      <Loader2 size={28} className="sm:w-8 sm:h-8 animate-spin" />
+                      <Loader2 className="w-7 h-7 sm:w-8 sm:h-8 animate-spin" />
                     </button>
                   ) : needsDataDownload ? (
                     <button
@@ -295,6 +308,16 @@ export function GameDetailView() {
                   ) : (
                     <Link
                       to={buildSharedGameUrl(`/games/${game.id}/play`, shareToken)}
+                      state={{
+                        playerBreadcrumbContext: {
+                          breadcrumbContext,
+                          gameTitle: game.title,
+                          gameDetailHref: buildSharedGameUrl(`/games/${game.id}`, shareToken),
+                          shareToken: shareToken ?? null,
+                          sharedPlaylistTitle: sharedPlaylist?.title ?? null,
+                          sharedPlaylistHref: shareToken ? `/playlists/shared/${shareToken}` : null,
+                        },
+                      }}
                       className="group inline-flex items-center justify-center p-4 sm:p-5 md:p-6 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg hover:shadow-xl hover:shadow-primary/20 transition-all hover:scale-105 active:scale-95 ring-2 ring-primary/20 hover:ring-primary/40 w-full sm:w-auto"
                       title="Play Game"
                     >
@@ -369,8 +392,8 @@ export function GameDetailView() {
             <div>
               <h2 className="text-lg font-semibold mb-2">Tags</h2>
               <div className="flex flex-wrap gap-2">
-                {game.tagsStr.split(';').map((tag, i) => (
-                  <Badge key={i} variant="tag">
+                {game.tagsStr.split(';').map((tag) => (
+                  <Badge key={tag.trim()} variant="tag">
                     {tag.trim()}
                   </Badge>
                 ))}

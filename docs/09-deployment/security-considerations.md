@@ -63,8 +63,10 @@ not in config files).
 
 **Session Management:**
 
-- Access tokens: 1 hour (short-lived)
-- Refresh tokens: 7 days (stored in database)
+- Access tokens: 1 hour (short-lived, memory only)
+- Refresh tokens: 30 days (HTTP-only cookies, secure in production)
+- Cookie path: `/api/auth` (prevents leakage to other routes)
+- SameSite=lax: Provides CSRF protection
 - Old tokens automatically revoked on refresh
 - Logout invalidates all user sessions
 
@@ -160,8 +162,6 @@ Docker secrets.
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw deny 3100/tcp      # Block direct backend access
-sudo ufw deny 22500/tcp
-sudo ufw deny 22501/tcp
 sudo ufw enable
 ```
 

@@ -72,7 +72,14 @@ router.get(
     } = queryResult.data;
 
     // Build filters object
-    const filters: any = {};
+    const filters: {
+      userId?: number;
+      username?: string;
+      action?: string;
+      resource?: string;
+      startDate?: string;
+      endDate?: string;
+    } = {};
     if (userId !== undefined) filters.userId = userId;
     if (username) filters.username = username;
     if (action) filters.action = action;
@@ -95,7 +102,20 @@ router.get(
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
+    // Validate timeRange before casting
+    const validTimeRanges = ['24h', '7d', '30d'] as const;
+    const rawTimeRange = req.query.timeRange as string | undefined;
+    if (
+      rawTimeRange &&
+      !validTimeRanges.includes(rawTimeRange as (typeof validTimeRanges)[number])
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid timeRange. Must be 24h, 7d, or 30d',
+      });
+    }
+    const timeRange = (rawTimeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
+
     const customRange =
       req.query.startDate && req.query.endDate
         ? {
@@ -147,7 +167,19 @@ router.get(
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 10, MAX_ACTIONS_LIMIT);
-    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
+    // Validate timeRange before casting
+    const validTimeRanges = ['24h', '7d', '30d'] as const;
+    const rawTimeRange = req.query.timeRange as string | undefined;
+    if (
+      rawTimeRange &&
+      !validTimeRanges.includes(rawTimeRange as (typeof validTimeRanges)[number])
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid timeRange. Must be 24h, 7d, or 30d',
+      });
+    }
+    const timeRange = (rawTimeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
 
     const result = await activityService.getTopActions(limit, timeRange);
 
@@ -176,6 +208,15 @@ router.get(
       return res.status(400).json({
         success: false,
         error: 'Invalid groupBy parameter. Must be one of: resource, user, ip',
+      });
+    }
+
+    // Validate timeRange
+    const validTimeRanges = ['24h', '7d', '30d'] as const;
+    if (req.query.timeRange && !validTimeRanges.includes(timeRange)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid timeRange. Must be 24h, 7d, or 30d',
       });
     }
 

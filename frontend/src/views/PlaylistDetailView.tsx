@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/auth';
 
 export function PlaylistDetailView() {
   const { id } = useParams<{ id: string }>();
-  const { data: playlist, isLoading, error } = usePlaylist(id!);
+  const { data: playlist, isLoading, error } = usePlaylist(id ?? '');
   const { isAuthenticated } = useAuthStore();
 
   // Fetch favorite game IDs for performance optimization
@@ -22,8 +22,8 @@ export function PlaylistDetailView() {
   if (isLoading) {
     return (
       <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
-        <p className="mt-4 text-gray-400">Loading playlist...</p>
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="mt-4 text-muted-foreground">Loading playlist...</p>
       </div>
     );
   }
@@ -31,11 +31,8 @@ export function PlaylistDetailView() {
   if (error || !playlist) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-400">Error loading playlist</p>
-        <Link
-          to="/flashpoint-playlists"
-          className="text-primary-500 hover:underline mt-4 inline-block"
-        >
+        <p className="text-destructive">Error loading playlist</p>
+        <Link to="/flashpoint-playlists" className="text-primary hover:underline mt-4 inline-block">
           Back to playlists
         </Link>
       </div>
@@ -46,7 +43,7 @@ export function PlaylistDetailView() {
     <div className="max-w-7xl mx-auto space-y-6">
       <Link
         to="/flashpoint-playlists"
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-gray-200 transition-colors"
       >
         <ArrowLeft size={20} />
         Back to playlists
@@ -67,17 +64,17 @@ export function PlaylistDetailView() {
 
       {playlist.games && playlist.games.length > 0 ? (
         <>
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-muted-foreground">
             {playlist.games.length} {playlist.games.length === 1 ? 'game' : 'games'}
           </div>
           <GameGrid
             games={playlist.games}
             favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
-            breadcrumbContext={{ label: playlist.title, href: `/flashpoint-playlists/${id}` }}
+            breadcrumbContext={{ label: playlist.title, href: `/flashpoint-playlists/${id ?? ''}` }}
           />
         </>
       ) : (
-        <div className="text-center py-12 text-gray-400">No games in this playlist</div>
+        <div className="text-center py-12 text-muted-foreground">No games in this playlist</div>
       )}
     </div>
   );

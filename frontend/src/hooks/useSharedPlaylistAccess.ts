@@ -65,12 +65,14 @@ export function buildSharedGameUrl(basePath: string, shareToken: string | null):
   // Map regular routes to shared layout routes when shareToken is present
   // Game play route: /games/:id/play → /games/:id/play-shared?shareToken=...
   if (basePath.match(/^\/games\/[^/]+\/play$/)) {
-    return basePath.replace('/play', '/play-shared') + `?shareToken=${shareToken}`;
+    return (
+      basePath.replace('/play', '/play-shared') + `?shareToken=${encodeURIComponent(shareToken)}`
+    );
   }
 
   // Game detail route: /games/:id → /games/:id/shared?shareToken=...
   if (basePath.match(/^\/games\/[^/]+$/)) {
-    return basePath + `/shared?shareToken=${shareToken}`;
+    return basePath + `/shared?shareToken=${encodeURIComponent(shareToken)}`;
   }
 
   // Fallback: add query param for other routes

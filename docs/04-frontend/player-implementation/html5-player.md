@@ -90,19 +90,19 @@ With current sandbox settings:
 
 ## Content URL Structure
 
-HTML5 game content is served through the game-service proxy:
+HTML5 game content is served through the integrated backend game server:
 
 ```
-http://localhost:22500/[relativePath]
+/game-proxy/[relativePath]
 ```
 
 Example:
 
 ```
-http://localhost:22500/Games/HTML5/example-game/index.html
+/game-proxy/Games/HTML5/example-game/index.html
 ```
 
-The game-service handles:
+The backend game server handles:
 
 - Serving index.html
 - Serving game assets (JS, CSS, images)
@@ -152,7 +152,7 @@ const [iframeError, setIframeError] = useState<string | null>(null);
 
 - Check browser console for CORS errors
 - Verify content URL is correct
-- Ensure game-service is running
+- Ensure backend is running
 
 **Issue: Game loads but doesn't work**
 
@@ -164,7 +164,7 @@ const [iframeError, setIframeError] = useState<string | null>(null);
 
 - CORS may be blocking cross-origin requests
 - Game may need same-origin access
-- Check game-service proxy configuration
+- Check backend game server configuration
 
 ## Performance
 
@@ -256,10 +256,26 @@ console.log('[HTML5 Game] Loaded successfully');
 console.error('[HTML5 Game] Load error:', error);
 ```
 
+## Related Features
+
+### Flash Game SWF Extraction
+
+The GamePlayer component handles Flash games with HTML wrapper pages by
+automatically extracting the actual SWF URL. See
+[Game Playing - Flash Content Resolution](../../10-features/03-game-playing.md#flash-game-content-url-resolution)
+for details on the 9-pattern SWF extraction system.
+
+### Flash SWF Filter
+
+Note that Flash games without `.swf` launchCommands are filtered from browse/search
+results. See [Common Pitfalls](../../08-development/common-pitfalls.md#flash-games-must-have-swf-launch-commands-to-appear-in-browse)
+for more information.
+
 ## Further Reading
 
 - [GamePlayer Component](../components/player-components.md)
 - [Ruffle Player](./ruffle-player.md)
-- [Game Service Documentation](../../05-game-service/README.md)
+- [Backend Game Server Documentation](../../03-backend/README.md)
+- [Game Playing Feature Guide](../../10-features/03-game-playing.md)
 - [MDN: iframe](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe)
 - [MDN: iframe sandbox](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe#attr-sandbox)

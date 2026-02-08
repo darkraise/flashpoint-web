@@ -3,10 +3,27 @@ import { promises as fs } from 'fs';
 import fsSync from 'fs';
 import path from 'path';
 import winston from 'winston';
+import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
+import { rateLimitStrict } from '../middleware/rateLimiter';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 import { config } from '../config';
+
+/**
+ * Zod schema for error report validation
+ * Enforces strict types and size limits on client-submitted error reports
+ */
+const errorReportSchema = z.object({
+  type: z.enum(['client_error', 'network_error', 'api_error', 'route_error']),
+  message: z.string().max(2000),
+  stack: z.string().max(5000).optional(),
+  url: z.string().max(2000),
+  timestamp: z.string().optional(),
+  userAgent: z.string().optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
+});
 
 const router = Router();
 
@@ -76,17 +93,6 @@ interface ErrorReport {
 type AuthenticatedRequest = Request & { user?: { id: number } };
 
 /**
- * Ensure logs directory exists
- */
-async function ensureLogDir(): Promise<void> {
-  try {
-    await fs.mkdir(LOG_DIR, { recursive: true });
-  } catch (error) {
-    logger.error('Failed to create logs directory:', error);
-  }
-}
-
-/**
  * Log error report to file in OTEL-compatible JSON format
  */
 async function logError(report: ErrorReport): Promise<void> {
@@ -110,49 +116,59 @@ async function logError(report: ErrorReport): Promise<void> {
  */
 async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
   try {
-    await ensureLogDir();
+    // Stream the file line by line to avoid loading the entire file into memory
+    const { createReadStream } = await import('fs');
+    const { createInterface } = await import('readline');
 
-    try {
-      const content = await fs.readFile(ERROR_LOG_FILE, 'utf8');
-      const lines = content.trim().split('\n');
+    return await new Promise<ErrorReport[]>((resolve) => {
+      try {
+        const stream = createReadStream(ERROR_LOG_FILE, { encoding: 'utf8' });
+        const rl = createInterface({ input: stream, crlfDelay: Infinity });
 
-      // Parse JSONL lines (newest first)
-      const errors: ErrorReport[] = [];
-      for (let i = lines.length - 1; i >= 0 && errors.length < limit; i--) {
-        const line = lines[i].trim();
-        if (line) {
-          try {
-            const logEntry = JSON.parse(line);
-            // Convert back to ErrorReport format for API response
-            errors.push({
-              type: logEntry.errorType || 'client_error',
-              message: logEntry.message,
-              stack: logEntry.stack,
-              url: logEntry.clientUrl,
-              timestamp: logEntry.clientTimestamp || logEntry.timestamp,
-              userAgent: logEntry.userAgent,
-              userId: logEntry.userId,
-              context: logEntry.context,
-            });
-          } catch (parseError) {
-            logger.warn('Failed to parse error log line:', parseError);
+        const allLines: string[] = [];
+
+        rl.on('line', (line) => {
+          const trimmed = line.trim();
+          if (trimmed) {
+            allLines.push(trimmed);
           }
-        }
-      }
+        });
 
-      return errors;
-    } catch (readError) {
-      // File doesn't exist yet - handle ENOENT error
-      if (
-        readError &&
-        typeof readError === 'object' &&
-        'code' in readError &&
-        readError.code === 'ENOENT'
-      ) {
-        return [];
+        rl.on('close', () => {
+          // Parse lines newest-first
+          const errors: ErrorReport[] = [];
+          for (let i = allLines.length - 1; i >= 0 && errors.length < limit; i--) {
+            try {
+              const logEntry = JSON.parse(allLines[i]);
+              errors.push({
+                type: logEntry.errorType || 'client_error',
+                message: logEntry.message,
+                stack: logEntry.stack,
+                url: logEntry.clientUrl,
+                timestamp: logEntry.clientTimestamp || logEntry.timestamp,
+                userAgent: logEntry.userAgent,
+                userId: logEntry.userId,
+                context: logEntry.context,
+              });
+            } catch (parseError) {
+              logger.warn('Failed to parse error log line:', parseError);
+            }
+          }
+          resolve(errors);
+        });
+
+        stream.on('error', (err: NodeJS.ErrnoException) => {
+          if (err.code === 'ENOENT') {
+            resolve([]);
+          } else {
+            logger.error('Failed to read client errors:', err);
+            resolve([]);
+          }
+        });
+      } catch (err) {
+        resolve([]);
       }
-      throw readError;
-    }
+    });
   } catch (error) {
     logger.error('Failed to read client errors:', error);
     return [];
@@ -164,54 +180,60 @@ async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
  * Report a client-side error
  * Public endpoint (no authentication required, but rate-limited)
  */
-router.post('/report', async (req: Request, res: Response) => {
-  try {
-    const report: ErrorReport = req.body;
+router.post(
+  '/report',
+  rateLimitStrict,
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      // Validate request body with Zod schema
+      const parseResult = errorReportSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: `Invalid error report: ${parseResult.error.issues[0].message}`,
+          },
+        });
+      }
 
-    // Validate required fields
-    if (!report.type || !report.message || !report.url) {
-      return res.status(400).json({
+      const validatedData = parseResult.data;
+
+      // Build report from validated data
+      const report: ErrorReport = {
+        type: validatedData.type,
+        message: validatedData.message,
+        stack: validatedData.stack,
+        url: validatedData.url,
+        timestamp: validatedData.timestamp || new Date().toISOString(),
+        userAgent: validatedData.userAgent || req.headers['user-agent'] || 'Unknown',
+        context: validatedData.context,
+      };
+
+      // Add user ID if authenticated
+      const authReq = req as AuthenticatedRequest;
+      if (authReq.user) {
+        report.userId = authReq.user.id;
+      }
+
+      // Log to file
+      await logError(report);
+
+      logger.info(`[Client Error] ${report.type} - ${report.message} (${report.url})`);
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error('Error in /errors/report:', error);
+      res.status(500).json({
         success: false,
         error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Missing required fields: type, message, url',
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to log error report',
         },
       });
     }
-
-    // Add user ID if authenticated
-    const authReq = req as AuthenticatedRequest;
-    if (authReq.user) {
-      report.userId = authReq.user.id;
-    }
-
-    // Add timestamp if not provided
-    if (!report.timestamp) {
-      report.timestamp = new Date().toISOString();
-    }
-
-    // Add user agent if not provided
-    if (!report.userAgent) {
-      report.userAgent = req.headers['user-agent'] || 'Unknown';
-    }
-
-    // Log to file
-    await logError(report);
-
-    logger.info(`[Client Error] ${report.type} - ${report.message} (${report.url})`);
-
-    res.json({ success: true });
-  } catch (error) {
-    logger.error('Error in /errors/report:', error);
-    res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to log error report',
-      },
-    });
-  }
-});
+  })
+);
 
 /**
  * GET /api/errors/recent
@@ -222,9 +244,9 @@ router.get(
   '/recent',
   authenticate,
   requirePermission('settings.update'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 100;
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 1000);
       const errors = await getRecentErrors(limit);
 
       res.json({
@@ -245,7 +267,7 @@ router.get(
         },
       });
     }
-  }
+  })
 );
 
 /**
@@ -257,7 +279,7 @@ router.get(
   '/stats',
   authenticate,
   requirePermission('settings.update'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const errors = await getRecentErrors(1000);
 
@@ -310,7 +332,7 @@ router.get(
         },
       });
     }
-  }
+  })
 );
 
 export default router;

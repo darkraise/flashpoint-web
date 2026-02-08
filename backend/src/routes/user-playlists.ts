@@ -36,15 +36,15 @@ const updatePlaylistSchema = z.object({
 });
 
 const addGamesSchema = z.object({
-  gameIds: z.array(z.string()).min(1),
+  gameIds: z.array(z.string()).min(1).max(100),
 });
 
 const removeGamesSchema = z.object({
-  gameIds: z.array(z.string()).min(1),
+  gameIds: z.array(z.string()).min(1).max(100),
 });
 
 const reorderGamesSchema = z.object({
-  gameIdOrder: z.array(z.string()).min(1),
+  gameIdOrder: z.array(z.string()).min(1).max(100),
 });
 
 const copyFlashpointPlaylistSchema = z.object({

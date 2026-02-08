@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { validateSharedPlaylist } from '../middleware/validateSharedPlaylist';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authenticate } from '../middleware/auth';
@@ -14,6 +15,11 @@ const router = Router();
 const playlistService = new UserPlaylistService();
 const userService = new UserService();
 
+// Validation schema
+const clonePlaylistSchema = z.object({
+  newTitle: z.string().min(1).max(255).optional(),
+});
+
 /**
  * GET /api/playlists/shared/:shareToken
  * Get shared playlist metadata (anonymous access)
@@ -28,7 +34,16 @@ router.get(
     const playlist = req.sharedPlaylist!;
 
     // Sanitize response - don't expose sensitive fields
-    const response: any = {
+    const response: {
+      id: number;
+      title: string;
+      description: string | null;
+      icon: string | null;
+      gameCount: number;
+      createdAt: string;
+      updatedAt: string;
+      ownerUsername?: string;
+    } = {
       id: playlist.id,
       title: playlist.title,
       description: playlist.description,
@@ -82,6 +97,7 @@ router.get(
 router.get(
   '/:shareToken/games/:gameId/validate',
   rateLimitStrict,
+  validateSharedPlaylist,
   asyncHandler(async (req, res) => {
     const { shareToken, gameId } = req.params;
 
@@ -144,7 +160,8 @@ router.post(
   requirePermission('playlists.create'),
   validateSharedPlaylist,
   asyncHandler(async (req, res) => {
-    const { newTitle } = req.body;
+    // Validate request body
+    const { newTitle } = clonePlaylistSchema.parse(req.body);
 
     const clonedPlaylist = playlistService.cloneSharedPlaylist(
       req.params.shareToken,

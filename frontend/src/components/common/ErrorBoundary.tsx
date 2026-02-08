@@ -80,18 +80,18 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Something went wrong</h1>
-                <p className="text-gray-400 mt-1">
+                <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
+                <p className="text-muted-foreground mt-1">
                   An unexpected error occurred. We've logged the issue and will look into it.
                 </p>
               </div>
             </div>
 
             {/* Error details (only in development) */}
-            {process.env.NODE_ENV === 'development' && this.state.error ? (
+            {import.meta.env.DEV && this.state.error ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h2 className="text-sm font-semibold text-red-400 mb-2">Error Details:</h2>
-                <pre className="text-xs text-gray-300 overflow-auto max-h-64">
+                <pre className="text-xs text-muted-foreground overflow-auto max-h-64">
                   {this.state.error.toString()}
                   {this.state.errorInfo ? (
                     <>
@@ -117,8 +117,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
             {/* Additional help text */}
             <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-sm text-gray-400">If this problem persists, please try:</p>
-              <ul className="mt-2 space-y-1 text-sm text-gray-400 list-disc list-inside">
+              <p className="text-sm text-muted-foreground">If this problem persists, please try:</p>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground list-disc list-inside">
                 <li>Refreshing the page</li>
                 <li>Clearing your browser cache</li>
                 <li>Checking your internet connection</li>

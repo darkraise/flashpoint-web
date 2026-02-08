@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth';
 import { useSharedAccessStore } from '@/store/sharedAccess';
-import type { AuthTokens } from '@/types/auth';
 
 /**
  * Base axios instance for API calls
@@ -17,6 +17,7 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 // ===================================
@@ -59,14 +60,20 @@ apiClient.interceptors.request.use(
  * requests receive 401 errors simultaneously
  */
 let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshSubscribers: { resolve: (token: string) => void; reject: (error: unknown) => void }[] =
+  [];
 
-function subscribeTokenRefresh(cb: (token: string) => void) {
-  refreshSubscribers.push(cb);
+function subscribeTokenRefresh(resolve: (token: string) => void, reject: (error: unknown) => void) {
+  refreshSubscribers.push({ resolve, reject });
 }
 
 function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers.forEach((sub) => sub.resolve(token));
+  refreshSubscribers = [];
+}
+
+function onTokenRefreshFailed(error: unknown) {
+  refreshSubscribers.forEach((sub) => sub.reject(error));
   refreshSubscribers = [];
 }
 
@@ -94,23 +101,21 @@ apiClient.interceptors.response.use(
 
     // Handle network errors (no response from server)
     if (!error.response) {
-      const { toast } = await import('sonner');
-      toast.error('Network error. Please check your connection.');
+      toast.error('Network error. Please check your connection.', { id: 'network-error' });
       return Promise.reject(error);
     }
 
     const status = error.response.status;
 
-    // Handle 404 errors - show toast notification
-    if (status === 404) {
-      const { toast } = await import('sonner');
-      toast.error('Resource not found');
+    // Handle 404 errors - only show toast for unexpected 404s
+    // Skip for endpoints that commonly return 404 as a normal response
+    if (status === 404 && !originalRequest._skip404Toast) {
+      toast.error('Resource not found', { id: 'not-found' });
     }
 
     // Handle 500+ errors (server errors) - show toast notification
     if (status >= 500) {
-      const { toast } = await import('sonner');
-      toast.error('Server error occurred. Please try again later.');
+      toast.error('Server error occurred. Please try again later.', { id: 'server-error' });
     }
 
     // If error is 401 and we haven't retried yet
@@ -123,7 +128,6 @@ apiClient.interceptors.response.use(
         originalRequest.headers?.Authorization?.startsWith('SharedAccess ')
       ) {
         useSharedAccessStore.getState().clearToken();
-        const { toast } = await import('sonner');
         toast.error('Your shared access has expired. Return to the playlist to continue browsing.');
         // Don't redirect to login for shared access - let the UI handle it
         return Promise.reject(error);
@@ -131,8 +135,7 @@ apiClient.interceptors.response.use(
 
       // Don't retry the refresh endpoint itself (prevents infinite loop)
       if (originalRequest.url?.includes('/auth/refresh')) {
-        const { toast } = await import('sonner');
-        toast.error('Session expired. Please login again.');
+        toast.error('Session expired. Please log in again.');
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
         return Promise.reject(error);
@@ -140,11 +143,11 @@ apiClient.interceptors.response.use(
 
       // If a token refresh is already in progress, wait for it
       if (isRefreshing) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           subscribeTokenRefresh((newToken) => {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             resolve(apiClient(originalRequest));
-          });
+          }, reject);
         });
       }
 
@@ -152,21 +155,19 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = useAuthStore.getState().refreshToken;
-
-        if (!refreshToken) {
-          // No refresh token available, clear auth and redirect to login
-          const { toast } = await import('sonner');
-          toast.error('Session expired. Please login again.');
+        if (!useAuthStore.getState().isAuthenticated) {
+          toast.error('Session expired. Please log in again.');
           useAuthStore.getState().clearAuth();
           window.location.href = '/login';
           return Promise.reject(error);
         }
 
-        // Try to refresh the token
-        const { data } = await apiClient.post<AuthTokens>('/auth/refresh', { refreshToken });
+        // Try to refresh the token (cookie sent automatically)
+        const { data } = await apiClient.post<{ accessToken: string; expiresIn: number }>(
+          '/auth/refresh'
+        );
 
-        // Update the access token in the store
+        // Update access token in the store
         useAuthStore.getState().updateAccessToken(data.accessToken);
 
         // Notify all waiting requests of the new token
@@ -176,9 +177,11 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
+        // Notify all waiting requests of the error
+        onTokenRefreshFailed(refreshError);
+
         // Refresh failed, clear auth and redirect to login
-        const { toast } = await import('sonner');
-        toast.error('Session expired. Please login again.');
+        toast.error('Session expired. Please log in again.');
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
         return Promise.reject(refreshError);

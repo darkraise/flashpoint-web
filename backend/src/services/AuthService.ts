@@ -8,6 +8,25 @@ import { hashPassword, verifyPassword } from '../utils/password';
 import { AppError } from '../middleware/errorHandler';
 import { LoginCredentials, RegisterData, AuthTokens, AuthUser } from '../types/auth';
 
+/**
+ * User data for token generation
+ */
+interface UserTokenData {
+  id: number;
+  username: string;
+  role_name: string;
+}
+
+/**
+ * Auth settings shape from system_settings
+ */
+interface AuthSettings {
+  guest_access_enabled: number;
+  user_registration_enabled: number;
+  max_login_attempts: number;
+  lockout_duration_minutes: number;
+}
+
 export class AuthService {
   private systemSettings: SystemSettingsService;
   private cachedSystemSettings: CachedSystemSettingsService;
@@ -30,9 +49,10 @@ export class AuthService {
       // Check login attempts and lockout
       await this.checkLoginAttempts(username, ipAddress);
 
-      // Find user
+      // Find user (select only needed columns — avoid passing password_hash beyond verification)
       const user = UserDatabaseService.get(
-        `SELECT u.*, r.name as role_name, r.priority
+        `SELECT u.id, u.username, u.email, u.password_hash,
+                r.name as role_name, r.priority
          FROM users u
          JOIN roles r ON u.role_id = r.id
          WHERE u.username = ? AND u.is_active = 1`,
@@ -73,8 +93,6 @@ export class AuthService {
         email: user.email,
         role: user.role_name,
         permissions,
-        themeColor: user.theme_color || 'blue-500',
-        surfaceColor: user.surface_color || 'slate-700',
       };
 
       return { user: authUser, tokens };
@@ -98,53 +116,55 @@ export class AuthService {
    * The method automatically detects which scenario applies based on whether users exist
    */
   async register(data: RegisterData): Promise<{ user: AuthUser; tokens: AuthTokens }> {
-    // Check if this is initial setup (no users exist)
-    const isInitialSetup = UserDatabaseService.needsInitialSetup();
-
-    // Validation: Regular registration requires registration to be enabled
-    // Initial setup bypasses this check (first user is always allowed)
-    if (!isInitialSetup) {
-      const settings = this.getAuthSettings();
-      if (!settings.user_registration_enabled) {
-        throw new AppError(403, 'User registration is currently disabled');
-      }
-    }
-
-    // Check if username exists
-    const existingUser = UserDatabaseService.get('SELECT id FROM users WHERE username = ?', [
-      data.username,
-    ]);
-    if (existingUser) {
-      throw new AppError(409, 'Username already exists');
-    }
-
-    // Check if email exists
-    const existingEmail = UserDatabaseService.get('SELECT id FROM users WHERE email = ?', [
-      data.email,
-    ]);
-    if (existingEmail) {
-      throw new AppError(409, 'Email already exists');
-    }
-
-    // Hash password
+    // Hash password before transaction
     const passwordHash = await hashPassword(data.password);
 
-    // First user becomes admin (role_id = 1), subsequent users get 'user' role (role_id = 2)
-    const roleId = isInitialSetup ? 1 : 2;
-    const result = UserDatabaseService.run(
-      'INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)',
-      [data.username, data.email, passwordHash, roleId]
-    );
+    // Wrap setup check + uniqueness checks + insert in transaction to prevent race condition
+    const db = UserDatabaseService.getDatabase();
+    const registerTransaction = db.transaction(() => {
+      // Check username uniqueness inside transaction
+      const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(data.username);
+      if (existingUser) {
+        throw new AppError(409, 'Username already exists');
+      }
 
-    if (isInitialSetup) {
-      logger.info('╔═══════════════════════════════════════════════════════════════╗');
-      logger.info('║  INITIAL ADMIN ACCOUNT CREATED                                ║');
-      logger.info(`║  Username: ${data.username.padEnd(48)} ║`);
-      logger.info('║  The first user has been granted administrator privileges.    ║');
-      logger.info('╚═══════════════════════════════════════════════════════════════╝');
-    }
+      // Check email uniqueness inside transaction
+      const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(data.email);
+      if (existingEmail) {
+        throw new AppError(409, 'Email already exists');
+      }
 
-    const userId = result.lastInsertRowid as number;
+      // Check if this is initial setup (no users exist)
+      const count = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
+      const isInitialSetup = count.count === 0;
+
+      // Validation: Regular registration requires registration to be enabled
+      // Initial setup bypasses this check (first user is always allowed)
+      if (!isInitialSetup) {
+        const settings = this.getAuthSettings();
+        if (!settings.user_registration_enabled) {
+          throw new AppError(403, 'User registration is currently disabled');
+        }
+      }
+
+      // First user becomes admin (role_id = 1), subsequent users get 'user' role (role_id = 2)
+      const roleId = isInitialSetup ? 1 : 2;
+      const result = db
+        .prepare('INSERT INTO users (username, email, password_hash, role_id) VALUES (?, ?, ?, ?)')
+        .run(data.username, data.email, passwordHash, roleId);
+
+      if (isInitialSetup) {
+        logger.info('╔═══════════════════════════════════════════════════════════════╗');
+        logger.info('║  INITIAL ADMIN ACCOUNT CREATED                                ║');
+        logger.info(`║  Username: ${data.username.padEnd(48)} ║`);
+        logger.info('║  The first user has been granted administrator privileges.    ║');
+        logger.info('╚═══════════════════════════════════════════════════════════════╝');
+      }
+
+      return result.lastInsertRowid as number;
+    });
+
+    const userId = registerTransaction();
 
     // Apply default theme and primary color from system settings
     const appSettings = this.cachedSystemSettings.getCategory('app');
@@ -165,7 +185,7 @@ export class AuthService {
 
     // Get created user
     const user = UserDatabaseService.get(
-      `SELECT u.*, r.name as role_name
+      `SELECT u.id, u.username, u.email, r.name as role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ?`,
@@ -184,8 +204,6 @@ export class AuthService {
       email: user.email,
       role: user.role_name,
       permissions,
-      themeColor: user.theme_color || 'blue-500',
-      surfaceColor: user.surface_color || 'slate-700',
     };
 
     return { user: authUser, tokens };
@@ -231,7 +249,7 @@ export class AuthService {
 
     // Get user
     const user = UserDatabaseService.get(
-      `SELECT u.*, r.name as role_name
+      `SELECT u.id, u.username, u.email, r.name as role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ? AND u.is_active = 1`,
@@ -263,7 +281,7 @@ export class AuthService {
 
       // Get user with current data
       const user = UserDatabaseService.get(
-        `SELECT u.*, r.name as role_name
+        `SELECT u.id, u.username, u.email, r.name as role_name
          FROM users u
          JOIN roles r ON u.role_id = r.id
          WHERE u.id = ? AND u.is_active = 1`,
@@ -319,7 +337,7 @@ export class AuthService {
   /**
    * Generate access and refresh tokens
    */
-  private async generateTokens(user: any): Promise<AuthTokens> {
+  private async generateTokens(user: UserTokenData): Promise<AuthTokens> {
     const accessToken = generateAccessToken({
       userId: user.id,
       username: user.username,
@@ -357,14 +375,25 @@ export class AuthService {
       1440
     );
 
-    // Count failed attempts in lockout window - using parameterized query
-    const failedAttempts = UserDatabaseService.get(
+    // Count failed attempts in lockout window - check username AND IP separately
+    // Using OR would allow an attacker to lock out any user by failing with their username
+    const failedAttemptsByUsername = UserDatabaseService.get(
       `SELECT COUNT(*) as count FROM login_attempts
-       WHERE (username = ? OR ip_address = ?)
+       WHERE username = ?
        AND success = 0
        AND attempted_at > datetime('now', '-' || ? || ' minutes')`,
-      [username, ipAddress, safeLockoutDuration]
+      [username, safeLockoutDuration]
     );
+    const failedAttemptsByIp = UserDatabaseService.get(
+      `SELECT COUNT(*) as count FROM login_attempts
+       WHERE ip_address = ?
+       AND success = 0
+       AND attempted_at > datetime('now', '-' || ? || ' minutes')`,
+      [ipAddress, safeLockoutDuration]
+    );
+    const failedAttempts = {
+      count: Math.max(failedAttemptsByUsername?.count ?? 0, failedAttemptsByIp?.count ?? 0),
+    };
 
     if (failedAttempts?.count >= maxAttempts) {
       throw new AppError(
@@ -406,7 +435,7 @@ export class AuthService {
   /**
    * Get auth settings from system_settings
    */
-  private getAuthSettings(): any {
+  private getAuthSettings(): AuthSettings {
     try {
       const authSettings = this.systemSettings.getCategory('auth');
 
@@ -424,8 +453,12 @@ export class AuthService {
               ? 1
               : 0
             : 1,
-        max_login_attempts: authSettings.maxLoginAttempts || 5,
-        lockout_duration_minutes: authSettings.lockoutDurationMinutes || 15,
+        max_login_attempts:
+          typeof authSettings.maxLoginAttempts === 'number' ? authSettings.maxLoginAttempts : 5,
+        lockout_duration_minutes:
+          typeof authSettings.lockoutDurationMinutes === 'number'
+            ? authSettings.lockoutDurationMinutes
+            : 15,
       };
     } catch (error) {
       logger.error('Failed to get auth settings, using defaults:', error);

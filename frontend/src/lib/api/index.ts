@@ -33,6 +33,7 @@ export { rolesApi } from './roles';
 
 // User Playlists
 export { userPlaylistsApi } from './userPlaylists';
+export type { PlaylistWithGames } from './userPlaylists';
 export { sharedPlaylistsApi } from './sharedPlaylists';
 
 // Favorites
@@ -58,6 +59,13 @@ export { jobsApi } from './jobs';
 
 // Ruffle
 export { ruffleApi } from './ruffle';
+
+// GitHub
+export { githubApi } from './github';
+
+// Updates
+export { updatesApi } from './updates';
+export type { MetadataUpdateInfo, MetadataSyncStatus } from './updates';
 
 // Default export for legacy compatibility
 import { apiClient } from './client';

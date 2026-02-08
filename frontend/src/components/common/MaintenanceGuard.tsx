@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +25,10 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
   // Check if user is admin (has settings.update permission)
   const isAdmin = user?.permissions?.includes('settings.update');
 
+  // Use ref to store the latest callback without triggering effect re-runs
+  const checkMaintenanceModeRef = useRef(checkMaintenanceMode);
+  checkMaintenanceModeRef.current = checkMaintenanceMode;
+
   useEffect(() => {
     // Don't check if already on maintenance page or login page
     if (location.pathname === '/maintenance' || location.pathname === '/login') {
@@ -39,7 +43,7 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
 
     // Check maintenance mode status from server
     const checkMaintenance = async () => {
-      const isActive = await checkMaintenanceMode();
+      const isActive = await checkMaintenanceModeRef.current();
       if (isActive && !isAdmin) {
         navigate('/maintenance', { replace: true });
       }
@@ -52,7 +56,7 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
     const interval = setInterval(checkMaintenance, 30000);
 
     return () => clearInterval(interval);
-  }, [isMaintenanceMode, isAdmin, navigate, location.pathname, checkMaintenanceMode]);
+  }, [isMaintenanceMode, isAdmin, navigate, location.pathname]);
 
   // If maintenance mode is active and user is not admin, don't render children
   if (isMaintenanceMode && !isAdmin && location.pathname !== '/maintenance') {

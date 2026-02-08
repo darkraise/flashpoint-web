@@ -42,7 +42,8 @@ export function UserPlaylistDetailView() {
   const viewMode = useUIStore((state) => state.viewMode);
   const { isAuthenticated } = useAuthStore();
 
-  const playlistId = id ? parseInt(id, 10) : null;
+  const parsed = parseInt(id ?? '', 10);
+  const playlistId = !isNaN(parsed) ? parsed : null;
 
   const {
     data: playlist,
@@ -98,9 +99,6 @@ export function UserPlaylistDetailView() {
       </div>
     );
   }
-
-  // playlistGames is already Game[] from the API
-  const games = playlistGames;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -177,7 +175,7 @@ export function UserPlaylistDetailView() {
       </div>
 
       {/* Games Display */}
-      {games.length === 0 ? (
+      {playlistGames.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground">No games in this playlist yet</p>
           <p className="text-sm text-muted-foreground mt-2">
@@ -188,13 +186,13 @@ export function UserPlaylistDetailView() {
         <>
           {viewMode === 'grid' ? (
             <GameGrid
-              games={games}
+              games={playlistGames}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
               breadcrumbContext={{ label: playlist.title, href: `/playlists/${playlist.id}` }}
             />
           ) : (
             <GameList
-              games={games}
+              games={playlistGames}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
               breadcrumbContext={{ label: playlist.title, href: `/playlists/${playlist.id}` }}
             />

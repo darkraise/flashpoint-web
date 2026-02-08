@@ -10,6 +10,7 @@ import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { requireFeature } from '../middleware/featureFlags';
 import { logActivity } from '../middleware/activityLogger';
+import { z } from 'zod';
 
 const router = Router();
 const playlistService = new PlaylistService();
@@ -20,6 +21,16 @@ const playlistService = new PlaylistService();
 // Apply feature flag check to all routes in this router
 // Admins with settings.update permission will bypass this check (via global softAuth)
 router.use(requireFeature('enablePlaylists'));
+
+// Validation schemas
+const createPlaylistSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+});
+
+const addGamesToPlaylistSchema = z.object({
+  gameIds: z.array(z.string()).min(1),
+});
 
 // GET /api/playlists - List all playlists
 // No additional auth needed - softAuth already runs at router level
@@ -53,13 +64,9 @@ router.post(
   requirePermission('playlists.create'),
   logActivity('playlists.create', 'playlists'),
   asyncHandler(async (req, res) => {
-    const data: CreatePlaylistDto = req.body;
+    const data = createPlaylistSchema.parse(req.body);
 
-    if (!data.title) {
-      throw new AppError(400, 'Playlist title is required');
-    }
-
-    const playlist = await playlistService.createPlaylist(data);
+    const playlist = await playlistService.createPlaylist(data as CreatePlaylistDto);
     res.status(201).json(playlist);
   })
 );
@@ -71,13 +78,12 @@ router.post(
   requirePermission('playlists.update'),
   logActivity('playlists.add_games', 'playlists'),
   asyncHandler(async (req, res) => {
-    const data: AddGamesToPlaylistDto = req.body;
+    const data = addGamesToPlaylistSchema.parse(req.body);
 
-    if (!data.gameIds || !Array.isArray(data.gameIds)) {
-      throw new AppError(400, 'gameIds array is required');
-    }
-
-    const playlist = await playlistService.addGamesToPlaylist(req.params.id, data);
+    const playlist = await playlistService.addGamesToPlaylist(
+      req.params.id,
+      data as AddGamesToPlaylistDto
+    );
 
     if (!playlist) {
       throw new AppError(404, 'Playlist not found');
@@ -94,13 +100,12 @@ router.delete(
   requirePermission('playlists.update'),
   logActivity('playlists.remove_games', 'playlists'),
   asyncHandler(async (req, res) => {
-    const data: AddGamesToPlaylistDto = req.body;
+    const data = addGamesToPlaylistSchema.parse(req.body);
 
-    if (!data.gameIds || !Array.isArray(data.gameIds)) {
-      throw new AppError(400, 'gameIds array is required');
-    }
-
-    const playlist = await playlistService.removeGamesFromPlaylist(req.params.id, data);
+    const playlist = await playlistService.removeGamesFromPlaylist(
+      req.params.id,
+      data as AddGamesToPlaylistDto
+    );
 
     if (!playlist) {
       throw new AppError(404, 'Playlist not found');

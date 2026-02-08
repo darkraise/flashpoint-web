@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 import { logger } from '../utils/logger';
 
 export class AppError extends Error {
@@ -43,7 +44,7 @@ function sanitizeBody(body: any): any {
 }
 
 export function errorHandler(
-  err: Error | AppError,
+  err: Error | AppError | ZodError,
   req: Request,
   res: Response,
   _next: NextFunction
@@ -61,6 +62,22 @@ export function errorHandler(
         message: err.message,
         statusCode: err.statusCode,
         ...(err.code && { code: err.code }),
+      },
+    });
+  }
+
+  // Handle Zod validation errors
+  if (err instanceof ZodError) {
+    logger.error(`[ValidationError] Zod validation failed`, {
+      path: req.path,
+      method: req.method,
+      errors: err.errors,
+    });
+
+    return res.status(400).json({
+      error: {
+        message: `Validation error: ${err.errors.map((e) => e.message).join(', ')}`,
+        statusCode: 400,
       },
     });
   }

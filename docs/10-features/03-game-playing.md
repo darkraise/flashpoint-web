@@ -12,7 +12,7 @@ handling.
 **Backend Components:**
 
 - Game Service: Provides game data and launch configuration
-- Game-Service Proxy: Serves game files (ports 22500/22501)
+- Game Content Routes: Serves game files via `/game-proxy/*` and `/game-zip/*`
 - HTTP Proxy Server: Handles Flash content delivery
 - GameZip Server: Mounts and serves files from ZIP archives
 
@@ -20,9 +20,10 @@ handling.
 
 - `GamePlayer`: Main player component (reusable)
 - `RufflePlayer`: Ruffle Flash emulator wrapper
-- `GamePlayerView`: Full-page player route
-- `GameDetailView`: Game details with embedded player
+- `GamePlayerView`: Full-page player route with breadcrumb navigation
+- `GameDetailView`: Game details with embedded player and breadcrumb navigation
 - `GamePlayerDialog`: Modal player overlay
+- `Breadcrumbs`: Navigation bar with back button and context trail
 
 ## Supported Platforms
 
@@ -42,35 +43,55 @@ Backend:
 
 1. Fetch game from flashpoint.sqlite
 2. Check if game has data on disk
-3. Auto-mount ZIP file if needed
-4. Extract launch command from game metadata
-5. Construct content URL via game-service proxy
-6. Return launch configuration
+3. If ZIP not present locally, start background download from gameDataSources
+4. Mount ZIP file (awaits mount completion)
+5. Extract launch command from game metadata
+6. Construct content URL via game-service proxy
+7. Return launch configuration with `downloading` status
 
-**Step 2: Initialize Player**
+**Step 2: Check Download Status**
+
+Frontend receives response with `downloading: true` if game ZIP is being downloaded:
+
+```typescript
+// GamePlayerView uses conditional polling
+const { data: launchData } = useGameLaunchData(id!);
+
+// Polls every 2 seconds if downloading, stops when complete
+useQuery({
+  queryKey: ['game', id, 'launch'],
+  queryFn: () => gamesApi.getGameLaunchData(id),
+  refetchInterval: (query) => query.state.data?.downloading ? 2000 : false,
+});
+```
+
+- If `downloading: true` - show download progress UI
+- If `downloading: false` - proceed to player initialization
+
+**Step 3: Initialize Player**
 
 - Check if game can play in browser (canPlayInBrowser)
 - Select appropriate player (Ruffle vs iframe)
 - Mount player component
 
-**Step 3: Load Content**
+**Step 4: Load Content**
 
 - **Flash:** Ruffle loads SWF from proxy URL
 - **HTML5:** Iframe loads game page from proxy URL
 - Game service proxies requests to local files or CDN
 
-**Step 4: Track Session**
+**Step 5: Track Session**
 
 - POST /api/play/start with gameId
 - Backend creates play session record
 - Returns sessionId
 
-**Step 5: Play**
+**Step 6: Play**
 
 - User interacts with game
 - All game assets served through proxy
 
-**Step 6: End Session**
+**Step 7: End Session**
 
 - User closes player or navigates away
 - POST /api/play/end with sessionId
@@ -82,7 +103,7 @@ Backend:
 
 Get game launch configuration.
 
-**Response:**
+**Response (ready to play):**
 
 ```json
 {
@@ -90,12 +111,32 @@ Get game launch configuration.
   "title": "Super Mario Flash",
   "platform": "Flash",
   "launchCommand": "http://uploads.ungrounded.net/396000/396724_DAplayer_V6.swf",
-  "contentUrl": "http://localhost:22500/http://uploads.ungrounded.net/396000/396724_DAplayer_V6.swf",
+  "contentUrl": "http://localhost:3100/game-proxy/http://uploads.ungrounded.net/396000/396724_DAplayer_V6.swf",
   "applicationPath": ":http: :message:",
   "playMode": "Single Player",
-  "canPlayInBrowser": true
+  "canPlayInBrowser": true,
+  "downloading": false
 }
 ```
+
+**Response (downloading):**
+
+```json
+{
+  "gameId": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Super Mario Flash",
+  "platform": "Flash",
+  "launchCommand": "...",
+  "contentUrl": "...",
+  "canPlayInBrowser": true,
+  "downloading": true
+}
+```
+
+When `downloading: true`, frontend should:
+1. Show download progress UI to user
+2. Poll this endpoint every 2 seconds
+3. Proceed to player when `downloading` becomes false
 
 **For games without content:**
 
@@ -106,9 +147,52 @@ Get game launch configuration.
   "platform": "Windows",
   "launchCommand": "game.exe",
   "contentUrl": "",
-  "canPlayInBrowser": false
+  "canPlayInBrowser": false,
+  "downloading": false
 }
 ```
+
+## Flash Game Content URL Resolution
+
+Flash games may have launch commands pointing to HTML wrapper pages instead of
+direct `.swf` files. The frontend automatically detects and resolves these:
+
+**SWF Extraction from HTML Wrappers:**
+
+The `useResolvedContentUrl` hook in `GamePlayer.tsx` handles HTML wrapper
+resolution for Flash games:
+
+1. Detects when Flash game has HTML content URL
+2. Fetches the HTML wrapper page
+3. Extracts SWF reference using 9 regex patterns:
+   - Embed tags (`<embed src="game.swf">`)
+   - Object tags (`<object data="game.swf">`)
+   - Param tags (`<param name="movie" value="game.swf">`)
+   - SWFObject v1 (`swf = new SWFObject("game.swf")`)
+   - SWFObject v2 (`swf.addVariable("..."`)`)
+   - Adobe AC_FL_RunContent
+   - Generic SWF references in quotes
+   - Relative and absolute path handling
+
+4. Passes resolved SWF URL to Ruffle player
+
+**Example:**
+
+```
+Original launch command: "Game.html"
+→ Fetch HTML wrapper page
+→ Extract: <embed src="Game.swf">
+→ Resolved URL: "/game-proxy/Game.swf"
+→ Pass to Ruffle
+```
+
+This allows playing Flash games even when Flashpoint provides HTML wrapper pages.
+
+**Flash SWF Filter:**
+
+Only Flash games with `.swf` launchCommands appear in browse/search results.
+Games with HTML wrappers or other content are excluded from the "Flash" platform
+filter but can still be played via direct URL if you know their game ID.
 
 ## Ruffle Integration
 
@@ -169,11 +253,15 @@ HTML5 games load in a sandboxed iframe:
 - allow-popups, allow-modals, allow-pointer-lock
 - allow-top-navigation-by-user-activation
 
-## Game Service Proxy
+## Game Content Serving
 
-**HTTP Proxy Server (Port 22500):**
+**Game Proxy Routes:**
 
-- Serves legacy web content
+Integrated into the backend, registered on routes `/game-proxy/*` and `/game-zip/*`:
+
+- Routes are registered before auth middleware for public game content access
+- Uses permissive CORS `*` to allow cross-domain game embedding
+- Serves legacy web content via HTTP proxy
 - Fallback chain:
   1. Local htdocs folder
   2. Game data directory
@@ -184,17 +272,72 @@ HTML5 games load in a sandboxed iframe:
 **Example Request Flow:**
 
 ```
-Browser: GET http://localhost:22500/http://uploads.ungrounded.net/396000/396724_DAplayer_V6.swf
-Proxy: Check local htdocs, game data, mounted ZIPs, fetch from CDN if needed
+Browser: GET http://localhost:3100/game-proxy/http://uploads.ungrounded.net/396000/396724_DAplayer_V6.swf
+Backend Proxy: Check local htdocs, game data, mounted ZIPs, fetch from CDN if needed
 Response: File with correct MIME type
 ```
 
-**GameZip Server (Port 22501):**
+**ZIP Management:**
 
 - Mounts ZIP files from Data/Games/
-- Streams files without extraction
+- Streams files without extraction via `/game-zip/*` routes
 - Uses node-stream-zip for efficiency
 - 199+ file types supported
+- Automatic cleanup of unmounted ZIPs
+
+## Navigation & Breadcrumbs
+
+**Breadcrumb Navigation Bar:**
+
+The application uses a unified navigation bar component that combines:
+
+- Back button (ArrowLeft icon)
+- Vertical divider
+- Contextual breadcrumb trail
+
+**Game Detail Page:**
+
+- Shows: `Home > [Context] > Game Title`
+- Context depends on entry point (Browse, Search, Playlist, etc.)
+- Play button passes `PlayerBreadcrumbContext` via React Router navigation state
+
+**Game Player Page:**
+
+- Shows: `Home > [Context] > Game Title > Play`
+- Reads context from navigation state (passed from game detail page)
+- Fallback for direct URL access: `Browse > Game Title > Play`
+- Hidden in fullscreen mode
+- Context examples:
+  - From browse: `Home > Browse > Game Title > Play`
+  - From playlist: `Home > Playlists > Playlist Name > Game Title > Play`
+  - From shared access: `Shared > Playlist Title > Game Title > Play`
+  - Direct URL: `Browse > Game Title > Play`
+
+**Context Flow:**
+
+```typescript
+// GameDetailView passes context to player
+navigate(`/games/${game.id}/play`, {
+  state: {
+    fromPlaylist: playlistId,
+    playlistName: playlistName,
+    breadcrumbContext: { path, label },
+  },
+});
+
+// GamePlayerView reads context
+const location = useLocation<{ breadcrumbContext?: PlayerBreadcrumbContext }>();
+const context = location.state?.breadcrumbContext;
+```
+
+**PlayerBreadcrumbContext Type:**
+
+```typescript
+interface PlayerBreadcrumbContext {
+  path: string; // URL path (e.g., "/playlists/123")
+  label: string; // Display label (e.g., "My Favorites")
+}
+```
 
 ## Fullscreen Implementation
 
@@ -217,6 +360,12 @@ useEffect(() => {
   }
 }, [isFullscreen]);
 ```
+
+**Fullscreen Behavior:**
+
+- Breadcrumb navigation bar is hidden in fullscreen mode
+- ESC key exits fullscreen
+- Player expands to fill viewport
 
 ## Ruffle Scale Modes
 

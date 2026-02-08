@@ -8,7 +8,8 @@ User authentication, registration, and token management.
 
 Body: `{ "username": "string (3-50)", "password": "string (min 6)" }`
 
-Returns `200 OK` with user object and tokens:
+Returns `200 OK` with user object and access token. **Refresh token is set as
+HTTP-only cookie automatically**.
 
 ```json
 {
@@ -21,10 +22,14 @@ Returns `200 OK` with user object and tokens:
   },
   "tokens": {
     "accessToken": "jwt...",
-    "refreshToken": "jwt...",
-    "expiresIn": 3600
+    "expiresIn": 900
   }
 }
+```
+
+Response headers also include:
+```
+Set-Cookie: fp_refresh=jwt...; Path=/api/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000
 ```
 
 Error: `401 Unauthorized` (invalid credentials) or `429 Too Many Requests`
@@ -37,7 +42,8 @@ Error: `401 Unauthorized` (invalid credentials) or `429 Too Many Requests`
 Body:
 `{ "username": "string (3-50)", "email": "valid-email", "password": "string (min 6)" }`
 
-Returns `201 Created` with user and tokens (same format as login).
+Returns `201 Created` with user and tokens (same format as login). **Refresh token
+is set as HTTP-only cookie automatically**.
 
 Error: `403 Forbidden` (registration disabled) or `409 Conflict` (username/email
 exists)
@@ -46,21 +52,49 @@ exists)
 
 `POST /api/auth/refresh` - No auth required
 
-Body: `{ "refreshToken": "jwt..." }`
+Body: Empty object `{}` or can be omitted
 
-Returns new accessToken, refreshToken (rotated), expiresIn.
+**Refresh token is read from HTTP-only cookie `fp_refresh` automatically.**
+The request must include credentials (cookies) to send the refresh token.
+
+```bash
+curl -X POST https://api.example.com/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  --cookie "fp_refresh=jwt..."
+```
+
+Returns new `accessToken` and `expiresIn`. **New refresh token is set as HTTP-only
+cookie automatically**.
+
+```json
+{
+  "accessToken": "jwt...",
+  "expiresIn": 900
+}
+```
 
 Old refresh token automatically revoked for security (prevents token reuse).
 
-Error: `401 Unauthorized` (invalid or expired refresh token)
+Error: `401 Unauthorized` (invalid or expired refresh token, or no refresh token
+in cookie)
 
 ## Logout
 
 `POST /api/auth/logout` - Optional auth
 
-Body: `{ "refreshToken": "jwt..." }`
+Body: Empty object `{}` or can be omitted
 
-Revokes the refresh token.
+**Refresh token is read from HTTP-only cookie `fp_refresh` automatically.**
+
+```bash
+curl -X POST https://api.example.com/api/auth/logout \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  --cookie "fp_refresh=jwt..."
+```
+
+Revokes the refresh token and clears the HTTP-only cookie.
 
 Returns `{ "success": true }`
 
@@ -74,45 +108,60 @@ Error: `401 Unauthorized`
 
 ## Usage Pattern
 
-```javascript
+**Frontend (with Axios client configured with `withCredentials: true`)**:
+
+```typescript
 // Login
-const { data } = await api.post('/auth/login', {
+const { data } = await api.post('/api/auth/login', {
   username: 'john_doe',
   password: 'password123',
 });
+// Response contains accessToken only
+// Refresh token is in HTTP-only cookie (automatic, not visible to JS)
 
-localStorage.setItem('accessToken', data.tokens.accessToken);
-localStorage.setItem('refreshToken', data.tokens.refreshToken);
+// Store access token in Zustand store (memory only)
+useAuthStore.setState({ accessToken: data.tokens.accessToken });
 
-// Subsequent requests
+// Subsequent requests (cookies sent automatically)
 const response = await api.get('/api/games');
 
-// On 401 - refresh token
-const refreshed = await api.post('/auth/refresh', {
-  refreshToken: localStorage.getItem('refreshToken'),
-});
+// On 401 - refresh automatically (cookies sent automatically)
+const refreshed = await api.post('/api/auth/refresh', {});
+// Response contains new accessToken only
+// New refresh token is in HTTP-only cookie (automatic)
 
-localStorage.setItem('accessToken', refreshed.data.accessToken);
-localStorage.setItem('refreshToken', refreshed.data.refreshToken);
+useAuthStore.setState({ accessToken: refreshed.data.accessToken });
 
-// Logout
-await api.post('/auth/logout', {
-  refreshToken: localStorage.getItem('refreshToken'),
-});
+// Logout (cookies sent automatically)
+await api.post('/api/auth/logout', {});
+// Refresh token cookie is cleared by backend
 
-localStorage.removeItem('accessToken');
-localStorage.removeItem('refreshToken');
+// Clear access token from store
+useAuthStore.setState({ accessToken: null });
 ```
+
+**axios configuration (required)**:
+
+```typescript
+const api = axios.create({
+  baseURL: 'http://localhost:3100',
+  withCredentials: true, // Enable cookies to be sent with requests
+});
+```
+
+This ensures cookies are sent with every request to `/api/auth/*` endpoints.
 
 ## Security Best Practices
 
 - Use HTTPS in production
-- Store tokens securely (httpOnly cookies recommended over localStorage)
-- Access tokens expire in 1 hour (configurable)
-- Refresh tokens rotate on each use
+- Access tokens (15 minutes) stored in memory only via Zustand store
+- Refresh tokens (30 days) stored in HTTP-only cookies - not accessible to JavaScript
+- HTTP-only cookies prevent XSS attacks from stealing refresh tokens
+- Refresh tokens rotate on each use to prevent token reuse attacks
 - Failed login attempts trigger rate limiting and account lockout
 - Enforce strong passwords in production (minimum 6 shown, recommend 12+)
-- Implement automatic token refresh on 401 responses
+- Automatic token refresh on 401 responses via axios interceptor
+- CORS with `credentials: true` ensures cookies are sent cross-origin (if applicable)
 
 ## Permission System
 
@@ -137,22 +186,55 @@ Common permissions returned in login/me:
 
 ## Interceptor Pattern
 
-```javascript
+```typescript
 // Axios interceptor for automatic token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+    const originalRequest = error.config;
 
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
 
-      error.config.headers['Authorization'] = `Bearer ${data.accessToken}`;
-      return axios(error.config);
+      try {
+        // Refresh token is sent in HTTP-only cookie automatically
+        const { data } = await api.post('/api/auth/refresh', {});
+
+        // Update access token in store (memory only)
+        useAuthStore.getState().updateAccessToken(data.accessToken);
+
+        // Retry original request with new token
+        originalRequest.headers['Authorization'] = `Bearer ${data.accessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh failed - clear auth and redirect to login
+        useAuthStore.getState().clearAuth();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
     }
+
     return Promise.reject(error);
   }
 );
+```
+
+## Cookie Details
+
+The `fp_refresh` HTTP-only cookie is set with the following attributes:
+
+| Attribute | Value | Purpose |
+| --------- | ----- | ------- |
+| `name` | `fp_refresh` | Identifies the refresh token |
+| `value` | JWT token | Refresh token |
+| `httpOnly` | `true` | Not accessible to JavaScript (XSS protection) |
+| `secure` | `true` (prod) | Only sent over HTTPS |
+| `sameSite` | `'lax'` | CSRF protection |
+| `path` | `/api/auth` | Only sent to auth endpoints |
+| `maxAge` | `2592000` | 30 days (in seconds) |
+| `domain` | (implicit) | Same domain as backend |
+
+Example Set-Cookie header:
+```
+Set-Cookie: fp_refresh=eyJhbGc...; Path=/api/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000
 ```

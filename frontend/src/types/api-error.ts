@@ -41,7 +41,8 @@ export function isApiError(error: unknown): error is ApiError {
     typeof error === 'object' &&
     error !== null &&
     'message' in error &&
-    typeof (error as ApiError).message === 'string'
+    typeof (error as ApiError).message === 'string' &&
+    ('statusCode' in error || 'code' in error || 'response' in error)
   );
 }
 

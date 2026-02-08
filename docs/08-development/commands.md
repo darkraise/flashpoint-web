@@ -12,7 +12,6 @@ Run from repository root.
 npm run dev                 # Start all services (concurrent)
 npm run dev:backend        # Backend only
 npm run dev:frontend       # Frontend only
-npm run dev:game-service   # Game service only
 ```
 
 ### Installation
@@ -21,7 +20,6 @@ npm run dev:game-service   # Game service only
 npm run install:all        # Install all service dependencies
 npm run install:backend    # Backend only
 npm run install:frontend   # Frontend only
-npm run install:game-service # Game service only
 ```
 
 ### Building
@@ -30,7 +28,6 @@ npm run install:game-service # Game service only
 npm run build              # Build all services for production
 npm run build:backend
 npm run build:frontend
-npm run build:game-service
 ```
 
 ### Type Checking
@@ -39,15 +36,13 @@ npm run build:game-service
 npm run typecheck          # Type check all services
 npm run typecheck:backend
 npm run typecheck:frontend
-npm run typecheck:game-service
 ```
 
 ### Production
 
 ```bash
-npm start                  # Start backend + game-service in production
+npm start                  # Start backend in production
 npm run start:backend
-npm run start:game-service
 ```
 
 ### Code Formatting
@@ -57,7 +52,6 @@ npm run format             # Format all files with Prettier
 npm run format:check       # Check without changes
 npm run format:backend
 npm run format:frontend
-npm run format:game-service
 ```
 
 ### Cleanup
@@ -66,7 +60,6 @@ npm run format:game-service
 npm run clean              # Remove all build artifacts + node_modules
 npm run clean:backend
 npm run clean:frontend
-npm run clean:game-service
 ```
 
 ---
@@ -142,33 +135,6 @@ npm run copy-ruffle        # Copy Ruffle emulator to public/ruffle/
 
 ---
 
-## Game Service Commands
-
-Run from `game-service/` directory.
-
-### Development
-
-```bash
-npm run dev                # Start with hot reload
-                           # Proxy: http://localhost:22500
-                           # GameZip: http://localhost:22501
-```
-
-### Building & Production
-
-```bash
-npm run build              # Compile TypeScript to dist/
-npm start                  # Run production build
-```
-
-### Code Quality
-
-```bash
-npm run typecheck          # Type check only
-```
-
----
-
 ## Docker Commands
 
 Run from repository root.
@@ -222,8 +188,7 @@ $env:FLASHPOINT_HOST_PATH = "D:\Flashpoint"
 ```bash
 npm run install:all
 cp backend/.env.example backend/.env
-cp game-service/.env.example game-service/.env
-# Edit .env files with Flashpoint path
+# Edit .env with Flashpoint path
 npm run typecheck
 npm run dev
 ```
@@ -259,22 +224,15 @@ npm start
 
 ### Backend (.env)
 
-| Variable            | Required | Default               | Notes                                 |
-| ------------------- | -------- | --------------------- | ------------------------------------- |
-| `FLASHPOINT_PATH`   | Yes      | -                     | All other paths derived automatically |
-| `JWT_SECRET`        | Yes\*    | -                     | \*Required in production              |
-| `DOMAIN`            | No       | http://localhost:5173 | Frontend URL for CORS                 |
-| `GAME_SERVICE_HOST` | No       | localhost             | Game service hostname                 |
-| `LOG_LEVEL`         | No       | info                  | error, warn, info, debug              |
-| `NODE_ENV`          | No       | development           | production in production              |
+| Variable          | Required | Default               | Notes                                 |
+| ----------------- | -------- | --------------------- | ------------------------------------- |
+| `FLASHPOINT_PATH` | Yes      | -                     | All other paths derived automatically |
+| `JWT_SECRET`      | Yes\*    | -                     | \*Required in production              |
+| `DOMAIN`          | No       | http://localhost:5173 | Frontend URL for CORS                 |
+| `LOG_LEVEL`       | No       | info                  | error, warn, info, debug              |
+| `NODE_ENV`        | No       | development           | production in production              |
 
-### Game Service (.env)
-
-| Variable                 | Required | Default | Notes                                 |
-| ------------------------ | -------- | ------- | ------------------------------------- |
-| `FLASHPOINT_PATH`        | Yes      | -       | All other paths derived automatically |
-| `LOG_LEVEL`              | No       | info    | error, warn, info, debug              |
-| `EXTERNAL_FALLBACK_URLS` | No       | -       | Comma-separated CDN URLs              |
+> **Note:** External fallback URLs are configured in `proxySettings.json`.
 
 ### Frontend
 

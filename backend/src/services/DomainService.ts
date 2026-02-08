@@ -85,27 +85,14 @@ export class DomainService {
 
   /**
    * Validate and normalize a hostname
+   * Note: Route-level Zod validation performs comprehensive checks.
+   * This method provides basic sanitization only.
    */
   private validateHostname(hostname: string): string {
     const trimmed = hostname.trim().toLowerCase();
 
     if (!trimmed) {
       throw new AppError(400, 'Hostname cannot be empty');
-    }
-
-    // Reject protocol prefixes
-    if (/^https?:\/\//i.test(trimmed)) {
-      throw new AppError(400, 'Hostname must not include a protocol (http:// or https://)');
-    }
-
-    // Reject path, query, or fragment
-    if (/[/?#]/.test(trimmed)) {
-      throw new AppError(400, 'Hostname must not include a path, query string, or fragment');
-    }
-
-    // Basic hostname validation: allow alphanumeric, dots, hyphens, colons (for port)
-    if (!/^[a-z0-9._-]+(:[0-9]+)?$/i.test(trimmed)) {
-      throw new AppError(400, 'Invalid hostname format');
     }
 
     return trimmed;
@@ -117,25 +104,30 @@ export class DomainService {
   addDomain(hostname: string, createdBy: number): Domain {
     const validated = this.validateHostname(hostname);
 
-    // Enforce maximum domain limit
-    const count = this.db.prepare('SELECT COUNT(*) as count FROM domains').get() as {
-      count: number;
-    };
-    if (count.count >= this.MAX_DOMAINS) {
-      throw new AppError(400, `Maximum of ${this.MAX_DOMAINS} domains allowed`);
-    }
+    // Wrap count check + duplicate check + insert in a transaction to prevent TOCTOU races
+    const transaction = this.db.transaction(() => {
+      // Enforce maximum domain limit
+      const count = this.db.prepare('SELECT COUNT(*) as count FROM domains').get() as {
+        count: number;
+      };
+      if (count.count >= this.MAX_DOMAINS) {
+        throw new AppError(400, `Maximum of ${this.MAX_DOMAINS} domains allowed`);
+      }
 
-    // Check for duplicate
-    const existing = this.db.prepare('SELECT id FROM domains WHERE hostname = ?').get(validated) as
-      | { id: number }
-      | undefined;
+      // Check for duplicate
+      const existing = this.db
+        .prepare('SELECT id FROM domains WHERE hostname = ?')
+        .get(validated) as { id: number } | undefined;
 
-    if (existing) {
-      throw new AppError(409, `Domain "${validated}" already exists`);
-    }
+      if (existing) {
+        throw new AppError(409, `Domain "${validated}" already exists`);
+      }
 
-    const stmt = this.db.prepare('INSERT INTO domains (hostname, created_by) VALUES (?, ?)');
-    const result = stmt.run(validated, createdBy);
+      const stmt = this.db.prepare('INSERT INTO domains (hostname, created_by) VALUES (?, ?)');
+      return stmt.run(validated, createdBy);
+    });
+
+    const result = transaction();
 
     this.invalidateCache();
     logger.info(`[Domains] Added domain "${validated}" (by user ${createdBy})`);

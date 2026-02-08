@@ -28,7 +28,7 @@ interface CreateQueryHookOptions<TData, TCreate, TUpdate, TId = number | string>
     update: (id: TId, data: TUpdate) => Promise<TData>;
 
     /** Delete item */
-    delete: (id: TId) => Promise<void | any>;
+    delete: (id: TId) => Promise<void | unknown>;
   };
 
   /** Optional success messages for mutations */
@@ -55,7 +55,7 @@ interface QueryHookResult<TData, TCreate, TUpdate, TId = number | string> {
   >;
 
   /** Hook to delete an item */
-  useDeleteMutation: () => ReturnType<typeof useMutation<void, unknown, TId>>;
+  useDeleteMutation: () => ReturnType<typeof useMutation<unknown, unknown, TId>>;
 }
 
 /**
@@ -135,7 +135,11 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
         onSuccess: (updated) => {
           // Optimistically update cache by replacing the updated item
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
-            return old.map((item) => ((item as any).id === (updated as any).id ? updated : item));
+            return old.map((item) =>
+              (item as Record<string, unknown>).id === (updated as Record<string, unknown>).id
+                ? updated
+                : item
+            );
           });
           showToast(options.messages?.updateSuccess || 'Updated successfully', 'success');
         },
@@ -152,7 +156,7 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
         onSuccess: (_, deletedId) => {
           // Optimistically update cache by removing the deleted item
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
-            return old.filter((item) => (item as any).id !== deletedId);
+            return old.filter((item) => (item as Record<string, unknown>).id !== deletedId);
           });
           showToast(options.messages?.deleteSuccess || 'Deleted successfully', 'success');
         },

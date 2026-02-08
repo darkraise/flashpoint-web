@@ -50,8 +50,10 @@ export const handlers = [
     if (body.username === 'testuser' && body.password === 'password123') {
       return HttpResponse.json({
         user: mockUser,
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
+        tokens: {
+          accessToken: 'mock-access-token',
+          expiresIn: 3600,
+        },
       });
     }
 
@@ -65,7 +67,7 @@ export const handlers = [
   http.post(`/api/auth/refresh`, () => {
     return HttpResponse.json({
       accessToken: 'new-mock-access-token',
-      refreshToken: 'new-mock-refresh-token',
+      expiresIn: 3600,
     });
   }),
 
@@ -95,10 +97,15 @@ export const handlers = [
     return HttpResponse.json(mockGame);
   }),
 
-  http.get(`/api/games/:id/launch-data`, ({ params }) => {
+  http.get(`/api/games/:id/launch`, ({ params }) => {
     return HttpResponse.json({
       gameId: params.id,
-      url: `http://localhost:22500/game/${params.id}`,
+      title: 'Test Game',
+      platform: 'Flash',
+      launchCommand: 'test.swf',
+      contentUrl: `/game-proxy/http://example.com/test.swf`,
+      canPlayInBrowser: true,
+      downloading: false,
     });
   }),
 

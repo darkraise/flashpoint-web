@@ -23,6 +23,8 @@ export function useLazyLoad<T extends HTMLElement = HTMLDivElement>(
 
   const [isInView, setIsInView] = useState(false);
   const ref = useRef<T>(null);
+  const onIntersectRef = useRef(onIntersect);
+  onIntersectRef.current = onIntersect;
 
   useEffect(() => {
     const element = ref.current;
@@ -31,16 +33,16 @@ export function useLazyLoad<T extends HTMLElement = HTMLDivElement>(
     // Fallback for browsers without IntersectionObserver
     if (!('IntersectionObserver' in window)) {
       setIsInView(true);
-      onIntersect?.();
+      onIntersectRef.current?.();
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !isInView) {
+          if (entry.isIntersecting) {
             setIsInView(true);
-            onIntersect?.();
+            onIntersectRef.current?.();
             // Stop observing after first intersection
             observer.unobserve(element);
           }
@@ -57,7 +59,7 @@ export function useLazyLoad<T extends HTMLElement = HTMLDivElement>(
     return () => {
       observer.disconnect();
     };
-  }, [rootMargin, threshold, onIntersect, isInView]);
+  }, [rootMargin, threshold]);
 
   return { ref, isInView };
 }

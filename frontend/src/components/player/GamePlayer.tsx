@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { logger } from '@/lib/logger';
 import { Play, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { RufflePlayer } from './RufflePlayer';
@@ -61,9 +61,19 @@ function GamePlayerInternal({
   };
 
   // Sync internal fullscreen state with prop changes (for auto-fullscreen)
+  const prevInitialFullscreenRef = useRef(initialFullscreen);
   useEffect(() => {
-    setIsFullscreen(initialFullscreen);
+    if (prevInitialFullscreenRef.current !== initialFullscreen) {
+      setIsFullscreen(initialFullscreen);
+      prevInitialFullscreenRef.current = initialFullscreen;
+    }
   }, [initialFullscreen]);
+
+  // Store onFullscreenChange in a ref to avoid re-subscribing on every render
+  const onFullscreenChangeRef = useRef(onFullscreenChange);
+  useEffect(() => {
+    onFullscreenChangeRef.current = onFullscreenChange;
+  }, [onFullscreenChange]);
 
   // Handle ESC key to exit fullscreen
   useEffect(() => {
@@ -71,7 +81,7 @@ function GamePlayerInternal({
       if (event.key === 'Escape' && isFullscreen) {
         event.preventDefault(); // Prevent default ESC behavior
         setIsFullscreen(false);
-        onFullscreenChange?.(false);
+        onFullscreenChangeRef.current?.(false);
       }
     };
 
@@ -79,17 +89,17 @@ function GamePlayerInternal({
       window.addEventListener('keydown', handleEscKey);
       return () => window.removeEventListener('keydown', handleEscKey);
     }
-  }, [isFullscreen, onFullscreenChange]);
+  }, [isFullscreen]);
 
   // Debug logging for game content
-  if (contentUrl) {
-    logger.debug(`[GamePlayer] Loading ${platform} game:`, {
-      title,
-      platform,
-      contentUrl,
-      canPlayInBrowser,
-    });
-  }
+  useEffect(() => {
+    if (contentUrl) {
+      logger.debug(`[GamePlayer] Loading ${platform} game:`, {
+        contentUrl,
+        scaleMode: defaultScaleMode,
+      });
+    }
+  }, [contentUrl, platform]);
 
   if (!canPlayInBrowser) {
     const isWebPlatform = platform === 'Flash' || platform === 'HTML5';
@@ -154,6 +164,7 @@ function GamePlayerInternal({
               onClick={toggleFullscreen}
               className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg transition-colors"
               title={isFullscreen ? 'Exit Fullscreen (ESC)' : 'Enter Fullscreen'}
+              aria-label={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
             >
               {isFullscreen ? (
                 <>

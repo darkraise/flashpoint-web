@@ -2,9 +2,11 @@
 
 ## Overview
 
-Game launch orchestrates multiple services: frontend requests launch data,
-backend mounts ZIPs, and frontend loads content directly from game-service into
-Ruffle or iframe.
+Game launch orchestrates backend and frontend with support for background ZIP
+downloads: frontend requests launch data, backend mounts ZIPs (or starts background
+downloads), and frontend polls for completion. When ready, frontend loads content
+directly from backend game routes into Ruffle or iframe. Downloads show a UI while
+in progress, with TanStack Query auto-polling every 2 seconds.
 
 ## Architecture
 
@@ -22,11 +24,7 @@ graph TB
         GameService[GameService]
         GameDataSvc[GameDataService]
         FlashpointDB[(flashpoint.sqlite)]
-    end
-
-    subgraph "Game Service :22500/:22501"
-        ProxyServer[HTTP Proxy :22500]
-        ZipServer[GameZip Server :22501]
+        GameRoutes[Game Routes<br/>/game-proxy/*<br/>/game-zip/*]
         ZipManager[ZIP Manager]
         FileSystem[File System]
     end
@@ -37,22 +35,20 @@ graph TB
     GameService --> FlashpointDB
     LaunchRoute --> GameDataSvc
 
-    GameDataSvc -.mount ZIP.-> ZipServer
-    ZipServer --> ZipManager
+    GameDataSvc -.mount ZIP.-> ZipManager
     ZipManager --> FileSystem
 
     LaunchRoute -.return contentUrl.-> GamePlayer
     GamePlayer -->|Flash game| Ruffle
     GamePlayer -->|HTML5 game| IFrame
 
-    Ruffle -->|load SWF| ProxyServer
-    IFrame -->|load HTML| ProxyServer
-    ProxyServer --> FileSystem
-    ProxyServer -.fallback.-> ZipServer
+    Ruffle -->|load SWF| GameRoutes
+    IFrame -->|load HTML| GameRoutes
+    GameRoutes --> FileSystem
 
     style GamePlayer fill:#61dafb
     style LaunchRoute fill:#90ee90
-    style ProxyServer fill:#ffd700
+    style GameRoutes fill:#ffd700
 ```
 
 ## 1. Game Launch Request Flow
@@ -66,7 +62,9 @@ sequenceDiagram
     participant Backend
     participant GameService
     participant GameDataService
+    participant ZipManager
     participant FlashpointDB
+    participant Downloader
 
     User->>GameCard: Click "Play Game"
     GameCard->>GamePlayerView: Navigate to /play/:id
@@ -79,25 +77,42 @@ sequenceDiagram
     FlashpointDB-->>GameService: Game metadata
 
     alt Game has data (presentOnDisk)
-        Backend->>GameDataService: mountGameZip(gameId)
-        GameDataService->>FlashpointDB: SELECT path from game_data
-        GameDataService->>Backend: ZIP mounted
+        Backend->>GameDataService: mountGameZip(gameId) [AWAITED]
+        GameDataService->>ZipManager: Check if ZIP exists locally
 
-        Backend->>GameService: getGameDataPath(gameId)
-        GameService->>FlashpointDB: SELECT launchCommand
+        alt ZIP exists locally
+            ZipManager->>GameDataService: Mount and return {mounted: true}
+        else ZIP not found locally
+            GameDataService->>Downloader: Start background download
+            Downloader-->>GameDataService: {downloading: true} [returns quickly]
+        end
+
+        Backend->>Backend: Extract launchCommand from game_data
     else No game data
         Backend->>Backend: Use game.launchCommand
     end
 
     Backend->>Backend: Construct contentUrl
     Backend-->>API: Launch data response
-    API-->>GamePlayerView: {gameId, title, contentUrl}
+    API-->>GamePlayerView: {gameId, title, contentUrl, downloading: boolean}
 
-    GamePlayerView->>GamePlayerView: Determine player type
-    alt Flash game
-        GamePlayerView->>GamePlayerView: Initialize Ruffle
-    else HTML5 game
-        GamePlayerView->>GamePlayerView: Create iframe
+    alt downloading: true (ZIP not ready yet)
+        GamePlayerView->>User: Show download progress UI
+        GamePlayerView->>GamePlayerView: Start polling every 2s via TanStack Query
+        loop Poll every 2 seconds
+            GamePlayerView->>API: gamesApi.getLaunchData(gameId)
+            API->>Backend: GET /api/games/{id}/launch
+            Backend->>Backend: Check mount status
+            Backend-->>API: {downloading: false} when ready
+            API-->>GamePlayerView: Update with downloading: false
+        end
+    else downloading: false (ZIP ready or not needed)
+        GamePlayerView->>GamePlayerView: Determine player type
+        alt Flash game
+            GamePlayerView->>GamePlayerView: Initialize Ruffle
+        else HTML5 game
+            GamePlayerView->>GamePlayerView: Create iframe
+        end
     end
 
     GamePlayerView->>User: Show game player
@@ -113,16 +128,30 @@ interface GameLaunchData {
   launchCommand: string;
   contentUrl: string;
   canPlayInBrowser: boolean;
+  /** True when the game ZIP is being downloaded in the background */
+  downloading?: boolean;
 }
 
-// Example
+// Example - ZIP already mounted (ready to play)
 {
   "gameId": "abc-123-def-456",
   "title": "Super Mario Flash",
   "platform": "Flash",
   "launchCommand": "http://example.com/games/mario.swf",
-  "contentUrl": "http://localhost:22500/http://example.com/games/mario.swf",
-  "canPlayInBrowser": true
+  "contentUrl": "http://localhost:3100/game-proxy/http://example.com/games/mario.swf",
+  "canPlayInBrowser": true,
+  "downloading": false
+}
+
+// Example - ZIP downloading (show download UI, poll every 2s)
+{
+  "gameId": "xyz-789-abc-123",
+  "title": "Legacy Game",
+  "platform": "HTML5",
+  "launchCommand": "game/index.html",
+  "contentUrl": "http://localhost:3100/game-proxy/game/index.html",
+  "canPlayInBrowser": true,
+  "downloading": true
 }
 ```
 
@@ -132,92 +161,142 @@ interface GameLaunchData {
 sequenceDiagram
     participant Backend
     participant GameDataService
-    participant ZipServer
     participant ZipManager
     participant FileSystem
+    participant Downloader
 
-    Backend->>GameDataService: mountGameZip(gameId)
+    Backend->>GameDataService: mountGameZip(gameId) [AWAITED]
 
-    alt ZIP already mounted
-        GameDataService->>ZipServer: Check if mounted
-        ZipServer-->>GameDataService: Already mounted
-    else ZIP not mounted
-        GameDataService->>FileSystem: Resolve ZIP path
-        GameDataService->>ZipServer: POST /mount {gameId, zipPath}
+    GameDataService->>FileSystem: Look for ZIP file locally
 
-        ZipServer->>FileSystem: Check file exists
-        ZipServer->>ZipManager: Load ZIP (StreamZip)
-        ZipManager->>ZipManager: Create instance and verify
-        ZipServer->>ZipServer: Store in mounts map
+    alt ZIP exists locally
+        GameDataService->>ZipManager: mount(gameId, zipPath, downloadParams)
 
-        ZipServer-->>GameDataService: {success: true, mountPoint}
+        alt Already mounted
+            ZipManager-->>GameDataService: {success: true, mounted: true}
+        else Not yet mounted
+            ZipManager->>FileSystem: Load ZIP (StreamZip)
+            ZipManager->>ZipManager: Verify and cache
+            ZipManager-->>GameDataService: {success: true, mounted: true}
+        end
+
+        GameDataService-->>Backend: {mounted: true, downloading: false}
+    else ZIP not found, start download
+        GameDataService->>Downloader: Start background download [NO AWAIT]
+        Downloader->>Downloader: Read gameDataSources from preferences.json
+        Downloader->>Downloader: Download from configured sources (retry/fallback)
+        Downloader->>Downloader: Verify SHA256 hash
+        Downloader->>FileSystem: Save to Data/Games/
+
+        Downloader->>ZipManager: Mount when download completes [async]
+
+        GameDataService-->>Backend: {mounted: false, downloading: true} [returns immediately]
     end
 ```
 
-**ZIP Manager Implementation**:
+**Key Behavior**:
+- `mountGameZip()` is **awaited** by the backend launch endpoint
+- Returns `{ mounted: true, downloading: false }` immediately if ZIP exists
+- Returns `{ mounted: false, downloading: true }` immediately if starting download
+- Frontend polls every 2s when `downloading: true` until mount completes
+- Download happens in background without blocking the response
+
+**GameDataService Implementation**:
 
 ```typescript
-class ZipManager {
-  private mounts: Map<string, StreamZip.StreamZipAsync> = new Map();
-  private lastAccess: Map<string, number> = new Map();
+interface MountResult {
+  mounted: boolean;
+  downloading: boolean;
+}
 
-  async mount(gameId: string, zipPath: string): Promise<string> {
-    if (this.mounts.has(gameId)) {
-      this.lastAccess.set(gameId, Date.now());
-      return `/gamedata/${gameId}`;
-    }
+async mountGameZip(gameId: string): Promise<MountResult> {
+  // Get game data entry for dateAdded and sha256
+  const gameDataEntry = this.getGameDataEntry(gameId);
 
-    if (!fs.existsSync(zipPath)) {
-      throw new Error(`ZIP file not found: ${zipPath}`);
-    }
+  // Find ZIP file in Data/Games/
+  const zipFile = files.find((f) => f.startsWith(gameId + '-') && f.endsWith('.zip'));
+  let zipPath: string;
 
-    const zip = new StreamZip.async({ file: zipPath });
-    await zip.entries();
+  if (zipFile) {
+    zipPath = path.join(gamesPath, zipFile);
+  } else if (gameDataEntry?.dateAdded) {
+    // Construct expected filename (needed for download request)
+    const timestamp = new Date(gameDataEntry.dateAdded).getTime();
+    zipPath = path.join(gamesPath, `${gameId}-${timestamp}.zip`);
 
-    this.mounts.set(gameId, zip);
-    this.lastAccess.set(gameId, Date.now());
+    // Start background download (no await)
+    gameZipServer.mountZip({
+      id: gameId,
+      zipPath,
+      dateAdded: gameDataEntry.dateAdded,
+      sha256: gameDataEntry.sha256
+    });
 
-    logger.info(`Mounted ZIP: ${gameId}`);
-    return `/gamedata/${gameId}`;
+    // Return immediately with downloading flag
+    return { mounted: false, downloading: true };
   }
 
-  async getFile(gameId: string, filePath: string): Promise<Buffer | null> {
-    const zip = this.mounts.get(gameId);
-    if (!zip) return null;
+  // ZIP exists locally - mount it synchronously
+  const result = await gameZipServer.mountZip({
+    id: gameId,
+    zipPath,
+    // ... parameters
+  });
 
-    this.lastAccess.set(gameId, Date.now());
-
-    try {
-      return await zip.entryData(filePath);
-    } catch (error) {
-      logger.warn(`File not found in ZIP: ${filePath}`);
-      return null;
-    }
+  if (result.success) {
+    return { mounted: true, downloading: false };
   }
 
-  async unmount(gameId: string): Promise<void> {
-    const zip = this.mounts.get(gameId);
-    if (zip) {
-      await zip.close();
-      this.mounts.delete(gameId);
-      logger.info(`Unmounted ZIP: ${gameId}`);
-    }
-  }
-
-  async cleanupStale(): Promise<void> {
-    const now = Date.now();
-    const maxAge = 60 * 60 * 1000; // 1 hour
-
-    for (const [gameId, lastAccess] of this.lastAccess.entries()) {
-      if (now - lastAccess > maxAge) {
-        await this.unmount(gameId);
-      }
-    }
-  }
+  return { mounted: false, downloading: false };
 }
 ```
 
-## 3. Game Content Loading
+**Frontend Polling Configuration** (`useGameLaunchData` hook):
+
+```typescript
+export function useGameLaunchData(id: string) {
+  return useQuery({
+    queryKey: ['game', id, 'launch'],
+    queryFn: () => gamesApi.getLaunchData(id),
+    enabled: !!id,
+    // Auto-poll every 2s while the game ZIP is being downloaded
+    refetchInterval: (query) => (query.state.data?.downloading ? 2000 : false),
+  });
+}
+```
+
+When `downloading: true`, TanStack Query automatically polls every 2 seconds. When
+the backend response changes to `downloading: false`, polling stops automatically.
+
+## 3. Download Progress UI
+
+While `downloading: true`, the frontend shows a download progress UI:
+
+```typescript
+// GamePlayerView.tsx
+{launchData?.downloading ? (
+  <div className="flex items-center justify-center h-full bg-black">
+    <div className="text-center">
+      <Download size={48} className="text-blue-500 mx-auto mb-4 animate-bounce" />
+      <h3 className="text-xl font-bold mb-2 text-white">Downloading Game Data...</h3>
+      <p className="text-gray-400 text-sm mb-4">
+        The game files are being downloaded. This page will update automatically when ready.
+      </p>
+      <Loader2 size={20} className="text-blue-400 mx-auto animate-spin" />
+    </div>
+  </div>
+) : (
+  <GamePlayer {...playerProps} />
+)}
+```
+
+Features:
+- Bouncing Download icon and spinner animation
+- User-friendly message
+- Auto-updates when download completes
+- No manual refresh needed (TanStack Query handles polling)
+
+## 4. Game Content Loading
 
 ### Flash Game (Ruffle)
 
@@ -225,26 +304,26 @@ class ZipManager {
 sequenceDiagram
     participant GamePlayer
     participant Ruffle
-    participant ProxyServer
+    participant Backend
     participant FileSystem
 
     GamePlayer->>Ruffle: window.RufflePlayer.newest()
     Ruffle-->>GamePlayer: Player instance
 
     GamePlayer->>Ruffle: player.load(contentUrl)
-    Note over GamePlayer,Ruffle: contentUrl: http://localhost:22500/http://example.com/game.swf
+    Note over GamePlayer,Ruffle: contentUrl: http://localhost:3100/game-proxy/http://example.com/game.swf
 
-    Ruffle->>ProxyServer: GET /http://example.com/game.swf
-    ProxyServer->>FileSystem: Check htdocs → game data → ZIPs
-    FileSystem-->>ProxyServer: SWF file bytes
+    Ruffle->>Backend: GET /game-proxy/http://example.com/game.swf
+    Backend->>FileSystem: Check htdocs → game data → ZIPs
+    FileSystem-->>Backend: SWF file bytes
 
-    ProxyServer-->>Ruffle: SWF with MIME type
+    Backend-->>Ruffle: SWF with MIME type
     Ruffle->>Ruffle: Parse and execute SWF
     Ruffle->>GamePlayer: Render game
 
     loop Asset Loading
-        Ruffle->>ProxyServer: GET /http://example.com/assets/sprite.png
-        ProxyServer-->>Ruffle: Asset bytes
+        Ruffle->>Backend: GET /game-proxy/http://example.com/assets/sprite.png
+        Backend-->>Ruffle: Asset bytes
     end
 ```
 
@@ -254,35 +333,35 @@ sequenceDiagram
 sequenceDiagram
     participant GamePlayer
     participant IFrame
-    participant ProxyServer
+    participant Backend
     participant FileSystem
 
     GamePlayer->>IFrame: Create iframe
     GamePlayer->>IFrame: Set src to contentUrl
-    Note over GamePlayer,IFrame: src: http://localhost:22500/http://example.com/game/index.html
+    Note over GamePlayer,IFrame: src: http://localhost:3100/game-proxy/http://example.com/game/index.html
 
-    IFrame->>ProxyServer: GET /http://example.com/game/index.html
-    ProxyServer->>FileSystem: Resolve HTML file
-    FileSystem-->>ProxyServer: HTML content
+    IFrame->>Backend: GET /game-proxy/http://example.com/game/index.html
+    Backend->>FileSystem: Resolve HTML file
+    FileSystem-->>Backend: HTML content
 
-    ProxyServer-->>IFrame: HTML with MIME type
+    Backend-->>IFrame: HTML with MIME type
     IFrame->>IFrame: Parse HTML
 
     loop Asset Loading
-        IFrame->>ProxyServer: GET /http://example.com/game/style.css
-        ProxyServer-->>IFrame: CSS content
-        IFrame->>ProxyServer: GET /http://example.com/game/script.js
-        ProxyServer-->>IFrame: JS content
+        IFrame->>Backend: GET /game-proxy/http://example.com/game/style.css
+        Backend-->>IFrame: CSS content
+        IFrame->>Backend: GET /game-proxy/http://example.com/game/script.js
+        Backend-->>IFrame: JS content
     end
 
     IFrame->>GamePlayer: Game fully loaded
 ```
 
-## 4. HTTP Proxy Server Request Handling
+## 5. Game Proxy Route Request Handling
 
 ```mermaid
 graph TB
-    Request[Incoming Request]
+    Request[Incoming Request<br/>/game-proxy/*]
     ParseURL[Parse URL]
     CheckHTDocs{Check htdocs}
     CheckGameData{Check game data}
@@ -306,6 +385,7 @@ graph TB
     CheckCDN -->|Found| ReturnFile
     CheckCDN -->|Not Found| Return404
 
+    style Request fill:#ffd700
     style ReturnFile fill:#90ee90
     style Return404 fill:#ffcccb
 ```
@@ -356,8 +436,8 @@ app.get('*', async (req, res) => {
       });
     }
 
-    // 4. Fallback to CDN
-    for (const cdnBase of process.env.EXTERNAL_FALLBACK_URLS.split(',')) {
+    // 4. Fallback to CDN (URLs loaded from proxySettings.json)
+    for (const cdnBase of settings.externalFilePaths) {
       try {
         const cdnUrl = `${cdnBase}/${domain}${path}`;
         const response = await axios.get(cdnUrl, {
@@ -381,7 +461,7 @@ app.get('*', async (req, res) => {
 });
 ```
 
-## 5. MIME Type Detection
+## 6. MIME Type Detection
 
 ```typescript
 function getMimeType(filePath: string): string {
@@ -406,7 +486,7 @@ function getMimeType(filePath: string): string {
 }
 ```
 
-## 6. Ruffle Player Integration
+## 7. Ruffle Player Integration
 
 ```typescript
 export const RufflePlayer: React.FC<{ gameUrl: string; gameTitle: string }> = ({
@@ -458,19 +538,43 @@ export const RufflePlayer: React.FC<{ gameUrl: string; gameTitle: string }> = ({
 };
 ```
 
-## 7. Full Example: Playing "Super Mario Flash"
+## 8. Full Example: Playing "Super Mario Flash" (ZIP Already Available)
+
+**Scenario**: ZIP file is already in `Data/Games/` directory
 
 1. User clicks "Play Game" on game card
 2. Frontend: `GET /api/games/abc-123-def-456/launch`
 3. Backend queries database, finds `presentOnDisk = 1`
-4. Backend: `POST http://localhost:22501/mount` → Mounts ZIP
-5. Backend returns:
-   `contentUrl: http://localhost:22500/http://example.com/games/mario.swf`
-6. Frontend creates Ruffle player with this URL
-7. Ruffle: `GET http://localhost:22500/http://example.com/games/mario.swf`
-8. Proxy server checks htdocs → game data → mounted ZIPs → **Found in ZIP!**
-9. Returns `mario.swf` from ZIP with proper MIME type
-10. Ruffle executes game, user plays
+4. Backend awaits `mountGameZip(abc-123-def-456)` (ZIP already exists locally)
+5. Returns: `{downloading: false, contentUrl: http://localhost:3100/game-proxy/...}`
+6. Frontend immediately renders Ruffle player
+7. Ruffle loads SWF from backend proxy
+8. User plays game
+
+## 9. Full Example: Playing "Legacy Game" (ZIP Needs Download)
+
+**Scenario**: ZIP file doesn't exist, needs to be downloaded
+
+1. User clicks "Play Game" on game card
+2. Frontend: `GET /api/games/xyz-789-abc-123/launch`
+3. Backend queries database, finds `presentOnDisk = 1` but ZIP not found locally
+4. Backend awaits `mountGameZip(xyz-789-abc-123)`
+5. GameDataService starts **background download** (no await) and returns immediately
+6. Backend returns: `{downloading: true, contentUrl: http://localhost:3100/game-proxy/...}`
+7. Frontend shows **download progress UI** (bouncing icon, spinner, message)
+8. Frontend starts **auto-polling** every 2s via TanStack Query
+9. Meanwhile, background downloader:
+   - Reads `gameDataSources` from `preferences.json`
+   - Downloads ZIP from configured sources (with retry/fallback)
+   - Verifies SHA256 hash
+   - Saves to `Data/Games/{gameId}-{timestamp}.zip`
+   - Mounts ZIP via ZipManager
+10. On next poll (within 2s), backend returns: `{downloading: false, contentUrl: ...}`
+11. Frontend automatically **stops polling** and renders Ruffle player
+12. User plays game
+
+**Key Improvement**: User sees friendly download UI instead of a timeout or error, and
+the download happens automatically without blocking the initial response.
 
 ## Error Handling
 
@@ -486,6 +590,20 @@ export const RufflePlayer: React.FC<{ gameUrl: string; gameTitle: string }> = ({
 
 **Lazy Loading**: Load Ruffle only when needed
 
-**ZIP Caching**: Keep frequently accessed ZIPs mounted (1 hour TTL)
+**ZIP Caching**: Keep frequently accessed ZIPs mounted (LRU cache, 30-min TTL)
 
 **File Streaming**: Stream large files instead of loading into memory
+
+**Background Downloads**: Start downloads immediately without waiting for completion,
+allowing the frontend to show download progress instead of a timeout
+
+**Connection Management**:
+- `keepAliveTimeout: 65s` - Keeps connections alive for repeated file requests
+- `headersTimeout: 66s` - Slightly higher than keepAliveTimeout
+- `timeout: 120s` - 2-minute max for any request (handles slow file downloads)
+- `maxConnections: 500` - Prevents connection exhaustion during game file streaming
+
+**Frontend Resource Management**:
+- TanStack Query polling stops automatically when download completes
+- No unnecessary network traffic when not downloading
+- Memory-efficient polling interval (2 seconds)

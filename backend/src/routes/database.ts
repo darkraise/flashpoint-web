@@ -1,9 +1,12 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs';
 import { DatabaseService } from '../services/DatabaseService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
+import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 const router = Router();
 
@@ -28,7 +31,7 @@ router.post(
   authenticate,
   requirePermission('settings.update'),
   logActivity('database.reload', 'database'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       logger.info('Manual database reload requested');
 
@@ -42,10 +45,10 @@ router.post(
       logger.error('Manual database reload failed:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to reload database',
       });
     }
-  }
+  })
 );
 
 /**
@@ -68,18 +71,14 @@ router.get(
   authenticate,
   requirePermission('settings.update'),
   logActivity('database.status', 'database'),
-  async (req: Request, res: Response) => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
-      const fs = require('fs');
-      const { config } = require('../config');
-
       const isConnected = DatabaseService.isConnected();
       const stats = fs.statSync(config.flashpointDbPath);
 
       res.json({
         success: true,
         connected: isConnected,
-        dbPath: config.flashpointDbPath,
         fileSizeBytes: stats.size,
         fileSizeMB: (stats.size / (1024 * 1024)).toFixed(2),
         lastModified: stats.mtime.toISOString(),
@@ -88,10 +87,10 @@ router.get(
       logger.error('Error getting database status:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to get database status',
       });
     }
-  }
+  })
 );
 
 export default router;

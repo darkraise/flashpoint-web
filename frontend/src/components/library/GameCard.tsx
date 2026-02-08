@@ -13,11 +13,7 @@ import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
 import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
-
-export interface BreadcrumbContext {
-  label: string;
-  href: string;
-}
+import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 
 interface GameCardProps {
   game: Game;
@@ -61,7 +57,13 @@ const GameCardComponent = function GameCard({
   const gamePlayUrl = buildSharedGameUrl(`/games/${game.id}/play`, shareToken);
 
   // Handle navigation to game details (for clicking on image/footer area)
-  const handleCardClick = () => {
+  const handleCardClick = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e && 'key' in e && e.key !== 'Enter' && e.key !== ' ') {
+      return;
+    }
+    if (e && 'key' in e) {
+      e.preventDefault();
+    }
     navigate(gameDetailUrl, {
       state: breadcrumbContext ? { breadcrumbContext } : undefined,
     });
@@ -72,6 +74,9 @@ const GameCardComponent = function GameCard({
       <CardContent
         className="p-0 aspect-square flex items-center justify-center relative overflow-hidden"
         onClick={handleCardClick}
+        role="link"
+        tabIndex={0}
+        onKeyDown={handleCardClick}
       >
         {imageUrl && !imageError ? (
           <>
@@ -202,6 +207,9 @@ const GameCardComponent = function GameCard({
       <CardFooter
         className="flex flex-col items-start gap-2 p-3 border-t border-border/50 cursor-pointer mt-auto"
         onClick={handleCardClick}
+        role="link"
+        tabIndex={0}
+        onKeyDown={handleCardClick}
       >
         {/* Platform Badge and Favorite Indicator Row - Fixed height */}
         <div className="flex items-center justify-between w-full h-6 min-h-[24px]">
@@ -254,12 +262,14 @@ const GameCardComponent = function GameCard({
       </CardFooter>
 
       {/* Add to Playlist Modal */}
-      <AddToPlaylistModal
-        isOpen={isPlaylistModalOpen}
-        onClose={() => setIsPlaylistModalOpen(false)}
-        gameId={game.id}
-        gameTitle={game.title}
-      />
+      {isPlaylistModalOpen ? (
+        <AddToPlaylistModal
+          isOpen={isPlaylistModalOpen}
+          onClose={() => setIsPlaylistModalOpen(false)}
+          gameId={game.id}
+          gameTitle={game.title}
+        />
+      ) : null}
     </Card>
   );
 };
@@ -267,8 +277,8 @@ const GameCardComponent = function GameCard({
 // Memoize component to prevent unnecessary re-renders
 // Only re-render if game.id changes or favoriteGameIds state changes
 export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
-  // Re-render if game ID changed
-  if (prevProps.game.id !== nextProps.game.id) {
+  // Re-render if game ID or title changed
+  if (prevProps.game.id !== nextProps.game.id || prevProps.game.title !== nextProps.game.title) {
     return false;
   }
 
@@ -296,3 +306,4 @@ export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
   // Don't re-render - props are effectively the same
   return true;
 });
+GameCard.displayName = 'GameCard';

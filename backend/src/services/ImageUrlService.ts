@@ -23,7 +23,7 @@ export class ImageUrlService {
           'https://infinity.unstable.life/Flashpoint/Data/Images', // Secondary fallback
         ];
 
-        logger.info('Using external image URLs from Flashpoint preferences', {
+        logger.debug('Using external image URLs from Flashpoint preferences', {
           baseUrl: preferences.onDemandBaseUrl,
           constructedUrls: urls,
         });
@@ -42,7 +42,7 @@ export class ImageUrlService {
       'https://infinity.unstable.life/Flashpoint/Data/Images',
     ];
 
-    logger.info('Using default image URLs', { urls: defaultUrls });
+    logger.debug('Using default image URLs', { urls: defaultUrls });
     return defaultUrls;
   }
 
@@ -72,5 +72,3 @@ export class ImageUrlService {
     }
   }
 }
-
-export default ImageUrlService;

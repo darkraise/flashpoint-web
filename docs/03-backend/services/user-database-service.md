@@ -60,7 +60,7 @@ private static async createTables(): Promise<void> {
 
 ### 3. Migration System
 
-Runs database migrations on startup:
+Runs database migrations on startup with transactional safety:
 
 ```typescript
 private static async runMigrations(): Promise<void> {
@@ -74,7 +74,14 @@ private static async runMigrations(): Promise<void> {
     logger.info('[UserDB] Running migration: 002_create-user-settings');
     const migrationPath = path.join(__dirname, '../migrations/002_create-user-settings.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-    this.db!.exec(migrationSQL);
+
+    // IMPORTANT: Wrap in transaction for atomicity
+    const transaction = this.db!.transaction(() => {
+      this.db!.exec(migrationSQL);
+      this.recordMigration('002_create-user-settings', migrationSQL);
+    });
+
+    transaction();  // Execute atomically
   }
 
   // Check for system_settings table
@@ -87,10 +94,37 @@ private static async runMigrations(): Promise<void> {
     // Run migration to create system_settings table
     const migrationPath = path.join(__dirname, '../migrations/003_create-system-settings.sql');
     const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
-    this.db!.exec(migrationSQL);
+
+    // IMPORTANT: Wrap in transaction for atomicity
+    const transaction = this.db!.transaction(() => {
+      this.db!.exec(migrationSQL);
+      this.recordMigration('003_create-system-settings', migrationSQL);
+    });
+
+    transaction();  // Execute atomically
   }
 }
 ```
+
+**Transaction Safety for Migrations:**
+
+Each migration execution is wrapped in a better-sqlite3 `db.transaction()` that
+includes:
+
+1. The SQL execution (`db.exec(sql)`)
+2. The migration registry insert (`recordMigration()`)
+
+If either part fails, the entire transaction rolls back, preventing partial
+migration states where:
+
+- SQL executed but not recorded in registry (orphaned changes)
+- Migration recorded but SQL never executed (wrong schema state)
+- Database left in inconsistent half-migrated state
+
+This ensures migrations are all-or-nothing: either the migration completely
+succeeds or completely fails with no intermediate states.
+
+
 
 ### 4. Default Admin User
 

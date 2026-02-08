@@ -41,7 +41,7 @@ Returns `200 OK` (healthy) or `503 Service Unavailable` (unhealthy)
   },
   "memory": { "heapUsed": 125829120, "heapTotal": 536870912 },
   "services": {
-    "gameService": { "available": true, "url": "http://localhost:22500" }
+    "gameService": { "status": "integrated" }
   }
 }
 ```
@@ -237,8 +237,7 @@ maxLoginAttempts: 1-10).
 
 Returns file content with appropriate MIME type and CORS headers.
 
-Uses fallback chain: Game Service → Game Service GameZip → External CDN → Local
-cache
+Uses fallback chain: Backend game-proxy → game-zip → External CDN → Local cache
 
 Query parameter `cache=false` bypasses caching.
 

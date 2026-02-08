@@ -23,8 +23,8 @@ declare global {
  * Authenticate user from JWT token
  * Requires valid token in Authorization header
  */
-export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
-  try {
+export const authenticate = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -38,17 +38,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     req.user = user;
 
     next();
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * Optional authentication - allows guest access if enabled
  * If token is provided, verifies it. Otherwise, sets guest user (if guest access enabled)
  */
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
-  try {
+export const optionalAuth = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -62,7 +60,8 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
         throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
       }
 
-      // Set guest user with read-only permissions
+      // Guest users get no permissions - they can only browse, not play
+      // (authentication is required for games.play permission)
       req.user = {
         id: 0,
         username: 'guest',
@@ -73,10 +72,8 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     }
 
     next();
-  } catch (error) {
-    next(error);
   }
-};
+);
 
 /**
  * Soft authentication - populates req.user if token exists, otherwise leaves undefined
@@ -139,7 +136,15 @@ export const sharedAccessAuth = asyncHandler(
             );
           }
 
+          // Grant games.play permission for valid shared access tokens
           req.sharedAccess = payload;
+          req.user = {
+            id: 0,
+            username: 'shared-guest',
+            email: '',
+            role: 'guest',
+            permissions: ['games.read', 'playlists.read', 'games.play'],
+          };
           return next();
         } catch (error) {
           if (error instanceof AppError) throw error;
@@ -161,13 +166,14 @@ export const sharedAccessAuth = asyncHandler(
       throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
     }
 
-    // Set guest user
+    // Guest users without a shared access token can only browse, not play
+    // (games.play is only granted when a valid shared access token is verified above)
     req.user = {
       id: 0,
       username: 'guest',
       email: '',
       role: 'guest',
-      permissions: ['games.read', 'playlists.read', 'games.play'],
+      permissions: ['games.read', 'playlists.read'],
     };
 
     next();
@@ -180,8 +186,8 @@ export const sharedAccessAuth = asyncHandler(
  */
 export const validateSharedGameAccess = (gameIdParam: string = 'id') => {
   return asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    // If regular user auth, skip validation
-    if (req.user) {
+    // If regular user auth (non-zero ID), skip validation
+    if (req.user && req.user.id !== 0) {
       return next();
     }
 
@@ -206,6 +212,11 @@ export const validateSharedGameAccess = (gameIdParam: string = 'id') => {
         );
       }
 
+      return next();
+    }
+
+    // Guest users (id=0, no sharedAccess) can view game details in read-only mode
+    if (req.user && req.user.id === 0 && req.user.permissions?.includes('games.read')) {
       return next();
     }
 

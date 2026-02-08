@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { WifiOff, Wifi, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ type NetworkStatus = 'online' | 'offline' | 'slow';
 export function NetworkStatusIndicator() {
   const [status, setStatus] = useState<NetworkStatus>('online');
   const [showBanner, setShowBanner] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Check if online/offline
@@ -38,9 +39,6 @@ export function NetworkStatusIndicator() {
       setShowBanner(true);
     }
 
-    // Monitor slow network conditions using Performance API
-    let slowNetworkTimeout: NodeJS.Timeout;
-
     const checkNetworkSpeed = () => {
       if (navigator.onLine) {
         const connection =
@@ -55,12 +53,20 @@ export function NetworkStatusIndicator() {
             setShowBanner(true);
 
             // Auto-hide slow warning after 10 seconds
-            slowNetworkTimeout = setTimeout(() => {
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
               setShowBanner(false);
             }, 10000);
-          } else if (status === 'slow') {
-            setStatus('online');
-            setTimeout(() => setShowBanner(false), 3000);
+          } else {
+            setStatus((prevStatus) => {
+              if (prevStatus === 'slow') {
+                setTimeout(() => setShowBanner(false), 3000);
+                return 'online';
+              }
+              return prevStatus;
+            });
           }
         }
       }
@@ -74,9 +80,11 @@ export function NetworkStatusIndicator() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(speedCheckInterval);
-      clearTimeout(slowNetworkTimeout);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-  }, [status]);
+  }, []);
 
   if (!showBanner) {
     return null;

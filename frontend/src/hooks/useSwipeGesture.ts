@@ -19,6 +19,10 @@ export function useSwipeGesture<T extends HTMLElement>(options: SwipeGestureOpti
   const touchStartX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
   const touchStartTime = useRef<number>(0);
+  const onSwipeLeftRef = useRef(onSwipeLeft);
+  const onSwipeRightRef = useRef(onSwipeRight);
+  onSwipeLeftRef.current = onSwipeLeft;
+  onSwipeRightRef.current = onSwipeRight;
 
   useEffect(() => {
     const element = elementRef.current;
@@ -45,10 +49,10 @@ export function useSwipeGesture<T extends HTMLElement>(options: SwipeGestureOpti
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         // Check if swipe was fast enough and long enough
         if (Math.abs(deltaX) >= minSwipeDistance && deltaTime <= maxSwipeTime) {
-          if (deltaX > 0 && onSwipeRight) {
-            onSwipeRight();
-          } else if (deltaX < 0 && onSwipeLeft) {
-            onSwipeLeft();
+          if (deltaX > 0 && onSwipeRightRef.current) {
+            onSwipeRightRef.current();
+          } else if (deltaX < 0 && onSwipeLeftRef.current) {
+            onSwipeLeftRef.current();
           }
         }
       }
@@ -61,7 +65,7 @@ export function useSwipeGesture<T extends HTMLElement>(options: SwipeGestureOpti
       element.removeEventListener('touchstart', handleTouchStart);
       element.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [onSwipeLeft, onSwipeRight, minSwipeDistance, maxSwipeTime]);
+  }, [minSwipeDistance, maxSwipeTime]);
 
   return elementRef;
 }

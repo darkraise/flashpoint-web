@@ -151,39 +151,17 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
 
       {/* All Filters */}
       <div className="space-y-3">
-        {/* With Platform Filter */}
-        {showPlatformFilter ? (
-          <>
-            {/* Desktop Layout: Single Row */}
-            <div className="hidden md:flex items-center gap-3 flex-wrap">
-              {/* Filters - Data-driven rendering */}
-              {renderFilters(false)}
-            </div>
+        {/* Desktop Layout: Single Row */}
+        <div className="hidden md:flex items-center gap-3 flex-wrap">
+          {/* Filters - Data-driven rendering */}
+          {renderFilters(false)}
+        </div>
 
-            {/* Mobile Layout */}
-            <div className="md:hidden flex items-center gap-2">
-              {/* Filters - Data-driven rendering */}
-              {renderFilters(true)}
-            </div>
-          </>
-        ) : null}
-
-        {/* Filter Popover - Desktop and Mobile (No platform filter) */}
-        {!showPlatformFilter ? (
-          <>
-            {/* Desktop Layout: Single Row */}
-            <div className="hidden md:flex items-center gap-3 flex-wrap">
-              {/* Filters - Data-driven rendering */}
-              {renderFilters(false)}
-            </div>
-
-            {/* Mobile Layout */}
-            <div className="md:hidden flex items-center gap-2">
-              {/* Filters - Data-driven rendering */}
-              {renderFilters(true)}
-            </div>
-          </>
-        ) : null}
+        {/* Mobile Layout */}
+        <div className="md:hidden flex items-center gap-2">
+          {/* Filters - Data-driven rendering */}
+          {renderFilters(true)}
+        </div>
 
         {/* Filter Badges - Data-driven rendering */}
         <div className="space-y-2">{renderFilterBadges()}</div>

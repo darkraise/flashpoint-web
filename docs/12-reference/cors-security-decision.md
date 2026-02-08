@@ -2,28 +2,28 @@
 
 ## Overview
 
-The Game Service intentionally uses `Access-Control-Allow-Origin: *` (wildcard)
-to allow cross-origin requests from any origin. This document explains the
-security rationale and justification for this decision.
+The backend service includes game content routes that intentionally use
+`Access-Control-Allow-Origin: *` (wildcard) to allow cross-origin requests from
+any origin. This document explains the security rationale and justification for
+this decision.
 
 ## Location
 
-- **File**: `game-service/src/utils/cors.ts`
-- **Implementation**: `setCorsHeaders()` function
-- **Affected Servers**:
-  - HTTP Proxy Server (port 22500)
-  - GameZip Server (port 22501)
+- **Backend Files**: `backend/src/game/legacy-server.ts`, `backend/src/game/gamezipserver.ts`
+- **Routes**:
+  - `/game-proxy/*` - HTTP proxy for game content
+  - `/game-zip/*` - ZIP file streaming
 
 ## Security Decision
 
-**Decision**: Allow all origins (`*`) for game-service CORS headers
+**Decision**: Allow all origins (`*`) for backend game content routes
 
 **Rationale**:
 
 ### 1. Public Game Content
 
-The game-service serves **public, read-only game content** from the Flashpoint
-Archive:
+The backend game content routes serve **public, read-only game content** from
+the Flashpoint Archive:
 
 - Flash game files (.swf)
 - HTML5 game files (.html, .js, .css)
@@ -42,14 +42,14 @@ All content served is:
 The wildcard CORS policy supports legitimate use cases:
 
 - Embedding Flash/HTML5 games in iframes across different domains
-- Running games from `http://localhost:22500` while frontend is on
+- Running games from `http://localhost:3100/game-proxy/*` while frontend is on
   `http://localhost:5173`
 - Supporting different development environments and ports
 - Allowing community-hosted instances with various domain configurations
 
 ### 3. No Sensitive Data Exposure
 
-The game-service does **NOT** serve:
+The backend game content routes do **NOT** serve:
 
 - ❌ User data or personal information
 - ❌ Authentication tokens or credentials
@@ -62,12 +62,15 @@ has **restrictive CORS** configured to only allow the specific frontend origin.
 
 ### 4. Security Boundaries
 
-**Backend Service (Port 3100)** - Restricted CORS:
+**Backend API Routes** (`/api/*`) - Restricted CORS:
 
 ```typescript
 // backend/src/server.ts
 cors({
-  origin: process.env.DOMAIN || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Checks env var and dynamic domains table
+    // Allows only configured origins
+  },
   credentials: true,
 });
 ```
@@ -77,12 +80,11 @@ cors({
 - Enforces RBAC permissions
 - Uses restrictive CORS with credentials
 
-**Game Service (Ports 22500, 22501)** - Permissive CORS:
+**Backend Game Content Routes** (`/game-proxy/*`, `/game-zip/*`) - Permissive CORS:
 
 ```typescript
-// game-service/src/utils/cors.ts
-setCorsHeaders(res, { allowCrossDomain: true });
-// Sets: Access-Control-Allow-Origin: *
+// backend/src/game/cors-handler.ts
+res.setHeader('Access-Control-Allow-Origin', '*');
 ```
 
 - Serves public game files only
@@ -92,27 +94,40 @@ setCorsHeaders(res, { allowCrossDomain: true });
 
 ### 5. Additional Security Measures
 
-Even with wildcard CORS, the game-service implements:
+Even with wildcard CORS, the backend game content routes implement:
 
 1. **Path Traversal Prevention**
-   - Validates ZIP mount IDs (no `..`, `/`, `\`, null bytes)
+   - Centralized security utilities in `backend/src/game/utils/pathSecurity.ts`
+   - Validates ZIP mount IDs and file paths
+   - Blocks `..`, `/`, `\`, null bytes, and URL-encoded traversal
    - Restricts ZIP files to allowed games directory
-   - File: `game-service/src/gamezipserver.ts:131-134, 156-169`
+   - Comprehensive test coverage (17 test cases)
 
 2. **Request Size Limits**
    - 1MB maximum request body size
    - Prevents DoS attacks
-   - File: `game-service/src/gamezipserver.ts:307`
 
 3. **Read-Only Operations**
    - No write, update, or delete operations
-   - ZIP mounting requires explicit POST request
+   - ZIP mounting is internal only
    - File serving is GET-only
 
 4. **No Credential Sharing**
    - No cookies or authentication headers
    - No `Access-Control-Allow-Credentials`
    - Stateless file serving
+
+## Separation of Concerns
+
+The wildcard CORS policy for game content routes is separate from the backend
+API CORS configuration:
+
+- **Backend API** (`/api/*`): Restrictive CORS, only allows configured origins
+- **Game Content** (`/game-proxy/*`, `/game-zip/*`): Permissive CORS, allows all
+  origins
+
+Both routes run on the same backend service (port 3100) but are isolated by
+path.
 
 ## Alternatives Considered
 
@@ -126,10 +141,11 @@ deployment environment.
 **Rejected**: Adds complexity with no security benefit given the public,
 read-only nature of served content.
 
-### Alternative 3: Separate Authenticated Endpoint
+### Alternative 3: Separate Backend Service
 
-**Already Implemented**: The backend service (port 3100) already handles all
-authenticated operations with restrictive CORS.
+**Previously Implemented**: Before the game-service merger, the game service
+ran on separate ports (22500/22501). Now integrated into the backend with
+separate route prefixes.
 
 ## Risk Assessment
 
@@ -157,9 +173,9 @@ authenticated operations with restrictive CORS.
 - Follows principle of least privilege (game-service has no database access)
 - Implements defense in depth (multiple security layers)
 
-## Backend Dynamic CORS (Updated 2026-02)
+## Backend API Dynamic CORS (Updated 2026-02)
 
-The backend service now supports **dynamic CORS** in addition to the static
+The backend API routes now support **dynamic CORS** in addition to the static
 `DOMAIN` environment variable:
 
 **Implementation**: `backend/src/server.ts`
@@ -183,14 +199,14 @@ origin: (origin, callback) => {
 - Results cached in-memory for 60 seconds, invalidated on any domain mutation
 - Falls back to `DOMAIN` env var if no domains configured or DB unavailable
 
-**Security**: This does NOT affect the game-service, which retains its wildcard
-CORS policy for public game content. Only the backend API service uses dynamic
-CORS.
+**Game Content Routes**: Game content routes (`/game-proxy/*`, `/game-zip/*`)
+always use wildcard CORS (`*`) for public game embedding, regardless of domain
+configuration.
 
 ## Conclusion
 
-The wildcard CORS policy for game-service is a **justified security decision**
-that:
+The wildcard CORS policy for backend game content routes is a **justified
+security decision** that:
 
 1. Serves only public, read-only game content
 2. Exposes no sensitive data

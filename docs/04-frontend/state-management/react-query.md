@@ -164,6 +164,34 @@ useQuery({
 });
 ```
 
+## Conditional Refetch Intervals
+
+Poll with dynamic intervals based on data state:
+
+```typescript
+// Example: Poll for game download completion
+useQuery({
+  queryKey: ['game', id, 'launch'],
+  queryFn: () => gamesApi.getGameLaunchData(id),
+  // Poll every 2 seconds if downloading, stop when done
+  refetchInterval: (query) => query.state.data?.downloading ? 2000 : false,
+});
+
+// This replaces manual polling logic with declarative TanStack Query patterns
+```
+
+**Use Cases:**
+- Download progress polling (poll while `downloading: true`)
+- Live status updates (poll while in progress, stop when complete)
+- Real-time data that becomes stale at specific times
+- User activity tracking
+
+**Benefits:**
+- Automatic cleanup when condition becomes false
+- Respects query cache and stale time
+- Deduplicates requests via query client
+- Integrates with DevTools
+
 ## Infinite Queries
 
 For pagination:

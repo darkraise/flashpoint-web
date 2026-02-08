@@ -44,7 +44,8 @@ hour; Refresh tokens: 7 days.
 assigned to roles, users inherit role permissions.
 
 **CORS (Cross-Origin Resource Sharing)** - Browser security mechanism. Backend
-restricts to frontend origin; game-service allows all origins.
+API restricts to configured origins; game content routes on backend allow all
+origins for public game embedding.
 
 **bcrypt** - Password hashing function based on Blowfish cipher. Cost factor 10
 (2^10 = 1024 rounds). Automatically salts and one-way hashes.
@@ -62,7 +63,7 @@ to request, response, and next function.
 data values, preventing SQL injection.
 
 **Proxy Server** - Intermediate server forwarding requests with optional
-modification. Game-service proxies to CDN fallback.
+modification. Backend game module proxies game content to CDN fallback.
 
 **MIME Type** - File format identifier for HTTP Content-Type headers (e.g.,
 application/x-shockwave-flash for SWF).
@@ -74,17 +75,17 @@ API: 100/15min.
 
 ## Architecture Terms
 
-**Monorepo** - Single repository for multiple projects: backend (Express),
-frontend (React), game-service (Node.js).
+**Monorepo** - Single repository for multiple projects: backend (Express with
+integrated game module), frontend (React).
 
 **Service Layer Pattern** - Separating business logic into dedicated services,
 decoupling from HTTP routes.
 
-**Separation of Concerns** - Backend (metadata/auth), game-service (file
+**Separation of Concerns** - Backend API (metadata/auth) and game module (file
 serving), frontend (UI).
 
 **API Gateway** - Entry point routing requests and aggregating responses.
-Backend delegates game files to game-service.
+Backend routes game file requests to integrated game module.
 
 **File Watching** - Monitoring filesystem events to trigger actions.
 DatabaseService watches flashpoint.sqlite for changes.

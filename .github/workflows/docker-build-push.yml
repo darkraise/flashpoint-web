@@ -23,9 +23,6 @@ jobs:
           - name: frontend
             context: .
             dockerfile: ./frontend/Dockerfile
-          - name: game-service
-            context: .
-            dockerfile: ./game-service/Dockerfile
 
     permissions:
       contents: read
@@ -93,7 +90,6 @@ jobs:
           echo "### Images Built:" >> $GITHUB_STEP_SUMMARY
           echo "- \`flashpoint-backend\`" >> $GITHUB_STEP_SUMMARY
           echo "- \`flashpoint-frontend\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`flashpoint-game-service\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Registry:" >> $GITHUB_STEP_SUMMARY
           echo "- Docker Hub: \`${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-*\`" >> $GITHUB_STEP_SUMMARY
@@ -102,5 +98,4 @@ jobs:
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-backend:latest" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-frontend:latest" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-game-service:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

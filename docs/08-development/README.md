@@ -44,20 +44,18 @@ npm run build
 
 ## Architecture Overview
 
-The project is a monorepo with three independent services:
+The project is a monorepo with two independent services:
 
-- **Backend** (port 3100): REST API with Express + TypeScript
+- **Backend** (port 3100): REST API with Express + TypeScript (includes game service)
 - **Frontend** (port 5173): React SPA with Vite + TypeScript
-- **Game Service** (ports 22500, 22501): Game content proxy and ZIP server
 
-Each service can be developed, tested, and deployed independently.
+Each service can be developed, tested, and deployed independently. The game service is now integrated into the backend as the `/game-proxy/*` and `/game-zip/*` routes.
 
 ## Getting Help
 
 - Review existing documentation in this directory
 - Check the main [CLAUDE.md](../../CLAUDE.md) for project overview
-- Consult service-specific docs in `docs/03-backend`, `docs/04-frontend`, and
-  `docs/05-game-service`
+- Consult service-specific docs in `docs/03-backend` and `docs/04-frontend`
 - Review architecture documentation in `docs/02-architecture`
 
 ## Contributing

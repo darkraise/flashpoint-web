@@ -5,6 +5,7 @@ import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { config } from './config';
 import { logger, getLoggingStatus, verifyFileLogging } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
@@ -25,6 +26,12 @@ import { RuffleUpdateJob } from './jobs/RuffleUpdateJob';
 import { CachedSystemSettingsService } from './services/CachedSystemSettingsService';
 import { PermissionCache } from './services/PermissionCache';
 import { RuffleService } from './services/RuffleService';
+import { ConfigManager } from './game/config';
+import { PreferencesService } from './game/services/PreferencesService';
+import { zipManager } from './game/zip-manager';
+import { gameZipServer } from './game/gamezipserver';
+import gameProxyRouter from './routes/game-proxy';
+import gameZipRouter from './routes/game-zip';
 
 /**
  * Clean up old activity logs based on retention settings
@@ -56,6 +63,28 @@ async function cleanupActivityLogs(): Promise<void> {
 
 async function startServer() {
   const app: Express = express();
+
+  // Trust proxy - Required for Docker/reverse proxy deployments
+  // Enables Express to correctly read X-Forwarded-* headers from reverse proxies
+  // Without this, req.ip returns the proxy IP instead of the client IP, causing all rate limiters to share a single counter
+  app.set('trust proxy', 1);
+
+  // --- Game content routes (BEFORE all middleware) ---
+  // These bypass auth, maintenance mode, restrictive CORS, and body parsing.
+  // Only a permissive CORS middleware is applied to game routes.
+  const gameCors = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    if (_req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    next();
+  };
+  app.use('/game-proxy', gameCors, gameProxyRouter);
+  app.use('/game-zip', gameCors, gameZipRouter);
+  // --- End game content routes ---
 
   // Security middleware
   app.use(
@@ -98,6 +127,9 @@ async function startServer() {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
+  // Cookie parsing
+  app.use(cookieParser());
+
   // Compression
   app.use(compression());
 
@@ -107,7 +139,16 @@ async function startServer() {
 
   // Request logging
   app.use((req, res, next) => {
-    logger.info(`${req.method} ${req.path}`);
+    // Skip logging for high-frequency paths
+    if (
+      req.path === '/health' ||
+      req.path.startsWith('/game-proxy/') ||
+      req.path.startsWith('/game-zip/')
+    ) {
+      next();
+      return;
+    }
+    logger.debug(`${req.method} ${req.path}`);
     next();
   });
 
@@ -217,58 +258,31 @@ async function startServer() {
     // Non-fatal error - continue server startup
   }
 
-  // Note: Game proxy server functionality has been moved to game-service
-  // The backend now proxies requests to game-service instead of serving them directly
-  logger.info('📡 Game content will be proxied to game-service');
-  logger.info(`   Proxy Server: ${config.gameServerUrl || 'http://localhost:22500'}`);
-  logger.info(`   GameZip Server: http://localhost:${config.gameServerHttpPort}`);
+  // Initialize game service configuration (integrated into backend)
+  try {
+    await ConfigManager.loadConfig(config.flashpointPath);
+    PreferencesService.initialize(config.flashpointPath);
+    logger.info('🎮 Game service configuration loaded (integrated)');
+  } catch (error) {
+    logger.warn('⚠️  Failed to load game service config (non-fatal):', error);
+  }
 
-  // Health check with game-service connectivity verification
-  app.get('/health', async (req, res) => {
-    let gameServiceStatus: 'ok' | 'error' | 'unknown' = 'unknown';
-    let gameServiceError: string | undefined;
-
-    // Check game-service connectivity
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-      const gameServiceUrl = config.gameServerUrl || 'http://localhost:22500';
-      const response = await fetch(`${gameServiceUrl}/health`, {
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        gameServiceStatus = 'ok';
-      } else {
-        gameServiceStatus = 'error';
-        gameServiceError = `HTTP ${response.status}`;
-      }
-    } catch (error) {
-      gameServiceStatus = 'error';
-      gameServiceError =
-        error instanceof Error
-          ? error.name === 'AbortError'
-            ? 'Connection timeout'
-            : error.message
-          : 'Unknown error';
-    }
-
-    const isHealthy = DatabaseService.isConnected() && gameServiceStatus === 'ok';
+  // Health check - game service is now integrated (no external dependency)
+  // NOTE: This endpoint is registered before middleware for load balancer access.
+  // It performs basic health checks. For detailed health status, use /api/health (requires auth).
+  app.get('/health', async (_req, res) => {
+    const isHealthy = DatabaseService.isConnected();
 
     res.status(isHealthy ? 200 : 503).json({
       status: isHealthy ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
-      flashpointPath: config.flashpointPath,
       services: {
         database: {
           status: DatabaseService.isConnected() ? 'ok' : 'error',
         },
         gameService: {
-          status: gameServiceStatus,
-          url: config.gameServerUrl || 'http://localhost:22500',
-          error: gameServiceError,
+          status: 'ok',
+          note: 'integrated',
         },
       },
     });
@@ -304,9 +318,15 @@ async function startServer() {
   const server = app.listen(config.port, config.host, () => {
     logger.info(`🚀 Flashpoint Web API server running on http://${config.host}:${config.port}`);
     logger.info(`📁 Flashpoint path: ${config.flashpointPath}`);
-    logger.info(`🎮 Game Service: ${config.gameServerUrl || 'http://localhost:22500'}`);
+    logger.info(`🎮 Game content: /game-proxy/* and /game-zip/* (integrated)`);
     logger.info(`🌍 Environment: ${config.nodeEnv}`);
   });
+
+  // Prevent connection exhaustion - critical for handling game file requests
+  server.keepAliveTimeout = 65000; // 65s - slightly above common load balancer timeout
+  server.headersTimeout = 66000; // Must be > keepAliveTimeout
+  server.timeout = 120000; // 2 min max for any request (including game file streaming)
+  // Note: Connection limiting is handled by the reverse proxy (nginx)
 
   // Start cleanup scheduler for abandoned play sessions (every 6 hours)
   const playTrackingService = new PlayTrackingService();
@@ -318,6 +338,7 @@ async function startServer() {
     },
     6 * 60 * 60 * 1000
   ); // 6 hours
+  playSessionCleanupInterval.unref();
 
   // Run initial play session cleanup
   playTrackingService.cleanupAbandonedSessions().catch((error) => {
@@ -334,6 +355,7 @@ async function startServer() {
     },
     6 * 60 * 60 * 1000
   ); // 6 hours
+  loginAttemptsCleanupInterval.unref();
 
   // Run initial login attempts cleanup
   authService.cleanupOldLoginAttempts().catch((error) => {
@@ -349,6 +371,7 @@ async function startServer() {
     },
     24 * 60 * 60 * 1000
   ); // 24 hours
+  activityLogsCleanupInterval.unref();
 
   // Run initial activity logs cleanup
   cleanupActivityLogs().catch((error) => {
@@ -356,7 +379,7 @@ async function startServer() {
   });
 
   // Graceful shutdown
-  const shutdown = () => {
+  const shutdown = async () => {
     logger.info('Shutting down gracefully...');
 
     // Stop scheduled jobs
@@ -370,6 +393,32 @@ async function startServer() {
     clearInterval(loginAttemptsCleanupInterval);
     clearInterval(activityLogsCleanupInterval);
 
+    // Dispose game zip server (stops download cleanup interval)
+    try {
+      gameZipServer.dispose();
+    } catch (err) {
+      logger.error('Failed to dispose game zip server during shutdown:', err);
+    }
+
+    // Clean up mounted ZIPs (await to release file handles)
+    try {
+      await zipManager.unmountAll();
+    } catch (err) {
+      logger.error('Failed to unmount ZIPs during shutdown:', err);
+    }
+
+    // Close database connections
+    try {
+      DatabaseService.close();
+    } catch (err) {
+      logger.error('Failed to close database during shutdown:', err);
+    }
+    try {
+      UserDatabaseService.close();
+    } catch (err) {
+      logger.error('Failed to close user database during shutdown:', err);
+    }
+
     // Close server
     server.close(() => {
       logger.info('Server closed');
@@ -380,7 +429,7 @@ async function startServer() {
     setTimeout(() => {
       logger.error('Could not close connections in time, forcefully shutting down');
       process.exit(1);
-    }, 10000);
+    }, 10000).unref();
   };
 
   process.on('SIGTERM', shutdown);

@@ -165,8 +165,17 @@ export const useThemeStore = create<ThemeState>()(
           set({ isLoading: true });
           const settings = await usersApi.getThemeSettings();
 
-          const mode = settings.mode as ThemeMode;
-          const primaryColor = settings.primaryColor as PrimaryColor;
+          // Validate mode against known values
+          const validModes: ThemeMode[] = ['light', 'dark', 'system'];
+          const mode = validModes.includes(settings.mode as ThemeMode)
+            ? (settings.mode as ThemeMode)
+            : 'dark';
+
+          // Validate primary color against known palette
+          const validColors = Object.keys(colorPalette) as PrimaryColor[];
+          const primaryColor = validColors.includes(settings.primaryColor as PrimaryColor)
+            ? (settings.primaryColor as PrimaryColor)
+            : 'blue';
 
           // Update store without triggering sync
           set({ mode, primaryColor, isLoading: false });

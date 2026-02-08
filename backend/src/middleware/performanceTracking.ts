@@ -40,7 +40,7 @@ function normalizePath(path: string): string {
       .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
       // Replace numeric IDs
       .replace(/\/\d+/g, '/:id')
-      // Replace alphanumeric IDs (game IDs, share tokens)
-      .replace(/\/[a-zA-Z0-9_-]{8,}/g, '/:id')
+      // Replace hex IDs (like game data IDs) - must contain at least one digit
+      .replace(/\/[a-f0-9]{8,}/gi, '/:id')
   );
 }

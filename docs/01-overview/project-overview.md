@@ -65,27 +65,25 @@ offering:
 
 ## Architecture Highlights
 
-Flashpoint Web consists of three independent services:
+Flashpoint Web consists of two independent services:
 
 1. **Backend (Port 3100)** - REST API server handling game metadata, user
-   management, and authentication
+   management, authentication, and game file serving
 2. **Frontend (Port 5173)** - React web application providing the user interface
-3. **Game Service (Ports 22500/22501)** - File serving proxy for game content
-   and ZIP archives
 
 This separation allows:
 
-- Independent scaling of services
-- Backend non-blocking on large file transfers
-- Game service caching and CDN compatibility
 - Clear separation of concerns
+- Backend handles both metadata and game content
+- Frontend focuses on user interface and client-side state
+- Simplified deployment with fewer containers
 
 ## Technology Stack Summary
 
-- **Backend**: Node.js, Express, TypeScript, SQLite (BetterSqlite3), JWT, bcrypt
+- **Backend**: Node.js, Express, TypeScript, SQLite (BetterSqlite3), JWT, bcrypt,
+  node-stream-zip
 - **Frontend**: React 18, TypeScript, Vite, TanStack Query, Zustand, Tailwind
   CSS, Shadcn UI
-- **Game Service**: Node.js, TypeScript, node-stream-zip, Axios
 - **Game Emulation**: Ruffle (Flash), Native Browser (HTML5)
 
 ## Use Cases

@@ -20,20 +20,26 @@ export function MaintenancePage() {
     }
 
     // Poll maintenance mode status every 30 seconds
-    const interval = setInterval(async () => {
-      const isMaintenanceActive = await checkMaintenanceMode();
-      if (!isMaintenanceActive) {
-        // Maintenance mode disabled, redirect to home
-        navigate('/');
-      }
+    const interval = setInterval(() => {
+      checkMaintenanceMode()
+        .then((isMaintenanceActive) => {
+          if (!isMaintenanceActive) {
+            // Maintenance mode disabled, redirect to home
+            navigate('/');
+          }
+        })
+        .catch(() => {
+          // Silently ignore polling errors - will retry on next interval
+        });
     }, 30000);
 
     return () => clearInterval(interval);
   }, [isAdmin, navigate, checkMaintenanceMode]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+  const handleLogout = () => {
+    logout()
+      .then(() => navigate('/login'))
+      .catch(() => navigate('/login'));
   };
 
   return (
@@ -88,13 +94,13 @@ export function MaintenancePage() {
 
           {!user ? (
             <Button className="w-full" onClick={() => navigate('/login')}>
-              Login
+              Log In
             </Button>
           ) : null}
 
           {user ? (
             <Button variant="ghost" className="w-full" onClick={handleLogout}>
-              Logout
+              Log Out
             </Button>
           ) : null}
         </div>

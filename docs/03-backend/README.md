@@ -2,8 +2,8 @@
 
 The backend is a REST API built with Express and TypeScript that serves as the
 central hub for the Flashpoint Web application. It manages game metadata, user
-accounts, authentication, and coordinates with the separate game-service for
-content delivery.
+accounts, authentication, and serves game content directly via integrated
+game-proxying (formerly provided by a separate game-service).
 
 ## Overview
 
@@ -23,7 +23,7 @@ content delivery.
 - Play session tracking with automatic cleanup
 - Activity logging for auditing
 - Database hot-reload when Flashpoint Launcher updates
-- Game file proxying to separate game-service
+- Integrated game content serving (proxy and ZIP mounting)
 
 ## Quick Start
 
@@ -44,7 +44,6 @@ npm start       # Run production build
 
 - `FLASHPOINT_PATH` - Path to Flashpoint installation (all other paths derived
   automatically)
-- `GAME_SERVICE_HOST` - Game service hostname/IP (default: localhost)
 - `DOMAIN` - Frontend URL (default: http://localhost:5173)
 
 See [configuration.md](./configuration.md) for complete environment variable
@@ -102,6 +101,15 @@ backend/
 │   ├── services/                 # Business logic layer
 │   ├── types/                    # TypeScript definitions
 │   ├── utils/                    # Utility functions
+│   ├── game/                     # Integrated game content serving
+│   │   ├── proxy-request-handler.ts   # Legacy htdocs proxy
+│   │   ├── gamezipserver.ts           # ZIP mounting server
+│   │   ├── legacy-server.ts           # Legacy file serving
+│   │   ├── zip-manager.ts             # ZIP mounting logic
+│   │   ├── cgi/                       # CGI/PHP execution
+│   │   ├── services/                  # Game data services
+│   │   ├── utils/                     # Game utilities
+│   │   └── config.ts                  # Game config
 │   └── migrations/               # Database migrations
 ├── user.db                       # User database (generated)
 ├── package.json
@@ -120,6 +128,8 @@ Main route groups:
 - `/api/activities` - Activity logs
 - `/api/playlists` - User playlists
 - `/api/domains` - Domain management
+- `/game-proxy/*` - Legacy htdocs and game file proxying (registered before auth)
+- `/game-zip/*` - ZIP archive mounting and serving (registered before auth)
 
 See the [API Reference](../06-api-reference/README.md) for complete API
 documentation.
@@ -155,6 +165,16 @@ documentation.
 - Indexed database queries
 - Response compression with gzip
 - File watching debouncing (500ms)
+
+**Query Optimization Patterns:**
+
+- **Window functions for pagination**: `COUNT(*) OVER()` merges count into single query
+- **Scalar subqueries**: Multiple aggregates in one SELECT (e.g., distinct counts)
+- **Map-based data merging**: O(1) lookups instead of O(N²) .find() loops
+- **Direct file access before directory scans**: O(1) fast path with O(N) fallback
+- **Parallel file reads**: `Promise.allSettled()` for concurrent I/O operations
+
+See [architecture.md](./architecture.md#query-optimization) for implementation details.
 
 ## Background Jobs
 
@@ -229,8 +249,8 @@ npm test -- --coverage     # Coverage report
 
 ### Game Files Not Loading
 
-- Verify game-service is running on port 22500/22501
-- Check GAME_SERVICE_HOST in .env (default: localhost)
+- Verify game content is being served via `/game-proxy/*` routes
+- Check backend logs for game server initialization errors
 - Ensure FLASHPOINT_PATH is correct
 
 ## Development Workflow
