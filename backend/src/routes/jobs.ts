@@ -102,7 +102,7 @@ router.patch(
       }
 
       // Update the job's enabled state in system_settings
-      const settingKey = `jobs.${jobId.replace('-', '_')}_enabled`;
+      const settingKey = `jobs.${jobId.replaceAll('-', '_')}_enabled`;
       const userId = req.user!.id;
       systemSettings.set(settingKey, enabled ? '1' : '0', userId);
 
@@ -122,7 +122,7 @@ router.patch(
     } catch (error) {
       logger.error(`Failed to update job ${req.params.jobId}:`, error);
       res.status(500).json({
-        error: { message: error instanceof Error ? error.message : 'Failed to update job' },
+        error: { message: 'Failed to update job' },
       });
     }
   })

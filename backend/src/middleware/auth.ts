@@ -215,6 +215,11 @@ export const validateSharedGameAccess = (gameIdParam: string = 'id') => {
       return next();
     }
 
+    // Guest users (id=0, no sharedAccess) can view game details in read-only mode
+    if (req.user && req.user.id === 0 && req.user.permissions?.includes('games.read')) {
+      return next();
+    }
+
     throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
   });
 };

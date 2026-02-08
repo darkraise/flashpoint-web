@@ -45,7 +45,7 @@ router.post(
       logger.error('Manual database reload failed:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to reload database',
       });
     }
   })
@@ -79,7 +79,6 @@ router.get(
       res.json({
         success: true,
         connected: isConnected,
-        dbPath: config.flashpointDbPath,
         fileSizeBytes: stats.size,
         fileSizeMB: (stats.size / (1024 * 1024)).toFixed(2),
         lastModified: stats.mtime.toISOString(),
@@ -88,7 +87,7 @@ router.get(
       logger.error('Error getting database status:', error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Failed to get database status',
       });
     }
   })

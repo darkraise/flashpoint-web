@@ -166,7 +166,20 @@ export class UserService {
       }
     }
 
-    UserDatabaseService.run('DELETE FROM users WHERE id = ?', [id]);
+    // Delete from all dependent tables in a transaction to avoid FK constraint errors
+    const db = UserDatabaseService.getDatabase();
+    db.transaction(() => {
+      db.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM user_favorites WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM user_game_plays WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM user_game_stats WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM user_settings WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM user_playlists WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    })();
+
+    // Invalidate permission cache for deleted user
+    PermissionCache.invalidateUser(id);
   }
 
   /**

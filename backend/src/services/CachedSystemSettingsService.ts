@@ -2,7 +2,7 @@ import { SystemSettingsService } from './SystemSettingsService';
 import { SettingValue, CategorySettings } from '../types/settings';
 
 interface CacheEntry {
-  value: SettingValue | CategorySettings;
+  value: SettingValue | CategorySettings | null;
   timestamp: number;
 }
 
@@ -78,12 +78,11 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     // Cache miss - fetch from database
     const value = super.get(key);
 
-    if (value !== null) {
-      this.cache.set(key, {
-        value,
-        timestamp: Date.now(),
-      });
-    }
+    // Cache both non-null and null values to avoid repeated DB queries for missing keys
+    this.cache.set(key, {
+      value,
+      timestamp: Date.now(),
+    });
 
     return value;
   }

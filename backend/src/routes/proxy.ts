@@ -17,6 +17,12 @@ const router = Router();
  */
 function validatePath(requestedPath: string, allowedBasePath: string): string | null {
   try {
+    // Reject null bytes (prevents path truncation attacks)
+    if (requestedPath.includes('\0')) {
+      logger.warn(`[Security] Null byte in path rejected: ${requestedPath}`);
+      return null;
+    }
+
     // Normalize the requested path to remove . and .. sequences
     const normalizedPath = path.normalize(requestedPath).replace(/^(\.\.(\/|\\|$))+/, '');
 
@@ -39,6 +45,9 @@ function validatePath(requestedPath: string, allowedBasePath: string): string | 
     return null;
   }
 }
+
+// Track in-progress cache writes to prevent duplicate concurrent writes for same file
+const pendingCacheWrites = new Set<string>();
 
 /**
  * Helper function to serve file with external CDN fallback
@@ -69,6 +78,8 @@ async function serveFileWithFallback(
         const response = await axios.get(externalUrl, {
           responseType: 'arraybuffer',
           timeout: 10000, // 10 second timeout
+          maxContentLength: 10 * 1024 * 1024, // 10MB max
+          maxBodyLength: 10 * 1024 * 1024,
           validateStatus: (status) => status === 200,
         });
 
@@ -78,24 +89,27 @@ async function serveFileWithFallback(
           const imageBuffer = Buffer.from(response.data);
 
           // Cache the image locally for future use (async, don't wait)
-          (async () => {
-            try {
-              // Create directory structure if it doesn't exist
-              const dir = path.dirname(localPath);
-              await fsPromises.mkdir(dir, { recursive: true });
-
-              // Save the image file
-              await fsPromises.writeFile(localPath, imageBuffer);
-              logger.info(`[Proxy] Cached image locally: ${localPath}`);
-            } catch (cacheError) {
-              // Log cache errors but don't fail the request
-              logger.warn(
-                `[Proxy] Failed to cache image locally: ${cacheError instanceof Error ? cacheError.message : 'Unknown error'}`
-              );
-            }
-          })().catch((err) => {
-            logger.warn('[Proxy] Cache write failed:', err);
-          });
+          // Skip if another request is already caching this file
+          if (!pendingCacheWrites.has(localPath)) {
+            pendingCacheWrites.add(localPath);
+            (async () => {
+              try {
+                const dir = path.dirname(localPath);
+                await fsPromises.mkdir(dir, { recursive: true });
+                await fsPromises.writeFile(localPath, imageBuffer);
+                logger.info(`[Proxy] Cached image locally: ${localPath}`);
+              } catch (cacheError) {
+                logger.warn(
+                  `[Proxy] Failed to cache image locally: ${cacheError instanceof Error ? cacheError.message : 'Unknown error'}`
+                );
+              } finally {
+                pendingCacheWrites.delete(localPath);
+              }
+            })().catch((err) => {
+              pendingCacheWrites.delete(localPath);
+              logger.warn('[Proxy] Cache write failed:', err);
+            });
+          }
 
           // Determine content type from file extension (not from CDN response)
           const ext = path.extname(relativePath).slice(1).toLowerCase();
@@ -187,8 +201,20 @@ router.get(
     // Get external image URLs dynamically from preferences
     const externalImageUrls = await getExternalImageUrls();
 
-    // For logos, the external path should include 'Logos' subdirectory
-    const externalUrls = externalImageUrls.map((url) => `${url}/../Logos`);
+    // For logos, derive external Logos URL from image base URLs
+    const externalUrls = externalImageUrls.map((url) => {
+      try {
+        const parsed = new URL(url);
+        // Replace last path segment with 'Logos'
+        const segments = parsed.pathname.replace(/\/$/, '').split('/');
+        segments[segments.length - 1] = 'Logos';
+        parsed.pathname = segments.join('/');
+        return parsed.toString().replace(/\/$/, '');
+      } catch {
+        // Fallback: use simple parent + Logos approach
+        return url.replace(/\/[^/]*\/?$/, '/Logos');
+      }
+    });
 
     await serveFileWithFallback(localPath, relativePath, externalUrls, res, next);
   })

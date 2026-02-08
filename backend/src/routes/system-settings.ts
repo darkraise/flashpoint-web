@@ -204,12 +204,22 @@ router.post(
 // ===================================
 // GET CATEGORY SETTINGS (Admin Only)
 // ===================================
+// Valid settings categories
+const VALID_CATEGORIES = ['app', 'auth', 'jobs', 'metadata', 'theme', 'features', 'maintenance'];
+
 router.get(
   '/:category',
   authenticate,
   requirePermission('settings.read'),
   asyncHandler(async (req: Request, res: Response) => {
     const { category } = req.params;
+
+    if (!VALID_CATEGORIES.includes(category)) {
+      return res.status(400).json({
+        error: { message: `Invalid settings category: ${category}` },
+      });
+    }
+
     const categorySettings = systemSettings.getCategory(category);
 
     // Return settings (empty object if category has no settings yet)
@@ -231,6 +241,13 @@ router.patch(
   logActivity('settings.update', 'system_settings'),
   asyncHandler(async (req: Request, res: Response) => {
     const { category } = req.params;
+
+    if (!VALID_CATEGORIES.includes(category)) {
+      return res.status(400).json({
+        error: { message: `Invalid settings category: ${category}` },
+      });
+    }
+
     const validation = updateCategorySchema.safeParse(req.body);
 
     if (!validation.success) {

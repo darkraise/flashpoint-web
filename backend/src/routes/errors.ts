@@ -116,47 +116,59 @@ async function logError(report: ErrorReport): Promise<void> {
  */
 async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
   try {
-    try {
-      const content = await fs.readFile(ERROR_LOG_FILE, 'utf8');
-      const lines = content.trim().split('\n');
+    // Stream the file line by line to avoid loading the entire file into memory
+    const { createReadStream } = await import('fs');
+    const { createInterface } = await import('readline');
 
-      // Parse JSONL lines (newest first)
-      const errors: ErrorReport[] = [];
-      for (let i = lines.length - 1; i >= 0 && errors.length < limit; i--) {
-        const line = lines[i].trim();
-        if (line) {
-          try {
-            const logEntry = JSON.parse(line);
-            // Convert back to ErrorReport format for API response
-            errors.push({
-              type: logEntry.errorType || 'client_error',
-              message: logEntry.message,
-              stack: logEntry.stack,
-              url: logEntry.clientUrl,
-              timestamp: logEntry.clientTimestamp || logEntry.timestamp,
-              userAgent: logEntry.userAgent,
-              userId: logEntry.userId,
-              context: logEntry.context,
-            });
-          } catch (parseError) {
-            logger.warn('Failed to parse error log line:', parseError);
+    return await new Promise<ErrorReport[]>((resolve) => {
+      try {
+        const stream = createReadStream(ERROR_LOG_FILE, { encoding: 'utf8' });
+        const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+        const allLines: string[] = [];
+
+        rl.on('line', (line) => {
+          const trimmed = line.trim();
+          if (trimmed) {
+            allLines.push(trimmed);
           }
-        }
-      }
+        });
 
-      return errors;
-    } catch (readError) {
-      // File doesn't exist yet - handle ENOENT error
-      if (
-        readError &&
-        typeof readError === 'object' &&
-        'code' in readError &&
-        readError.code === 'ENOENT'
-      ) {
-        return [];
+        rl.on('close', () => {
+          // Parse lines newest-first
+          const errors: ErrorReport[] = [];
+          for (let i = allLines.length - 1; i >= 0 && errors.length < limit; i--) {
+            try {
+              const logEntry = JSON.parse(allLines[i]);
+              errors.push({
+                type: logEntry.errorType || 'client_error',
+                message: logEntry.message,
+                stack: logEntry.stack,
+                url: logEntry.clientUrl,
+                timestamp: logEntry.clientTimestamp || logEntry.timestamp,
+                userAgent: logEntry.userAgent,
+                userId: logEntry.userId,
+                context: logEntry.context,
+              });
+            } catch (parseError) {
+              logger.warn('Failed to parse error log line:', parseError);
+            }
+          }
+          resolve(errors);
+        });
+
+        stream.on('error', (err: NodeJS.ErrnoException) => {
+          if (err.code === 'ENOENT') {
+            resolve([]);
+          } else {
+            logger.error('Failed to read client errors:', err);
+            resolve([]);
+          }
+        });
+      } catch (err) {
+        resolve([]);
       }
-      throw readError;
-    }
+    });
   } catch (error) {
     logger.error('Failed to read client errors:', error);
     return [];

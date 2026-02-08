@@ -24,11 +24,11 @@ const toggleFavoriteSchema = z.object({
 });
 
 const batchAddSchema = z.object({
-  gameIds: z.array(z.string()).min(1).max(500),
+  gameIds: z.array(z.string()).min(1).max(100),
 });
 
 const batchRemoveSchema = z.object({
-  gameIds: z.array(z.string()).min(1).max(500),
+  gameIds: z.array(z.string()).min(1).max(100),
 });
 
 /**

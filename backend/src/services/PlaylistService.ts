@@ -29,8 +29,33 @@ export interface AddGamesToPlaylistDto {
   gameIds: string[];
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export class PlaylistService {
   private gameService = new GameService();
+
+  /**
+   * Validate playlist ID format and resolved path to prevent path traversal.
+   * Returns the safe file path, or null if validation fails.
+   */
+  private validatePlaylistPath(id: string, playlistsPath: string): string | null {
+    // Must be a valid UUID to prevent path traversal via crafted IDs
+    if (!UUID_REGEX.test(id)) {
+      logger.warn(`[PlaylistService] Rejected invalid playlist ID format: ${id}`);
+      return null;
+    }
+
+    const filePath = path.join(playlistsPath, `${id}.json`);
+    const resolved = path.resolve(filePath);
+
+    // Verify resolved path stays within the playlists directory
+    if (!resolved.startsWith(path.resolve(playlistsPath))) {
+      logger.warn(`[PlaylistService] Path traversal attempt blocked: ${id}`);
+      return null;
+    }
+
+    return filePath;
+  }
 
   async getAllPlaylists(): Promise<Playlist[]> {
     try {
@@ -87,8 +112,12 @@ export class PlaylistService {
     try {
       const playlistsPath = config.flashpointPlaylistsPath;
 
+      // Validate ID format to prevent path traversal
+      const validatedPath = this.validatePlaylistPath(id, playlistsPath);
+      if (!validatedPath) return null;
+
       // Try direct file access first (O(1) instead of scanning all files)
-      const directPath = path.join(playlistsPath, `${id}.json`);
+      const directPath = validatedPath;
       const playlist = await this.tryReadPlaylist(directPath, id);
       if (playlist) return playlist;
 
@@ -232,6 +261,12 @@ export class PlaylistService {
 
   async deletePlaylist(playlistId: string): Promise<boolean> {
     try {
+      // Validate ID format before file operations
+      if (!UUID_REGEX.test(playlistId)) {
+        logger.warn(`[PlaylistService] Rejected invalid playlist ID for delete: ${playlistId}`);
+        return false;
+      }
+
       const found = await this.findPlaylistFile(playlistId);
       if (!found) return false;
 
@@ -251,6 +286,12 @@ export class PlaylistService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async findPlaylistFile(id: string): Promise<{ filePath: string; data: any } | null> {
     const playlistsPath = config.flashpointPlaylistsPath;
+
+    // Validate ID format to prevent path traversal
+    if (!UUID_REGEX.test(id)) {
+      logger.warn(`[PlaylistService] Rejected invalid playlist ID in findPlaylistFile: ${id}`);
+      return null;
+    }
 
     // Try direct path first (O(1))
     const directPath = path.join(playlistsPath, `${id}.json`);

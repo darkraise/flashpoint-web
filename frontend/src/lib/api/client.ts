@@ -107,8 +107,9 @@ apiClient.interceptors.response.use(
 
     const status = error.response.status;
 
-    // Handle 404 errors - show toast notification
-    if (status === 404) {
+    // Handle 404 errors - only show toast for unexpected 404s
+    // Skip for endpoints that commonly return 404 as a normal response
+    if (status === 404 && !originalRequest._skip404Toast) {
       toast.error('Resource not found', { id: 'not-found' });
     }
 

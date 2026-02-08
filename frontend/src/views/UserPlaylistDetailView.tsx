@@ -138,7 +138,7 @@ export function UserPlaylistDetailView() {
               <p className="text-muted-foreground">{playlist.description}</p>
             ) : null}
             <p className="text-sm text-muted-foreground mt-2">
-              {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'playlistGames'}
+              {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
             </p>
           </div>
         </div>
@@ -221,7 +221,7 @@ export function UserPlaylistDetailView() {
             <AlertDialogTitle>Delete Playlist</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{playlist.title}"? This action cannot be undone. All
-              playlistGames in this playlist will remain in your library.
+              games in this playlist will remain in your library.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

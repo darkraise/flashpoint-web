@@ -297,6 +297,15 @@ export class UserPlaylistService {
       for (const gameId of gameIds) {
         insertStmt.run(playlistId, gameId, orderIndex++);
       }
+
+      // Update game_count to reflect actual count
+      const countResult = db
+        .prepare('SELECT COUNT(*) as count FROM user_playlist_games WHERE playlist_id = ?')
+        .get(playlistId) as { count: number };
+      db.prepare('UPDATE user_playlists SET game_count = ? WHERE id = ?').run(
+        countResult.count,
+        playlistId
+      );
     });
 
     transaction(gameIds);
@@ -335,6 +344,15 @@ export class UserPlaylistService {
       for (const gameId of gameIds) {
         stmt.run(playlistId, gameId);
       }
+
+      // Update game_count to reflect actual count
+      const countResult = db
+        .prepare('SELECT COUNT(*) as count FROM user_playlist_games WHERE playlist_id = ?')
+        .get(playlistId) as { count: number };
+      db.prepare('UPDATE user_playlists SET game_count = ? WHERE id = ?').run(
+        countResult.count,
+        playlistId
+      );
     });
 
     transaction(gameIds);
@@ -744,6 +762,12 @@ export class UserPlaylistService {
           insertStmt.run(playlistId, game.game_id, game.order_index, game.notes);
         }
       }
+
+      // Set game_count on the cloned playlist
+      db.prepare('UPDATE user_playlists SET game_count = ? WHERE id = ?').run(
+        games.length,
+        playlistId
+      );
 
       return playlistId;
     })();

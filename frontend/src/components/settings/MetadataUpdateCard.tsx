@@ -127,7 +127,11 @@ export function MetadataUpdateCard() {
           setIsSyncingMetadata(false);
           setSyncProgress(0);
           setSyncMessage('');
-          throw pollError;
+          // Handle error within the interval callback instead of throwing
+          // (thrown errors from setInterval callbacks become unhandled rejections)
+          const errorMsg = pollError instanceof Error ? pollError.message : 'Metadata sync failed';
+          setError(errorMsg);
+          showToast(errorMsg, 'error');
         }
       }, 1000);
 

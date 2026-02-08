@@ -49,9 +49,10 @@ export class AuthService {
       // Check login attempts and lockout
       await this.checkLoginAttempts(username, ipAddress);
 
-      // Find user
+      // Find user (select only needed columns — avoid passing password_hash beyond verification)
       const user = UserDatabaseService.get(
-        `SELECT u.*, r.name as role_name, r.priority
+        `SELECT u.id, u.username, u.email, u.password_hash,
+                r.name as role_name, r.priority
          FROM users u
          JOIN roles r ON u.role_id = r.id
          WHERE u.username = ? AND u.is_active = 1`,
@@ -92,8 +93,6 @@ export class AuthService {
         email: user.email,
         role: user.role_name,
         permissions,
-        themeColor: user.theme_color || 'blue-500',
-        surfaceColor: user.surface_color || 'slate-700',
       };
 
       return { user: authUser, tokens };
@@ -186,7 +185,7 @@ export class AuthService {
 
     // Get created user
     const user = UserDatabaseService.get(
-      `SELECT u.*, r.name as role_name
+      `SELECT u.id, u.username, u.email, r.name as role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ?`,
@@ -205,8 +204,6 @@ export class AuthService {
       email: user.email,
       role: user.role_name,
       permissions,
-      themeColor: user.theme_color || 'blue-500',
-      surfaceColor: user.surface_color || 'slate-700',
     };
 
     return { user: authUser, tokens };
@@ -252,7 +249,7 @@ export class AuthService {
 
     // Get user
     const user = UserDatabaseService.get(
-      `SELECT u.*, r.name as role_name
+      `SELECT u.id, u.username, u.email, r.name as role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ? AND u.is_active = 1`,
@@ -284,7 +281,7 @@ export class AuthService {
 
       // Get user with current data
       const user = UserDatabaseService.get(
-        `SELECT u.*, r.name as role_name
+        `SELECT u.id, u.username, u.email, r.name as role_name
          FROM users u
          JOIN roles r ON u.role_id = r.id
          WHERE u.id = ? AND u.is_active = 1`,
@@ -378,14 +375,25 @@ export class AuthService {
       1440
     );
 
-    // Count failed attempts in lockout window - using parameterized query
-    const failedAttempts = UserDatabaseService.get(
+    // Count failed attempts in lockout window - check username AND IP separately
+    // Using OR would allow an attacker to lock out any user by failing with their username
+    const failedAttemptsByUsername = UserDatabaseService.get(
       `SELECT COUNT(*) as count FROM login_attempts
-       WHERE (username = ? OR ip_address = ?)
+       WHERE username = ?
        AND success = 0
        AND attempted_at > datetime('now', '-' || ? || ' minutes')`,
-      [username, ipAddress, safeLockoutDuration]
+      [username, safeLockoutDuration]
     );
+    const failedAttemptsByIp = UserDatabaseService.get(
+      `SELECT COUNT(*) as count FROM login_attempts
+       WHERE ip_address = ?
+       AND success = 0
+       AND attempted_at > datetime('now', '-' || ? || ' minutes')`,
+      [ipAddress, safeLockoutDuration]
+    );
+    const failedAttempts = {
+      count: Math.max(failedAttemptsByUsername?.count ?? 0, failedAttemptsByIp?.count ?? 0),
+    };
 
     if (failedAttempts?.count >= maxAttempts) {
       throw new AppError(

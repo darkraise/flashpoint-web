@@ -58,21 +58,30 @@ export class DownloadManager {
     onDetails?: DetailsCallback,
     abortSignal?: AbortSignal
   ): Promise<string> {
-    // Check if already downloading
+    // Atomically check-and-set to prevent duplicate downloads from concurrent requests
     if (this.activeDownloads.has(gameDataId)) {
       throw new Error(`Game data ${gameDataId} is already being downloaded`);
     }
 
-    // Check if already downloaded
-    const isDownloaded = await GameDatabaseUpdater.isDownloaded(gameDataId);
-    if (isDownloaded) {
-      logger.info('Game data already downloaded', { gameDataId });
-      throw new Error(`Game data ${gameDataId} is already downloaded`);
-    }
-
-    // Create abort controller for this download
+    // Reserve the slot immediately (synchronously) before any async work
     const controller = new AbortController();
     this.activeDownloads.set(gameDataId, controller);
+
+    try {
+      // Check if already downloaded
+      const isDownloaded = await GameDatabaseUpdater.isDownloaded(gameDataId);
+      if (isDownloaded) {
+        logger.info('Game data already downloaded', { gameDataId });
+        this.activeDownloads.delete(gameDataId);
+        throw new Error(`Game data ${gameDataId} is already downloaded`);
+      }
+    } catch (error) {
+      // Clean up reserved slot if pre-checks fail
+      if (this.activeDownloads.get(gameDataId) === controller) {
+        this.activeDownloads.delete(gameDataId);
+      }
+      throw error;
+    }
 
     // Chain external abort signal if provided
     const onExternalAbort = () => controller.abort();

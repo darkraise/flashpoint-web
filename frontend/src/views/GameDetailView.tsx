@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGame } from '@/hooks/useGames';
 import { useDownload } from '@/hooks/useDownload';
@@ -104,11 +104,15 @@ export function GameDetailView() {
     setShouldAutoPlay(false);
   }, [id]);
 
-  // Handle download completion
+  // Handle download completion - refetch and wait before auto-play
+  const isRefetchingAfterDownload = useRef(false);
   useEffect(() => {
-    if (progress?.status === 'complete') {
-      // Refetch game data to update activeDataOnDisk
-      refetch();
+    if (progress?.status === 'complete' && !isRefetchingAfterDownload.current) {
+      // Refetch game data to update activeDataOnDisk, wait for completion
+      isRefetchingAfterDownload.current = true;
+      refetch().finally(() => {
+        isRefetchingAfterDownload.current = false;
+      });
     }
     if (progress?.status === 'error') {
       setDownloadError(progress.error || 'Download failed');
@@ -118,7 +122,13 @@ export function GameDetailView() {
 
   // Auto-play after download completes and game data is refetched
   useEffect(() => {
-    if (shouldAutoPlay && game && game.presentOnDisk !== 0 && !isDownloading) {
+    if (
+      shouldAutoPlay &&
+      game &&
+      game.presentOnDisk !== 0 &&
+      !isDownloading &&
+      !isRefetchingAfterDownload.current
+    ) {
       // Game is now available, auto-navigate to play page
       setShouldAutoPlay(false);
       navigate(buildSharedGameUrl(`/games/${game.id}/play`, shareToken), {

@@ -6,12 +6,18 @@ import { logger } from '../utils/logger';
 import { sanitizeErrorMessage } from './utils/pathSecurity';
 import { MAX_BUFFERED_FILE_SIZE } from './config';
 
+interface EntryMeta {
+  isDirectory: boolean;
+  size: number;
+}
+
 interface MountedZip {
   id: string;
   zipPath: string;
   zip: StreamZip.StreamZipAsync;
   mountTime: Date;
   entryIndex: Set<string>; // Set of all entry names for O(1) lookup
+  entryMeta: Map<string, EntryMeta>; // Cached entry metadata for directory/size checks
 }
 
 export class ZipManager {
@@ -91,9 +97,17 @@ export class ZipManager {
       const zip = new StreamZip.async({ file: zipPath });
 
       try {
-        // Build entry index for O(1) lookup
+        // Build entry index and metadata cache for O(1) lookup
         const entries = await zip.entries();
-        const entryIndex = new Set(Object.keys(entries));
+        const entryIndex = new Set<string>();
+        const entryMeta = new Map<string, EntryMeta>();
+        for (const [name, entry] of Object.entries(entries)) {
+          entryIndex.add(name);
+          entryMeta.set(name, {
+            isDirectory: entry.isDirectory,
+            size: entry.size,
+          });
+        }
 
         // Store mounted ZIP
         this.mountedZips.set(id, {
@@ -102,6 +116,7 @@ export class ZipManager {
           zip,
           mountTime: new Date(),
           entryIndex,
+          entryMeta,
         });
 
         logger.info(`[ZipManager] ✓ Mounted ZIP: ${id} (${entryIndex.size} files)`);
@@ -161,12 +176,11 @@ export class ZipManager {
         return null;
       }
 
-      // Check file size before buffering
-      const entries = await mounted.zip.entries();
-      const entry = entries[normalizedPath];
-      if (entry && entry.size > MAX_BUFFERED_FILE_SIZE) {
+      // Check file size before buffering (use cached metadata)
+      const meta = mounted.entryMeta.get(normalizedPath);
+      if (meta && meta.size > MAX_BUFFERED_FILE_SIZE) {
         logger.warn(
-          `[ZipManager] File too large to buffer: ${normalizedPath} (${entry.size} bytes)`
+          `[ZipManager] File too large to buffer: ${normalizedPath} (${meta.size} bytes)`
         );
         return null;
       }
@@ -201,7 +215,14 @@ export class ZipManager {
     ];
 
     // Search all mounted ZIPs
-    for (const [id, mounted] of this.mountedZips) {
+    // Collect IDs first to avoid issues with LRU iterator during async operations
+    const mountIds = Array.from(this.mountedZips.keys());
+
+    for (const id of mountIds) {
+      // Use .get() to refresh access time and pin the reference (prevents eviction during read)
+      const mounted = this.mountedZips.get(id);
+      if (!mounted) continue; // Evicted between keys() and get()
+
       for (const pathVariant of pathsToTry) {
         // Normalize path (remove leading slash)
         const normalizedPath = pathVariant.startsWith('/') ? pathVariant.substring(1) : pathVariant;
@@ -211,17 +232,16 @@ export class ZipManager {
           continue;
         }
 
-        // Get entries to check if it's a directory and check size
-        const entries = await mounted.zip.entries();
-        const entry = entries[normalizedPath];
-        if (!entry || entry.isDirectory) {
+        // Check cached metadata for directory/size (avoids re-reading entries)
+        const meta = mounted.entryMeta.get(normalizedPath);
+        if (!meta || meta.isDirectory) {
           continue;
         }
 
         // Check size before reading
-        if (entry.size > MAX_BUFFERED_FILE_SIZE) {
+        if (meta.size > MAX_BUFFERED_FILE_SIZE) {
           logger.warn(
-            `[ZipManager] File too large to buffer: ${normalizedPath} (${entry.size} bytes)`
+            `[ZipManager] File too large to buffer: ${normalizedPath} (${meta.size} bytes)`
           );
           continue;
         }
@@ -232,7 +252,7 @@ export class ZipManager {
           logger.info(`[ZipManager] ✓ Found in ${id}: ${pathVariant}`);
           return { data, mountId: id };
         } catch (error) {
-          // Entry read failed, continue to next variant
+          // Entry read failed (possibly evicted during async read), continue
           logger.debug(`[ZipManager] Failed to read entry ${normalizedPath}: ${error}`);
           continue;
         }

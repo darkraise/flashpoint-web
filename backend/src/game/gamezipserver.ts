@@ -293,8 +293,20 @@ export class GameZipServer {
 
     logger.debug(`[GameZipServer] Looking for: ${relPath}`);
 
+    // Check if client already disconnected before doing the heavy ZIP lookup
+    if (res.destroyed) {
+      logger.debug(`[GameZipServer] Client disconnected before file lookup: ${relPath}`);
+      return;
+    }
+
     // Search mounted ZIPs
     const result = await zipManager.findFile(relPath);
+
+    // Check again after async operation (client may have disconnected during lookup)
+    if (res.destroyed) {
+      logger.debug(`[GameZipServer] Client disconnected during file lookup: ${relPath}`);
+      return;
+    }
 
     if (!result) {
       // Check if a download is in progress for any game

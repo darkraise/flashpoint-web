@@ -304,12 +304,17 @@ export class GameService {
 
       if (query.search) {
         sql += ` AND (
-          g.title LIKE ? OR
-          g.alternateTitles LIKE ? OR
-          g.developer LIKE ? OR
-          g.publisher LIKE ?
+          g.title LIKE ? ESCAPE '\\' OR
+          g.alternateTitles LIKE ? ESCAPE '\\' OR
+          g.developer LIKE ? ESCAPE '\\' OR
+          g.publisher LIKE ? ESCAPE '\\'
         )`;
-        const searchTerm = `%${query.search}%`;
+        // Escape LIKE wildcards in the search term
+        const escapedSearch = query.search
+          .replace(/\\/g, '\\\\')
+          .replace(/%/g, '\\%')
+          .replace(/_/g, '\\_');
+        const searchTerm = `%${escapedSearch}%`;
         params.push(searchTerm, searchTerm, searchTerm, searchTerm);
       }
 

@@ -285,8 +285,10 @@ export class SystemSettingsService {
     switch (dataType) {
       case 'boolean':
         return value === '1' || value === 'true';
-      case 'number':
-        return parseFloat(value);
+      case 'number': {
+        const num = parseFloat(value);
+        return isNaN(num) ? null : num;
+      }
       case 'json':
         try {
           return JSON.parse(value);

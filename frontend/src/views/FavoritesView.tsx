@@ -49,7 +49,7 @@ export function FavoritesView() {
   if (error) {
     return (
       <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300">
-        Error loading favorites: {(error as Error).message}
+        Error loading favorites: {error instanceof Error ? error.message : 'Unknown error'}
       </div>
     );
   }

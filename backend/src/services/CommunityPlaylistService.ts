@@ -135,8 +135,11 @@ export class CommunityPlaylistService {
       }
 
       // Fetch playlist JSON
+      // maxRedirects: 0 prevents SSRF via open redirects on allowed domains
       const response = await axios.get(downloadUrl, {
         timeout: 60000,
+        maxRedirects: 0,
+        maxContentLength: 10 * 1024 * 1024, // 10MB limit
         headers: {
           'User-Agent': 'Flashpoint-Webapp/1.0',
         },

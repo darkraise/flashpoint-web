@@ -97,6 +97,7 @@ router.get(
 router.get(
   '/:shareToken/games/:gameId/validate',
   rateLimitStrict,
+  validateSharedPlaylist,
   asyncHandler(async (req, res) => {
     const { shareToken, gameId } = req.params;
 

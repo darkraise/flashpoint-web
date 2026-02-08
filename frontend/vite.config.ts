@@ -21,7 +21,8 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.wasm'],
   esbuild: {
-    drop: ['console', 'debugger'],
+    drop: ['debugger'],
+    pure: ['console.log', 'console.debug'],
   },
   build: {
     // Target modern browsers for smaller bundles

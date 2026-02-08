@@ -127,20 +127,27 @@ router.post(
  * Get current metadata sync status and progress
  * Frontend polls this endpoint to get real-time updates
  */
-router.get('/metadata/sync/status', (req, res) => {
-  try {
-    const syncStatus = SyncStatusService.getInstance();
-    res.json(syncStatus.getStatus());
-  } catch (error) {
-    logger.error('[Updates API] Error getting sync status:', error);
-    res.status(500).json({
-      isRunning: false,
-      stage: 'error',
-      progress: 0,
-      message: 'Error getting sync status',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
+router.get(
+  '/metadata/sync/status',
+  asyncHandler(async (req, res) => {
+    try {
+      const syncStatus = SyncStatusService.getInstance();
+      const status = syncStatus.getStatus();
+      // Sanitize error messages - don't leak internal details to unauthenticated users
+      if (status.error) {
+        status.error = 'Sync failed. Check server logs for details.';
+      }
+      res.json(status);
+    } catch (error) {
+      logger.error('[Updates API] Error getting sync status:', error);
+      res.status(500).json({
+        isRunning: false,
+        stage: 'error',
+        progress: 0,
+        message: 'Error getting sync status',
+      });
+    }
+  })
+);
 
 export default router;

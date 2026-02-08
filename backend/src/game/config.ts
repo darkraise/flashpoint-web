@@ -124,7 +124,7 @@ export class ConfigManager {
             'Legacy',
             process.platform === 'win32' ? 'php-cgi.exe' : 'php-cgi'
           ),
-        cgiTimeout: proxySettings.cgiTimeout || 30000, // 30 seconds
+        cgiTimeout: proxySettings.cgiTimeout ?? 30000, // 30 seconds
         cgiMaxBodySize: proxySettings.cgiMaxBodySize || 10 * 1024 * 1024, // 10MB
         cgiMaxResponseSize: proxySettings.cgiMaxResponseSize || 50 * 1024 * 1024, // 50MB
       };

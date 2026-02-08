@@ -260,7 +260,10 @@ export class GameDataDownloader {
   }
 
   /**
-   * Single download attempt with SSRF protection and double-settlement guard
+   * Single download attempt with SSRF protection and double-settlement guard.
+   * Async validation (DNS lookup) runs before the Promise; the Promise executor
+   * is synchronous to avoid the `new Promise(async ...)` anti-pattern that
+   * silently swallows rejections.
    */
   private async downloadFileOnce(
     url: string,
@@ -269,14 +272,59 @@ export class GameDataDownloader {
     onProgress?: DownloadProgressCallback,
     maxRedirects: number = 5
   ): Promise<void> {
-    return new Promise(async (resolve, reject) => {
+    if (maxRedirects <= 0) {
+      throw new Error('Too many redirects');
+    }
+
+    // Validate URL protocol - only HTTP(S) allowed
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+      throw new Error(
+        `Unsupported protocol: ${parsedUrl.protocol} - only http: and https: are allowed`
+      );
+    }
+
+    // Validate URL is not targeting a private/reserved IP
+    if (this.isPrivateHost(parsedUrl.hostname)) {
+      logger.warn(
+        `[GameDataDownloader] Blocked download to private/reserved address: ${parsedUrl.hostname}`
+      );
+      throw new Error(
+        `Download blocked: ${parsedUrl.hostname} resolves to a private/reserved address`
+      );
+    }
+
+    // DNS rebinding protection: resolve hostname and check for private IPs
+    const hostname = parsedUrl.hostname;
+    if (!net.isIPv4(hostname) && !net.isIPv6(hostname)) {
+      try {
+        const { address } = await dnsLookup(hostname);
+        if (this.isPrivateIPv4(address) || this.isPrivateIPv6(address)) {
+          logger.warn(
+            `[GameDataDownloader] Blocked: ${hostname} resolves to private address ${address}`
+          );
+          throw new Error(`Blocked: ${hostname} resolves to private address ${address}`);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith('Blocked:')) {
+          throw error;
+        }
+        // DNS lookup failed - allow the request to proceed (it will fail on connect anyway)
+      }
+    }
+
+    const protocol = parsedUrl.protocol === 'https:' ? https : http;
+
+    // Synchronous Promise executor — redirect is signalled via resolve value
+    // instead of recursing inside the executor
+    const result = await new Promise<{ redirect?: string }>((resolve, reject) => {
       // Guard against double-settlement: the 'data' handler can reject on size
       // limit while the piped writeStream 'finish' event can still fire afterward.
       let settled = false;
-      const safeResolve = () => {
+      const safeResolve = (val: { redirect?: string } = {}) => {
         if (!settled) {
           settled = true;
-          resolve();
+          resolve(val);
         }
       };
       const safeReject = (error: Error) => {
@@ -286,68 +334,15 @@ export class GameDataDownloader {
         }
       };
 
-      if (maxRedirects <= 0) {
-        safeReject(new Error('Too many redirects'));
-        return;
-      }
-
-      // Validate initial URL protocol - only HTTP(S) allowed
-      const parsedUrl = new URL(url);
-      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
-        safeReject(
-          new Error(
-            `Unsupported protocol: ${parsedUrl.protocol} - only http: and https: are allowed`
-          )
-        );
-        return;
-      }
-
-      // Validate initial URL is not targeting a private/reserved IP
-      if (this.isPrivateHost(parsedUrl.hostname)) {
-        logger.warn(
-          `[GameDataDownloader] Blocked download to private/reserved address: ${parsedUrl.hostname}`
-        );
-        safeReject(
-          new Error(
-            `Download blocked: ${parsedUrl.hostname} resolves to a private/reserved address`
-          )
-        );
-        return;
-      }
-
-      // DNS rebinding protection: resolve hostname and check for private IPs
-      const hostname = parsedUrl.hostname;
-      if (!net.isIPv4(hostname) && !net.isIPv6(hostname)) {
-        // It's a hostname, not an IP - perform DNS lookup
-        try {
-          const { address } = await dnsLookup(hostname);
-          if (this.isPrivateIPv4(address) || this.isPrivateIPv6(address)) {
-            logger.warn(
-              `[GameDataDownloader] Blocked: ${hostname} resolves to private address ${address}`
-            );
-            safeReject(new Error(`Blocked: ${hostname} resolves to private address ${address}`));
-            return;
-          }
-        } catch (error) {
-          if (error instanceof Error && error.message.startsWith('Blocked:')) {
-            safeReject(error);
-            return;
-          }
-          // DNS lookup failed - allow the request to proceed (it will fail on connect anyway)
-        }
-      }
-
-      const protocol = parsedUrl.protocol === 'https:' ? https : http;
       let writeStream: ReturnType<typeof createWriteStream> | null = null;
 
       const request = protocol.get(url, { timeout: this.DOWNLOAD_TIMEOUT_MS }, (response) => {
-        // Handle redirects
+        // Handle redirects — signal back instead of recursing inside Promise
         if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400) {
           const redirectUrl = response.headers.location;
           if (redirectUrl) {
             response.resume();
 
-            // Validate redirect URL before following
             try {
               this.validateRedirectUrl(redirectUrl);
             } catch (err) {
@@ -355,10 +350,7 @@ export class GameDataDownloader {
               return;
             }
 
-            logger.info(`[GameDataDownloader] Following redirect to: ${redirectUrl}`);
-            this.downloadFileOnce(redirectUrl, destPath, sourceName, onProgress, maxRedirects - 1)
-              .then(safeResolve)
-              .catch(safeReject);
+            safeResolve({ redirect: redirectUrl });
             return;
           }
         }
@@ -375,7 +367,7 @@ export class GameDataDownloader {
         const totalBytes = contentLength ? parseInt(contentLength, 10) : null;
 
         if (totalBytes && totalBytes > this.MAX_FILE_SIZE) {
-          response.resume(); // Drain the response
+          response.resume();
           safeReject(new Error(`File too large: ${totalBytes} bytes (max: ${this.MAX_FILE_SIZE})`));
           return;
         }
@@ -387,7 +379,6 @@ export class GameDataDownloader {
         response.on('data', (chunk: Buffer) => {
           downloadedBytes += chunk.length;
 
-          // Check size limit during download
           if (downloadedBytes > this.MAX_FILE_SIZE) {
             response.destroy();
             request.destroy();
@@ -434,12 +425,24 @@ export class GameDataDownloader {
 
       request.on('timeout', () => {
         if (writeStream) {
-          writeStream.destroy(); // Also close the file handle
+          writeStream.destroy();
         }
         request.destroy();
         safeReject(new Error(`Download timed out after ${this.DOWNLOAD_TIMEOUT_MS}ms`));
       });
     });
+
+    // Handle redirect outside the Promise (async recursion is safe here)
+    if (result.redirect) {
+      logger.info(`[GameDataDownloader] Following redirect to: ${result.redirect}`);
+      return this.downloadFileOnce(
+        result.redirect,
+        destPath,
+        sourceName,
+        onProgress,
+        maxRedirects - 1
+      );
+    }
   }
 
   /**

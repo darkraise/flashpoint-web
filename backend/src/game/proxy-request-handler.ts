@@ -345,23 +345,27 @@ export class ProxyRequestHandler {
       let totalSize = 0;
       let settled = false;
 
+      const cleanup = () => {
+        req.removeListener('data', onData);
+        req.removeListener('end', onEnd);
+        req.removeListener('error', onError);
+      };
+
       const settle = <T>(fn: () => T): T | undefined => {
         if (!settled) {
           settled = true;
           clearTimeout(timeoutHandle);
+          cleanup();
           return fn();
         }
         return undefined;
       };
 
       const timeoutHandle = setTimeout(() => {
-        settle(() => {
-          req.removeAllListeners('data');
-          reject(new Error('Request body collection timed out'));
-        });
+        settle(() => reject(new Error('Request body collection timed out')));
       }, 30000);
 
-      req.on('data', (chunk: Buffer) => {
+      const onData = (chunk: Buffer) => {
         if (settled) return;
         totalSize += chunk.length;
         if (totalSize > MAX_REQUEST_BODY_SIZE) {
@@ -369,12 +373,16 @@ export class ProxyRequestHandler {
           return;
         }
         chunks.push(chunk);
-      });
+      };
 
-      req.on('end', () =>
-        settle(() => resolve(chunks.length === 0 ? undefined : Buffer.concat(chunks)))
-      );
-      req.on('error', (error) => settle(() => reject(error)));
+      const onEnd = () =>
+        settle(() => resolve(chunks.length === 0 ? undefined : Buffer.concat(chunks)));
+
+      const onError = (error: Error) => settle(() => reject(error));
+
+      req.on('data', onData);
+      req.on('end', onEnd);
+      req.on('error', onError);
     });
   }
 }

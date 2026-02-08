@@ -311,9 +311,16 @@ export class MetadataSyncService {
 
       // Paginate through all games
       // Fetch games in batches
+      const MAX_BATCHES = 10000; // Safety guard against infinite pagination loops
       let hasMore = true;
       while (hasMore) {
         batchCount++;
+        if (batchCount > MAX_BATCHES) {
+          logger.warn(
+            `[MetadataSync] Exceeded max batch count (${MAX_BATCHES}), stopping pagination`
+          );
+          break;
+        }
         let url = `${source.baseUrl}/api/games?after=${after}&broad=true`;
         if (afterId) {
           url += `&afterId=${afterId}`;
@@ -463,7 +470,12 @@ export class MetadataSyncService {
 
   /**
    * Apply game updates to database (upsert)
+   * Chunks batches to stay under SQLite's SQLITE_MAX_VARIABLE_NUMBER (default 999).
+   * With 29 columns per game, max ~30 games per chunk (30 * 29 = 870 < 999).
    */
+  private static readonly COLUMNS_PER_GAME = 29;
+  private static readonly MAX_GAMES_PER_CHUNK = 30; // 30 * 29 = 870 params, under 999 limit
+
   private async applyGames(games: ApiGame[]): Promise<void> {
     if (games.length === 0) return;
 
@@ -471,8 +483,25 @@ export class MetadataSyncService {
     // This prevents FOREIGN KEY constraint errors on parentGameId
     const sortedGames = this.sortGamesByParentDependency(games);
 
-    // Build SQL for bulk upsert (29 columns per row)
-    const placeholders = sortedGames
+    const db = DatabaseService.getDatabase();
+
+    // Process in chunks to stay under SQLite variable limit
+    for (let i = 0; i < sortedGames.length; i += MetadataSyncService.MAX_GAMES_PER_CHUNK) {
+      const chunk = sortedGames.slice(i, i + MetadataSyncService.MAX_GAMES_PER_CHUNK);
+      this.applyGamesChunk(db, chunk);
+    }
+
+    logger.debug(`[MetadataSync] Upserted ${sortedGames.length} games`);
+  }
+
+  /**
+   * Apply a single chunk of games to the database
+   */
+  private applyGamesChunk(
+    db: ReturnType<typeof DatabaseService.getDatabase>,
+    chunk: ApiGame[]
+  ): void {
+    const placeholders = chunk
       .map(
         () =>
           '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
@@ -480,7 +509,7 @@ export class MetadataSyncService {
       .join(', ');
 
     const values: (string | number | null)[] = [];
-    sortedGames.forEach((game) => {
+    chunk.forEach((game) => {
       values.push(
         game.id,
         game.parent_game_id || null,
@@ -553,14 +582,11 @@ export class MetadataSyncService {
         ruffleSupport = excluded.ruffleSupport
     `;
 
-    // Wrap in a transaction for atomicity - a partial upsert would leave the
-    // database in an inconsistent state (some games updated, others not).
-    const db = DatabaseService.getDatabase();
+    // Wrap in a transaction for atomicity
     db.transaction(() => {
       const stmt = db.prepare(sql);
       stmt.run(values);
     })();
-    logger.debug(`[MetadataSync] Upserted ${sortedGames.length} games`);
   }
 
   /**

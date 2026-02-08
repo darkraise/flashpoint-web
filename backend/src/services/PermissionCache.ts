@@ -33,13 +33,14 @@ export class PermissionCache {
   static startCleanup(): void {
     if (this.cleanupInterval) return;
 
-    // Run cleanup every 5 minutes
+    // Run cleanup every 5 minutes (unref to allow graceful shutdown)
     this.cleanupInterval = setInterval(
       () => {
         this.cleanup();
       },
       5 * 60 * 1000
     );
+    this.cleanupInterval.unref();
 
     logger.info('[PermissionCache] Cleanup interval started');
   }

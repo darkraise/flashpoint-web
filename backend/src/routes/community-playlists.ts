@@ -73,9 +73,9 @@ router.post(
 
     if (!result.success) {
       if (result.conflict) {
-        throw new AppError(409, result.error || 'A playlist with this ID already exists');
+        throw new AppError(409, 'A playlist with this ID already exists');
       }
-      throw new AppError(500, result.error || 'Failed to download playlist');
+      throw new AppError(500, 'Failed to download playlist');
     }
 
     // Store metadata for activity logging

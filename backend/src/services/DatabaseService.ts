@@ -349,12 +349,8 @@ export class DatabaseService {
       logger.info('Database reloaded, caches invalidated');
     } catch (error) {
       logger.error('Failed to sync and reload database:', error);
-      // Try to re-initialize if sync failed
-      try {
-        await this.initialize();
-      } catch (reinitError) {
-        logger.error('Failed to re-initialize database:', reinitError);
-      }
+      // Log but don't retry — calling initialize() here risks rapid retry loops
+      // since it re-registers the file watcher which could trigger another syncAndReload
     }
   }
 

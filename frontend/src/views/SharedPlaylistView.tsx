@@ -44,7 +44,7 @@ export function SharedPlaylistView() {
   } = useQuery({
     queryKey: ['sharedPlaylist', shareToken],
     queryFn: () => sharedPlaylistsApi.getByToken(shareToken ?? ''),
-    enabled: !!shareToken,
+    enabled: !!shareToken && (isAuthenticated || hasValidToken),
     retry: false,
   });
 

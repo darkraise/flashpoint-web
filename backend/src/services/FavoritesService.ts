@@ -47,29 +47,29 @@ export class FavoritesService {
   toggleFavorite(userId: number, gameId: string): { isFavorited: boolean } {
     const db = this.userDb.getDatabase();
 
-    if (this.isFavorited(userId, gameId)) {
-      // Remove from favorites
-      const stmt = db.prepare(`
-        DELETE FROM user_favorites
-        WHERE user_id = ? AND game_id = ?
-      `);
+    const toggle = db.transaction(() => {
+      const exists = db
+        .prepare('SELECT 1 FROM user_favorites WHERE user_id = ? AND game_id = ?')
+        .get(userId, gameId);
 
-      stmt.run(userId, gameId);
-      logger.info(`Removed game ${gameId} from favorites for user ${userId}`);
+      if (exists) {
+        db.prepare('DELETE FROM user_favorites WHERE user_id = ? AND game_id = ?').run(
+          userId,
+          gameId
+        );
+        logger.info(`Removed game ${gameId} from favorites for user ${userId}`);
+        return { isFavorited: false };
+      } else {
+        db.prepare('INSERT INTO user_favorites (user_id, game_id) VALUES (?, ?)').run(
+          userId,
+          gameId
+        );
+        logger.info(`Added game ${gameId} to favorites for user ${userId}`);
+        return { isFavorited: true };
+      }
+    });
 
-      return { isFavorited: false };
-    } else {
-      // Add to favorites
-      const stmt = db.prepare(`
-        INSERT INTO user_favorites (user_id, game_id)
-        VALUES (?, ?)
-      `);
-
-      stmt.run(userId, gameId);
-      logger.info(`Added game ${gameId} to favorites for user ${userId}`);
-
-      return { isFavorited: true };
-    }
+    return toggle();
   }
 
   /**

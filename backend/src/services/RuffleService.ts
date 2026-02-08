@@ -182,18 +182,41 @@ export class RuffleService {
         fs.renameSync(this.frontendPublicPath, backupDir);
       }
 
+      // Verify extracted files are within tempDir (Zip Slip protection)
+      const extractedFiles = fs.readdirSync(tempDir, { recursive: true }) as string[];
+      const resolvedTempDir = path.resolve(tempDir);
+      for (const file of extractedFiles) {
+        const resolvedFile = path.resolve(tempDir, file);
+        if (
+          !resolvedFile.startsWith(resolvedTempDir + path.sep) &&
+          resolvedFile !== resolvedTempDir
+        ) {
+          // Clean up and abort
+          fs.rmSync(tempDir, { recursive: true, force: true });
+          throw new Error('Zip Slip detected: extracted file outside target directory');
+        }
+      }
+
       // Move extracted files to public/ruffle
       fs.renameSync(tempDir, this.frontendPublicPath);
 
-      // Clean up backup
-      if (fs.existsSync(backupDir)) {
-        fs.rmSync(backupDir, { recursive: true, force: true });
-      }
-
-      // Verify the installation was successful
+      // Verify the installation was successful BEFORE deleting backup
       const isInstalled = this.verifyInstallation();
       if (!isInstalled) {
+        // Restore backup if verification fails
+        if (fs.existsSync(backupDir)) {
+          if (fs.existsSync(this.frontendPublicPath)) {
+            fs.rmSync(this.frontendPublicPath, { recursive: true, force: true });
+          }
+          fs.renameSync(backupDir, this.frontendPublicPath);
+          logger.info('[RuffleService] Restored backup after failed verification');
+        }
         throw new Error('Ruffle files were not installed successfully');
+      }
+
+      // Clean up backup only after successful verification
+      if (fs.existsSync(backupDir)) {
+        fs.rmSync(backupDir, { recursive: true, force: true });
       }
 
       logger.info('[RuffleService] Ruffle update completed successfully');
