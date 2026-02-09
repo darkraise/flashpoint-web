@@ -79,7 +79,12 @@ async function startServer() {
 
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+        },
+      },
       crossOriginEmbedderPolicy: false,
       frameguard: { action: 'deny' },
     })
@@ -269,7 +274,7 @@ async function startServer() {
   server.keepAliveTimeout = 65000; // 65s - slightly above common load balancer timeout
   server.headersTimeout = 66000; // Must be > keepAliveTimeout
   server.timeout = 120000; // 2 min max for any request (including game file streaming)
-  // Note: Connection limiting is handled by the reverse proxy (nginx)
+  server.maxConnections = 500; // Defense-in-depth; nginx handles primary limiting
 
   const playTrackingService = new PlayTrackingService();
   const playSessionCleanupInterval = setInterval(

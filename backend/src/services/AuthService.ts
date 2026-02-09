@@ -108,12 +108,12 @@ export class AuthService {
     const registerTransaction = db.transaction(() => {
       const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(data.username);
       if (existingUser) {
-        throw new AppError(409, 'Username already exists');
+        throw new AppError(409, 'An account with that username or email already exists');
       }
 
       const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(data.email);
       if (existingEmail) {
-        throw new AppError(409, 'Email already exists');
+        throw new AppError(409, 'An account with that username or email already exists');
       }
 
       // Check if this is initial setup (no users exist)

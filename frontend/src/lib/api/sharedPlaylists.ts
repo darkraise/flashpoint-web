@@ -4,26 +4,33 @@ import type { Game } from '@/types/game';
 
 export const sharedPlaylistsApi = {
   getByToken: async (shareToken: string): Promise<SharedPlaylist> => {
-    const { data } = await apiClient.get<SharedPlaylist>(`/playlists/shared/${shareToken}`);
+    const { data } = await apiClient.get<SharedPlaylist>(
+      `/playlists/shared/${encodeURIComponent(shareToken)}`
+    );
     return data;
   },
 
   getGames: async (shareToken: string): Promise<Game[]> => {
-    const { data } = await apiClient.get<Game[]>(`/playlists/shared/${shareToken}/games`);
+    const { data } = await apiClient.get<Game[]>(
+      `/playlists/shared/${encodeURIComponent(shareToken)}/games`
+    );
     return data;
   },
 
   clonePlaylist: async (shareToken: string, newTitle?: string): Promise<UserPlaylist> => {
-    const { data } = await apiClient.post<UserPlaylist>(`/playlists/shared/${shareToken}/clone`, {
-      newTitle,
-    });
+    const { data } = await apiClient.post<UserPlaylist>(
+      `/playlists/shared/${encodeURIComponent(shareToken)}/clone`,
+      {
+        newTitle,
+      }
+    );
     return data;
   },
 
   validateGameAccess: async (shareToken: string, gameId: string): Promise<boolean> => {
     try {
       const { data } = await apiClient.get<{ valid: boolean }>(
-        `/playlists/shared/${shareToken}/games/${gameId}/validate`
+        `/playlists/shared/${encodeURIComponent(shareToken)}/games/${encodeURIComponent(gameId)}/validate`
       );
       return data.valid;
     } catch {
@@ -39,7 +46,9 @@ export const sharedPlaylistsApi = {
     expiresIn: number;
     playlistId: number;
   }> => {
-    const { data } = await apiClient.post(`/playlists/shared/${shareToken}/generate-access-token`);
+    const { data } = await apiClient.post(
+      `/playlists/shared/${encodeURIComponent(shareToken)}/generate-access-token`
+    );
     return data;
   },
 };

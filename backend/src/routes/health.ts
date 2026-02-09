@@ -22,7 +22,7 @@ router.get('/', (req, res) => {
 router.get(
   '/detailed',
   authenticate,
-  requirePermission('settings.view'),
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
     const startTime = performance.now();
 

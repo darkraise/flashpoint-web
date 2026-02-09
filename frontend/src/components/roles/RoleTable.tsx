@@ -19,6 +19,9 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 
+/** System role IDs from the initial migration — admin=1, user=2, guest=3 */
+const SYSTEM_ROLE_IDS = new Set([1, 2, 3]);
+
 interface RoleTableProps {
   onEdit: (role: Role) => void;
   onManagePermissions: (role: Role) => void;
@@ -99,7 +102,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
       header: 'Actions',
       cell: ({ row }) => {
         const role = row.original;
-        const isSystemRole = role.id <= 3;
+        const isSystemRole = SYSTEM_ROLE_IDS.has(role.id);
 
         return (
           <div className="flex items-center gap-2">
@@ -119,7 +122,10 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
                   </DropdownMenuItem>
                 </RoleGuard>
                 <RoleGuard permission="roles.update">
-                  <DropdownMenuItem onClick={() => onManagePermissions(role)}>
+                  <DropdownMenuItem
+                    onClick={() => onManagePermissions(role)}
+                    disabled={isSystemRole}
+                  >
                     Manage Permissions
                   </DropdownMenuItem>
                 </RoleGuard>

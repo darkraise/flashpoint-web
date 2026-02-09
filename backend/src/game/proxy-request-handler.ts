@@ -139,6 +139,7 @@ export class ProxyRequestHandler {
     const statusCode = result.statusCode || 200;
 
     setCorsHeaders(res, settings);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
 
     res.setHeader('Cache-Control', `public, max-age=${CACHE_MAX_AGE_SECONDS}`);
     if (process.env.NODE_ENV !== 'production') {
@@ -233,6 +234,7 @@ export class ProxyRequestHandler {
 
     const settings = ConfigManager.getSettings();
     setCorsHeaders(res, settings);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
 
     res.setHeader('Content-Type', 'text/plain');
     res.writeHead(statusCode);

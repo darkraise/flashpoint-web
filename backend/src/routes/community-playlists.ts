@@ -6,7 +6,8 @@ import {
 } from '../services/CommunityPlaylistService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { optionalAuth } from '../middleware/auth';
+import { optionalAuth, authenticate } from '../middleware/auth';
+import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 
 const router = Router();
@@ -36,7 +37,8 @@ router.get(
 
 router.post(
   '/download',
-  optionalAuth,
+  authenticate,
+  requirePermission('playlists.create'),
   logActivity('playlists.community.download', 'community_playlists', (req, res) => ({
     downloadUrl: req.body.downloadUrl,
     playlistTitle: res.locals.playlistTitle || null,

@@ -77,6 +77,13 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = createRoleSchema.parse(req.body);
 
+    if (data.permissionIds && data.permissionIds.length > 0) {
+      await roleService.validatePermissionEscalation(
+        data.permissionIds,
+        req.user?.permissions || []
+      );
+    }
+
     const role = await roleService.createRole(
       data.name,
       data.description,
@@ -119,6 +126,8 @@ router.put(
     }
 
     const data = updatePermissionsSchema.parse(req.body);
+
+    await roleService.validatePermissionEscalation(data.permissionIds, req.user?.permissions || []);
 
     await roleService.updateRolePermissions(id, data.permissionIds);
     const role = await roleService.getRoleById(id);

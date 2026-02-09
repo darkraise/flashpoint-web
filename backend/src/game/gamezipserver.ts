@@ -289,6 +289,8 @@ export class GameZipServer {
 
     const settings = ConfigManager.getSettings();
     setCorsHeaders(res, settings);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', fileData.length);
@@ -529,6 +531,7 @@ export class GameZipServer {
 
     const settings = ConfigManager.getSettings();
     setCorsHeaders(res, settings);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
 
     res.setHeader('Content-Type', 'text/plain');
     res.writeHead(statusCode);
