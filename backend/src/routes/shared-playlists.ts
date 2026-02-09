@@ -48,7 +48,7 @@ router.get(
 
     if (playlist.showOwner) {
       const user = await userService.getUserById(playlist.userId);
-      response.ownerUsername = user?.username || 'Unknown';
+      response.ownerUsername = user?.username ?? 'Unknown';
     }
 
     logger.debug(`Shared playlist ${playlist.id} accessed via token`);
@@ -77,18 +77,9 @@ router.get(
   rateLimitStrict,
   validateSharedPlaylist,
   asyncHandler(async (req, res) => {
-    const { shareToken, gameId } = req.params;
+    const { gameId } = req.params;
 
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!UUID_REGEX.test(shareToken)) {
-      return res.json({ valid: false });
-    }
-
-    if (!gameId || typeof gameId !== 'string') {
-      return res.json({ valid: false });
-    }
-
-    const isValid = playlistService.isGameInSharedPlaylist(shareToken, gameId);
+    const isValid = playlistService.isGameInSharedPlaylist(req.params.shareToken, gameId);
 
     logger.debug(`Game ${gameId.substring(0, 8)}... access validation via share token: ${isValid}`);
 

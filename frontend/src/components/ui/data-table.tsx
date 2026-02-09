@@ -1,12 +1,9 @@
 import * as React from 'react';
 import {
   ColumnDef,
-  ColumnFiltersState,
   SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
@@ -55,9 +52,6 @@ export function DataTable<TData, TValue>({
   caption,
 }: DataTableProps<TData, TValue>) {
   const [internalSorting, setInternalSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = React.useState({});
 
   // Use controlled sorting if provided, otherwise use internal state
   const sorting = controlledSorting ?? internalSorting;
@@ -67,12 +61,7 @@ export function DataTable<TData, TValue>({
       if (onControlledSortingChange) {
         onControlledSortingChange(updater);
       } else {
-        // Properly handle both function and value updaters
-        if (typeof updater === 'function') {
-          setInternalSorting((old) => updater(old));
-        } else {
-          setInternalSorting(updater);
-        }
+        setInternalSorting(updater);
       }
     },
     [onControlledSortingChange]
@@ -84,16 +73,9 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: pagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      columnFilters,
-      columnVisibility,
-      rowSelection,
     },
     manualPagination: !!pagination,
     manualSorting: !!controlledSorting,
@@ -143,8 +125,9 @@ export function DataTable<TData, TValue>({
                                 (e.key === 'Enter' || e.key === ' ')
                               ) {
                                 e.preventDefault();
-                                header.column.getToggleSortingHandler()?.(
-                                  e as unknown as React.MouseEvent
+                                header.column.toggleSorting(
+                                  header.column.getIsSorted() === 'asc',
+                                  e.shiftKey
                                 );
                               }
                             }}
@@ -156,7 +139,8 @@ export function DataTable<TData, TValue>({
                                   : undefined
                             }
                             aria-label={
-                              header.column.getCanSort()
+                              header.column.getCanSort() &&
+                              typeof header.column.columnDef.header === 'string'
                                 ? `Sort by ${header.column.columnDef.header}`
                                 : undefined
                             }
@@ -172,9 +156,9 @@ export function DataTable<TData, TValue>({
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
+              {table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                  <TableRow key={row.id} data-state={row.getIsSelected() ? 'selected' : undefined}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -194,7 +178,10 @@ export function DataTable<TData, TValue>({
         </div>
 
         {pagination && pagination.totalPages > 1 ? (
-          <div className="flex flex-col sm:flex-row gap-4 sm:justify-between sm:items-center p-4 border-t bg-muted/30">
+          <nav
+            aria-label="Table pagination"
+            className="flex flex-col sm:flex-row gap-4 sm:justify-between sm:items-center p-4 border-t bg-muted/30"
+          >
             <div className="text-sm text-muted-foreground">
               Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
             </div>
@@ -214,6 +201,7 @@ export function DataTable<TData, TValue>({
                 size="sm"
                 onClick={() => onPageChange?.(pagination.page - 1)}
                 disabled={pagination.page === 1}
+                aria-label="Go to previous page"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -223,6 +211,7 @@ export function DataTable<TData, TValue>({
                 size="sm"
                 onClick={() => onPageChange?.(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}
+                aria-label="Go to next page"
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -238,7 +227,7 @@ export function DataTable<TData, TValue>({
                 <ChevronsRight className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
-          </div>
+          </nav>
         ) : null}
       </Card>
     </div>

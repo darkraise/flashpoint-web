@@ -684,7 +684,7 @@ export class UserPlaylistService {
     // Wrap create + game inserts in transaction to ensure atomicity
     const newPlaylistId = db.transaction(() => {
       // Create new playlist
-      const title = newTitle || `${sourcePlaylist.title} (Copy)`;
+      const title = newTitle ?? `${sourcePlaylist.title} (Copy)`;
       const now = new Date().toISOString();
       const result = db
         .prepare(
