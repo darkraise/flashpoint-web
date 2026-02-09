@@ -7,13 +7,11 @@ import { useQuery } from '@tanstack/react-query';
 import { ruffleApi } from '@/lib/api';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 
-// Tab components
 import { GeneralSettingsTab } from '@/components/settings/GeneralSettingsTab';
 import { AppSettingsTab } from '@/components/settings/AppSettingsTab';
 import { UpdateSettingsTab } from '@/components/settings/UpdateSettingsTab';
 import { FeaturesSettingsTab } from '@/components/settings/FeaturesSettingsTab';
 
-// Animation variants for tab transitions - smooth cross-fade
 const tabContentVariants = {
   initial: {
     opacity: 0,
@@ -42,30 +40,25 @@ export function SettingsView() {
   const { user } = useAuthStore();
   const isAdmin = user?.permissions.includes('settings.update') ?? false;
 
-  // Fetch Ruffle version for non-admin users
   const { data: ruffleVersion, isLoading: isLoadingRuffleVersion } = useQuery({
     queryKey: ['ruffleVersion'],
     queryFn: () => ruffleApi.getVersion(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     enabled: !isAdmin, // Only fetch for non-admin users (admin users get it from GeneralSettingsTab)
   });
 
-  // Public settings (cached, no extra request) for edition/version
   const { data: publicSettings } = usePublicSettings();
 
-  // Get version strings
   const flashpointVersion = publicSettings?.metadata?.flashpointVersion || 'Unknown';
   const webAppVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Settings size={32} className="text-primary" />
         <h1 className="text-3xl font-bold">Settings</h1>
       </div>
 
-      {/* Tabbed Interface - Only show tabs for admin users */}
       {isAdmin ? (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 border-2 border-primary/60 h-full">
@@ -96,7 +89,6 @@ export function SettingsView() {
           </div>
         </Tabs>
       ) : (
-        // Non-admin users: Show only Version Info without tabs
         <div className="space-y-6">
           <div className="bg-card rounded-lg p-6 border border-border shadow-md">
             <h2 className="text-xl font-semibold mb-4">Version Information</h2>

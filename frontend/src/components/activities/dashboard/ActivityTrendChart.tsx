@@ -54,10 +54,8 @@ export function ActivityTrendChart({ autoRefresh = false }: ActivityTrendChartPr
 
   const formatTimestamp = (timestamp: string) => {
     if (days === 1) {
-      // For 24h view, show time
       return formatTime(timestamp);
     } else {
-      // For multi-day view, show date
       return formatDate(timestamp);
     }
   };

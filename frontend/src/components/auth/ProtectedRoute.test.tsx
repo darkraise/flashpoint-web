@@ -5,7 +5,6 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { useAuthStore } from '@/store/auth';
 import type { User } from '@/types/auth';
 
-// Mock hooks
 vi.mock('@/hooks/useFeatureFlags', () => ({
   useFeatureFlags: () => ({
     enablePlaylists: true,
@@ -22,7 +21,6 @@ vi.mock('@/hooks/useSharedPlaylistAccess', () => ({
 }));
 
 describe('ProtectedRoute', () => {
-  // Clear auth state before each test
   beforeEach(() => {
     useAuthStore.getState().clearAuth();
   });
@@ -50,7 +48,6 @@ describe('ProtectedRoute', () => {
     });
 
     it('should allow access when authenticated', () => {
-      // Set authenticated user
       const mockUser: User = {
         id: 1,
         username: 'testuser',
@@ -82,7 +79,6 @@ describe('ProtectedRoute', () => {
     });
 
     it('should allow guest access when auth not required', () => {
-      // Set guest mode
       useAuthStore.getState().setGuestMode();
 
       render(

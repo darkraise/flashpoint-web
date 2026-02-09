@@ -1,7 +1,3 @@
-/**
- * Loading fallback component for lazy-loaded routes
- * Displays a centered loading spinner while route components are being loaded
- */
 export function RouteLoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">

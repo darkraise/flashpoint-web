@@ -6,14 +6,7 @@ interface AnalogousColors {
   cool: string;
 }
 
-/**
- * Custom hook: Calculate analogous colors from CSS primary variable
- *
- * Reads the --primary CSS variable and generates analogous colors by shifting
- * the hue by ±30° on the color wheel while maintaining saturation and lightness.
- *
- * @returns Analogous color scheme with primary, warm (+30°), and cool (-30°) variants
- */
+// Generates analogous colors by shifting the --primary hue by +/-30 degrees
 function useAnalogousColors(): AnalogousColors {
   const [colors, setColors] = useState<AnalogousColors>({
     primary: '221.2 83.2% 53.3%',
@@ -23,12 +16,10 @@ function useAnalogousColors(): AnalogousColors {
 
   useEffect(() => {
     const calculateColors = () => {
-      // Read --primary from root element
       const root = document.documentElement;
       const primaryValue = getComputedStyle(root).getPropertyValue('--primary').trim();
 
       if (primaryValue) {
-        // Parse HSL values (format: "221.2 83.2% 53.3%")
         const values = primaryValue.split(' ').map((v) => parseFloat(v.replace('%', '')));
 
         if (values.length >= 3) {
@@ -43,10 +34,8 @@ function useAnalogousColors(): AnalogousColors {
       }
     };
 
-    // Calculate colors on mount
     calculateColors();
 
-    // Listen for theme changes via MutationObserver
     const observer = new MutationObserver(() => {
       calculateColors();
     });
@@ -62,11 +51,6 @@ function useAnalogousColors(): AnalogousColors {
   return colors;
 }
 
-/**
- * Custom hook: Detect mobile for performance optimization
- *
- * @returns True if viewport width is less than 1024px
- */
 function useMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -83,39 +67,12 @@ function useMobile(): boolean {
   return isMobile;
 }
 
-/**
- * PrismaticBackground - Multi-colored light gradient ambient background
- *
- * Creates a sophisticated ambient effect using radial gradients that simulate
- * light diffused through frosted glass. Uses analogous color harmony based on
- * the theme's primary color.
- *
- * Features:
- * - Three radial gradient layers with analogous color scheme
- * - Slow circular drift and scale pulsing (60-80s cycles)
- * - Theme-aware: Calculates analogous colors from --primary CSS variable
- * - Responsive: Reduces to 2 layers on mobile (< 1024px)
- * - Accessibility: Respects prefers-reduced-motion
- *
- * Design Philosophy:
- * - Prismatic Light Diffusion aesthetic
- * - Simulates ambient light diffused through frosted glass
- * - Uses theme primary + analogous hues (±30° on color wheel)
- * - Subtle opacity (2-5%) for sophisticated, non-distracting effect
- *
- * Performance:
- * - GPU-accelerated animations (transform only)
- * - Minimal DOM (2-3 elements)
- * - CSS variables for dynamic opacity
- * - MutationObserver for efficient theme change detection
- */
 export function PrismaticBackground() {
   const colors = useAnalogousColors();
   const isMobile = useMobile();
 
   return (
     <>
-      {/* Light Layer 1: Primary color - Large ellipse, slow drift */}
       <div
         className="prismatic-light-1"
         style={{
@@ -128,7 +85,6 @@ export function PrismaticBackground() {
         aria-hidden="true"
       />
 
-      {/* Light Layer 2: Warm analogous - Medium ellipse, counter-drift */}
       <div
         className="prismatic-light-2"
         style={{
@@ -141,7 +97,6 @@ export function PrismaticBackground() {
         aria-hidden="true"
       />
 
-      {/* Light Layer 3: Cool analogous - Desktop only, vertical wave */}
       {!isMobile ? (
         <div
           className="prismatic-light-3"

@@ -15,10 +15,6 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-/**
- * ErrorBoundary component that catches JavaScript errors in child components
- * and displays a fallback UI instead of crashing the entire application
- */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -30,20 +26,16 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    // Update state so the next render will show the fallback UI
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error details for debugging
     logger.error('ErrorBoundary caught an error:', error, errorInfo);
 
-    // Call custom error handler if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
 
-    // Store error info in state
     this.setState({
       error,
       errorInfo,
@@ -51,7 +43,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = (): void => {
-    // Reset error state and try to recover
     this.setState({
       hasError: false,
       error: null,
@@ -60,18 +51,15 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = (): void => {
-    // Navigate to home page and reset error state
     window.location.href = '/';
   };
 
   render(): ReactNode {
     if (this.state.hasError) {
-      // Use custom fallback if provided
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
-      // Default fallback UI
       return (
         <div className="min-h-screen flex items-center justify-center bg-background-primary px-4">
           <div className="max-w-2xl w-full bg-background-elevated rounded-lg shadow-xl p-8">
@@ -87,7 +75,6 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             </div>
 
-            {/* Error details (only in development) */}
             {import.meta.env.DEV && this.state.error ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h2 className="text-sm font-semibold text-red-400 mb-2">Error Details:</h2>
@@ -103,7 +90,6 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Action buttons */}
             <div className="flex gap-3">
               <Button variant="default" onClick={this.handleReset}>
                 <RefreshCw size={18} className="mr-2" />
@@ -115,7 +101,6 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
 
-            {/* Additional help text */}
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground">If this problem persists, please try:</p>
               <ul className="mt-2 space-y-1 text-sm text-muted-foreground list-disc list-inside">

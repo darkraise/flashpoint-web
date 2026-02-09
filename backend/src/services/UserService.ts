@@ -8,9 +8,6 @@ import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../
 import { logger } from '../utils/logger';
 
 export class UserService {
-  /**
-   * Get all users with pagination
-   */
   async getUsers(page: number = 1, limit: number = 50): Promise<PaginatedResponse<User>> {
     const offset = calculateOffset(page, limit);
 
@@ -37,9 +34,6 @@ export class UserService {
     return createPaginatedResponse(users as User[], total, page, limit);
   }
 
-  /**
-   * Get user by ID
-   */
   async getUserById(id: number): Promise<User | null> {
     const user = UserDatabaseService.get(
       `SELECT u.id, u.username, u.email, u.role_id as roleId, r.name as roleName,
@@ -54,9 +48,6 @@ export class UserService {
     return user || null;
   }
 
-  /**
-   * Create new user
-   */
   async createUser(data: CreateUserData): Promise<User> {
     // Hash password before transaction
     const passwordHash = await hashPassword(data.password);
@@ -76,7 +67,6 @@ export class UserService {
         throw new AppError(409, 'Email already exists');
       }
 
-      // Create user
       const result = db
         .prepare(
           'INSERT INTO users (username, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, ?)'
@@ -90,9 +80,6 @@ export class UserService {
     return (await this.getUserById(userId))!;
   }
 
-  /**
-   * Update user
-   */
   async updateUser(id: number, data: UpdateUserData): Promise<User> {
     const user = await this.getUserById(id);
     if (!user) {
@@ -156,9 +143,6 @@ export class UserService {
     return (await this.getUserById(id))!;
   }
 
-  /**
-   * Delete user
-   */
   async deleteUser(id: number): Promise<void> {
     const user = await this.getUserById(id);
     if (!user) {
@@ -194,9 +178,6 @@ export class UserService {
     PermissionCache.invalidateUser(id);
   }
 
-  /**
-   * Change user password
-   */
   async changePassword(
     id: number,
     currentPassword: string,
@@ -233,9 +214,6 @@ export class UserService {
     logger.info(`[UserService] All refresh tokens revoked after password change for user ${id}`);
   }
 
-  /**
-   * Get user setting by key
-   */
   async getUserSetting(userId: number, key: string): Promise<string | null> {
     const result = UserDatabaseService.get(
       `SELECT setting_value FROM user_settings
@@ -245,9 +223,6 @@ export class UserService {
     return result?.setting_value ?? null;
   }
 
-  /**
-   * Get all settings for a user
-   */
   async getUserSettings(userId: number): Promise<Record<string, string>> {
     const results = UserDatabaseService.all(
       `SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?`,
@@ -263,9 +238,6 @@ export class UserService {
     );
   }
 
-  /**
-   * Set user setting (upsert)
-   */
   async setUserSetting(userId: number, key: string, value: string): Promise<void> {
     const user = await this.getUserById(userId);
     if (!user) {
@@ -283,9 +255,6 @@ export class UserService {
     );
   }
 
-  /**
-   * Update theme settings in user_settings table (atomic transaction)
-   */
   async updateThemeSettings(userId: number, mode: string, primaryColor: string): Promise<void> {
     const user = await this.getUserById(userId);
     if (!user) {
@@ -299,9 +268,6 @@ export class UserService {
     ]);
   }
 
-  /**
-   * Get theme settings from user_settings table
-   */
   async getThemeSettings(userId: number): Promise<{ mode: string; primaryColor: string }> {
     const mode = await this.getUserSetting(userId, 'theme_mode');
     const primaryColor = await this.getUserSetting(userId, 'primary_color');

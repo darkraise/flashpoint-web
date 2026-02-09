@@ -1,13 +1,5 @@
 import { logger } from './logger';
 
-/**
- * Query Performance Logger
- *
- * Wraps database query execution with performance monitoring.
- * Logs queries that exceed the threshold with execution time and details.
- */
-
-// Performance threshold in milliseconds
 const SLOW_QUERY_THRESHOLD_MS = 100;
 
 interface QueryMetrics {
@@ -17,14 +9,10 @@ interface QueryMetrics {
   timestamp: string;
 }
 
-/**
- * Sanitize query parameters for logging
- * Redacts sensitive values like passwords and tokens
- */
+/** Redacts sensitive values (passwords, tokens) from query params before logging. */
 function sanitizeParams(params: unknown[] = []): unknown[] {
   return params.map((param) => {
     if (typeof param === 'string') {
-      // Redact if it looks like a password or token
       if (param.length > 20 && /^[a-f0-9]{32,}$/i.test(param)) {
         return '[REDACTED_TOKEN]';
       }
@@ -36,9 +24,6 @@ function sanitizeParams(params: unknown[] = []): unknown[] {
   });
 }
 
-/**
- * Truncate SQL query for logging (keep first 200 chars)
- */
 function truncateSQL(sql: string): string {
   const maxLength = 200;
   if (sql.length <= maxLength) {
@@ -47,9 +32,6 @@ function truncateSQL(sql: string): string {
   return sql.substring(0, maxLength) + '...';
 }
 
-/**
- * Log slow query performance metrics
- */
 function logSlowQuery(metrics: QueryMetrics): void {
   const { sql, params, executionTime, timestamp } = metrics;
 
@@ -62,14 +44,6 @@ function logSlowQuery(metrics: QueryMetrics): void {
   });
 }
 
-/**
- * Wrap a database query execution function with performance monitoring
- *
- * @param queryFn - The function that executes the database query
- * @param sql - The SQL query string
- * @param params - Query parameters
- * @returns The result of the query function
- */
 export function measureQueryPerformance<T>(
   queryFn: () => T,
   sql: string,
@@ -81,7 +55,6 @@ export function measureQueryPerformance<T>(
     const result = queryFn();
     const executionTime = Math.round(performance.now() - start);
 
-    // Log if query exceeded threshold
     if (executionTime >= SLOW_QUERY_THRESHOLD_MS) {
       logSlowQuery({
         sql,
@@ -95,7 +68,6 @@ export function measureQueryPerformance<T>(
   } catch (error) {
     const executionTime = Math.round(performance.now() - start);
 
-    // Log error with execution time
     logger.error('[Query Performance] Query failed', {
       executionTime: `${executionTime}ms`,
       sql: truncateSQL(sql),
@@ -107,16 +79,10 @@ export function measureQueryPerformance<T>(
   }
 }
 
-/**
- * Get current performance threshold in milliseconds
- */
 export function getSlowQueryThreshold(): number {
   return SLOW_QUERY_THRESHOLD_MS;
 }
 
-/**
- * Async version of measureQueryPerformance for async operations
- */
 export async function measureQueryPerformanceAsync<T>(
   queryFn: () => Promise<T>,
   sql: string,
@@ -128,7 +94,6 @@ export async function measureQueryPerformanceAsync<T>(
     const result = await queryFn();
     const executionTime = Math.round(performance.now() - start);
 
-    // Log if query exceeded threshold
     if (executionTime >= SLOW_QUERY_THRESHOLD_MS) {
       logSlowQuery({
         sql,
@@ -142,7 +107,6 @@ export async function measureQueryPerformanceAsync<T>(
   } catch (error) {
     const executionTime = Math.round(performance.now() - start);
 
-    // Log error with execution time
     logger.error('[Query Performance] Query failed', {
       executionTime: `${executionTime}ms`,
       sql: truncateSQL(sql),

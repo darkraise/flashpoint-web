@@ -54,7 +54,6 @@ export function JobCard({
 
   return (
     <Card className="hover:shadow-lg transition-shadow flex flex-col h-full">
-      {/* HEADER: Name, ID, and Status Toggle */}
       <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -72,9 +71,7 @@ export function JobCard({
         </div>
       </CardHeader>
 
-      {/* BODY: Schedule, Last Execution, Next Run, Running Status */}
       <CardContent className="space-y-4 pt-3 flex-1 overflow-auto">
-        {/* Running Status Badge - Only show when job is currently running */}
         {job.running ? (
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3">
             <div className="flex items-center gap-2">
@@ -84,13 +81,11 @@ export function JobCard({
           </div>
         ) : null}
 
-        {/* Schedule */}
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Schedule</p>
           <JobScheduleDisplay cronSchedule={job.cronSchedule} />
         </div>
 
-        {/* Last Execution - Always shown, but skip if currently running */}
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">
             Last Execution
@@ -118,7 +113,6 @@ export function JobCard({
               {job.lastExecution.message ? (
                 <div className="mt-2 text-xs space-y-1">
                   {job.lastExecution.message.includes('Games updated') ? (
-                    // Parse metadata sync result
                     <div className="bg-muted/50 rounded p-2 space-y-0.5">
                       {job.lastExecution.message.match(/Games updated: (\d+)/) ? (
                         <div className="flex justify-between">
@@ -154,7 +148,6 @@ export function JobCard({
                       ) : null}
                     </div>
                   ) : (
-                    // Display as plain text for other messages
                     <p className="text-muted-foreground">{job.lastExecution.message}</p>
                   )}
                 </div>
@@ -165,7 +158,6 @@ export function JobCard({
           )}
         </div>
 
-        {/* Next Run */}
         {job.enabled && job.nextRunEstimate && !job.running ? (
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Next Run</p>
@@ -178,7 +170,6 @@ export function JobCard({
         ) : null}
       </CardContent>
 
-      {/* FOOTER: Action Buttons */}
       <CardFooter className="flex gap-2 pt-4 border-t flex-wrap flex-shrink-0">
         {job.running ? (
           <Button onClick={() => onStop(job.id)} variant="outline" size="sm" disabled={disabled}>

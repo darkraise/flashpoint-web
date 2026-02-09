@@ -10,14 +10,12 @@ interface AuthState {
   isGuest: boolean;
   isMaintenanceMode: boolean;
 
-  // Actions
   setAuth: (user: User) => void;
   setGuestMode: () => void;
   clearAuth: () => void;
   updateUser: (user: User) => void;
   setMaintenanceMode: (isActive: boolean) => void;
 
-  // Permission helpers
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
@@ -39,7 +37,6 @@ export const useAuthStore = create<AuthState>()(
           isGuest: false,
         });
 
-        // Load theme settings from server after successful login (not guest)
         if (user.role !== 'guest') {
           const themeStore = useThemeStore.getState();
           themeStore.loadThemeFromServer().catch((error) => {
@@ -49,7 +46,6 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setGuestMode: () => {
-        // Create a temporary guest user with limited permissions
         const guestUser: User = {
           id: 0,
           username: 'Guest',
@@ -106,9 +102,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'flashpoint-auth',
+      // Guest sessions → sessionStorage (tab-scoped); authenticated → localStorage (persistent)
       storage: createJSONStorage(() => ({
         getItem: (name) => {
-          // For guest users, use sessionStorage; for authenticated users, use localStorage
           const sessionValue = sessionStorage.getItem(name);
           if (sessionValue) {
             try {
@@ -126,12 +122,9 @@ export const useAuthStore = create<AuthState>()(
           try {
             const parsed = JSON.parse(value);
             if (parsed?.state?.isGuest) {
-              // Guest sessions go to sessionStorage only
               sessionStorage.setItem(name, value);
             } else {
-              // Authenticated sessions go to localStorage
               localStorage.setItem(name, value);
-              // Clear any guest session from sessionStorage
               sessionStorage.removeItem(name);
             }
           } catch {

@@ -79,9 +79,6 @@ export class UserPlaylistService {
     this.gameService = new GameService();
   }
 
-  /**
-   * Get all playlists for a user
-   */
   getUserPlaylists(userId: number): UserPlaylist[] {
     const db = this.userDb.getDatabase();
 
@@ -95,9 +92,6 @@ export class UserPlaylistService {
     return stmt.all(userId) as UserPlaylist[];
   }
 
-  /**
-   * Get a specific playlist by ID
-   */
   getPlaylistById(playlistId: number, userId: number): UserPlaylist | null {
     const db = this.userDb.getDatabase();
 
@@ -110,9 +104,6 @@ export class UserPlaylistService {
     return (stmt.get(playlistId, userId) as UserPlaylist) || null;
   }
 
-  /**
-   * Get games in a playlist
-   */
   getPlaylistGames(playlistId: number, userId: number): PlaylistGame[] {
     const db = this.userDb.getDatabase();
 
@@ -132,9 +123,6 @@ export class UserPlaylistService {
     return stmt.all(playlistId) as PlaylistGame[];
   }
 
-  /**
-   * Get games in a playlist with full game data
-   */
   async getPlaylistGamesWithData(playlistId: number, userId: number): Promise<Game[]> {
     const db = this.userDb.getDatabase();
 
@@ -164,9 +152,6 @@ export class UserPlaylistService {
     return games;
   }
 
-  /**
-   * Create a new playlist
-   */
   createPlaylist(userId: number, data: CreatePlaylistData): UserPlaylist {
     const db = this.userDb.getDatabase();
 
@@ -182,9 +167,6 @@ export class UserPlaylistService {
     return this.getPlaylistById(result.lastInsertRowid as number, userId)!;
   }
 
-  /**
-   * Update a playlist
-   */
   updatePlaylist(
     playlistId: number,
     userId: number,
@@ -234,9 +216,6 @@ export class UserPlaylistService {
     return this.getPlaylistById(playlistId, userId);
   }
 
-  /**
-   * Delete a playlist
-   */
   deletePlaylist(playlistId: number, userId: number): boolean {
     const db = this.userDb.getDatabase();
 
@@ -258,9 +237,6 @@ export class UserPlaylistService {
     return true;
   }
 
-  /**
-   * Add games to a playlist
-   */
   addGamesToPlaylist(playlistId: number, userId: number, gameIds: string[]): boolean {
     // Validate batch size
     if (gameIds.length > UserPlaylistService.MAX_BATCH_SIZE) {
@@ -315,9 +291,6 @@ export class UserPlaylistService {
     return true;
   }
 
-  /**
-   * Remove games from playlist
-   */
   removeGamesFromPlaylist(playlistId: number, userId: number, gameIds: string[]): boolean {
     // Validate batch size
     if (gameIds.length > UserPlaylistService.MAX_BATCH_SIZE) {
@@ -362,9 +335,6 @@ export class UserPlaylistService {
     return true;
   }
 
-  /**
-   * Reorder games in playlist
-   */
   reorderGames(playlistId: number, userId: number, gameIdOrder: string[]): boolean {
     // Validate batch size
     if (gameIdOrder.length > UserPlaylistService.MAX_BATCH_SIZE) {
@@ -401,9 +371,6 @@ export class UserPlaylistService {
     return true;
   }
 
-  /**
-   * Copy Flashpoint playlist to user playlist
-   */
   async copyFlashpointPlaylist(
     userId: number,
     flashpointPlaylistId: string,
@@ -440,9 +407,6 @@ export class UserPlaylistService {
     }
   }
 
-  /**
-   * Get playlist statistics for a user
-   */
   getUserPlaylistStats(userId: number): { totalPlaylists: number; totalGames: number } {
     const db = this.userDb.getDatabase();
 

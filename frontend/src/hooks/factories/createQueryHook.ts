@@ -3,35 +3,16 @@ import { useFeatureFlags } from '../useFeatureFlags';
 import { useDialog } from '@/contexts/DialogContext';
 import { getErrorMessage } from '@/types/api-error';
 
-/**
- * Options for creating a query hook with CRUD operations
- */
 interface CreateQueryHookOptions<TData, TCreate, TUpdate, TId = number | string> {
-  /** Query key for TanStack Query cache */
   queryKey: string[];
-
-  /** Optional feature flag to check before enabling queries */
   featureFlag?: keyof ReturnType<typeof useFeatureFlags>;
-
-  /** API methods for CRUD operations */
   api: {
-    /** Get all items */
     getAll: () => Promise<TData[]>;
-
-    /** Get single item by ID (optional) */
     getById?: (id: TId) => Promise<TData>;
-
-    /** Create new item */
     create: (data: TCreate) => Promise<TData>;
-
-    /** Update existing item */
     update: (id: TId, data: TUpdate) => Promise<TData>;
-
-    /** Delete item */
     delete: (id: TId) => Promise<void | unknown>;
   };
-
-  /** Optional success messages for mutations */
   messages?: {
     createSuccess?: string;
     updateSuccess?: string;
@@ -39,22 +20,12 @@ interface CreateQueryHookOptions<TData, TCreate, TUpdate, TId = number | string>
   };
 }
 
-/**
- * Return type for the created query hook
- */
 interface QueryHookResult<TData, TCreate, TUpdate, TId = number | string> {
-  /** Hook to query all items */
   useAllQuery: (enabled?: boolean) => ReturnType<typeof useQuery<TData[]>>;
-
-  /** Hook to create a new item */
   useCreateMutation: () => ReturnType<typeof useMutation<TData, unknown, TCreate>>;
-
-  /** Hook to update an existing item */
   useUpdateMutation: () => ReturnType<
     typeof useMutation<TData, unknown, { id: TId; data: TUpdate }>
   >;
-
-  /** Hook to delete an item */
   useDeleteMutation: () => ReturnType<typeof useMutation<unknown, unknown, TId>>;
 }
 
@@ -99,10 +70,8 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
     const { showToast } = useDialog();
     const featureFlags = useFeatureFlags();
 
-    // Check feature flag if provided
     const isEnabled = options.featureFlag ? featureFlags[options.featureFlag] : true;
 
-    // Query hook for fetching all items
     const useAllQuery = (enabled = true) => {
       return useQuery({
         queryKey: options.queryKey,
@@ -111,12 +80,10 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
       });
     };
 
-    // Create mutation with optimistic update
     const useCreateMutation = () => {
       return useMutation({
         mutationFn: options.api.create,
         onSuccess: (newItem) => {
-          // Optimistically update cache by prepending new item
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
             return [newItem, ...old];
           });
@@ -128,12 +95,10 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
       });
     };
 
-    // Update mutation with optimistic update
     const useUpdateMutation = () => {
       return useMutation({
         mutationFn: ({ id, data }: { id: TId; data: TUpdate }) => options.api.update(id, data),
         onSuccess: (updated) => {
-          // Optimistically update cache by replacing the updated item
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
             return old.map((item) =>
               (item as Record<string, unknown>).id === (updated as Record<string, unknown>).id
@@ -149,12 +114,10 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
       });
     };
 
-    // Delete mutation with optimistic update
     const useDeleteMutation = () => {
       return useMutation({
         mutationFn: options.api.delete,
         onSuccess: (_, deletedId) => {
-          // Optimistically update cache by removing the deleted item
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
             return old.filter((item) => (item as Record<string, unknown>).id !== deletedId);
           });

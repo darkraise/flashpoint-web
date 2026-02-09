@@ -30,7 +30,6 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
   const [cronSchedule, setCronSchedule] = useState(job?.cronSchedule || '0 * * * *');
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Validate cron expression
   const validateCronExpression = (cron: string) => {
     if (!cron.trim()) {
       setValidationError('Cron expression is required');
@@ -46,7 +45,6 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
     return true;
   };
 
-  // Reset state when job changes
   useEffect(() => {
     if (job) {
       setCronSchedule(job.cronSchedule);
@@ -54,13 +52,11 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
     }
   }, [job]);
 
-  // Validate on cron schedule change
   const handleCronChange = (value: string) => {
     setCronSchedule(value);
     validateCronExpression(value);
   };
 
-  // Update job settings mutation
   const updateJobSettings = useMutation({
     mutationFn: (settings: Record<string, unknown>) =>
       systemSettingsApi.updateCategory('jobs', settings),
@@ -80,13 +76,11 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
   const handleSave = () => {
     if (!job) return;
 
-    // Validate before saving
     if (!validateCronExpression(cronSchedule)) {
       showToast('Please fix the validation errors before saving', 'error');
       return;
     }
 
-    // Map job ID to settings keys
     const settingsKey = job.id === 'metadata-sync' ? 'metadataSync' : job.id;
 
     updateJobSettings.mutate({
@@ -107,7 +101,6 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
         </DialogHeader>
 
         <DialogBody className="space-y-6 py-4">
-          {/* Cron Schedule Configuration */}
           <div className="space-y-2">
             <Label htmlFor="cron-schedule" className="text-base">
               Schedule (Cron Expression)
@@ -132,7 +125,6 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
               disabled={updateJobSettings.isPending}
             />
 
-            {/* Validation Error */}
             {validationError ? (
               <div className="flex items-center gap-2 text-sm text-red-500">
                 <AlertCircle size={16} />
@@ -140,7 +132,6 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
               </div>
             ) : null}
 
-            {/* Human-readable description */}
             {!validationError && cronSchedule ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Info size={16} />
@@ -148,7 +139,6 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
               </div>
             ) : null}
 
-            {/* Quick preset buttons */}
             <div className="flex flex-wrap gap-2 mt-2">
               <button
                 type="button"
@@ -188,7 +178,6 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
             </div>
           </div>
 
-          {/* Info Box */}
           <div className="bg-muted/30 rounded-md p-3 border border-border/50">
             <div className="flex items-start gap-2">
               <Info size={18} className="text-primary mt-0.5 flex-shrink-0" />

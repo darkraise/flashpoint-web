@@ -11,7 +11,7 @@ import { sanitizeUrlPath, sanitizeErrorMessage } from './utils/pathSecurity';
 import { validateGameId, validateHostname } from './validation/schemas';
 import { gameDataDownloader } from './services';
 
-/** Escape HTML special characters to prevent XSS in loading page */
+/** Escape HTML special characters to prevent XSS */
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -22,10 +22,6 @@ function escapeHtml(str: string): string {
     .replace(/`/g, '&#96;');
 }
 
-/**
- * Download progress tracking for in-progress downloads
- * Used to show loading page while game is being downloaded
- */
 interface DownloadProgress {
   startTime: number;
   progress: number;
@@ -34,33 +30,21 @@ interface DownloadProgress {
   zipPath: string;
 }
 
-/** Map of gameId -> download progress for in-progress downloads */
 const downloadsInProgress = new Map<string, DownloadProgress>();
-
-/** Maximum concurrent downloads */
 const MAX_CONCURRENT_DOWNLOADS = 3;
-
-/** Cleanup stale downloads older than 10 minutes */
 const DOWNLOAD_STALE_MS = 10 * 60 * 1000;
 
-/**
- * GameZip Server - Direct-call interface for mounting/serving files from ZIP archives
- * Refactored from game-service to expose methods instead of running an HTTP server
- */
+/** Direct-call interface for mounting/serving files from ZIP archives */
 export class GameZipServer {
   private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    // Start periodic cleanup of stale downloads (every 60 seconds)
     this.cleanupInterval = setInterval(() => {
       this.cleanupStaleDownloads();
     }, 60000);
-    this.cleanupInterval.unref(); // Don't prevent graceful shutdown
+    this.cleanupInterval.unref();
   }
 
-  /**
-   * Dispose of the server and stop cleanup intervals
-   */
   dispose(): void {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
@@ -68,10 +52,6 @@ export class GameZipServer {
     }
   }
 
-  /**
-   * Mount a ZIP file directly (no HTTP)
-   * Returns { success, downloading?, statusCode }
-   */
   async mountZip(params: {
     id: string;
     zipPath: string;
@@ -81,7 +61,6 @@ export class GameZipServer {
   }): Promise<{ success: boolean; downloading?: boolean; statusCode: number }> {
     const { id, zipPath, gameId, dateAdded, sha256 } = params;
 
-    // Validate mount ID using Zod schema
     try {
       validateGameId(id);
     } catch (error) {
@@ -93,7 +72,6 @@ export class GameZipServer {
       return { success: false, statusCode: 400 };
     }
 
-    // Validate ZIP path to prevent directory traversal
     const flashpointPath =
       process.env.FLASHPOINT_PATH ||
       (process.env.NODE_ENV === 'production' ? '/data/flashpoint' : 'D:/Flashpoint');
@@ -117,7 +95,6 @@ export class GameZipServer {
       return { success: false, statusCode: 400 };
     }
 
-    // Check if ZIP file exists locally
     let zipExists = false;
     try {
       await fs.access(zipPath);
@@ -126,14 +103,12 @@ export class GameZipServer {
       zipExists = false;
     }
 
-    // If ZIP doesn't exist and we have download parameters, start background download
     if (!zipExists && gameId && dateAdded) {
       if (downloadsInProgress.has(gameId)) {
         logger.info(`[GameZipServer] Download already in progress for game ${gameId}`);
         return { success: true, downloading: true, statusCode: 202 };
       }
 
-      // Check if we've hit the concurrent download limit
       if (downloadsInProgress.size >= MAX_CONCURRENT_DOWNLOADS) {
         logger.warn(
           `[GameZipServer] Too many concurrent downloads (${downloadsInProgress.size}), rejecting ${gameId}`
@@ -167,11 +142,10 @@ export class GameZipServer {
       return { success: false, statusCode: 404 };
     }
 
-    // Mount the ZIP (file exists locally)
     try {
       await zipManager.mount(id, zipPath);
 
-      // After the mount succeeds, verify the real path hasn't changed (TOCTOU protection)
+      // TOCTOU protection: verify real path hasn't changed via symlink
       try {
         const realPath = await fs.realpath(zipPath);
         const resolvedReal = path.resolve(realPath);
@@ -180,7 +154,6 @@ export class GameZipServer {
           !resolvedReal.startsWith(resolvedGamesPath + path.sep) &&
           resolvedReal !== resolvedGamesPath
         ) {
-          // Symlink pointed outside allowed directory - unmount immediately
           logger.warn(`[GameZipServer] Symlink detected: ${zipPath} -> ${realPath}. Unmounting.`);
           await zipManager.unmount(id);
           return { success: false, statusCode: 403 };
@@ -201,9 +174,6 @@ export class GameZipServer {
     }
   }
 
-  /**
-   * Unmount a ZIP file directly (no HTTP)
-   */
   async unmountZip(id: string): Promise<boolean> {
     try {
       validateGameId(id);
@@ -214,17 +184,11 @@ export class GameZipServer {
     return await zipManager.unmount(id);
   }
 
-  /**
-   * List all mounted ZIPs
-   */
   listMounts(): Array<{ id: string; zipPath: string; mountTime: Date; fileCount: number }> {
     return zipManager.getMountedZips();
   }
 
-  /**
-   * Handle file request from mounted ZIPs (compatible with both raw HTTP and Express)
-   * Supports proxy-style requests: GET http://domain.com/path HTTP/1.1
-   */
+  /** Handle file request from mounted ZIPs (supports proxy-style and regular requests) */
   async handleFileRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if (!req.url) {
       this.sendError(res, 400, 'Bad Request: No URL');
@@ -234,31 +198,24 @@ export class GameZipServer {
     let hostname: string;
     let urlPath: string;
 
-    // Normalize malformed URLs: /http:/domain → /http://domain
-    // This is a common pattern in legacy Flash games
+    // Legacy Flash games sometimes emit /http:/domain instead of /http://domain
     let normalizedUrl = req.url;
     if (normalizedUrl.match(/^\/https?:\/[^\/]/)) {
-      // Single slash after protocol - insert the missing slash
       normalizedUrl = normalizedUrl.replace(/^(\/https?:)\//, '$1//');
       logger.debug(`[GameZipServer] Normalized malformed URL: ${req.url} → ${normalizedUrl}`);
     }
 
-    // Parse URL (same logic as main proxy server)
     try {
       if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
-        // Proxy-style: GET http://domain.com/path HTTP/1.1
         const targetUrl = new URL(normalizedUrl);
         hostname = targetUrl.hostname;
         urlPath = targetUrl.pathname + targetUrl.search;
       } else if (normalizedUrl.startsWith('/http://') || normalizedUrl.startsWith('/https://')) {
-        // Path-based: GET /http://domain.com/path HTTP/1.1
         const urlWithoutSlash = normalizedUrl.substring(1);
         const targetUrl = new URL(urlWithoutSlash);
         hostname = targetUrl.hostname;
         urlPath = targetUrl.pathname + targetUrl.search;
       } else {
-        // Regular: GET /path HTTP/1.1
-        // Strip port from hostname (e.g., "localhost:3100" -> "localhost")
         hostname = (req.headers.host || 'localhost').split(':')[0];
         urlPath = normalizedUrl;
       }
@@ -268,7 +225,6 @@ export class GameZipServer {
       return;
     }
 
-    // Validate hostname using Zod schema
     try {
       hostname = validateHostname(hostname);
     } catch (error) {
@@ -277,7 +233,6 @@ export class GameZipServer {
       return;
     }
 
-    // Sanitize URL path to prevent null bytes and dangerous patterns
     try {
       urlPath = sanitizeUrlPath(urlPath);
     } catch (error) {
@@ -286,33 +241,24 @@ export class GameZipServer {
       return;
     }
 
-    // Strip query string from path for ZIP file lookup
-    // Files in ZIPs don't have query strings (e.g., file.swf?token=xyz → file.swf)
     const pathWithoutQuery = urlPath.split('?')[0];
-
-    // Build relative path
     const relPath = path.posix.join(hostname, pathWithoutQuery);
 
     logger.debug(`[GameZipServer] Looking for: ${relPath}`);
 
-    // Check if client already disconnected before doing the heavy ZIP lookup
     if (res.destroyed) {
       logger.debug(`[GameZipServer] Client disconnected before file lookup: ${relPath}`);
       return;
     }
 
-    // Search mounted ZIPs
     const result = await zipManager.findFile(relPath);
 
-    // Check again after async operation (client may have disconnected during lookup)
     if (res.destroyed) {
       logger.debug(`[GameZipServer] Client disconnected during file lookup: ${relPath}`);
       return;
     }
 
     if (!result) {
-      // Check if a download is in progress for any game
-      // The mount ID is typically the gameId
       const downloadStatus = this.findActiveDownload(relPath);
 
       if (downloadStatus) {
@@ -328,31 +274,25 @@ export class GameZipServer {
       return;
     }
 
-    // Determine content type (use path without query string)
     const ext = path.extname(pathWithoutQuery).substring(1).toLowerCase();
     const contentType = getMimeType(ext);
 
-    // Process HTML files to inject polyfills for better game compatibility
     let fileData = result.data;
     if (ext === 'html' || ext === 'htm') {
       fileData = injectPolyfills(result.data);
       logger.info(`[GameZipServer] Injected polyfills into HTML file: ${relPath}`);
     }
 
-    // Send file
     logger.info(
       `[GameZipServer] ✓ Serving from ZIP ${result.mountId}: ${relPath} (${fileData.length} bytes)`
     );
 
-    // Get settings for CORS configuration
     const settings = ConfigManager.getSettings();
-
-    // CORS headers
     setCorsHeaders(res, settings);
 
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', fileData.length);
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+    res.setHeader('Cache-Control', 'public, max-age=86400');
     if (process.env.NODE_ENV !== 'production') {
       res.setHeader('X-Source', `gamezipserver:${result.mountId}`);
     }
@@ -362,10 +302,6 @@ export class GameZipServer {
     res.end(fileData);
   }
 
-  /**
-   * Download ZIP and mount it in background
-   * This runs asynchronously - errors are logged but don't affect the HTTP response
-   */
   private async downloadAndMountInBackground(
     mountId: string,
     gameId: string,
@@ -384,7 +320,6 @@ export class GameZipServer {
         },
         (downloaded, total, source) => {
           try {
-            // Update progress tracking
             const existing = downloadsInProgress.get(gameId);
             if (existing) {
               downloadsInProgress.set(gameId, {
@@ -407,7 +342,6 @@ export class GameZipServer {
       if (result.success && result.filePath) {
         logger.info(`[GameZipServer] Successfully downloaded ZIP from "${result.sourceUsed}"`);
 
-        // Validate downloaded file path before mounting
         const resolvedFilePath = path.resolve(result.filePath);
         const resolvedAllowedPath = path.resolve(targetPath);
         if (
@@ -420,7 +354,6 @@ export class GameZipServer {
           return;
         }
 
-        // Mount the downloaded ZIP
         try {
           await zipManager.mount(mountId, result.filePath);
           logger.info(`[GameZipServer] ✓ ZIP downloaded and mounted for game ${gameId}`);
@@ -435,14 +368,10 @@ export class GameZipServer {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       logger.error(`[GameZipServer] Background download error for ${gameId}: ${errorMsg}`);
     } finally {
-      // Remove from in-progress tracking
       downloadsInProgress.delete(gameId);
     }
   }
 
-  /**
-   * Clean up stale downloads older than DOWNLOAD_STALE_MS
-   */
   private cleanupStaleDownloads(): void {
     const now = Date.now();
     for (const [gameId, progress] of downloadsInProgress.entries()) {
@@ -453,27 +382,18 @@ export class GameZipServer {
     }
   }
 
-  /**
-   * Find an active download that might be related to the requested file path
-   * Returns the download status if found, null otherwise
-   */
   private findActiveDownload(
     relPath: string
   ): { gameId: string; progress: DownloadProgress } | null {
-    // Clean up stale downloads first
     this.cleanupStaleDownloads();
 
-    // Extract hostname from relPath (format: hostname/path/to/file)
     const hostname = relPath.split('/')[0]?.toLowerCase();
 
-    // Try to find a download matching this hostname
     if (hostname) {
       for (const [gameId, download] of downloadsInProgress.entries()) {
-        // Check if mount ID or ZIP path contains the hostname
         if (gameId.toLowerCase().includes(hostname)) {
           return { gameId, progress: download };
         }
-        // Also check the ZIP path for hostname match
         const zipFilename = download.zipPath.toLowerCase();
         if (zipFilename.includes(hostname)) {
           return { gameId, progress: download };
@@ -481,14 +401,9 @@ export class GameZipServer {
       }
     }
 
-    // No matching download found - return null for a proper 404
     return null;
   }
 
-  /**
-   * Send a loading page while game is being downloaded
-   * Uses auto-refresh to poll until game is ready
-   */
   private sendLoadingPage(
     res: http.ServerResponse,
     gameId: string,
@@ -600,13 +515,10 @@ export class GameZipServer {
       'Content-Security-Policy',
       "default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; script-src 'none'"
     );
-    res.writeHead(202); // 202 Accepted - still processing
+    res.writeHead(202);
     res.end(html);
   }
 
-  /**
-   * Send error response
-   */
   private sendError(res: http.ServerResponse, statusCode: number, message: string): void {
     if (res.headersSent) {
       res.end();
@@ -615,7 +527,6 @@ export class GameZipServer {
 
     logger.warn(`[GameZipServer] Sending error ${statusCode}: ${message}`);
 
-    // Set CORS headers even for error responses
     const settings = ConfigManager.getSettings();
     setCorsHeaders(res, settings);
 

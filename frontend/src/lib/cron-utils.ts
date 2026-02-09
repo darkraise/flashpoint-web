@@ -1,6 +1,3 @@
-/**
- * Convert cron expression to human-readable format
- */
 export function cronToReadable(cronExpression: string): string {
   const parts = cronExpression.trim().split(' ');
   if (parts.length !== 5) return cronExpression; // Invalid cron, return as-is
@@ -53,9 +50,6 @@ export function cronToReadable(cronExpression: string): string {
   return cronExpression;
 }
 
-/**
- * Validate cron expression format
- */
 export function isValidCron(cronExpression: string): boolean {
   const parts = cronExpression.trim().split(' ');
   if (parts.length !== 5) return false;
@@ -99,9 +93,6 @@ export function isValidCron(cronExpression: string): boolean {
   );
 }
 
-/**
- * Format duration in seconds
- */
 export function formatDuration(seconds: number | undefined): string {
   if (seconds === undefined || seconds === null) return 'N/A';
 

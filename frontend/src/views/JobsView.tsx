@@ -23,7 +23,6 @@ export function JobsView() {
   const { showToast } = useDialog();
   const queryClient = useQueryClient();
 
-  // Fetch jobs with auto-refresh every 5 seconds
   const {
     data: jobs = [],
     isLoading,
@@ -31,18 +30,16 @@ export function JobsView() {
   } = useQuery({
     queryKey: ['jobs'],
     queryFn: () => jobsApi.getAll(),
-    refetchInterval: 5000, // Real-time updates
+    refetchInterval: 5000,
     refetchIntervalInBackground: true,
   });
 
-  // Fetch logs for selected job
   const { data: logsData, isLoading: logsLoading } = useQuery({
     queryKey: ['jobLogs', selectedJobId],
     queryFn: () => jobsApi.getLogs(selectedJobId!, 50, 0),
     enabled: !!selectedJobId && showLogsDialog,
   });
 
-  // Stop mutation
   const stopMutation = useMutation({
     mutationFn: (jobId: string) => jobsApi.stop(jobId),
     onSuccess: (data) => {
@@ -54,7 +51,6 @@ export function JobsView() {
     },
   });
 
-  // Trigger mutation
   const triggerMutation = useMutation({
     mutationFn: (jobId: string) => jobsApi.trigger(jobId),
     onSuccess: (data) => {
@@ -66,7 +62,6 @@ export function JobsView() {
     },
   });
 
-  // Update mutation (for enabling/disabling jobs)
   const updateMutation = useMutation({
     mutationFn: ({ jobId, enabled }: { jobId: string; enabled: boolean }) =>
       jobsApi.update(jobId, { enabled }),
@@ -107,13 +102,11 @@ export function JobsView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Clock size={32} className="text-primary" />
         <h1 className="text-3xl font-bold">Background Jobs</h1>
       </div>
 
-      {/* Loading State */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2].map((i) => (
@@ -122,14 +115,12 @@ export function JobsView() {
         </div>
       ) : null}
 
-      {/* Error State */}
       {error ? (
         <div className="bg-red-950/20 border border-red-500 rounded-lg p-4">
           <p className="text-red-400">Failed to load jobs. Please try again.</p>
         </div>
       ) : null}
 
-      {/* Jobs Grid */}
       {!isLoading && !error ? (
         <>
           {jobs.length === 0 ? (
@@ -156,7 +147,6 @@ export function JobsView() {
         </>
       ) : null}
 
-      {/* Logs Dialog */}
       <Dialog open={showLogsDialog} onOpenChange={setShowLogsDialog}>
         <DialogContent className="max-w-5xl">
           <DialogHeader>
@@ -170,7 +160,6 @@ export function JobsView() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
       <JobEditDialog
         job={jobs.find((j) => j.id === selectedJobId) || null}
         open={showEditDialog}

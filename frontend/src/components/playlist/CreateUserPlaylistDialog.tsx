@@ -22,8 +22,8 @@ import { getErrorMessage } from '@/types/api-error';
 interface CreateUserPlaylistDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  playlist?: UserPlaylist; // If provided, we're editing
-  onSuccess?: (playlist: UserPlaylist) => void; // Called after successful create/update
+  playlist?: UserPlaylist;
+  onSuccess?: (playlist: UserPlaylist) => void;
 }
 
 export function CreateUserPlaylistDialog({
@@ -41,7 +41,6 @@ export function CreateUserPlaylistDialog({
 
   const isEditing = !!playlist;
 
-  // Populate form when editing
   useEffect(() => {
     if (playlist) {
       setTitle(playlist.title);
@@ -84,7 +83,6 @@ export function CreateUserPlaylistDialog({
         toast.success('Playlist created successfully');
       }
 
-      // Call onSuccess callback if provided
       if (onSuccess) {
         onSuccess(result);
       } else {

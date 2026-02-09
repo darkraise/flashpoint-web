@@ -24,7 +24,6 @@ interface AppSettingsTabProps {
   tabContentVariants: Variants;
 }
 
-// Available primary colors for theme customization
 const PRIMARY_COLORS: PrimaryColor[] = [
   'slate',
   'gray',
@@ -56,10 +55,8 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
   const queryClient = useQueryClient();
   const isAdmin = user?.permissions.includes('settings.update');
 
-  // Local state for site name input
   const [siteNameInput, setSiteNameInput] = useState('');
 
-  // Domain settings state
   const [domainInput, setDomainInput] = useState('');
   const [domainError, setDomainError] = useState<string | null>(null);
   const [deletingDomainIds, setDeletingDomainIds] = useState<Set<number>>(new Set());
@@ -68,29 +65,24 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
   const deleteDomainMutation = useDeleteDomain();
   const setDefaultDomainMutation = useSetDefaultDomain();
 
-  // Fetch app settings
   const { data: appSettings } = useQuery({
     queryKey: ['systemSettings', 'app'],
     queryFn: async () => systemSettingsApi.getCategory('app') as unknown as AppSettings,
     enabled: isAdmin,
   });
 
-  // Sync local state with fetched settings
   useEffect(() => {
     if (appSettings?.siteName) {
       setSiteNameInput(appSettings.siteName);
     }
   }, [appSettings?.siteName]);
 
-  // Update system settings mutation
   const updateSystemSettings = useMutation({
     mutationFn: ({ category, settings }: { category: string; settings: Record<string, unknown> }) =>
       systemSettingsApi.updateCategory(category, settings),
     onSuccess: (updatedSettings, variables) => {
-      // Use response data instead of refetching
       queryClient.setQueryData(['systemSettings', variables.category], updatedSettings);
 
-      // Invalidate public settings cache so header updates
       queryClient.invalidateQueries({
         queryKey: ['system-settings', 'public'],
       });
@@ -103,7 +95,6 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
     },
   });
 
-  // Handler to save site name
   const handleSaveSiteName = () => {
     if (siteNameInput.trim() === '') {
       showToast('Site name cannot be empty', 'error');

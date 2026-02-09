@@ -794,7 +794,7 @@ export class GameService {
 
       const results = DatabaseService.all(sql, []) as Array<{ tagsStr: string }>;
 
-      // Parse pipe-delimited tags and count occurrences
+      // Tags are semicolon-delimited
       const tagCounts = new Map<string, number>();
 
       for (const row of results) {

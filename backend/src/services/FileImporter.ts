@@ -3,39 +3,19 @@ import path from 'path';
 import { logger } from '../utils/logger';
 import { PreferencesService } from './PreferencesService';
 
-/**
- * Service for importing downloaded game data files into the Flashpoint installation.
- * Handles file naming, copying to final location, and cleanup.
- */
 export class FileImporter {
-  /**
-   * Generate a filename for a downloaded game data file.
-   * Format: {gameId}-{timestamp}.zip
-   *
-   * @param gameId - The game ID
-   * @returns Generated filename
-   */
+  /** Format: {gameId}-{timestamp}.zip */
   static generateFilename(gameId: string): string {
     const timestamp = Date.now();
     return `${gameId}-${timestamp}.zip`;
   }
 
-  /**
-   * Import a temporary downloaded file to the final location.
-   *
-   * @param gameId - The game ID
-   * @param tempFilePath - Absolute path to the temporary file
-   * @returns Promise resolving to the final absolute file path
-   * @throws Error if copy fails or disk space is insufficient
-   */
   static async import(gameId: string, tempFilePath: string): Promise<string> {
     try {
-      // Verify temp file exists
       if (!fs.existsSync(tempFilePath)) {
         throw new Error(`Temporary file not found: ${tempFilePath}`);
       }
 
-      // Get stats for logging and validation
       const stats = await fs.promises.stat(tempFilePath);
       logger.info('Starting file import', {
         gameId,
@@ -43,22 +23,16 @@ export class FileImporter {
         size: stats.size,
       });
 
-      // Get destination directory
       const dataPacksPath = await PreferencesService.getDataPacksPath();
-
-      // Ensure destination directory exists
       await fs.promises.mkdir(dataPacksPath, { recursive: true });
 
-      // Generate final filename
       const filename = this.generateFilename(gameId);
       const finalPath = path.join(dataPacksPath, filename);
 
-      // Check if destination already exists (shouldn't happen with timestamp)
       if (fs.existsSync(finalPath)) {
         logger.warn('Destination file already exists, overwriting', { finalPath });
       }
 
-      // Copy file to final location (atomic operation)
       await fs.promises.copyFile(tempFilePath, finalPath);
       logger.info('File copied successfully', {
         gameId,
@@ -66,7 +40,6 @@ export class FileImporter {
         size: stats.size,
       });
 
-      // Verify copy succeeded
       const finalStats = await fs.promises.stat(finalPath);
       if (finalStats.size !== stats.size) {
         throw new Error(
@@ -74,7 +47,6 @@ export class FileImporter {
         );
       }
 
-      // Delete temporary file
       await this.cleanupTempFile(tempFilePath);
 
       logger.info('File import completed successfully', {
@@ -90,7 +62,6 @@ export class FileImporter {
         error,
       });
 
-      // Re-throw with more context
       if (error instanceof Error) {
         if (error.message.includes('ENOSPC')) {
           throw new Error(`Insufficient disk space to import file for game ${gameId}`);
@@ -104,12 +75,7 @@ export class FileImporter {
     }
   }
 
-  /**
-   * Clean up a temporary file.
-   * Logs errors but doesn't throw (cleanup is best-effort).
-   *
-   * @param tempFilePath - Absolute path to the temporary file
-   */
+  /** Logs errors but doesn't throw (cleanup is best-effort) */
   static async cleanupTempFile(tempFilePath: string): Promise<void> {
     try {
       if (fs.existsSync(tempFilePath)) {
@@ -125,23 +91,13 @@ export class FileImporter {
     }
   }
 
-  /**
-   * Check if there is sufficient disk space for a file.
-   * Note: This is an approximation as fs doesn't provide disk space API on all platforms.
-   *
-   * @param _size - Required size in bytes
-   * @returns Promise resolving to true if space check passes
-   */
+  /** Approximation - fs doesn't provide disk space API on all platforms */
   static async checkDiskSpace(_size: number): Promise<boolean> {
     try {
-      // Get destination directory
       const dataPacksPath = await PreferencesService.getDataPacksPath();
-
-      // Ensure directory exists
       await fs.promises.mkdir(dataPacksPath, { recursive: true });
 
-      // On Windows, we can't easily check disk space without native modules
-      // This is a basic check - just ensure we can write a test file
+      // On Windows, no easy disk space check without native modules - just verify write access
       const testPath = path.join(dataPacksPath, '.diskspace-test');
       await fs.promises.writeFile(testPath, 'test');
       await fs.promises.unlink(testPath);
@@ -156,12 +112,6 @@ export class FileImporter {
     }
   }
 
-  /**
-   * Get the size of a file.
-   *
-   * @param filePath - Absolute path to the file
-   * @returns Promise resolving to file size in bytes
-   */
   static async getFileSize(filePath: string): Promise<number> {
     const stats = await fs.promises.stat(filePath);
     return stats.size;

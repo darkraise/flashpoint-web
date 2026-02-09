@@ -46,9 +46,6 @@ export class ImageUrlService {
     return defaultUrls;
   }
 
-  /**
-   * Get local image folder paths from preferences
-   */
   static async getImageFolderPaths(): Promise<{
     images: string;
     logos: string;

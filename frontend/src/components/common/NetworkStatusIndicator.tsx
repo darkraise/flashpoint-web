@@ -6,23 +6,16 @@ import { cn } from '@/lib/index';
 
 type NetworkStatus = 'online' | 'offline' | 'slow';
 
-/**
- * NetworkStatusIndicator component displays a banner when network conditions are poor
- * - Shows offline message when no connection
- * - Shows slow connection warning when response times are high
- * - Automatically dismisses when connection improves
- */
 export function NetworkStatusIndicator() {
   const [status, setStatus] = useState<NetworkStatus>('online');
   const [showBanner, setShowBanner] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Check if online/offline
     const handleOnline = () => {
       setStatus('online');
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => setShowBanner(false), 3000); // Hide after 3s when back online
+      timeoutRef.current = setTimeout(() => setShowBanner(false), 3000);
     };
 
     const handleOffline = () => {
@@ -30,11 +23,9 @@ export function NetworkStatusIndicator() {
       setShowBanner(true);
     };
 
-    // Monitor network connection
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Check initial status
     if (!navigator.onLine) {
       setStatus('offline');
       setShowBanner(true);
@@ -46,14 +37,12 @@ export function NetworkStatusIndicator() {
           navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 
         if (connection) {
-          // Use Network Information API if available
           const effectiveType = connection.effectiveType;
 
           if (effectiveType === 'slow-2g' || effectiveType === '2g') {
             setStatus('slow');
             setShowBanner(true);
 
-            // Auto-hide slow warning after 10 seconds
             if (timeoutRef.current) {
               clearTimeout(timeoutRef.current);
             }
@@ -74,9 +63,8 @@ export function NetworkStatusIndicator() {
       }
     };
 
-    // Check network speed periodically
     const speedCheckInterval = setInterval(checkNetworkSpeed, 5000);
-    checkNetworkSpeed(); // Check immediately
+    checkNetworkSpeed();
 
     return () => {
       window.removeEventListener('online', handleOnline);

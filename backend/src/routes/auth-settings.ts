@@ -10,7 +10,6 @@ import { z } from 'zod';
 const router = Router();
 const authSettingsService = new AuthSettingsService();
 
-// Validation schema
 const updateSettingsSchema = z.object({
   guestAccessEnabled: z.boolean().optional(),
   userRegistrationEnabled: z.boolean().optional(),
@@ -20,10 +19,6 @@ const updateSettingsSchema = z.object({
   lockoutDurationMinutes: z.number().int().positive().optional(),
 });
 
-/**
- * GET /api/settings/auth
- * Get current auth settings (public endpoint)
- */
 router.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -32,10 +27,6 @@ router.get(
   })
 );
 
-/**
- * PATCH /api/settings/auth
- * Update auth settings (admin only)
- */
 router.patch(
   '/',
   authenticate,

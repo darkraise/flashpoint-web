@@ -9,22 +9,18 @@ export function MaintenancePage() {
   const { user } = useAuthStore();
   const { logout, checkMaintenanceMode } = useAuth();
 
-  // Check if user is admin (has settings.update permission)
   const isAdmin = user?.permissions?.includes('settings.update');
 
   useEffect(() => {
-    // If admin, redirect to dashboard
     if (isAdmin) {
       navigate('/');
       return;
     }
 
-    // Poll maintenance mode status every 30 seconds
     const interval = setInterval(() => {
       checkMaintenanceMode()
         .then((isMaintenanceActive) => {
           if (!isMaintenanceActive) {
-            // Maintenance mode disabled, redirect to home
             navigate('/');
           }
         })
@@ -45,7 +41,6 @@ export function MaintenancePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-md w-full space-y-8 text-center">
-        {/* Icon */}
         <div className="mx-auto w-24 h-24 rounded-full bg-yellow-500/10 flex items-center justify-center">
           <svg
             className="w-12 h-12 text-yellow-500"
@@ -62,7 +57,6 @@ export function MaintenancePage() {
           </svg>
         </div>
 
-        {/* Title */}
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Under Maintenance</h1>
           <p className="text-muted-foreground text-lg">
@@ -70,7 +64,6 @@ export function MaintenancePage() {
           </p>
         </div>
 
-        {/* Message */}
         <div className="bg-muted/50 rounded-lg p-6 space-y-3">
           <p className="text-sm text-muted-foreground">
             The application is temporarily unavailable while we make important updates. We apologize
@@ -79,14 +72,12 @@ export function MaintenancePage() {
           <p className="text-sm font-medium">Please check back shortly.</p>
         </div>
 
-        {/* User info */}
         {user ? (
           <div className="text-sm text-muted-foreground">
             Logged in as: <span className="font-medium">{user.username}</span>
           </div>
         ) : null}
 
-        {/* Actions */}
         <div className="space-y-3">
           <Button variant="outline" className="w-full" onClick={() => window.location.reload()}>
             Refresh Page

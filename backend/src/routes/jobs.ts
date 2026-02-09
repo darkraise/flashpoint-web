@@ -12,9 +12,6 @@ const router = Router();
 const executionService = new JobExecutionService();
 const systemSettings = CachedSystemSettingsService.getInstance();
 
-// ===================================
-// GET ALL JOBS WITH STATUS
-// ===================================
 router.get(
   '/',
   authenticate,
@@ -30,9 +27,6 @@ router.get(
   })
 );
 
-// ===================================
-// GET ALL EXECUTION LOGS
-// ===================================
 router.get(
   '/logs/all',
   authenticate,
@@ -51,9 +45,6 @@ router.get(
   })
 );
 
-// ===================================
-// GET SPECIFIC JOB STATUS
-// ===================================
 router.get(
   '/:jobId',
   authenticate,
@@ -75,9 +66,6 @@ router.get(
   })
 );
 
-// ===================================
-// UPDATE JOB SETTINGS (ENABLE/DISABLE)
-// ===================================
 router.patch(
   '/:jobId',
   authenticate,
@@ -88,35 +76,29 @@ router.patch(
       const { jobId } = req.params;
       const { enabled } = req.body;
 
-      // Validate request body
       if (typeof enabled !== 'boolean') {
         return res.status(400).json({
           error: { message: 'Invalid request: enabled must be a boolean' },
         });
       }
 
-      // Verify job exists
       const job = JobScheduler.getJobStatusEnriched(jobId);
       if (!job) {
         return res.status(404).json({ error: { message: 'Job not found' } });
       }
 
-      // Update the job's enabled state in system_settings
       const settingKey = `jobs.${jobId.replaceAll('-', '_')}_enabled`;
       const userId = req.user!.id;
       systemSettings.set(settingKey, enabled ? '1' : '0', userId);
 
-      // Update the job in JobScheduler
       JobScheduler.updateJobEnabled(jobId, enabled);
 
-      // Start or stop the job based on enabled state
       if (enabled) {
         JobScheduler.startJob(jobId);
       } else {
         JobScheduler.stopJob(jobId);
       }
 
-      // Return updated job status
       const updatedJob = JobScheduler.getJobStatusEnriched(jobId);
       res.json(updatedJob);
     } catch (error) {
@@ -128,9 +110,6 @@ router.patch(
   })
 );
 
-// ===================================
-// START A JOB
-// ===================================
 router.post(
   '/:jobId/start',
   authenticate,
@@ -151,9 +130,6 @@ router.post(
   })
 );
 
-// ===================================
-// STOP A JOB
-// ===================================
 router.post(
   '/:jobId/stop',
   authenticate,
@@ -174,9 +150,6 @@ router.post(
   })
 );
 
-// ===================================
-// TRIGGER MANUAL JOB EXECUTION
-// ===================================
 router.post(
   '/:jobId/trigger',
   authenticate,
@@ -205,9 +178,6 @@ router.post(
   })
 );
 
-// ===================================
-// GET EXECUTION LOGS FOR SPECIFIC JOB
-// ===================================
 router.get(
   '/:jobId/logs',
   authenticate,

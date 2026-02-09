@@ -1,7 +1,3 @@
-/**
- * Favorites Types
- */
-
 import { Game } from './game';
 
 export interface Favorite {

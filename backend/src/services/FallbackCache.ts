@@ -20,9 +20,6 @@ export class FallbackCache<T = any> {
     });
   }
 
-  /**
-   * Store data in fallback cache
-   */
   set(key: string, data: T): void {
     this.cache.set(key, {
       data,
@@ -30,10 +27,6 @@ export class FallbackCache<T = any> {
     });
   }
 
-  /**
-   * Get data from fallback cache
-   * Returns both data and metadata about cache age
-   */
   get(key: string): { data: T; cachedAt: number; age: number } | null {
     const cached = this.cache.get(key);
     if (!cached) {
@@ -55,23 +48,14 @@ export class FallbackCache<T = any> {
     };
   }
 
-  /**
-   * Check if key exists in cache
-   */
   has(key: string): boolean {
     return this.cache.has(key);
   }
 
-  /**
-   * Clear cache
-   */
   clear(): void {
     this.cache.clear();
   }
 
-  /**
-   * Get cache statistics
-   */
   getStats(): { size: number; max: number } {
     return {
       size: this.cache.size,

@@ -3,47 +3,28 @@ import fs from 'fs/promises';
 import { logger } from '../utils/logger';
 import { z } from 'zod';
 
-/**
- * Maximum file size for buffering in memory (50MB)
- * Used consistently across gamezipserver, zip-manager, and legacy-server
- */
+/** Maximum file size for buffering in memory (used across gamezipserver, zip-manager, legacy-server) */
 export const MAX_BUFFERED_FILE_SIZE = 50 * 1024 * 1024;
 
 export interface ServerSettings {
-  // Proxy server port (default: 22500)
   proxyPort: number;
-
-  // GameZip server port (default: 22501)
   gameZipPort: number;
-
-  // Legacy paths
   legacyHTDOCSPath: string;
   legacyCGIBINPath: string;
-
-  // Override paths for file resolution
   legacyOverridePaths: string[];
-
-  // External fallback URLs
   infinityServerURL?: string;
   externalFilePaths: string[];
-
-  // MAD4FP mode settings
   mad4fpEnabled: boolean;
   mad4fpPaths: string[];
-
-  // Feature flags
   allowCrossDomain: boolean;
   enableBrotli: boolean;
   enableCGI: boolean;
-
-  // CGI settings
   phpCgiPath: string;
   cgiTimeout: number;
   cgiMaxBodySize: number;
   cgiMaxResponseSize: number;
 }
 
-// Zod schema for proxySettings.json validation
 const proxySettingsSchema = z
   .object({
     legacyOverridePaths: z.array(z.string()).default([]),
@@ -63,9 +44,6 @@ const proxySettingsSchema = z
 export class ConfigManager {
   private static settings: ServerSettings | null = null;
 
-  /**
-   * Load configuration from proxySettings.json and environment
-   */
   static async loadConfig(flashpointPath: string): Promise<ServerSettings> {
     if (ConfigManager.settings) {
       logger.warn('[ConfigManager] Re-initializing configuration - this may indicate a bug');
@@ -76,7 +54,6 @@ export class ConfigManager {
       const data = await fs.readFile(proxySettingsPath, 'utf-8');
       const parsed = JSON.parse(data);
 
-      // Validate with Zod schema
       let proxySettings;
       try {
         proxySettings = proxySettingsSchema.parse(parsed);
@@ -89,8 +66,6 @@ export class ConfigManager {
         throw error;
       }
 
-      // Build settings from proxySettings.json and defaults
-      // Ports hardcoded - use docker-compose port mapping to expose on different ports
       this.settings = {
         proxyPort: 22500,
         gameZipPort: 22501,
@@ -100,7 +75,7 @@ export class ConfigManager {
 
         legacyOverridePaths: proxySettings.legacyOverridePaths || [],
 
-        // Use HTTPS for external sources (servers redirect HTTP to HTTPS anyway)
+        // Servers redirect HTTP to HTTPS anyway, so use HTTPS directly
         infinityServerURL: proxySettings.infinityServerURL
           ? proxySettings.infinityServerURL.replace(/^http:\/\//, 'https://')
           : 'https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/',
@@ -116,7 +91,6 @@ export class ConfigManager {
         enableBrotli: true,
         enableCGI: process.env.ENABLE_CGI === 'true',
 
-        // CGI settings
         phpCgiPath:
           proxySettings.phpCgiPath ||
           path.join(
@@ -124,9 +98,9 @@ export class ConfigManager {
             'Legacy',
             process.platform === 'win32' ? 'php-cgi.exe' : 'php-cgi'
           ),
-        cgiTimeout: proxySettings.cgiTimeout ?? 30000, // 30 seconds
-        cgiMaxBodySize: proxySettings.cgiMaxBodySize ?? 10 * 1024 * 1024, // 10MB
-        cgiMaxResponseSize: proxySettings.cgiMaxResponseSize ?? 50 * 1024 * 1024, // 50MB
+        cgiTimeout: proxySettings.cgiTimeout ?? 30000,
+        cgiMaxBodySize: proxySettings.cgiMaxBodySize ?? 10 * 1024 * 1024,
+        cgiMaxResponseSize: proxySettings.cgiMaxResponseSize ?? 50 * 1024 * 1024,
       };
 
       logger.info('[ConfigManager] Configuration loaded successfully');
@@ -138,7 +112,6 @@ export class ConfigManager {
 
       return this.settings;
     } catch (error: unknown) {
-      // Differentiate between file not found and JSON parse errors
       if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
         logger.warn('[ConfigManager] proxySettings.json not found, using defaults');
       } else {
@@ -146,7 +119,6 @@ export class ConfigManager {
         logger.error('[ConfigManager] Failed to parse proxySettings.json:', errorMsg);
       }
 
-      // Fallback to defaults
       this.settings = {
         proxyPort: 22500,
         gameZipPort: 22501,
@@ -164,7 +136,6 @@ export class ConfigManager {
         enableBrotli: true,
         enableCGI: false,
 
-        // CGI settings (defaults when proxySettings.json not available)
         phpCgiPath: path.join(
           flashpointPath,
           'Legacy',

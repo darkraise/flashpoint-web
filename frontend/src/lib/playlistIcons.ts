@@ -1320,17 +1320,8 @@ export const PLAYLIST_ICONS = {
   fan: Fan,
 } as const;
 
-/**
- * Type-safe icon name (literal union of all icon keys)
- * Use this type for icon fields in interfaces
- * Automatically updated when PLAYLIST_ICONS changes
- */
 export type PlaylistIconName = keyof typeof PLAYLIST_ICONS;
 
-/**
- * Icon categories for organized browsing in IconSelector
- * Organized into 600 icons across 12 main categories
- */
 export const ICON_CATEGORIES = {
   media: {
     label: 'Media',
@@ -2090,17 +2081,6 @@ export const ICON_CATEGORIES = {
   },
 } as const satisfies Record<string, { label: string; icons: readonly PlaylistIconName[] }>;
 
-/**
- * Get icon component by name with fallback
- * Returns ListVideo icon if iconName is null, undefined, or invalid
- *
- * @param iconName - Icon name from the PLAYLIST_ICONS registry
- * @returns LucideIcon component
- *
- * @example
- * const Icon = getPlaylistIcon('music');
- * const FallbackIcon = getPlaylistIcon(null); // Returns ListVideo
- */
 export function getPlaylistIcon(iconName: PlaylistIconName | null | undefined): LucideIcon {
   if (!iconName || !(iconName in PLAYLIST_ICONS)) {
     return ListVideo; // Default fallback
@@ -2108,18 +2088,6 @@ export function getPlaylistIcon(iconName: PlaylistIconName | null | undefined): 
   return PLAYLIST_ICONS[iconName];
 }
 
-/**
- * Get all icon names as array (for iteration)
- *
- * @returns Array of all valid playlist icon names
- *
- * @example
- * const allIcons = getAllIconNames();
- * allIcons.forEach(iconName => {
- *   const Icon = getPlaylistIcon(iconName);
- *   // render icon
- * });
- */
 export function getAllIconNames(): PlaylistIconName[] {
   return Object.keys(PLAYLIST_ICONS) as PlaylistIconName[];
 }

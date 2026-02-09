@@ -68,9 +68,6 @@ export class RoleService {
     }));
   }
 
-  /**
-   * Get role by ID
-   */
   async getRoleById(id: number): Promise<Role | null> {
     const role = UserDatabaseService.get<{
       id: number;
@@ -98,9 +95,6 @@ export class RoleService {
     };
   }
 
-  /**
-   * Get all permissions
-   */
   async getPermissions(): Promise<Permission[]> {
     return UserDatabaseService.all(
       `SELECT id, name, description, resource, action FROM permissions ORDER BY resource, action`,
@@ -108,9 +102,6 @@ export class RoleService {
     );
   }
 
-  /**
-   * Get permissions for a role
-   */
   private getRolePermissions(roleId: number): Permission[] {
     return UserDatabaseService.all(
       `SELECT p.id, p.name, p.description, p.resource, p.action
@@ -122,9 +113,6 @@ export class RoleService {
     );
   }
 
-  /**
-   * Create new role
-   */
   async createRole(
     name: string,
     description?: string,
@@ -154,9 +142,6 @@ export class RoleService {
     return (await this.getRoleById(roleId))!;
   }
 
-  /**
-   * Update role
-   */
   async updateRole(
     id: number,
     name?: string,
@@ -216,9 +201,6 @@ export class RoleService {
     return (await this.getRoleById(id))!;
   }
 
-  /**
-   * Update role permissions
-   */
   async updateRolePermissions(roleId: number, permissionIds: number[]): Promise<void> {
     const role = await this.getRoleById(roleId);
     if (!role) {
@@ -254,9 +236,6 @@ export class RoleService {
     // but that would defeat the purpose of caching. The TTL handles eventual consistency.
   }
 
-  /**
-   * Delete role
-   */
   async deleteRole(id: number): Promise<void> {
     const role = await this.getRoleById(id);
     if (!role) {

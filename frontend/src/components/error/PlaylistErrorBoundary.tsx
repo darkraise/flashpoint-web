@@ -16,10 +16,6 @@ interface State {
   retryCount: number;
 }
 
-/**
- * Error boundary for playlist views
- * Provides contextual error messages and recovery options
- */
 export class PlaylistErrorBoundary extends Component<Props, State> {
   private maxRetries = 2;
 
@@ -83,7 +79,6 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
               </div>
             </div>
 
-            {/* Error details */}
             {this.state.error ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h3 className="text-sm font-semibold text-destructive mb-2">Error Details:</h3>
@@ -91,7 +86,6 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
                   {this.state.error.message}
                 </p>
 
-                {/* Common playlist errors */}
                 {this.state.error.message.includes('404') ? (
                   <p className="text-sm text-muted-foreground mt-2">
                     This playlist may have been deleted or you don't have permission to access it.
@@ -105,7 +99,6 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Retry count */}
             {this.state.retryCount > 0 ? (
               <div className="mb-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <p className="text-sm text-blue-400">
@@ -115,7 +108,6 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Action buttons */}
             <div className="flex gap-3">
               {canRetry ? (
                 <Button variant="default" onClick={this.handleRetry}>
@@ -129,7 +121,6 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
 
-            {/* Help text */}
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground">Troubleshooting tips:</p>
               <ul className="mt-2 space-y-1 text-sm text-muted-foreground list-disc list-inside">

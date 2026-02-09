@@ -9,18 +9,11 @@ export interface DownloadProgress {
   error?: string;
 }
 
-/**
- * React hook for managing game downloads.
- * Provides functions to start, cancel downloads and tracks progress via SSE.
- */
 export function useDownload(gameId: string) {
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  /**
-   * Start downloading a game.
-   */
   const startDownload = useCallback(
     async (gameDataId?: number) => {
       try {
@@ -31,13 +24,10 @@ export function useDownload(gameId: string) {
           details: 'Starting download...',
         });
 
-        // Start download on backend
         const result = await gamesApi.downloadGame(gameId, gameDataId);
 
-        // Connect to SSE endpoint for progress updates with authentication
-        // NOTE: Raw fetch() is used here instead of apiClient because axios does not support
-        // SSE/ReadableStream. Auth is handled via HTTP-only cookies (credentials: 'include').
-        // See CLAUDE.md "Frontend API Guidelines" for the general policy.
+        // Raw fetch() — axios doesn't support SSE/ReadableStream.
+        // Auth via HTTP-only cookies (credentials: 'include').
         const abortController = new AbortController();
         abortControllerRef.current = abortController;
 
@@ -94,9 +84,7 @@ export function useDownload(gameId: string) {
           }
         };
 
-        // processStream is intentionally fire-and-forget - it updates state via
-        // setProgress/setStatus as events arrive. The returned result from startDownload
-        // is the initial POST response, not the completion of the download.
+        // Fire-and-forget: updates state as SSE events arrive
         processStream();
 
         return result;
@@ -114,18 +102,13 @@ export function useDownload(gameId: string) {
     [gameId]
   );
 
-  /**
-   * Cancel an active download.
-   */
   const cancelDownload = useCallback(async () => {
     try {
-      // Abort SSE connection
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
 
-      // Cancel on backend
       await gamesApi.cancelDownload(gameId);
 
       setIsDownloading(false);
@@ -141,15 +124,11 @@ export function useDownload(gameId: string) {
     }
   }, [gameId]);
 
-  /**
-   * Reset progress state.
-   */
   const resetProgress = useCallback(() => {
     setProgress(null);
     setIsDownloading(false);
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {

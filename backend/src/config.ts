@@ -5,10 +5,7 @@ import path from 'path';
 
 dotenv.config();
 
-/**
- * Generate a secure JWT secret for development environments
- * In production, JWT_SECRET MUST be provided as an environment variable
- */
+/** In production, JWT_SECRET MUST be set. In dev, generates an ephemeral random secret. */
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
 
@@ -16,7 +13,6 @@ function getJwtSecret(): string {
     return secret;
   }
 
-  // In production, fail fast if JWT_SECRET is not set
   if (process.env.NODE_ENV === 'production') {
     throw new Error(
       'FATAL: JWT_SECRET environment variable is required in production.\n' +
@@ -25,7 +21,6 @@ function getJwtSecret(): string {
     );
   }
 
-  // In development, generate a random secret and warn
   const devSecret = `INSECURE-DEV-ONLY-${crypto.randomBytes(32).toString('hex')}`;
   // NOTE: console.warn used intentionally - logger not yet initialized at config load time
   console.warn('\n⚠️  WARNING: Using auto-generated JWT secret for development.');
@@ -34,9 +29,6 @@ function getJwtSecret(): string {
   return devSecret;
 }
 
-// Get base Flashpoint path and derive all other paths from it
-// Docker (production): /data/flashpoint (volume mount point)
-// Local dev: D:/Flashpoint or FLASHPOINT_PATH env var
 const getFlashpointPath = (): string => {
   if (process.env.FLASHPOINT_PATH) {
     return process.env.FLASHPOINT_PATH;
@@ -46,14 +38,6 @@ const getFlashpointPath = (): string => {
 
 const flashpointPath = getFlashpointPath();
 
-/**
- * Parse version.txt from Flashpoint installation directory.
- * Examples:
- *   "Flashpoint 14.0.3 Infinity - Kingfisher"
- *   "Flashpoint 14 Ultimate - Kingfisher"
- *
- * Returns { edition, versionString } or defaults if file is missing/unparseable.
- */
 function parseVersionFile(): { edition: 'infinity' | 'ultimate'; versionString: string } {
   const defaults = { edition: 'infinity' as const, versionString: '' };
 
@@ -74,7 +58,6 @@ function parseVersionFile(): { edition: 'infinity' | 'ultimate'; versionString: 
 
     return { edition, versionString: content };
   } catch {
-    // File doesn't exist or can't be read - use defaults
     return defaults;
   }
 }
@@ -82,12 +65,10 @@ function parseVersionFile(): { edition: 'infinity' | 'ultimate'; versionString: 
 const flashpointVersion = parseVersionFile();
 
 export const config = {
-  // Server (hardcoded - use docker-compose port mapping to expose on different ports)
   nodeEnv: process.env.NODE_ENV || 'development',
   port: 3100,
   host: '0.0.0.0',
 
-  // Flashpoint paths (all derived from FLASHPOINT_PATH)
   flashpointPath,
   flashpointDbPath: `${flashpointPath}/Data/flashpoint.sqlite`,
   flashpointHtdocsPath: `${flashpointPath}/Legacy/htdocs`,
@@ -96,68 +77,39 @@ export const config = {
   flashpointPlaylistsPath: `${flashpointPath}/Data/Playlists`,
   flashpointGamesPath: `${flashpointPath}/Data/Games`,
 
-  // Frontend domain (used for CORS and share URL generation)
   domain: process.env.DOMAIN || 'http://localhost:5173',
 
-  // Rate limiting
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '', 10) || 60000,
   rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '', 10) || 100,
 
-  // Logging
-  // In Docker (production): defaults to /app/logs/backend.log
-  // In local dev: no file logging unless LOG_FILE is explicitly set
   logLevel: process.env.LOG_LEVEL || 'info',
   logFile:
     process.env.LOG_FILE ||
     (process.env.NODE_ENV === 'production' ? '/app/logs/backend.log' : undefined),
 
-  // User Database
-  // In Docker (production): /app/data/user.db
-  // In local dev: ./user.db in the current directory
   userDbPath: process.env.NODE_ENV === 'production' ? '/app/data/user.db' : './user.db',
 
-  // JWT Configuration
   jwtSecret: getJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
 
-  // Security
   bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '', 10) || 10,
 
-  // Home Page Configuration
   homeRecentHours: parseInt(process.env.HOME_RECENT_HOURS || '', 10) || 24,
 
-  // Local Database Copy (for network storage optimization)
-  // When enabled, copies flashpoint.sqlite to local storage for faster access
-  // Stored in /app/data alongside user.db
+  // When enabled, copies flashpoint.sqlite to local storage for faster network access
   enableLocalDbCopy: process.env.ENABLE_LOCAL_DB_COPY === 'true',
-  localDbPath: '/app/data/flashpoint.sqlite', // Only used when enableLocalDbCopy is true
+  localDbPath: '/app/data/flashpoint.sqlite',
 
-  // SQLite Performance Tuning
-  sqliteCacheSize: parseInt(process.env.SQLITE_CACHE_SIZE || '', 10) || -64000, // Negative = KB, -64000 = 64MB
-  sqliteMmapSize: parseInt(process.env.SQLITE_MMAP_SIZE || '', 10) || 268435456, // 256MB default
+  sqliteCacheSize: parseInt(process.env.SQLITE_CACHE_SIZE || '', 10) || -64000, // Negative = KB (-64000 = 64MB)
+  sqliteMmapSize: parseInt(process.env.SQLITE_MMAP_SIZE || '', 10) || 268435456, // 256MB
+  enableCachePrewarm: process.env.ENABLE_CACHE_PREWARM !== 'false',
 
-  // Cache Pre-warming
-  enableCachePrewarm: process.env.ENABLE_CACHE_PREWARM !== 'false', // Enabled by default
-
-  // Flashpoint Edition (auto-detected from version.txt)
-  // Infinity: has metadata source for sync, game table includes logoPath/screenshotPath
-  // Ultimate: no metadata source, game table lacks logoPath/screenshotPath
+  // Auto-detected from version.txt; affects metadata sync and image path availability
   flashpointEdition: flashpointVersion.edition,
-
-  // Full version string from version.txt (e.g., "Flashpoint 14.0.3 Infinity - Kingfisher")
   flashpointVersionString: flashpointVersion.versionString,
 };
 
-/**
- * Get external image URLs for CDN fallback.
- * This is resolved dynamically from Flashpoint preferences.
- *
- * Priority:
- * 1. Flashpoint preferences (onDemandBaseUrl)
- * 2. Hardcoded defaults
- *
- * @returns Promise<string[]> Array of image CDN URLs
- */
+/** Resolves external image CDN URLs from Flashpoint preferences, with hardcoded fallbacks. */
 export async function getExternalImageUrls(): Promise<string[]> {
   const { ImageUrlService } = await import('./services/ImageUrlService');
   return ImageUrlService.getExternalImageUrls();

@@ -1,16 +1,10 @@
 import { logger } from '../utils/logger';
 
-/**
- * Metric data point
- */
 interface MetricPoint {
   timestamp: number;
   value: number;
 }
 
-/**
- * Aggregated metric statistics
- */
 interface MetricStats {
   count: number;
   sum: number;
@@ -57,9 +51,6 @@ export class PerformanceMetrics {
     );
   }
 
-  /**
-   * Record API endpoint response time
-   */
   static recordEndpoint(path: string, method: string, durationMs: number): void {
     const normalizedPath = this.normalizePath(path);
     const key = `${method} ${normalizedPath}`;
@@ -94,9 +85,6 @@ export class PerformanceMetrics {
     }
   }
 
-  /**
-   * Record cache hit
-   */
   static recordCacheHit(cacheName: string): void {
     if (!this.cacheMetrics.has(cacheName)) {
       this.cacheMetrics.set(cacheName, { hits: 0, misses: 0 });
@@ -105,9 +93,6 @@ export class PerformanceMetrics {
     this.cacheMetrics.get(cacheName)!.hits++;
   }
 
-  /**
-   * Record cache miss
-   */
   static recordCacheMiss(cacheName: string): void {
     if (!this.cacheMetrics.has(cacheName)) {
       this.cacheMetrics.set(cacheName, { hits: 0, misses: 0 });
@@ -116,9 +101,6 @@ export class PerformanceMetrics {
     this.cacheMetrics.get(cacheName)!.misses++;
   }
 
-  /**
-   * Record database query execution time
-   */
   static recordQuery(durationMs: number): void {
     this.queryMetrics.push({
       timestamp: Date.now(),
@@ -131,9 +113,6 @@ export class PerformanceMetrics {
     }
   }
 
-  /**
-   * Get statistics for a specific endpoint
-   */
   static getEndpointStats(path: string, method: string): MetricStats | null {
     const key = `${method} ${path}`;
     const metrics = this.endpointMetrics.get(key);
@@ -145,9 +124,6 @@ export class PerformanceMetrics {
     return this.calculateStats(metrics);
   }
 
-  /**
-   * Get statistics for all endpoints
-   */
   static getAllEndpointStats(): Record<string, MetricStats> {
     const stats: Record<string, MetricStats> = {};
 
@@ -160,9 +136,6 @@ export class PerformanceMetrics {
     return stats;
   }
 
-  /**
-   * Get cache hit rates
-   */
   static getCacheStats(): Record<string, { hits: number; misses: number; hitRate: number }> {
     const stats: Record<string, { hits: number; misses: number; hitRate: number }> = {};
 
@@ -180,9 +153,6 @@ export class PerformanceMetrics {
     return stats;
   }
 
-  /**
-   * Get query performance statistics
-   */
   static getQueryStats(): MetricStats | null {
     if (this.queryMetrics.length === 0) {
       return null;
@@ -191,9 +161,6 @@ export class PerformanceMetrics {
     return this.calculateStats(this.queryMetrics);
   }
 
-  /**
-   * Get top N slowest endpoints
-   */
   static getSlowestEndpoints(limit: number = 10): Array<{ endpoint: string; avgDuration: number }> {
     const endpointStats = this.getAllEndpointStats();
 
@@ -206,9 +173,6 @@ export class PerformanceMetrics {
       .slice(0, limit);
   }
 
-  /**
-   * Calculate statistics from metric points
-   */
   private static calculateStats(points: MetricPoint[]): MetricStats {
     const values = points.map((p) => p.value).sort((a, b) => a - b);
     const count = values.length;
@@ -226,17 +190,11 @@ export class PerformanceMetrics {
     };
   }
 
-  /**
-   * Calculate percentile value
-   */
   private static percentile(sortedValues: number[], percentile: number): number {
     const index = Math.ceil(sortedValues.length * percentile) - 1;
     return sortedValues[Math.max(0, index)];
   }
 
-  /**
-   * Clear old metrics (older than retention period)
-   */
   static cleanupOldMetrics(): void {
     const cutoff = Date.now() - this.RETENTION_MS;
 
@@ -257,9 +215,6 @@ export class PerformanceMetrics {
     logger.debug('[PerformanceMetrics] Cleaned up old metrics');
   }
 
-  /**
-   * Reset all metrics
-   */
   static reset(): void {
     this.endpointMetrics.clear();
     this.cacheMetrics.clear();
@@ -267,9 +222,6 @@ export class PerformanceMetrics {
     logger.info('[PerformanceMetrics] All metrics reset');
   }
 
-  /**
-   * Get summary of all metrics
-   */
   static getSummary(): {
     endpoints: { total: number; slowest: Array<{ endpoint: string; avgDuration: number }> };
     caches: Record<string, { hits: number; misses: number; hitRate: number }>;

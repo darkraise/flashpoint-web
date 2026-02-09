@@ -54,9 +54,6 @@ export class DomainService {
     };
   }
 
-  /**
-   * Get all configured domains
-   */
   getAllDomains(): Domain[] {
     const now = Date.now();
     if (this.cachedDomains && now - this.cacheTimestamp < this.CACHE_TTL_MS) {
@@ -74,20 +71,13 @@ export class DomainService {
     return this.cachedDomains;
   }
 
-  /**
-   * Get the default domain hostname, or null if none configured
-   */
   getDefaultDomain(): string | null {
     const domains = this.getAllDomains();
     const defaultDomain = domains.find((d) => d.isDefault);
     return defaultDomain?.hostname ?? null;
   }
 
-  /**
-   * Validate and normalize a hostname
-   * Note: Route-level Zod validation performs comprehensive checks.
-   * This method provides basic sanitization only.
-   */
+  /** Route-level Zod validation performs comprehensive checks; this is basic sanitization only */
   private validateHostname(hostname: string): string {
     const trimmed = hostname.trim().toLowerCase();
 
@@ -98,15 +88,11 @@ export class DomainService {
     return trimmed;
   }
 
-  /**
-   * Add a new domain
-   */
   addDomain(hostname: string, createdBy: number): Domain {
     const validated = this.validateHostname(hostname);
 
     // Wrap count check + duplicate check + insert in a transaction to prevent TOCTOU races
     const transaction = this.db.transaction(() => {
-      // Enforce maximum domain limit
       const count = this.db.prepare('SELECT COUNT(*) as count FROM domains').get() as {
         count: number;
       };
@@ -114,7 +100,6 @@ export class DomainService {
         throw new AppError(400, `Maximum of ${this.MAX_DOMAINS} domains allowed`);
       }
 
-      // Check for duplicate
       const existing = this.db
         .prepare('SELECT id FROM domains WHERE hostname = ?')
         .get(validated) as { id: number } | undefined;
@@ -139,9 +124,6 @@ export class DomainService {
     return this.mapRow(row);
   }
 
-  /**
-   * Delete a domain by ID
-   */
   deleteDomain(id: number): void {
     const existing = this.db.prepare('SELECT hostname FROM domains WHERE id = ?').get(id) as
       | { hostname: string }
@@ -179,9 +161,6 @@ export class DomainService {
     logger.info(`[Domains] Deleted domain "${existing.hostname}" (id: ${id})`);
   }
 
-  /**
-   * Set a domain as the default (clears previous default in a transaction)
-   */
   setDefault(id: number): Domain {
     const existing = this.db
       .prepare('SELECT id, hostname, is_default, created_at FROM domains WHERE id = ?')

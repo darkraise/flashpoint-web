@@ -57,14 +57,10 @@ export interface DownloadResult {
 }
 
 export class CommunityPlaylistService {
-  /**
-   * Fetch and parse community playlists from the Flashpoint Archive wiki
-   */
   async fetchCommunityPlaylists(): Promise<CommunityPlaylistsResponse> {
     try {
       logger.info('[CommunityPlaylist] Fetching community playlists from wiki');
 
-      // Fetch HTML from wiki page
       const response = await axios.get(PLAYLISTS_WIKI_URL, {
         timeout: 30000,
         headers: {
@@ -72,7 +68,6 @@ export class CommunityPlaylistService {
         },
       });
 
-      // Parse HTML and extract playlists
       const categories = this.parsePlaylistTables(response.data);
 
       logger.info(
@@ -99,15 +94,12 @@ export class CommunityPlaylistService {
     }
   }
 
-  /**
-   * Validate that a URL is from an allowed domain (SSRF protection)
-   */
+  /** SSRF protection: validate URL is from an allowed domain */
   private isAllowedDownloadUrl(url: string): boolean {
     try {
       const parsedUrl = new URL(url);
       const hostname = parsedUrl.hostname.toLowerCase();
 
-      // Check if hostname matches or is a subdomain of an allowed domain
       return ALLOWED_DOWNLOAD_DOMAINS.some((domain) => {
         const lowerDomain = domain.toLowerCase();
         return hostname === lowerDomain || hostname.endsWith(`.${lowerDomain}`);
@@ -118,9 +110,6 @@ export class CommunityPlaylistService {
     }
   }
 
-  /**
-   * Download a specific playlist from the given URL and save it to disk
-   */
   async downloadPlaylist(downloadUrl: string): Promise<DownloadResult> {
     try {
       logger.info(`[CommunityPlaylist] Downloading playlist from: ${downloadUrl}`);
@@ -134,7 +123,6 @@ export class CommunityPlaylistService {
         };
       }
 
-      // Fetch playlist JSON
       // maxRedirects: 0 prevents SSRF via open redirects on allowed domains
       const response = await axios.get(downloadUrl, {
         timeout: 60000,
@@ -147,7 +135,6 @@ export class CommunityPlaylistService {
 
       const playlistData = response.data;
 
-      // Validate playlist structure
       if (!this.validatePlaylistStructure(playlistData)) {
         logger.error('[CommunityPlaylist] Invalid playlist structure');
         return {
@@ -156,7 +143,6 @@ export class CommunityPlaylistService {
         };
       }
 
-      // Check if playlist already exists (conflict detection)
       const playlistsPath = config.flashpointPlaylistsPath;
       const playlistFilePath = path.join(playlistsPath, `${playlistData.id}.json`);
 
@@ -173,7 +159,6 @@ export class CommunityPlaylistService {
         // File doesn't exist - good to proceed
       }
 
-      // Save playlist to disk
       await fs.writeFile(playlistFilePath, JSON.stringify(playlistData, null, '\t'), 'utf-8');
 
       logger.info(
@@ -215,26 +200,20 @@ export class CommunityPlaylistService {
     }
   }
 
-  /**
-   * Parse HTML tables from wiki page to extract playlists
-   */
   private parsePlaylistTables(html: string): CommunityPlaylistCategory[] {
     const $ = cheerio.load(html);
     const categories: CommunityPlaylistCategory[] = [];
     let mainCategory = ''; // h2 header
     let subCategory = ''; // h3 header
 
-    // Process all headers and tables in sequence
     $('h2, h3, table.wikitable').each((i, elem) => {
       const tagName = elem.type === 'tag' ? elem.name : null;
       if (!tagName) return;
 
       if (tagName === 'h2') {
-        // This is a main category header
         const headerText = $(elem).text().trim();
         const categoryName = headerText.replace(/\[edit.*?\]/g, '').trim();
 
-        // Skip certain headers
         if (
           categoryName.toLowerCase().includes('contents') ||
           categoryName.toLowerCase().includes('navigation') ||
@@ -244,9 +223,8 @@ export class CommunityPlaylistService {
         }
 
         mainCategory = categoryName;
-        subCategory = ''; // Reset subcategory when entering new main category
+        subCategory = '';
       } else if (tagName === 'h3') {
-        // This is a subcategory header
         const headerText = $(elem).text().trim();
         const categoryName = headerText.replace(/\[edit.*?\]/g, '').trim();
 
@@ -258,10 +236,8 @@ export class CommunityPlaylistService {
 
         subCategory = categoryName;
       } else if (tagName === 'table' && mainCategory) {
-        // This is a playlist table
         const playlists: CommunityPlaylist[] = [];
 
-        // Parse table rows (skip header row)
         $(elem)
           .find('tr')
           .slice(1)
@@ -275,13 +251,10 @@ export class CommunityPlaylistService {
               const downloadLink = $(cells[3]).find('a').attr('href');
 
               if (name && downloadLink) {
-                // Make URL absolute
                 const absoluteUrl = this.makeAbsoluteUrl(downloadLink);
 
-                // Determine category name
                 let categoryName = mainCategory;
                 if (mainCategory === 'Games' && subCategory) {
-                  // For Games category, create separate categories for each subcategory
                   categoryName = `Games - ${subCategory}`;
                 }
 
@@ -296,15 +269,12 @@ export class CommunityPlaylistService {
             }
           });
 
-        // Only add category if it has playlists (non-empty)
         if (playlists.length > 0) {
-          // Determine final category name
           let categoryName = mainCategory;
           if (mainCategory === 'Games' && subCategory) {
             categoryName = `Games - ${subCategory}`;
           }
 
-          // Find or create category
           let category = categories.find((cat) => cat.name === categoryName);
           if (!category) {
             category = {
@@ -314,26 +284,20 @@ export class CommunityPlaylistService {
             categories.push(category);
           }
 
-          // Add playlists to category
           category.playlists.push(...playlists);
         }
       }
     });
 
-    // Filter out empty categories
     return categories.filter((cat) => cat.playlists.length > 0);
   }
 
-  /**
-   * Validate that the downloaded playlist has the required structure
-   */
   private validatePlaylistStructure(data: unknown): boolean {
     if (!data || typeof data !== 'object') return false;
     const obj = data as Record<string, unknown>;
     // UUID validation regex for path traversal protection
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    // Must have required fields
     if (!obj.id || typeof obj.id !== 'string') {
       logger.warn('[CommunityPlaylist] Validation failed: missing or invalid id');
       return false;
@@ -350,13 +314,11 @@ export class CommunityPlaylistService {
       return false;
     }
 
-    // Games array must exist and be valid
     if (!Array.isArray(obj.games)) {
       logger.warn('[CommunityPlaylist] Validation failed: games is not an array');
       return false;
     }
 
-    // Each game entry must have gameId
     for (const game of obj.games) {
       if (typeof game !== 'object' || !game.gameId) {
         logger.warn('[CommunityPlaylist] Validation failed: game entry missing gameId');
@@ -367,15 +329,11 @@ export class CommunityPlaylistService {
     return true;
   }
 
-  /**
-   * Convert relative URLs to absolute URLs
-   */
   private makeAbsoluteUrl(relativeUrl: string): string {
     if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
       return relativeUrl;
     }
 
-    // Handle different types of relative URLs
     if (relativeUrl.startsWith('/')) {
       return `${WIKI_BASE_URL}${relativeUrl}`;
     }

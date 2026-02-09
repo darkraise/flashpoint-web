@@ -10,7 +10,6 @@ import { z } from 'zod';
 const router = Router();
 const roleService = new RoleService();
 
-// Validation schemas
 const createRoleSchema = z.object({
   name: z.string().min(3).max(50),
   description: z.string().optional(),
@@ -28,10 +27,6 @@ const updatePermissionsSchema = z.object({
   permissionIds: z.array(z.number().int().positive()),
 });
 
-/**
- * GET /api/roles
- * List all roles with their permissions
- */
 router.get(
   '/',
   authenticate,
@@ -43,10 +38,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/roles/permissions
- * List all available permissions
- */
 router.get(
   '/permissions',
   authenticate,
@@ -57,10 +48,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/roles/:id
- * Get single role by ID with permissions
- */
 router.get(
   '/:id',
   authenticate,
@@ -82,10 +69,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/roles
- * Create new role with permissions
- */
 router.post(
   '/',
   authenticate,
@@ -105,10 +88,6 @@ router.post(
   })
 );
 
-/**
- * PATCH /api/roles/:id
- * Update role metadata (name, description, priority)
- */
 router.patch(
   '/:id',
   authenticate,
@@ -128,10 +107,6 @@ router.patch(
   })
 );
 
-/**
- * PUT /api/roles/:id/permissions
- * Update role permissions (replaces all permissions)
- */
 router.put(
   '/:id/permissions',
   authenticate,
@@ -152,10 +127,6 @@ router.put(
   })
 );
 
-/**
- * DELETE /api/roles/:id
- * Delete role (prevents deleting system roles)
- */
 router.delete(
   '/:id',
   authenticate,

@@ -40,15 +40,10 @@ export interface UserStats {
 }
 
 export class PlayTrackingService {
-  /**
-   * Start a new play session
-   */
   async startPlaySession(userId: number, gameId: string, gameTitle: string): Promise<string> {
     try {
-      // Generate unique session ID (UUID format)
       const sessionId = randomUUID();
 
-      // Insert play session
       UserDatabaseService.run(
         `INSERT INTO user_game_plays (user_id, game_id, game_title, session_id, started_at)
          VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
@@ -199,9 +194,6 @@ export class PlayTrackingService {
     logger.debug(`[PlayTracking] Skipping Flashpoint DB update for game ${gameId} (read-only)`);
   }
 
-  /**
-   * Get user's overall stats
-   */
   async getUserStats(userId: number): Promise<UserStats | null> {
     try {
       const stats = UserDatabaseService.get(
@@ -235,9 +227,6 @@ export class PlayTrackingService {
     }
   }
 
-  /**
-   * Get user's game-specific stats
-   */
   async getUserGameStats(userId: number, limit = 50, offset = 0): Promise<GameStats[]> {
     try {
       const stats = UserDatabaseService.all(
@@ -263,9 +252,6 @@ export class PlayTrackingService {
     }
   }
 
-  /**
-   * Get user's recent play sessions
-   */
   async getUserPlayHistory(userId: number, limit = 50, offset = 0): Promise<PlaySession[]> {
     try {
       const sessions = UserDatabaseService.all(
@@ -293,9 +279,6 @@ export class PlayTrackingService {
     }
   }
 
-  /**
-   * Get top played games for a user
-   */
   async getTopGames(userId: number, limit = 10): Promise<GameStats[]> {
     try {
       const stats = UserDatabaseService.all(
@@ -321,9 +304,6 @@ export class PlayTrackingService {
     }
   }
 
-  /**
-   * Get play activity over time (daily aggregation)
-   */
   async getPlayActivityOverTime(
     userId: number,
     days = 30
@@ -358,9 +338,6 @@ export class PlayTrackingService {
     }
   }
 
-  /**
-   * Get games distribution by playtime
-   */
   async getGamesDistribution(
     userId: number,
     limit = 10

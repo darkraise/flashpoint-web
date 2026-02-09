@@ -18,10 +18,6 @@ interface State {
   isRetrying: boolean;
 }
 
-/**
- * Error boundary for game player component
- * Provides game-specific error recovery and troubleshooting
- */
 export class GamePlayerErrorBoundary extends Component<Props, State> {
   private maxRetries = 2;
 
@@ -48,7 +44,6 @@ export class GamePlayerErrorBoundary extends Component<Props, State> {
 
     this.setState({ isRetrying: true });
 
-    // Small delay to give visual feedback
     setTimeout(() => {
       this.setState((prevState) => ({
         hasError: false,
@@ -71,9 +66,6 @@ export class GamePlayerErrorBoundary extends Component<Props, State> {
     }
   };
 
-  /**
-   * Get platform-specific troubleshooting tips
-   */
   private getTroubleshootingTips(): string[] {
     const { platform } = this.props;
 
@@ -129,7 +121,6 @@ export class GamePlayerErrorBoundary extends Component<Props, State> {
               </div>
             </div>
 
-            {/* Error details */}
             {this.state.error && !this.state.isRetrying ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h3 className="text-sm font-semibold text-destructive mb-2">Error Details:</h3>
@@ -137,7 +128,6 @@ export class GamePlayerErrorBoundary extends Component<Props, State> {
                   {this.state.error.message}
                 </p>
 
-                {/* Common error patterns */}
                 {this.state.error.message.includes('Failed to fetch') ? (
                   <div className="mt-3 p-3 bg-yellow-500/10 rounded border border-yellow-500/20">
                     <p className="text-sm text-yellow-400">
@@ -167,7 +157,6 @@ export class GamePlayerErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Retry count */}
             {this.state.retryCount > 0 && !this.state.isRetrying ? (
               <div className="mb-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <p className="text-sm text-blue-400">
@@ -177,7 +166,6 @@ export class GamePlayerErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Action buttons */}
             <div className="flex flex-wrap gap-3 mb-6">
               {canRetry && !this.state.isRetrying ? (
                 <Button
@@ -201,7 +189,6 @@ export class GamePlayerErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
 
-            {/* Troubleshooting tips */}
             <div className="pt-6 border-t border-border">
               <h3 className="text-sm font-semibold text-foreground mb-3">Troubleshooting Tips:</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -213,7 +200,6 @@ export class GamePlayerErrorBoundary extends Component<Props, State> {
                 ))}
               </ul>
 
-              {/* Download suggestion for unsupported games */}
               {this.props.platform && !['Flash', 'HTML5'].includes(this.props.platform) ? (
                 <div className="mt-4 p-3 bg-blue-500/10 rounded border border-blue-500/20">
                   <p className="text-sm text-blue-400 flex items-start gap-2">

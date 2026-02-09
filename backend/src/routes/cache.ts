@@ -7,11 +7,6 @@ import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
-/**
- * GET /api/cache/stats
- * Get cache statistics
- * Requires: settings.view permission
- */
 router.get(
   '/stats',
   authenticate,
@@ -35,11 +30,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/cache/clear
- * Clear all caches
- * Requires: settings.update permission
- */
 router.post(
   '/clear',
   authenticate,
@@ -47,7 +37,6 @@ router.post(
   asyncHandler(async (req, res) => {
     const { cacheType } = req.body;
 
-    // Validate cacheType
     const validCacheTypes = ['gameSearch', 'permissions', 'all'];
     if (cacheType && !validCacheTypes.includes(cacheType)) {
       return res.status(400).json({

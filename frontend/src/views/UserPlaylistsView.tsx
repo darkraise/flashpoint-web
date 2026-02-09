@@ -83,7 +83,6 @@ export function UserPlaylistsView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 border border-primary rounded-lg">
@@ -106,14 +105,12 @@ export function UserPlaylistsView() {
           </div>
         </div>
 
-        {/* Create Button */}
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus size={18} className="mr-2" />
           Create Playlist
         </Button>
       </div>
 
-      {/* Playlists Grid */}
       {playlists.length === 0 ? (
         <div className="text-center py-16">
           <div className="inline-flex items-center justify-center w-24 h-24 bg-muted rounded-full mb-4">
@@ -142,14 +139,12 @@ export function UserPlaylistsView() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
       <CreateUserPlaylistDialog
         isOpen={isCreateDialogOpen}
         onClose={handleCloseDialog}
         playlist={editingPlaylist || undefined}
       />
 
-      {/* Share Dialog */}
       {sharingPlaylist ? (
         <SharePlaylistDialog
           isOpen={!!sharingPlaylist}
@@ -158,7 +153,6 @@ export function UserPlaylistsView() {
         />
       ) : null}
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog
         open={!!deletingPlaylist}
         onOpenChange={(open: boolean) => !open && setDeletingPlaylist(null)}

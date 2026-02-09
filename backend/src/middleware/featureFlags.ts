@@ -5,16 +5,10 @@ import { logger } from '../utils/logger';
 
 const systemSettings = CachedSystemSettingsService.getInstance();
 
-/**
- * Middleware to check if a feature is enabled
- * Admins with settings.update permission bypass feature flag checks
- * @param featureKey - The feature flag key (e.g., 'enablePlaylists')
- * @returns Middleware function
- */
+/** Middleware to check if a feature is enabled. Admins bypass feature flag checks. */
 export function requireFeature(featureKey: string) {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      // Admins bypass feature flag checks
       if (req.user?.permissions?.includes('settings.update')) {
         logger.debug(
           `[FeatureFlag] Admin '${req.user.username}' bypassing feature flag check for '${featureKey}'`
@@ -42,11 +36,7 @@ export function requireFeature(featureKey: string) {
   };
 }
 
-/**
- * Check if a feature is enabled (for use in route handlers or services)
- * @param featureKey - The feature flag key (e.g., 'enablePlaylists')
- * @returns boolean
- */
+/** Check if a feature is enabled (for use in route handlers or services). */
 export function isFeatureEnabled(featureKey: string): boolean {
   try {
     const features = systemSettings.getCategory('features');

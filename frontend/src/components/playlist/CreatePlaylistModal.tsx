@@ -72,7 +72,6 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
         library: values.library,
       });
 
-      // Reset form
       form.reset();
 
       showToast('Playlist created successfully', 'success');

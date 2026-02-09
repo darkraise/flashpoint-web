@@ -11,14 +11,8 @@ import { z } from 'zod';
 const router = Router();
 const favoritesService = new FavoritesService();
 
-// Global softAuth (from server.ts) already populates req.user for all routes
-// No need to apply softAuth again at router level
-
-// Apply feature flag check to all routes in this router
-// Admins with settings.update permission will bypass this check (via global softAuth)
 router.use(requireFeature('enableFavorites'));
 
-// Validation schemas
 const toggleFavoriteSchema = z.object({
   gameId: z.string(),
 });
@@ -31,10 +25,6 @@ const batchRemoveSchema = z.object({
   gameIds: z.array(z.string()).min(1).max(100),
 });
 
-/**
- * GET /api/favorites
- * Get all favorites for the authenticated user
- */
 router.get(
   '/',
   authenticate,
@@ -56,10 +46,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/favorites/game-ids
- * Get favorite game IDs for the authenticated user
- */
 router.get(
   '/game-ids',
   authenticate,
@@ -74,10 +60,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/favorites/games
- * Get favorite games with full game data for the authenticated user
- */
 router.get(
   '/games',
   authenticate,
@@ -94,14 +76,12 @@ router.get(
       ? Math.max(0, parseInt(req.query.offset as string, 10) || 0)
       : undefined;
 
-    // Validate sortBy
     const allowedSortBy = ['title', 'dateAdded'];
     const sortBy =
       req.query.sortBy && allowedSortBy.includes(req.query.sortBy as string)
         ? (req.query.sortBy as 'title' | 'dateAdded')
         : 'dateAdded';
 
-    // Validate sortOrder
     const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc';
 
     const games = await favoritesService.getUserFavoriteGames(
@@ -115,10 +95,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/favorites/stats
- * Get favorites statistics for the authenticated user
- */
 router.get(
   '/stats',
   authenticate,
@@ -133,10 +109,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/favorites/toggle
- * Toggle favorite status for a game
- */
 router.post(
   '/toggle',
   authenticate,
@@ -154,10 +126,6 @@ router.post(
   })
 );
 
-/**
- * POST /api/favorites
- * Add a game to favorites
- */
 router.post(
   '/',
   authenticate,
@@ -175,10 +143,6 @@ router.post(
   })
 );
 
-/**
- * POST /api/favorites/batch
- * Batch add favorites
- */
 router.post(
   '/batch',
   authenticate,
@@ -196,11 +160,8 @@ router.post(
   })
 );
 
-/**
- * DELETE /api/favorites/batch
- * Batch remove favorites
- * NOTE: Static route must be registered before parameterized /:gameId route
- */
+// Must be registered before /:gameId to avoid being shadowed
+
 router.delete(
   '/batch',
   authenticate,
@@ -218,10 +179,6 @@ router.delete(
   })
 );
 
-/**
- * DELETE /api/favorites/:gameId
- * Remove a game from favorites
- */
 router.delete(
   '/:gameId',
   authenticate,
@@ -243,10 +200,6 @@ router.delete(
   })
 );
 
-/**
- * DELETE /api/favorites
- * Clear all favorites for the authenticated user
- */
 router.delete(
   '/',
   authenticate,

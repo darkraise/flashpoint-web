@@ -9,31 +9,19 @@ import axios from 'axios';
 
 const router = Router();
 
-/**
- * Validate path to prevent directory traversal attacks
- * @param requestedPath - The path from the request
- * @param allowedBasePath - The allowed base directory
- * @returns Validated safe path or null if invalid
- */
+/** Prevent directory traversal: returns resolved path if within base, null otherwise */
 function validatePath(requestedPath: string, allowedBasePath: string): string | null {
   try {
-    // Reject null bytes (prevents path truncation attacks)
     if (requestedPath.includes('\0')) {
       logger.warn(`[Security] Null byte in path rejected: ${requestedPath}`);
       return null;
     }
 
-    // Normalize the requested path to remove . and .. sequences
     const normalizedPath = path.normalize(requestedPath).replace(/^(\.\.(\/|\\|$))+/, '');
-
-    // Join with base path
     const fullPath = path.join(allowedBasePath, normalizedPath);
-
-    // Resolve to absolute path
     const resolvedPath = path.resolve(fullPath);
     const resolvedBase = path.resolve(allowedBasePath);
 
-    // Verify the resolved path is within the allowed directory
     if (!resolvedPath.startsWith(resolvedBase)) {
       logger.warn(`[Security] Path traversal attempt detected: ${requestedPath}`);
       return null;
@@ -46,12 +34,9 @@ function validatePath(requestedPath: string, allowedBasePath: string): string | 
   }
 }
 
-// Track in-progress cache writes to prevent duplicate concurrent writes for same file
+// Prevent duplicate concurrent cache writes for the same file
 const pendingCacheWrites = new Set<string>();
 
-/**
- * Helper function to serve file with external CDN fallback
- */
 async function serveFileWithFallback(
   localPath: string,
   relativePath: string,
@@ -60,14 +45,12 @@ async function serveFileWithFallback(
   next: NextFunction
 ) {
   try {
-    // Try local file first
     if (fs.existsSync(localPath)) {
       logger.debug(`[Proxy] Serving local file: ${localPath}`);
       res.setHeader('X-Content-Type-Options', 'nosniff');
       return res.sendFile(localPath);
     }
 
-    // Try external CDN fallback
     logger.debug(`[Proxy] Local file not found, trying external CDN: ${relativePath}`);
 
     for (const baseUrl of externalBaseUrls) {
@@ -77,8 +60,8 @@ async function serveFileWithFallback(
 
         const response = await axios.get(externalUrl, {
           responseType: 'arraybuffer',
-          timeout: 10000, // 10 second timeout
-          maxContentLength: 10 * 1024 * 1024, // 10MB max
+          timeout: 10000,
+          maxContentLength: 10 * 1024 * 1024,
           maxBodyLength: 10 * 1024 * 1024,
           validateStatus: (status) => status === 200,
         });
@@ -88,8 +71,6 @@ async function serveFileWithFallback(
 
           const imageBuffer = Buffer.from(response.data);
 
-          // Cache the image locally for future use (async, don't wait)
-          // Skip if another request is already caching this file
           if (!pendingCacheWrites.has(localPath)) {
             pendingCacheWrites.add(localPath);
             (async () => {
@@ -111,7 +92,6 @@ async function serveFileWithFallback(
             });
           }
 
-          // Determine content type from file extension (not from CDN response)
           const ext = path.extname(relativePath).slice(1).toLowerCase();
           const mimeMap: Record<string, string> = {
             jpg: 'image/jpeg',
@@ -135,11 +115,9 @@ async function serveFileWithFallback(
         logger.debug(
           `[Proxy] Failed to fetch from ${baseUrl}: ${err instanceof Error ? err.message : 'Unknown error'}`
         );
-        // Continue to next URL
       }
     }
 
-    // If all attempts failed, return 404
     logger.warn(`[Proxy] Image not found locally or on CDN: ${relativePath}`);
     res.status(404).json({
       error: {
@@ -152,16 +130,11 @@ async function serveFileWithFallback(
   }
 }
 
-// Note: Game content is now served directly via /game-proxy and /game-zip routes
-// (registered in server.ts before middleware). No proxy to external game-service needed.
-
-// Serve images with CDN fallback
 router.get(
   '/images/:path(*)',
   asyncHandler(async (req, res, next) => {
     const relativePath = req.params.path;
 
-    // Validate path to prevent directory traversal
     const localPath = validatePath(relativePath, config.flashpointImagesPath);
 
     if (!localPath) {
@@ -173,20 +146,17 @@ router.get(
       });
     }
 
-    // Get external image URLs dynamically from preferences
     const externalImageUrls = await getExternalImageUrls();
 
     await serveFileWithFallback(localPath, relativePath, externalImageUrls, res, next);
   })
 );
 
-// Serve logos with CDN fallback
 router.get(
   '/logos/:path(*)',
   asyncHandler(async (req, res, next) => {
     const relativePath = req.params.path;
 
-    // Validate path to prevent directory traversal
     const localPath = validatePath(relativePath, config.flashpointLogosPath);
 
     if (!localPath) {
@@ -198,20 +168,17 @@ router.get(
       });
     }
 
-    // Get external image URLs dynamically from preferences
     const externalImageUrls = await getExternalImageUrls();
 
-    // For logos, derive external Logos URL from image base URLs
+    // Derive Logos URL from image base URLs by replacing last path segment
     const externalUrls = externalImageUrls.map((url) => {
       try {
         const parsed = new URL(url);
-        // Replace last path segment with 'Logos'
         const segments = parsed.pathname.replace(/\/$/, '').split('/');
         segments[segments.length - 1] = 'Logos';
         parsed.pathname = segments.join('/');
         return parsed.toString().replace(/\/$/, '');
       } catch {
-        // Fallback: use simple parent + Logos approach
         return url.replace(/\/[^/]*\/?$/, '/Logos');
       }
     });
@@ -220,13 +187,11 @@ router.get(
   })
 );
 
-// Serve screenshots with CDN fallback
 router.get(
   '/screenshots/:path(*)',
   asyncHandler(async (req, res, next) => {
     const relativePath = `Screenshots/${req.params.path}`;
 
-    // Validate path to prevent directory traversal
     const localPath = validatePath(relativePath, config.flashpointImagesPath);
 
     if (!localPath) {
@@ -238,7 +203,6 @@ router.get(
       });
     }
 
-    // Get external image URLs dynamically from preferences
     const externalImageUrls = await getExternalImageUrls();
 
     await serveFileWithFallback(localPath, relativePath, externalImageUrls, res, next);

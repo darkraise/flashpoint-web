@@ -25,7 +25,6 @@ export function FavoritesView() {
     error,
   } = useFavoriteGames(undefined, undefined, sortBy, sortOrder);
 
-  // Handle sort change - combined value like "title-asc" or "dateAdded-desc"
   const handleSortChange = (value: string) => {
     const [newSortBy, newSortOrder] = value.split('-') as ['title' | 'dateAdded', 'asc' | 'desc'];
     setSortBy(newSortBy);
@@ -56,7 +55,6 @@ export function FavoritesView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 border border-primary rounded-lg">
@@ -70,9 +68,7 @@ export function FavoritesView() {
           </div>
         </div>
 
-        {/* Controls */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* Sort Dropdown */}
           {games.length > 0 ? (
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <Label htmlFor="sort-select" className="text-sm whitespace-nowrap hidden sm:inline">
@@ -112,12 +108,10 @@ export function FavoritesView() {
             </div>
           ) : null}
 
-          {/* View Mode Controls */}
           <CardSizeControl />
         </div>
       </div>
 
-      {/* Games Display */}
       {games.length === 0 ? (
         <div className="text-center py-16">
           <div className="inline-flex items-center justify-center w-24 h-24 bg-muted rounded-full mb-4">

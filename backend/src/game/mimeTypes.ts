@@ -1,10 +1,4 @@
-/**
- * MIME type mappings from Flashpoint proxySettings.json
- * Includes 199 custom MIME types for legacy web content
- */
-
 const CUSTOM_MIME_TYPES: { [key: string]: string } = {
-  // Legacy multimedia formats
   aab: 'application/x-authorware-bin',
   aam: 'application/x-authorware-map',
   aas: 'application/x-authorware-seg',
@@ -20,7 +14,6 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   aw3: 'application/x-awingsoft-winds3d',
   axs: 'application/x-MindAvenueAXELStream',
 
-  // 3D and modeling formats
   blend: 'application/x-burster',
   blendz: 'application/x-burster',
   blz: 'video/blz',
@@ -28,7 +21,6 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   bub: 'application/photobubble',
   bxwrl: 'application/x-blaxxuncc3d',
 
-  // Director and Shockwave
   ccn: 'application/x-cnc',
   cct: 'application/x-director',
   cnc: 'application/x-cnc',
@@ -40,7 +32,6 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   swa: 'application/x-director',
   w3d: 'application/x-director',
 
-  // Chemical and scientific formats
   cdx: 'chemical/x-cdx',
   chm: 'chemical/x-chemdraw',
   cow: 'chemical/x-cow',
@@ -61,7 +52,6 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   tgf: 'chemical/x-mdl-tgf',
   xyz: 'chemical/x-xyz',
 
-  // Image formats
   cgm: 'image/cgm',
   cit: 'image/cit',
   dgn: 'image/dgn',
@@ -81,7 +71,6 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   twfz: 'image/x-twf-zlib-compressed',
   vec: 'image/vec',
 
-  // Audio formats
   it: 'audio/it',
   itz: 'audio/x-zipped-it',
   mdz: 'audio/x-zipped-mod',
@@ -96,10 +85,8 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   xm: 'audio/xm',
   xmz: 'audio/x-mod',
 
-  // Video formats
   mov: 'video/quicktime',
 
-  // Application formats
   class: 'application/java',
   cmo: 'application/x-virtools',
   co: 'application/x-cult3d-object',
@@ -113,12 +100,10 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   eva: 'application/x-eva',
   evy: 'application/envoy',
 
-  // Compressed formats
   gz: 'application/x-gzip-compressed',
   wrz: 'application/x-gzip-compressed',
   x3dz: 'application/x-gzip-compressed',
 
-  // Web formats
   htm: 'text/html',
   html: 'text/html',
   js: 'text/javascript',
@@ -126,7 +111,6 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   json: 'application/json',
   xml: 'application/xml',
 
-  // Plugin formats
   ips: 'application/x-ipscript',
   ipx: 'application/x-ipix',
   jar: 'application/java-archive',
@@ -164,7 +148,6 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   xar: 'application/vnd.xara',
   xpg: 'text/x-xpg',
 
-  // World/3D formats
   d96: 'x-world/x-d96',
   dae: 'model/x-bs-collada+xml',
   mus: 'x-world/x-d96',
@@ -178,13 +161,10 @@ const CUSTOM_MIME_TYPES: { [key: string]: string } = {
   xvr: 'x-world/x-xvr',
 };
 
-// Standard MIME types for common web files
 const STANDARD_MIME_TYPES: { [key: string]: string } = {
-  // Text
   txt: 'text/plain',
   csv: 'text/csv',
 
-  // Images
   png: 'image/png',
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
@@ -193,31 +173,26 @@ const STANDARD_MIME_TYPES: { [key: string]: string } = {
   ico: 'image/x-icon',
   webp: 'image/webp',
 
-  // Audio
   mp3: 'audio/mpeg',
   ogg: 'audio/ogg',
   oga: 'audio/ogg',
 
-  // Video
   mp4: 'video/mp4',
   webm: 'video/webm',
   ogv: 'video/ogg',
   avi: 'video/x-msvideo',
 
-  // Fonts
   woff: 'font/woff',
   woff2: 'font/woff2',
   ttf: 'font/ttf',
   otf: 'font/otf',
   eot: 'application/vnd.ms-fontobject',
 
-  // Archives
   zip: 'application/zip',
   rar: 'application/x-rar-compressed',
   '7z': 'application/x-7z-compressed',
   tar: 'application/x-tar',
 
-  // Documents
   pdf: 'application/pdf',
   doc: 'application/msword',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -226,29 +201,22 @@ const STANDARD_MIME_TYPES: { [key: string]: string } = {
   ppt: 'application/vnd.ms-powerpoint',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 
-  // Binary
   bin: 'application/octet-stream',
   exe: 'application/octet-stream',
   dll: 'application/octet-stream',
 };
 
-/**
- * Get MIME type for a file extension
- * Checks custom Flashpoint MIME types first, then standard types
- */
+/** Custom Flashpoint MIME types take priority over standard types */
 export function getMimeType(extension: string): string {
   const ext = extension.toLowerCase();
 
-  // Check custom MIME types first (priority for legacy content)
   if (CUSTOM_MIME_TYPES[ext]) {
     return CUSTOM_MIME_TYPES[ext];
   }
 
-  // Check standard MIME types
   if (STANDARD_MIME_TYPES[ext]) {
     return STANDARD_MIME_TYPES[ext];
   }
 
-  // Default to octet-stream for unknown types
   return 'application/octet-stream';
 }

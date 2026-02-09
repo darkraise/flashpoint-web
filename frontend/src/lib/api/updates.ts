@@ -1,8 +1,5 @@
 import { apiClient } from './client';
 
-/**
- * Metadata sync status returned during sync operations
- */
 export interface MetadataSyncStatus {
   isRunning: boolean;
   stage: string;
@@ -17,9 +14,6 @@ export interface MetadataSyncStatus {
   };
 }
 
-/**
- * Metadata update information
- */
 export interface MetadataUpdateInfo {
   hasUpdates: boolean;
   gamesUpdateAvailable: boolean;
@@ -31,25 +25,12 @@ export interface MetadataUpdateInfo {
   edition?: string;
 }
 
-/**
- * Updates/Metadata API
- *
- * Manages Flashpoint metadata updates and synchronization
- */
 export const updatesApi = {
-  /**
-   * Get metadata update info
-   * Returns info about available updates for games and tags
-   */
   getMetadataInfo: async (): Promise<MetadataUpdateInfo> => {
     const { data } = await apiClient.get<MetadataUpdateInfo>('/updates/metadata');
     return data;
   },
 
-  /**
-   * Start metadata sync in background
-   * Returns immediately with sync started status
-   */
   startMetadataSync: async (): Promise<{
     success: boolean;
     message: string;
@@ -59,10 +40,6 @@ export const updatesApi = {
     return data;
   },
 
-  /**
-   * Get current metadata sync status
-   * Used for polling during sync process
-   */
   getMetadataSyncStatus: async (): Promise<MetadataSyncStatus> => {
     const { data } = await apiClient.get<MetadataSyncStatus>('/updates/metadata/sync/status');
     return data;

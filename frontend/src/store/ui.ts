@@ -26,7 +26,6 @@ interface UIState {
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      // Default sidebar open on desktop (>= 1024px), closed on mobile
       sidebarOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
       sidebarCollapsed: false,
       viewMode: 'grid',
@@ -46,7 +45,7 @@ export const useUIStore = create<UIState>()(
     {
       name: 'flashpoint-ui-settings',
       partialize: (state) => ({
-        sidebarOpen: state.sidebarOpen, // Persist sidebar state
+        sidebarOpen: state.sidebarOpen,
         sidebarCollapsed: state.sidebarCollapsed,
         cardSize: state.cardSize,
         viewMode: state.viewMode,

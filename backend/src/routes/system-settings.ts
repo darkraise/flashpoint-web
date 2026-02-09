@@ -16,10 +16,8 @@ const router = Router();
 const systemSettings = CachedSystemSettingsService.getInstance();
 const domainService = DomainService.getInstance();
 
-// Helper function to update job scheduler when jobs settings change
 function updateJobScheduler(category: string, settings: CategorySettings): void {
   if (category === 'jobs') {
-    // Update metadata sync job if its settings changed
     if ('metadataSyncEnabled' in settings || 'metadataSyncSchedule' in settings) {
       const currentSettings = systemSettings.getCategory('jobs');
       const enabled = (settings.metadataSyncEnabled ??
@@ -37,9 +35,6 @@ function updateJobScheduler(category: string, settings: CategorySettings): void 
   }
 }
 
-// ===================================
-// GET ALL SETTINGS (Admin Only)
-// ===================================
 router.get(
   '/',
   authenticate,
@@ -51,9 +46,6 @@ router.get(
   })
 );
 
-// ===================================
-// GET PUBLIC SETTINGS (No Auth Required)
-// ===================================
 router.get(
   '/public',
   asyncHandler(async (req: Request, res: Response) => {
@@ -62,7 +54,6 @@ router.get(
       Record<string, unknown>
     > = systemSettings.getPublicSettings();
 
-    // Add environment-based config values to public settings
     if (!publicSettings.app) {
       publicSettings.app = {};
     }
@@ -89,9 +80,6 @@ router.get(
   })
 );
 
-// ===================================
-// GET CACHE STATISTICS (Admin Only)
-// ===================================
 router.get(
   '/_cache/stats',
   authenticate,
@@ -102,9 +90,6 @@ router.get(
   })
 );
 
-// ===================================
-// CLEAR CACHE (Admin Only)
-// ===================================
 router.post(
   '/_cache/clear',
   authenticate,
@@ -123,9 +108,6 @@ router.post(
   })
 );
 
-// ===================================
-// GET PERMISSION CACHE STATISTICS (Admin Only)
-// ===================================
 router.get(
   '/_cache/permissions/stats',
   authenticate,
@@ -147,15 +129,11 @@ router.get(
   })
 );
 
-// Validation schema for permission cache clear
 const clearPermissionCacheSchema = z.object({
   type: z.enum(['all', 'user', 'role', 'users', 'roles']),
   id: z.number().int().positive().optional(),
 });
 
-// ===================================
-// CLEAR PERMISSION CACHE (Admin Only)
-// ===================================
 router.post(
   '/_cache/permissions/clear',
   authenticate,
@@ -201,10 +179,6 @@ router.post(
   })
 );
 
-// ===================================
-// GET CATEGORY SETTINGS (Admin Only)
-// ===================================
-// Valid settings categories
 const VALID_CATEGORIES = ['app', 'auth', 'jobs', 'metadata', 'theme', 'features', 'maintenance'];
 
 router.get(
@@ -222,14 +196,10 @@ router.get(
 
     const categorySettings = systemSettings.getCategory(category);
 
-    // Return settings (empty object if category has no settings yet)
     res.json(categorySettings);
   })
 );
 
-// ===================================
-// UPDATE CATEGORY SETTINGS (Admin Only)
-// ===================================
 const updateCategorySchema = z.record(
   z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())])
 );
@@ -262,21 +232,14 @@ router.patch(
     const settings = validation.data;
     const userId = req.user!.id;
 
-    // Update settings (validation happens in service)
     systemSettings.updateCategory(category, settings, userId);
-
-    // Update job scheduler if jobs settings changed
     updateJobScheduler(category, settings);
 
-    // Return updated settings
     const updated = systemSettings.getCategory(category);
     res.json(updated);
   })
 );
 
-// ===================================
-// GET SINGLE SETTING (Admin Only)
-// ===================================
 router.get(
   '/:category/:key',
   authenticate,
@@ -301,9 +264,6 @@ router.get(
   })
 );
 
-// ===================================
-// UPDATE SINGLE SETTING (Admin Only)
-// ===================================
 const updateSettingSchema = z.object({
   value: z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())]),
 });
@@ -335,10 +295,8 @@ router.patch(
     const { value } = validation.data;
     const userId = req.user!.id;
 
-    // Update setting (validation happens in service)
     systemSettings.set(fullKey, value, userId);
 
-    // Return updated value
     const updated = systemSettings.get(fullKey);
     res.json({ value: updated });
   })

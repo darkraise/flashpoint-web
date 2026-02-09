@@ -8,7 +8,7 @@ import { getErrorMessage } from '@/types/api-error';
 
 interface FavoriteButtonProps {
   gameId: string;
-  isFavorited: boolean; // Required: parent must provide this from useFavoriteGameIds()
+  isFavorited: boolean;
   size?: 'sm' | 'default' | 'lg' | 'icon';
   variant?: 'default' | 'secondary' | 'ghost' | 'outline' | 'destructive';
   className?: string;

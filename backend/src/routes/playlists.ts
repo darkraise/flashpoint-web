@@ -15,14 +15,8 @@ import { z } from 'zod';
 const router = Router();
 const playlistService = new PlaylistService();
 
-// Global softAuth (from server.ts) already populates req.user for all routes
-// No need to apply softAuth again at router level
-
-// Apply feature flag check to all routes in this router
-// Admins with settings.update permission will bypass this check (via global softAuth)
 router.use(requireFeature('enablePlaylists'));
 
-// Validation schemas
 const createPlaylistSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
@@ -32,8 +26,6 @@ const addGamesToPlaylistSchema = z.object({
   gameIds: z.array(z.string()).min(1).max(100),
 });
 
-// GET /api/playlists - List all playlists
-// No additional auth needed - softAuth already runs at router level
 router.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -42,8 +34,6 @@ router.get(
   })
 );
 
-// GET /api/playlists/:id - Get playlist by ID with games
-// No additional auth needed - softAuth already runs at router level
 router.get(
   '/:id',
   asyncHandler(async (req, res) => {
@@ -57,7 +47,6 @@ router.get(
   })
 );
 
-// POST /api/playlists - Create new playlist
 router.post(
   '/',
   authenticate,
@@ -71,7 +60,6 @@ router.post(
   })
 );
 
-// POST /api/playlists/:id/games - Add games to playlist
 router.post(
   '/:id/games',
   authenticate,
@@ -93,7 +81,6 @@ router.post(
   })
 );
 
-// DELETE /api/playlists/:id/games - Remove games from playlist
 router.delete(
   '/:id/games',
   authenticate,
@@ -115,7 +102,6 @@ router.delete(
   })
 );
 
-// DELETE /api/playlists/:id - Delete playlist
 router.delete(
   '/:id',
   authenticate,

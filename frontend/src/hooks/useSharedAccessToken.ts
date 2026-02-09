@@ -3,17 +3,11 @@ import { useSharedAccessStore } from '@/store/sharedAccess';
 import { sharedPlaylistsApi } from '@/lib/api/sharedPlaylists';
 
 interface UseSharedAccessTokenResult {
-  /** Whether a valid shared access token exists */
   hasValidToken: boolean;
-  /** Generate a new shared access token */
   generateToken: (shareToken: string) => Promise<void>;
-  /** Clear the current token */
   clearToken: () => void;
-  /** The current share token (if any) */
   currentShareToken: string | null;
-  /** Whether token generation is in progress */
   isGenerating: boolean;
-  /** Error from token generation */
   error: Error | null;
 }
 
@@ -25,7 +19,6 @@ export function useSharedAccessToken(): UseSharedAccessTokenResult {
 
   const generateToken = useCallback(
     async (shareToken: string) => {
-      // Don't regenerate if we already have a valid token for this shareToken
       if (isValid() && currentShareToken === shareToken) {
         return;
       }

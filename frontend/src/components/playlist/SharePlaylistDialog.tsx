@@ -62,12 +62,10 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
   const disableSharingMutation = useDisableSharing();
   const regenerateTokenMutation = useRegenerateShareToken();
 
-  // Domain data: admins get the full list, regular users get default from public settings
   const { data: domains } = useDomains(!!isAdmin);
   const { data: publicSettings } = usePublicSettings();
   const defaultDomain = publicSettings?.domains?.defaultDomain ?? null;
 
-  // Initialize selected domain from the default only when first loaded (not after manual selection)
   useEffect(() => {
     if (hasManuallySelected) return;
 
@@ -79,14 +77,12 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
     }
   }, [isAdmin, domains, defaultDomain, hasManuallySelected]);
 
-  // Build the share URL locally
   const shareUrl = useMemo(() => {
     if (!shareData) return '';
     const hostname = selectedDomain === CURRENT_URL_VALUE ? null : selectedDomain;
     return buildShareUrl(hostname, shareData.shareToken);
   }, [shareData, selectedDomain]);
 
-  // Load initial share data if already shared
   useEffect(() => {
     if (isOpen && playlist.isPublic && playlist.shareToken) {
       setShareData({
@@ -97,7 +93,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
     }
   }, [isOpen, playlist]);
 
-  // Reset state when dialog closes
   useEffect(() => {
     if (!isOpen) {
       setIsSharing(playlist.isPublic);
@@ -112,7 +107,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
     setIsSharing(enabled);
 
     if (enabled) {
-      // Enable sharing
       try {
         const data = await enableSharingMutation.mutateAsync({
           id: playlist.id,
@@ -128,7 +122,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
         toast.error(getErrorMessage(error) || 'Failed to enable sharing');
       }
     } else {
-      // Disable sharing
       try {
         await disableSharingMutation.mutateAsync(playlist.id);
         setShareData(null);
@@ -179,7 +172,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
     }
   };
 
-  // Check if settings have changed
   const hasSettingsChanged = () => {
     if (!shareData) return false;
     const currentExpiry = expiresAt?.toISOString() || null;
@@ -198,7 +190,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
         </DialogHeader>
 
         <DialogBody className="space-y-4 py-4">
-          {/* Enable Sharing Toggle */}
           <div className="flex items-center justify-between space-x-2">
             <div className="space-y-0.5">
               <Label htmlFor="enable-sharing" className="text-base font-medium">
@@ -218,7 +209,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
 
           {isSharing ? (
             <>
-              {/* Warning Alert */}
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
@@ -227,7 +217,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
                 </AlertDescription>
               </Alert>
 
-              {/* Domain Selector (admin only) */}
               {isAdmin && domains && domains.length > 0 && shareData ? (
                 <div className="space-y-2">
                   <Label htmlFor="share-domain">Domain</Label>
@@ -256,7 +245,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
                 </div>
               ) : null}
 
-              {/* Share URL */}
               {shareData ? (
                 <div className="space-y-2">
                   <Label htmlFor="share-url">Share URL</Label>
@@ -280,7 +268,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
                 </div>
               ) : null}
 
-              {/* Expiry Date */}
               <div className="space-y-2">
                 <Label htmlFor="expiry-date">Link Expiry (Optional)</Label>
                 <DatePicker
@@ -296,7 +283,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
                 </p>
               </div>
 
-              {/* Show Owner */}
               <div className="flex items-start space-x-2">
                 <Checkbox
                   id="show-owner"
@@ -316,7 +302,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
                 </div>
               </div>
 
-              {/* Update Settings Button */}
               {shareData && hasSettingsChanged() ? (
                 <Button
                   type="button"
@@ -329,7 +314,6 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
                 </Button>
               ) : null}
 
-              {/* Regenerate Link */}
               {shareData ? (
                 <div className="space-y-2 pt-2 border-t">
                   <Label>Regenerate Link</Label>

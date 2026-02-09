@@ -10,22 +10,7 @@ import { config } from '../config';
 
 const router = Router();
 
-/**
- * POST /api/database/reload
- * Manually reload database from disk
- *
- * Useful when Flashpoint Launcher has updated the database
- * and you want to see changes immediately without waiting
- * for the automatic file watcher.
- *
- * Requires: Admin permission (settings.update)
- *
- * Responses:
- * - 200: Database reloaded successfully
- * - 401: Not authenticated
- * - 403: Insufficient permissions
- * - 500: Failed to reload database
- */
+// Manually trigger reload when changes need to be visible before the file watcher fires
 router.post(
   '/reload',
   authenticate,
@@ -51,21 +36,6 @@ router.post(
   })
 );
 
-/**
- * GET /api/database/status
- * Get database connection status and file info
- *
- * Returns information about the database connection,
- * file size, and last modification time.
- *
- * Requires: Admin permission (settings.update)
- *
- * Responses:
- * - 200: Status information
- * - 401: Not authenticated
- * - 403: Insufficient permissions
- * - 500: Error getting status
- */
 router.get(
   '/status',
   authenticate,

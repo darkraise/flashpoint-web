@@ -6,16 +6,9 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
-/**
- * User Database Service - Singleton for user.db
- * Mirrors the pattern of DatabaseService.ts for Flashpoint database
- */
 export class UserDatabaseService {
   private static db: BetterSqlite3.Database | null = null;
 
-  /**
-   * Initialize user database connection and schema
-   */
   static async initialize(): Promise<void> {
     try {
       // Ensure directory exists
@@ -213,9 +206,6 @@ export class UserDatabaseService {
     }
   }
 
-  /**
-   * Get the database instance
-   */
   static getDatabase(): BetterSqlite3.Database {
     if (!this.db) {
       throw new Error('[UserDB] Database not initialized. Call initialize() first.');
@@ -306,16 +296,10 @@ export class UserDatabaseService {
     );
   }
 
-  /**
-   * Check if database is connected
-   */
   static isConnected(): boolean {
     return this.db !== null && this.db.open;
   }
 
-  /**
-   * Close database connection
-   */
   static close(): void {
     if (this.db) {
       this.db.close();

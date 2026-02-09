@@ -1,11 +1,3 @@
-/**
- * Authentication and User Management Types
- */
-
-// ===================================
-// User Types
-// ===================================
-
 export interface User {
   id: number;
   username: string;
@@ -25,10 +17,6 @@ export interface UserDetails {
   updatedAt: string;
   lastLoginAt: string | null;
 }
-
-// ===================================
-// Authentication Types
-// ===================================
 
 export interface AuthTokens {
   expiresIn: number;
@@ -54,10 +42,6 @@ export interface RegisterResponse {
   user: User;
   tokens: AuthTokens;
 }
-
-// ===================================
-// Role Types
-// ===================================
 
 export interface Permission {
   id: number;
@@ -91,10 +75,6 @@ export interface UpdateRoleData {
   priority?: number;
 }
 
-// ===================================
-// User Management Types
-// ===================================
-
 export interface CreateUserData {
   username: string;
   email: string;
@@ -114,7 +94,6 @@ export interface ChangePasswordData {
   newPassword: string;
 }
 
-// Standardized pagination metadata
 export interface PaginationMetadata {
   total: number;
   page: number;
@@ -122,7 +101,6 @@ export interface PaginationMetadata {
   totalPages: number;
 }
 
-// Standardized paginated response
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: PaginationMetadata;
@@ -132,10 +110,6 @@ export interface UsersResponse {
   data: UserDetails[];
   pagination: PaginationMetadata;
 }
-
-// ===================================
-// Activity Log Types
-// ===================================
 
 export interface ActivityLog {
   id: number;
@@ -165,10 +139,6 @@ export interface ActivitiesResponse {
   data: ActivityLog[];
   pagination: PaginationMetadata;
 }
-
-// ===================================
-// Activity Dashboard Types
-// ===================================
 
 export interface ActivityStats {
   total: number;
@@ -265,10 +235,6 @@ export interface ActivityBreakdownResponse {
 }
 
 export type TimeRange = '24h' | '7d' | '30d';
-
-// ===================================
-// Auth Settings Types
-// ===================================
 
 export interface AuthSettings {
   guestAccessEnabled: boolean;

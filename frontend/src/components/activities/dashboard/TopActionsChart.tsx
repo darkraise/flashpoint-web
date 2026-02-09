@@ -168,7 +168,6 @@ export function TopActionsChart({ autoRefresh = false }: TopActionsChartProps) {
         </ResponsiveContainer>
       </div>
 
-      {/* Legend */}
       <div className="flex gap-4 mt-4 justify-center flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500"></div>

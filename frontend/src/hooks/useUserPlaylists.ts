@@ -14,9 +14,6 @@ import { useFeatureFlags } from './useFeatureFlags';
 import { useDialog } from '@/contexts/DialogContext';
 import { getErrorMessage } from '@/types/api-error';
 
-/**
- * Hook to fetch all user playlists
- */
 export function useUserPlaylists(enabled = true) {
   const { enablePlaylists } = useFeatureFlags();
 
@@ -27,10 +24,6 @@ export function useUserPlaylists(enabled = true) {
   });
 }
 
-/**
- * Hook to create a new user playlist
- * Uses optimistic updates for immediate UI feedback
- */
 export function useCreateUserPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -49,10 +42,6 @@ export function useCreateUserPlaylist() {
   });
 }
 
-/**
- * Hook to update a user playlist
- * Uses optimistic updates for immediate UI feedback
- */
 export function useUpdateUserPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -61,12 +50,10 @@ export function useUpdateUserPlaylist() {
     mutationFn: ({ id, data }: { id: number; data: UpdatePlaylistData }) =>
       userPlaylistsApi.update(id, data),
     onSuccess: (updated) => {
-      // Update the playlists list cache
       queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
         return old.map((playlist) => (playlist.id === updated.id ? updated : playlist));
       });
 
-      // Update the single playlist detail cache
       queryClient.setQueryData(['user-playlist', updated.id], updated);
 
       showToast('Playlist updated successfully', 'success');
@@ -77,10 +64,6 @@ export function useUpdateUserPlaylist() {
   });
 }
 
-/**
- * Hook to delete a user playlist
- * Uses optimistic updates for immediate UI feedback
- */
 export function useDeleteUserPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -99,9 +82,6 @@ export function useDeleteUserPlaylist() {
   });
 }
 
-/**
- * Hook to fetch user playlist statistics
- */
 export function useUserPlaylistStats() {
   const { enablePlaylists } = useFeatureFlags();
 
@@ -112,9 +92,6 @@ export function useUserPlaylistStats() {
   });
 }
 
-/**
- * Hook to fetch a specific user playlist by ID
- */
 export function useUserPlaylist(id: number | null) {
   const { enablePlaylists } = useFeatureFlags();
 
@@ -125,9 +102,6 @@ export function useUserPlaylist(id: number | null) {
   });
 }
 
-/**
- * Hook to fetch games in a user playlist
- */
 export function useUserPlaylistGames(id: number | null) {
   const { enablePlaylists } = useFeatureFlags();
 
@@ -138,10 +112,6 @@ export function useUserPlaylistGames(id: number | null) {
   });
 }
 
-/**
- * Hook to add games to a user playlist
- * Uses optimistic updates for immediate UI feedback
- */
 export function useAddGamesToUserPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -156,12 +126,10 @@ export function useAddGamesToUserPlaylist() {
       userPlaylistsApi.addGames(id, gameIds),
 
     onMutate: async ({ id }) => {
-      // Cancel outgoing refetches to prevent race conditions
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id] });
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
       await queryClient.cancelQueries({ queryKey: ['user-playlists'] });
 
-      // Snapshot previous values for rollback
       const previousPlaylist = queryClient.getQueryData(['user-playlist', id]);
       const previousGames = queryClient.getQueryData(['user-playlist', id, 'games']);
       const previousPlaylists = queryClient.getQueryData(['user-playlists']);
@@ -170,7 +138,6 @@ export function useAddGamesToUserPlaylist() {
     },
 
     onSuccess: (response, variables) => {
-      // Update single playlist cache with new gameCount
       queryClient.setQueryData(['user-playlist', variables.id], {
         id: response.id,
         userId: response.userId,
@@ -180,13 +147,11 @@ export function useAddGamesToUserPlaylist() {
         createdAt: response.createdAt,
         updatedAt: response.updatedAt,
         isPublic: response.isPublic,
-        gameCount: response.gameCount, // Updated count from backend
+        gameCount: response.gameCount,
       });
 
-      // Update games list cache
       queryClient.setQueryData(['user-playlist', variables.id, 'games'], response.games);
 
-      // Update playlists list cache
       queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
         return old.map((playlist) =>
           playlist.id === variables.id ? { ...playlist, gameCount: response.gameCount } : playlist
@@ -197,7 +162,6 @@ export function useAddGamesToUserPlaylist() {
     },
 
     onError: (err: unknown, variables, context) => {
-      // Rollback all caches on error
       if (context?.previousPlaylist) {
         queryClient.setQueryData(['user-playlist', variables.id], context.previousPlaylist);
       }
@@ -214,10 +178,6 @@ export function useAddGamesToUserPlaylist() {
   });
 }
 
-/**
- * Hook to remove games from a user playlist
- * Uses optimistic updates for immediate UI feedback
- */
 export function useRemoveGamesFromUserPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -232,17 +192,14 @@ export function useRemoveGamesFromUserPlaylist() {
       userPlaylistsApi.removeGames(id, gameIds),
 
     onMutate: async ({ id, gameIds }) => {
-      // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id] });
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
       await queryClient.cancelQueries({ queryKey: ['user-playlists'] });
 
-      // Snapshot previous values for rollback
       const previousPlaylist = queryClient.getQueryData(['user-playlist', id]);
       const previousGames = queryClient.getQueryData<Game[]>(['user-playlist', id, 'games']);
       const previousPlaylists = queryClient.getQueryData(['user-playlists']);
 
-      // Optimistically remove games from cache for immediate feedback
       if (previousGames) {
         queryClient.setQueryData<Game[]>(
           ['user-playlist', id, 'games'],
@@ -254,7 +211,6 @@ export function useRemoveGamesFromUserPlaylist() {
     },
 
     onSuccess: (response, variables) => {
-      // Update single playlist cache with new gameCount
       queryClient.setQueryData(['user-playlist', variables.id], {
         id: response.id,
         userId: response.userId,
@@ -264,13 +220,11 @@ export function useRemoveGamesFromUserPlaylist() {
         createdAt: response.createdAt,
         updatedAt: response.updatedAt,
         isPublic: response.isPublic,
-        gameCount: response.gameCount, // Updated count from backend
+        gameCount: response.gameCount,
       });
 
-      // Update games list cache with authoritative backend response
       queryClient.setQueryData(['user-playlist', variables.id, 'games'], response.games);
 
-      // Update playlists list cache
       queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
         return old.map((playlist) =>
           playlist.id === variables.id ? { ...playlist, gameCount: response.gameCount } : playlist
@@ -281,7 +235,6 @@ export function useRemoveGamesFromUserPlaylist() {
     },
 
     onError: (err: unknown, variables, context) => {
-      // Rollback all caches on error
       if (context?.previousPlaylist) {
         queryClient.setQueryData(['user-playlist', variables.id], context.previousPlaylist);
       }
@@ -298,10 +251,6 @@ export function useRemoveGamesFromUserPlaylist() {
   });
 }
 
-/**
- * Hook to reorder games in a user playlist
- * Uses optimistic updates for immediate UI feedback
- */
 export function useReorderUserPlaylistGames() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -314,7 +263,6 @@ export function useReorderUserPlaylistGames() {
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
       const previousGames = queryClient.getQueryData<Game[]>(['user-playlist', id, 'games']);
 
-      // Optimistically reorder
       if (previousGames) {
         const reordered = gameIdOrder
           .map((gameId) => previousGames.find((g) => g.id === gameId))
@@ -334,7 +282,6 @@ export function useReorderUserPlaylistGames() {
     },
 
     onSuccess: (_, variables) => {
-      // Invalidate queries to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['user-playlist', variables.id] });
       queryClient.invalidateQueries({
         queryKey: ['user-playlist', variables.id, 'games'],
@@ -344,10 +291,6 @@ export function useReorderUserPlaylistGames() {
   });
 }
 
-/**
- * Hook to copy a Flashpoint playlist to user playlists
- * Uses cache updates for immediate UI feedback
- */
 export function useCopyFlashpointPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -362,15 +305,10 @@ export function useCopyFlashpointPlaylist() {
     }) => userPlaylistsApi.copyFlashpointPlaylist(flashpointPlaylistId, newTitle),
 
     onSuccess: (newPlaylist) => {
-      // Add to list cache
       queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
         return [newPlaylist, ...old];
       });
-
-      // Add to single-item cache
       queryClient.setQueryData(['user-playlist', newPlaylist.id], newPlaylist);
-
-      // Update stats
       queryClient.setQueryData<PlaylistStats>(['user-playlists', 'stats'], (old) => {
         if (!old) return old;
         return { ...old, totalPlaylists: (old.totalPlaylists || 0) + 1 };
@@ -386,9 +324,6 @@ export function useCopyFlashpointPlaylist() {
   });
 }
 
-/**
- * Hook to enable sharing for a user playlist
- */
 export function useEnableSharing() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -397,7 +332,6 @@ export function useEnableSharing() {
     mutationFn: ({ id, options }) => userPlaylistsApi.enableSharing(id, options),
 
     onSuccess: (_, variables) => {
-      // Invalidate playlist queries to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
       queryClient.invalidateQueries({ queryKey: ['user-playlist', variables.id] });
 
@@ -411,9 +345,6 @@ export function useEnableSharing() {
   });
 }
 
-/**
- * Hook to disable sharing for a user playlist
- */
 export function useDisableSharing() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -422,7 +353,6 @@ export function useDisableSharing() {
     mutationFn: (id: number) => userPlaylistsApi.disableSharing(id),
 
     onSuccess: (_, id) => {
-      // Invalidate playlist queries
       queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
       queryClient.invalidateQueries({ queryKey: ['user-playlist', id] });
 
@@ -436,9 +366,6 @@ export function useDisableSharing() {
   });
 }
 
-/**
- * Hook to regenerate share token (invalidates old links)
- */
 export function useRegenerateShareToken() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -447,7 +374,6 @@ export function useRegenerateShareToken() {
     mutationFn: (id: number) => userPlaylistsApi.regenerateShareToken(id),
 
     onSuccess: (_, id) => {
-      // Invalidate playlist queries
       queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
       queryClient.invalidateQueries({ queryKey: ['user-playlist', id] });
 
@@ -461,9 +387,6 @@ export function useRegenerateShareToken() {
   });
 }
 
-/**
- * Hook to clone a shared playlist to the authenticated user's account
- */
 export function useCloneSharedPlaylist() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -473,15 +396,10 @@ export function useCloneSharedPlaylist() {
       sharedPlaylistsApi.clonePlaylist(shareToken, newTitle),
 
     onSuccess: (newPlaylist) => {
-      // Add to list cache
       queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
         return [newPlaylist, ...old];
       });
-
-      // Add to single-item cache
       queryClient.setQueryData(['user-playlist', newPlaylist.id], newPlaylist);
-
-      // Update stats
       queryClient.setQueryData<PlaylistStats>(['user-playlists', 'stats'], (old) => {
         if (!old) return old;
         return { ...old, totalPlaylists: (old.totalPlaylists || 0) + 1 };

@@ -11,10 +11,6 @@ import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 import { config } from '../config';
 
-/**
- * Zod schema for error report validation
- * Enforces strict types and size limits on client-submitted error reports
- */
 const errorReportSchema = z.object({
   type: z.enum(['client_error', 'network_error', 'api_error', 'route_error']),
   message: z.string().max(2000),
@@ -32,18 +28,13 @@ const errorReportSchema = z.object({
 
 const router = Router();
 
-// Client error logs go to the same directory as backend logs
 const LOG_DIR = config.logFile ? path.dirname(config.logFile) : path.join(__dirname, '../../logs');
 const ERROR_LOG_FILE = path.join(LOG_DIR, 'client-errors.log');
 
-// Ensure logs directory exists for file transport at startup
 if (!fsSync.existsSync(LOG_DIR)) {
   fsSync.mkdirSync(LOG_DIR, { recursive: true });
 }
 
-/**
- * Map client error types to OTEL severity numbers
- */
 function getSeverityNumber(type: string): number {
   const severityMap: Record<string, number> = {
     client_error: 17, // ERROR
@@ -54,16 +45,12 @@ function getSeverityNumber(type: string): number {
   return severityMap[type] || 17;
 }
 
-/**
- * Client error logger with OTEL-compatible format
- */
 const clientErrorLogger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DDTHH:mm:ss.SSSZ' }), // ISO 8601
     winston.format.errors({ stack: true }),
     winston.format((info) => {
-      // Add OTEL severity fields based on error type
       const errorType = (info.errorType as string) || 'client_error';
       info.severity = errorType === 'network_error' ? 'WARN' : 'ERROR';
       info.severityNumber = getSeverityNumber(errorType);
@@ -97,9 +84,6 @@ interface ErrorReport {
 
 type AuthenticatedRequest = Request & { user?: { id: number } };
 
-/**
- * Log error report to file in OTEL-compatible JSON format
- */
 async function logError(report: ErrorReport): Promise<void> {
   try {
     clientErrorLogger.info(report.message, {
@@ -116,12 +100,8 @@ async function logError(report: ErrorReport): Promise<void> {
   }
 }
 
-/**
- * Read recent error reports from log file
- */
 async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
   try {
-    // Stream the file line by line to avoid loading the entire file into memory
     const { createReadStream } = await import('fs');
     const { createInterface } = await import('readline');
 
@@ -140,7 +120,6 @@ async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
         });
 
         rl.on('close', () => {
-          // Parse lines newest-first
           const errors: ErrorReport[] = [];
           for (let i = allLines.length - 1; i >= 0 && errors.length < limit; i--) {
             try {
@@ -182,17 +161,11 @@ async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
   }
 }
 
-/**
- * POST /api/errors/report
- * Report a client-side error
- * Public endpoint (no authentication required, but rate-limited)
- */
 router.post(
   '/report',
   rateLimitStrict,
   asyncHandler(async (req: Request, res: Response) => {
     try {
-      // Validate request body with Zod schema
       const parseResult = errorReportSchema.safeParse(req.body);
       if (!parseResult.success) {
         return res.status(400).json({
@@ -206,7 +179,6 @@ router.post(
 
       const validatedData = parseResult.data;
 
-      // Build report from validated data
       const report: ErrorReport = {
         type: validatedData.type,
         message: validatedData.message,
@@ -217,13 +189,11 @@ router.post(
         context: validatedData.context,
       };
 
-      // Add user ID if authenticated
       const authReq = req as AuthenticatedRequest;
       if (authReq.user) {
         report.userId = authReq.user.id;
       }
 
-      // Log to file
       await logError(report);
 
       logger.info(`[Client Error] ${report.type} - ${report.message} (${report.url})`);
@@ -242,11 +212,6 @@ router.post(
   })
 );
 
-/**
- * GET /api/errors/recent
- * Get recent client error reports
- * Requires: settings.update permission (admin only)
- */
 router.get(
   '/recent',
   authenticate,
@@ -277,11 +242,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/errors/stats
- * Get error statistics for dashboard
- * Requires: settings.update permission (admin only)
- */
 router.get(
   '/stats',
   authenticate,
@@ -290,7 +250,6 @@ router.get(
     try {
       const errors = await getRecentErrors(1000);
 
-      // Calculate stats
       const now = new Date();
       const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -304,17 +263,14 @@ router.get(
         topMessages: {} as Record<string, number>,
       };
 
-      // Group by type
       for (const error of errors) {
         stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
         stats.topUrls[error.url] = (stats.topUrls[error.url] || 0) + 1;
 
-        // Truncate message for grouping
         const shortMessage = error.message.substring(0, 100);
         stats.topMessages[shortMessage] = (stats.topMessages[shortMessage] || 0) + 1;
       }
 
-      // Sort and limit top items
       const sortAndLimit = (obj: Record<string, number>, limit: number) => {
         return Object.entries(obj)
           .sort((a, b) => b[1] - a[1])

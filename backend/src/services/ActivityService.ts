@@ -82,9 +82,6 @@ export class ActivityService {
     return { sql, params };
   }
 
-  /**
-   * Log activity
-   */
   async log(data: LogActivityData): Promise<void> {
     const detailsJson = data.details ? JSON.stringify(data.details) : null;
 
@@ -105,9 +102,6 @@ export class ActivityService {
     );
   }
 
-  /**
-   * Get activity logs with pagination
-   */
   async getLogs(
     page: number = 1,
     limit: number = 50,
@@ -151,9 +145,6 @@ export class ActivityService {
     return createPaginatedResponse(logs, total, page, limit);
   }
 
-  /**
-   * Clean up old logs (retention policy)
-   */
   async cleanup(retentionDays: number = 90): Promise<number> {
     const result = UserDatabaseService.run(
       `DELETE FROM activity_logs WHERE created_at < datetime('now', '-' || ? || ' days')`,
@@ -163,9 +154,6 @@ export class ActivityService {
     return result.changes;
   }
 
-  /**
-   * Get aggregate statistics for dashboard
-   */
   async getStats(
     timeRange: TimeRange = '24h',
     customRange?: { startDate?: string; endDate?: string }
@@ -278,9 +266,6 @@ export class ActivityService {
     };
   }
 
-  /**
-   * Get activity trend over time
-   */
   async getTrend(days: number = 7) {
     const granularity = days <= 1 ? 'hour' : 'day';
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -323,9 +308,6 @@ export class ActivityService {
     };
   }
 
-  /**
-   * Get top actions by frequency
-   */
   async getTopActions(limit: number = 10, timeRange: TimeRange = '24h') {
     const hours = getHoursFromTimeRange(timeRange);
     const startDate = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
@@ -396,9 +378,6 @@ export class ActivityService {
     };
   }
 
-  /**
-   * Get activity breakdown by dimension
-   */
   async getBreakdown(
     groupBy: 'resource' | 'user' | 'ip',
     limit: number = 10,

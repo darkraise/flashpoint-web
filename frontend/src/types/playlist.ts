@@ -1,9 +1,5 @@
 import type { PlaylistIconName } from '@/lib/playlistIcons';
 
-/**
- * User Playlist Types
- */
-
 export interface UserPlaylist {
   id: number;
   userId: number;
@@ -61,10 +57,6 @@ export interface RemoveGamesFromPlaylistData {
 export interface ReorderGamesData {
   gameIdOrder: string[];
 }
-
-/**
- * Shared Playlist Types (anonymous access)
- */
 
 export interface SharedPlaylist {
   id: number;

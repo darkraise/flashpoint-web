@@ -5,27 +5,17 @@ import { RufflePlayer } from './RufflePlayer';
 import { PlayerErrorBoundary } from './PlayerErrorBoundary';
 
 export interface GamePlayerProps {
-  /** Game title for display */
   title: string;
-  /** Platform (Flash, HTML5, etc.) */
   platform: string;
-  /** Content URL for the game */
   contentUrl?: string;
-  /** Launch command (if any) */
   launchCommand?: string;
-  /** Whether the game can be played in browser */
   canPlayInBrowser: boolean;
-  /** Optional fullscreen mode */
   allowFullscreen?: boolean;
-  /** Whether fullscreen is initially enabled */
   initialFullscreen?: boolean;
-  /** Callback when fullscreen state changes */
   onFullscreenChange?: (isFullscreen: boolean) => void;
-  /** Custom class name for the container */
   className?: string;
-  /** Show player controls */
   showControls?: boolean;
-  /** Container height (CSS value) */
+  /** CSS value (e.g. "calc(100vh - 220px)" or "aspect-video") */
   height?: string;
 }
 
@@ -51,7 +41,6 @@ function GamePlayerInternal({
   const [isFullscreen, setIsFullscreen] = useState(initialFullscreen);
   const [iframeError, setIframeError] = useState<string | null>(null);
 
-  // Default scale mode for Ruffle player (hardcoded)
   const defaultScaleMode = 'showall';
 
   const toggleFullscreen = () => {
@@ -60,7 +49,6 @@ function GamePlayerInternal({
     onFullscreenChange?.(newFullscreenState);
   };
 
-  // Sync internal fullscreen state with prop changes (for auto-fullscreen)
   const prevInitialFullscreenRef = useRef(initialFullscreen);
   useEffect(() => {
     if (prevInitialFullscreenRef.current !== initialFullscreen) {
@@ -69,17 +57,15 @@ function GamePlayerInternal({
     }
   }, [initialFullscreen]);
 
-  // Store onFullscreenChange in a ref to avoid re-subscribing on every render
   const onFullscreenChangeRef = useRef(onFullscreenChange);
   useEffect(() => {
     onFullscreenChangeRef.current = onFullscreenChange;
   }, [onFullscreenChange]);
 
-  // Handle ESC key to exit fullscreen
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isFullscreen) {
-        event.preventDefault(); // Prevent default ESC behavior
+        event.preventDefault();
         setIsFullscreen(false);
         onFullscreenChangeRef.current?.(false);
       }
@@ -91,7 +77,6 @@ function GamePlayerInternal({
     }
   }, [isFullscreen]);
 
-  // Debug logging for game content
   useEffect(() => {
     if (contentUrl) {
       logger.debug(`[GamePlayer] Loading ${platform} game:`, {
@@ -104,17 +89,14 @@ function GamePlayerInternal({
   if (!canPlayInBrowser) {
     const isWebPlatform = platform === 'Flash' || platform === 'HTML5';
 
-    // Determine the reason why the game cannot be played
     let reason: string;
     let details: string;
 
     if (isWebPlatform && !launchCommand) {
-      // Missing content data
       reason = 'This game is missing content data and cannot be played.';
       details =
         'This game entry is incomplete. Try launching it from the Flashpoint Launcher instead.';
     } else {
-      // Not a web platform
       reason = `The ${platform} platform requires the Flashpoint Launcher.`;
       details = 'Only Flash and HTML5 games with valid content can be played in the browser.';
     }
@@ -140,12 +122,10 @@ function GamePlayerInternal({
 
   const containerClasses = isFullscreen ? 'fixed inset-0 z-50 bg-black' : className;
 
-  // Special handling for aspect-video containers - use flex layout
   const isAspectVideo = height === 'aspect-video';
 
   return (
     <div className={`${containerClasses} ${isAspectVideo ? 'flex flex-col' : ''}`}>
-      {/* Player Controls */}
       {showControls ? (
         <div className="flex items-center justify-between bg-card/90 backdrop-blur-sm px-4 py-3 flex-shrink-0 border-b border-border">
           <div className="flex items-center gap-3">
@@ -182,7 +162,6 @@ function GamePlayerInternal({
         </div>
       ) : null}
 
-      {/* Game Player Container */}
       <div
         className={`bg-black relative ${isAspectVideo ? 'flex-1 min-h-0' : ''}`}
         style={

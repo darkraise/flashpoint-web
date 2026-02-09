@@ -43,9 +43,6 @@ export class MetadataUpdateService {
     this.preferencesPath = path.join(config.flashpointPath, 'preferences.json');
   }
 
-  /**
-   * Get the current Flashpoint edition from config (auto-detected from version.txt)
-   */
   getEdition(): string {
     return config.flashpointEdition;
   }
@@ -202,9 +199,6 @@ export class MetadataUpdateService {
     }
   }
 
-  /**
-   * Format the last update time in a human-readable format
-   */
   formatLastUpdateTime(timestamp: string): string {
     const date = new Date(timestamp);
     const now = new Date();

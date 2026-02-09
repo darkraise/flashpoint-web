@@ -10,7 +10,6 @@ import { z } from 'zod';
 const router = Router();
 const userService = new UserService();
 
-// Validation schemas
 const createUserSchema = z.object({
   username: z.string().min(3).max(50),
   email: z.string().email(),
@@ -42,10 +41,6 @@ const updateThemeSettingsSchema = z.object({
 
 const updateUserSettingsSchema = z.record(z.string().max(50), z.string().max(500));
 
-/**
- * GET /api/users
- * List all users with pagination
- */
 router.get(
   '/',
   authenticate,
@@ -61,11 +56,7 @@ router.get(
   })
 );
 
-/**
- * GET /api/users/me/theme (DEPRECATED - redirects to new endpoint)
- * Legacy endpoint for backward compatibility
- * @deprecated Use GET /api/users/me/settings/theme instead
- */
+/** @deprecated Use GET /api/users/me/settings/theme instead */
 router.get(
   '/me/theme',
   authenticate,
@@ -81,11 +72,7 @@ router.get(
   })
 );
 
-/**
- * PATCH /api/users/me/theme (DEPRECATED - redirects to new endpoint)
- * Legacy endpoint for backward compatibility
- * @deprecated Use PATCH /api/users/me/settings/theme instead
- */
+/** @deprecated Use PATCH /api/users/me/settings/theme instead */
 router.patch(
   '/me/theme',
   authenticate,
@@ -97,7 +84,6 @@ router.patch(
     // Extract color name from format like 'blue-500' -> 'blue'
     const primaryColor = data.themeColor.split('-')[0];
 
-    // Update using new settings table
     await userService.updateThemeSettings(userId, 'dark', primaryColor);
 
     res.json({
@@ -108,11 +94,7 @@ router.patch(
   })
 );
 
-/**
- * GET /api/users/me/settings/theme (DEPRECATED)
- * Get current user's theme settings from user_settings table
- * @deprecated Use GET /api/users/me/settings instead and extract theme_mode and primary_color
- */
+/** @deprecated Use GET /api/users/me/settings and extract theme_mode + primary_color */
 router.get(
   '/me/settings/theme',
   authenticate,
@@ -123,11 +105,7 @@ router.get(
   })
 );
 
-/**
- * PATCH /api/users/me/settings/theme (DEPRECATED)
- * Update current user's theme settings in user_settings table
- * @deprecated Use PATCH /api/users/me/settings with theme_mode and primary_color keys instead
- */
+/** @deprecated Use PATCH /api/users/me/settings with theme_mode + primary_color keys */
 router.patch(
   '/me/settings/theme',
   authenticate,
@@ -143,10 +121,6 @@ router.patch(
   })
 );
 
-/**
- * GET /api/users/me/settings
- * Get all settings for current user
- */
 router.get(
   '/me/settings',
   authenticate,
@@ -157,10 +131,6 @@ router.get(
   })
 );
 
-/**
- * PATCH /api/users/me/settings
- * Update multiple settings for current user
- */
 router.patch(
   '/me/settings',
   authenticate,
@@ -178,10 +148,6 @@ router.patch(
   })
 );
 
-/**
- * GET /api/users/:id
- * Get single user by ID
- */
 router.get(
   '/:id',
   authenticate,
@@ -203,10 +169,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/users
- * Create new user (admin only)
- */
 router.post(
   '/',
   authenticate,
@@ -227,10 +189,6 @@ router.post(
   })
 );
 
-/**
- * PATCH /api/users/:id
- * Update existing user
- */
 router.patch(
   '/:id',
   authenticate,
@@ -253,10 +211,6 @@ router.patch(
   })
 );
 
-/**
- * DELETE /api/users/:id
- * Delete user (prevents deleting last admin)
- */
 router.delete(
   '/:id',
   authenticate,
@@ -274,11 +228,6 @@ router.delete(
   })
 );
 
-/**
- * POST /api/users/:id/change-password
- * Change user password
- * Users can change their own password, admins can change any password
- */
 router.post(
   '/:id/change-password',
   authenticate,
@@ -290,7 +239,6 @@ router.post(
 
     const data = changePasswordSchema.parse(req.body);
 
-    // Check if user is changing their own password or is an admin
     const isOwnPassword = req.user?.id === id;
     const isAdmin = req.user?.permissions.includes('users.update');
 
@@ -305,7 +253,12 @@ router.post(
       throw new AppError(400, 'Current password is required');
     }
 
-    await userService.changePassword(id, data.currentPassword || '', data.newPassword, isAdminReset);
+    await userService.changePassword(
+      id,
+      data.currentPassword || '',
+      data.newPassword,
+      isAdminReset
+    );
 
     res.json({ success: true, message: 'Password changed successfully' });
   })

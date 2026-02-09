@@ -12,7 +12,6 @@ export function PlaylistDetailView() {
   const { data: playlist, isLoading, error } = usePlaylist(id ?? '');
   const { isAuthenticated } = useAuthStore();
 
-  // Fetch favorite game IDs for performance optimization
   const { data: favoriteGameIdsArray } = useFavoriteGameIds();
   const favoriteGameIds = useMemo(
     () => (favoriteGameIdsArray ? new Set(favoriteGameIdsArray) : undefined),

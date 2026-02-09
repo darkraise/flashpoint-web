@@ -1,9 +1,5 @@
 import { useState, useCallback } from 'react';
 
-/**
- * Custom hook to manage multiple filter dropdown states
- * Replaces 16+ individual useState calls in FilterPanel
- */
 export function useFilterDropdowns() {
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
 

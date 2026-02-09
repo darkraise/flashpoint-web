@@ -1,14 +1,7 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { SettingValue, SettingRow, CategorySettings, SettingDataType } from '../types/settings';
 
-/**
- * System Settings Service
- * Handles key-value storage for flexible system-wide settings
- */
 export class SystemSettingsService {
-  /**
-   * Get a single setting by key
-   */
   get(key: string): SettingValue | null {
     const row = UserDatabaseService.get(
       'SELECT value, data_type, default_value FROM system_settings WHERE key = ?',
@@ -23,9 +16,6 @@ export class SystemSettingsService {
     return this.parseValue(valueToUse, row.data_type);
   }
 
-  /**
-   * Get all settings in a category
-   */
   getCategory(category: string): CategorySettings {
     const rows = UserDatabaseService.all(
       'SELECT key, value, data_type, default_value FROM system_settings WHERE category = ?',
@@ -48,9 +38,6 @@ export class SystemSettingsService {
     return settings;
   }
 
-  /**
-   * Get all settings grouped by category
-   */
   getAll(): Record<string, CategorySettings> {
     const rows = UserDatabaseService.all(
       'SELECT key, value, data_type, default_value, category FROM system_settings',
@@ -76,9 +63,6 @@ export class SystemSettingsService {
     return allSettings;
   }
 
-  /**
-   * Set a single setting by key
-   */
   set(key: string, value: SettingValue, updatedBy?: number): void {
     // Validate before setting
     this.validate(key, value);
@@ -93,9 +77,6 @@ export class SystemSettingsService {
     );
   }
 
-  /**
-   * Update multiple settings in a category
-   */
   updateCategory(category: string, settings: CategorySettings, updatedBy?: number): void {
     const db = UserDatabaseService.getDatabase();
     db.transaction(() => {
@@ -135,17 +116,11 @@ export class SystemSettingsService {
     return publicSettings;
   }
 
-  /**
-   * Check if a setting exists
-   */
   exists(key: string): boolean {
     const row = UserDatabaseService.get('SELECT 1 FROM system_settings WHERE key = ?', [key]);
     return !!row;
   }
 
-  /**
-   * Reset a setting to its default value
-   */
   resetToDefault(key: string, updatedBy?: number): void {
     UserDatabaseService.run(
       `UPDATE system_settings
@@ -155,9 +130,6 @@ export class SystemSettingsService {
     );
   }
 
-  /**
-   * Get setting metadata
-   */
   getMetadata(key: string): {
     key: string;
     dataType: string;
@@ -185,9 +157,6 @@ export class SystemSettingsService {
     };
   }
 
-  /**
-   * Validate a value against its JSON schema
-   */
   validate(key: string, value: SettingValue): void {
     const row = UserDatabaseService.get(
       'SELECT validation_schema, data_type FROM system_settings WHERE key = ?',
@@ -208,9 +177,6 @@ export class SystemSettingsService {
     }
   }
 
-  /**
-   * Validate value against JSON schema
-   */
   private validateAgainstSchema(
     value: SettingValue,
     schema: Record<string, unknown>,
@@ -259,9 +225,6 @@ export class SystemSettingsService {
     }
   }
 
-  /**
-   * Get JavaScript type name for validation
-   */
   private getType(value: SettingValue): string {
     if (typeof value === 'boolean') return 'boolean';
     if (typeof value === 'string') return 'string';
@@ -274,9 +237,6 @@ export class SystemSettingsService {
     return typeof value;
   }
 
-  /**
-   * Parse value based on data type
-   */
   private parseValue(value: string | null, dataType: SettingDataType): SettingValue | null {
     if (value === null || value === undefined) {
       return null;
@@ -301,9 +261,6 @@ export class SystemSettingsService {
     }
   }
 
-  /**
-   * Stringify value for storage
-   */
   private stringifyValue(value: SettingValue): string {
     if (typeof value === 'boolean') {
       return value ? '1' : '0';
@@ -314,16 +271,10 @@ export class SystemSettingsService {
     return String(value);
   }
 
-  /**
-   * Convert snake_case to camelCase
-   */
   private snakeToCamel(str: string): string {
     return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
   }
 
-  /**
-   * Convert camelCase to snake_case
-   */
   private camelToSnake(str: string): string {
     return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
   }

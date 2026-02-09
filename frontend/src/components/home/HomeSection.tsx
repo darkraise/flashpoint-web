@@ -21,7 +21,6 @@ export function HomeSection({
   viewAllHref,
   favoriteGameIds,
 }: HomeSectionProps) {
-  // Loading skeleton
   if (isLoading) {
     return (
       <section className="space-y-4">
@@ -40,7 +39,6 @@ export function HomeSection({
     );
   }
 
-  // Empty state
   if (games.length === 0) {
     return (
       <section className="space-y-4">
@@ -62,10 +60,8 @@ export function HomeSection({
     );
   }
 
-  // Content with games
   return (
     <section className="space-y-4">
-      {/* Section Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">{title}</h2>
@@ -79,7 +75,6 @@ export function HomeSection({
         </Link>
       </div>
 
-      {/* Horizontal Scrolling Game Cards */}
       <div className="relative">
         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent py-2">
           {games.map((game) => (

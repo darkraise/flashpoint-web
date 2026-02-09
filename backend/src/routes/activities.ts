@@ -10,7 +10,6 @@ import { validateDateRange } from '../middleware/dateValidation';
 const router = Router();
 const activityService = new ActivityService();
 
-// Pagination and limit constants
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 50;
 const MAX_PAGE_LIMIT = 100;
@@ -20,7 +19,6 @@ const DEFAULT_TREND_DAYS = 7;
 const MAX_TREND_DAYS = 30;
 const DEFAULT_TIME_RANGE = '24h' as const;
 
-// Validation schema for activity query parameters
 const activityQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(DEFAULT_PAGE),
   limit: z.coerce.number().int().min(1).max(MAX_PAGE_LIMIT).default(DEFAULT_LIMIT),
@@ -34,20 +32,14 @@ const activityQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
-// Apply feature flag check to all routes in this router
 router.use(requireFeature('enableStatistics'));
 
-/**
- * GET /api/activities
- * List activity logs with pagination and filters
- */
 router.get(
   '/',
   authenticate,
   requirePermission('activities.read'),
   validateDateRange(),
   asyncHandler(async (req, res) => {
-    // Validate and parse query parameters
     const queryResult = activityQuerySchema.safeParse(req.query);
 
     if (!queryResult.success) {
@@ -71,7 +63,6 @@ router.get(
       sortOrder,
     } = queryResult.data;
 
-    // Build filters object
     const filters: {
       userId?: number;
       username?: string;
@@ -93,16 +84,11 @@ router.get(
   })
 );
 
-/**
- * GET /api/activities/stats
- * Get aggregate statistics for dashboard
- */
 router.get(
   '/stats',
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    // Validate timeRange before casting
     const validTimeRanges = ['24h', '7d', '30d'] as const;
     const rawTimeRange = req.query.timeRange as string | undefined;
     if (
@@ -137,10 +123,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/activities/trend
- * Get activity trend over time
- */
 router.get(
   '/trend',
   authenticate,
@@ -157,17 +139,12 @@ router.get(
   })
 );
 
-/**
- * GET /api/activities/top-actions
- * Get top actions by frequency
- */
 router.get(
   '/top-actions',
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 10, MAX_ACTIONS_LIMIT);
-    // Validate timeRange before casting
     const validTimeRanges = ['24h', '7d', '30d'] as const;
     const rawTimeRange = req.query.timeRange as string | undefined;
     if (
@@ -190,10 +167,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/activities/breakdown
- * Get activity breakdown by dimension
- */
 router.get(
   '/breakdown',
   authenticate,
@@ -203,7 +176,6 @@ router.get(
     const limit = Math.min(parseInt(req.query.limit as string) || 10, MAX_BREAKDOWN_LIMIT);
     const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
 
-    // Validate groupBy parameter
     if (!['resource', 'user', 'ip'].includes(groupBy)) {
       return res.status(400).json({
         success: false,
@@ -211,7 +183,6 @@ router.get(
       });
     }
 
-    // Validate timeRange
     const validTimeRanges = ['24h', '7d', '30d'] as const;
     if (req.query.timeRange && !validTimeRanges.includes(timeRange)) {
       return res.status(400).json({

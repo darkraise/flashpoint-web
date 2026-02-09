@@ -20,28 +20,21 @@ export interface CommunityPlaylistsResponse {
   lastFetched: string;
 }
 
-/**
- * Fetch list of community playlists from the Flashpoint Archive wiki
- */
 export function useCommunityPlaylists() {
   return useQuery({
     queryKey: ['community-playlists'],
     queryFn: () => communityPlaylistsApi.fetchAll(),
-    staleTime: 5 * 60 * 1000, // 5 minutes (wiki doesn't update frequently)
-    gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
-/**
- * Download a community playlist and save it locally
- */
 export function useDownloadCommunityPlaylist() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (downloadUrl: string) => communityPlaylistsApi.download(downloadUrl),
     onSuccess: () => {
-      // Invalidate playlists cache so the new playlist appears immediately
       queryClient.invalidateQueries({ queryKey: ['playlists'] });
       queryClient.invalidateQueries({ queryKey: ['statistics'] });
     },

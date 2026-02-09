@@ -16,9 +16,6 @@ export interface GameData {
   parameters: string | null;
 }
 
-/**
- * Internal interface for database rows returned by SQL queries.
- */
 interface GameDataRow {
   id: number;
   gameId: string;
@@ -33,27 +30,13 @@ interface GameDataRow {
 }
 
 /**
- * Service for updating the Flashpoint database after game data downloads.
- *
  * NOTE: This service intentionally writes to flashpoint.sqlite to update
  * presentOnDisk and path fields in game_data/game tables. This matches
  * the Flashpoint Launcher's behavior when downloading game data.
  * better-sqlite3 handles file locking, and the backend's DatabaseService
  * file watcher handles reloads when the Launcher makes changes.
- *
- * All write operations are wrapped in transactions for atomicity to prevent
- * database inconsistencies if any step fails.
  */
 export class GameDatabaseUpdater {
-  /**
-   * Update database to mark game data as downloaded and set its path.
-   * Updates both game_data and game tables in a transaction.
-   *
-   * @param gameDataId - The game_data.id to update
-   * @param filePath - Absolute path to the downloaded file
-   * @returns Promise resolving to updated GameData object
-   * @throws Error if update fails or database transaction fails
-   */
   static async markAsDownloaded(gameDataId: number, filePath: string): Promise<GameData> {
     try {
       logger.info('Updating database for downloaded game data', {
@@ -61,15 +44,12 @@ export class GameDatabaseUpdater {
         filePath,
       });
 
-      // First, fetch the current game data to get the gameId
       const gameData = await this.getGameData(gameDataId);
       if (!gameData) {
         throw new Error(`Game data not found with id: ${gameDataId}`);
       }
 
-      // Convert absolute path to relative path (Flashpoint Launcher compatibility)
-      // Flashpoint stores paths relative to the Flashpoint installation directory
-      // Example: "Data/Games/uuid-timestamp.zip" instead of "D:/Flashpoint/Data/Games/uuid-timestamp.zip"
+      // Flashpoint stores paths relative to installation dir (e.g. "Data/Games/uuid-timestamp.zip")
       const relativePath = this.makeRelativePath(filePath);
 
       logger.debug('Path conversion for database storage', {
@@ -77,10 +57,8 @@ export class GameDatabaseUpdater {
         relativePath,
       });
 
-      // Wrap both UPDATE statements in a transaction for atomicity
       const db = DatabaseService.getDatabase();
       const updateTransaction = db.transaction(() => {
-        // Update game_data table
         const updateGameDataSql = `
           UPDATE game_data
           SET presentOnDisk = 1, path = ?
@@ -96,7 +74,6 @@ export class GameDatabaseUpdater {
 
         logger.debug('game_data UPDATE successful');
 
-        // Check if this game_data is the active data for the game
         const gameSql = `
           SELECT id, activeDataId
           FROM game
@@ -107,7 +84,6 @@ export class GameDatabaseUpdater {
           | undefined;
 
         if (game && game.activeDataId === gameDataId) {
-          // Update game table to mark active data as on disk
           const updateGameSql = `
             UPDATE game
             SET activeDataOnDisk = 1
@@ -133,10 +109,7 @@ export class GameDatabaseUpdater {
         }
       });
 
-      // Execute the transaction
       updateTransaction();
-
-      // Save database to disk
       await this.saveDatabase();
 
       logger.info('Database updated successfully', {
@@ -145,7 +118,6 @@ export class GameDatabaseUpdater {
         filePath,
       });
 
-      // Fetch and return updated game data
       const updated = await this.getGameData(gameDataId);
       if (!updated) {
         throw new Error('Failed to fetch updated game data');
@@ -159,20 +131,12 @@ export class GameDatabaseUpdater {
         error,
       });
 
-      // Attempt to rollback by reloading database (sql.js limitation)
-      // In a real scenario, we'd use a proper transaction system
       throw new Error(
         `Database update failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
 
-  /**
-   * Get game data by ID.
-   *
-   * @param gameDataId - The game_data.id
-   * @returns Promise resolving to GameData object or null if not found
-   */
   static async getGameData(gameDataId: number): Promise<GameData | null> {
     try {
       const sql = `
@@ -199,15 +163,9 @@ export class GameDatabaseUpdater {
     }
   }
 
-  /**
-   * Save the in-memory database to disk.
-   * Uses atomic write with temp file + rename for safety.
-   * Properly handles database locking on Windows with retries and fallback.
-   */
   private static async saveDatabase(): Promise<void> {
     try {
-      // With better-sqlite3, changes are automatically written to disk
-      // We just need to ensure they're flushed
+      // better-sqlite3 writes automatically; just ensure changes are flushed
       DatabaseService.save();
 
       logger.info('Database changes flushed to disk', {
@@ -221,9 +179,6 @@ export class GameDatabaseUpdater {
     }
   }
 
-  /**
-   * Map database row to GameData object.
-   */
   private static mapRowToGameData(row: GameDataRow): GameData {
     return {
       id: row.id,
@@ -239,12 +194,6 @@ export class GameDatabaseUpdater {
     };
   }
 
-  /**
-   * Check if game data is already downloaded.
-   *
-   * @param gameDataId - The game_data.id
-   * @returns Promise resolving to true if already downloaded
-   */
   static async isDownloaded(gameDataId: number): Promise<boolean> {
     try {
       const sql = `
@@ -261,17 +210,10 @@ export class GameDatabaseUpdater {
     }
   }
 
-  /**
-   * Mark game data as not downloaded (for cleanup/error scenarios).
-   * Wrapped in transaction for consistency with markAsDownloaded.
-   *
-   * @param gameDataId - The game_data.id
-   */
   static async markAsNotDownloaded(gameDataId: number): Promise<void> {
     try {
       const db = DatabaseService.getDatabase();
 
-      // Wrap UPDATE in transaction for atomicity
       const updateTransaction = db.transaction(() => {
         const sql = `
           UPDATE game_data
@@ -282,7 +224,6 @@ export class GameDatabaseUpdater {
         db.prepare(sql).run(gameDataId);
       });
 
-      // Execute the transaction
       updateTransaction();
 
       await this.saveDatabase();
@@ -294,19 +235,10 @@ export class GameDatabaseUpdater {
     }
   }
 
-  /**
-   * Convert an absolute file path to a relative path for Flashpoint Launcher compatibility.
-   * Flashpoint stores paths relative to the Flashpoint installation directory.
-   *
-   * @param absolutePath - Absolute file path (e.g., "D:/Flashpoint/Data/Games/uuid-123.zip")
-   * @returns Relative path (e.g., "Data/Games/uuid-123.zip")
-   */
   private static makeRelativePath(absolutePath: string): string {
-    // Get relative path from Flashpoint installation directory
     const relativePath = path.relative(config.flashpointPath, absolutePath);
 
     // Flashpoint uses forward slashes for cross-platform compatibility
-    // Convert Windows backslashes to forward slashes
     const normalizedPath = relativePath.replace(/\\/g, '/');
 
     return normalizedPath;

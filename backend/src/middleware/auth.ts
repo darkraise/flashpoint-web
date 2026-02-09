@@ -9,10 +9,6 @@ import { getAccessTokenFromCookie } from '../utils/cookies';
 const authService = new AuthService();
 const playlistService = new UserPlaylistService();
 
-/**
- * Extract access token from HTTP-only cookie or Authorization header.
- * Cookie takes priority (regular authenticated user).
- */
 function getAccessToken(req: Request): string | undefined {
   const cookieToken = getAccessTokenFromCookie(req.cookies);
   if (cookieToken) return cookieToken;
@@ -25,9 +21,6 @@ function getAccessToken(req: Request): string | undefined {
   return undefined;
 }
 
-/**
- * Extend Express Request to include sharedAccess property
- */
 declare global {
   namespace Express {
     interface Request {
@@ -36,10 +29,6 @@ declare global {
   }
 }
 
-/**
- * Authenticate user from JWT token
- * Reads access token from HTTP-only cookie first, falls back to Authorization header
- */
 export const authenticate = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const token = getAccessToken(req);
@@ -54,10 +43,6 @@ export const authenticate = asyncHandler(
   }
 );
 
-/**
- * Optional authentication - allows guest access if enabled
- * Reads token from cookie or header. If absent, sets guest user (if guest access enabled)
- */
 export const optionalAuth = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const token = getAccessToken(req);
@@ -66,7 +51,6 @@ export const optionalAuth = asyncHandler(
       const user = await authService.verifyAccessToken(token);
       req.user = user;
     } else {
-      // No token - check if guest access is enabled
       if (!authService.isGuestAccessEnabled()) {
         throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
       }
@@ -107,9 +91,8 @@ export const softAuth = async (req: Request, res: Response, next: NextFunction) 
       req.user = undefined;
     }
 
-    next(); // Always continue, never throw errors
+    next();
   } catch {
-    // Unexpected error - continue anyway with undefined user
     req.user = undefined;
     next();
   }
@@ -137,8 +120,6 @@ export const sharedAccessAuth = asyncHandler(
       const token = authHeader.substring(13);
       try {
         const payload = verifySharedAccessToken(token);
-
-        // Validate the shareToken is still valid
         const playlist = playlistService.getPlaylistByShareToken(payload.shareToken);
         if (!playlist) {
           throw new AppError(

@@ -56,9 +56,6 @@ export class PermissionCache {
     }
   }
 
-  /**
-   * Get cached user permissions
-   */
   static getUserPermissions(userId: number): string[] | null {
     const entry = this.userPermissionsCache.get(userId);
 
@@ -77,9 +74,6 @@ export class PermissionCache {
     return entry.data;
   }
 
-  /**
-   * Set user permissions in cache
-   */
   static setUserPermissions(userId: number, permissions: string[]): void {
     this.userPermissionsCache.set(userId, {
       data: permissions,
@@ -91,9 +85,6 @@ export class PermissionCache {
     );
   }
 
-  /**
-   * Get cached role permissions
-   */
   static getRolePermissions(roleId: number): string[] | null {
     const entry = this.rolePermissionsCache.get(roleId);
 
@@ -112,9 +103,6 @@ export class PermissionCache {
     return entry.data;
   }
 
-  /**
-   * Set role permissions in cache
-   */
   static setRolePermissions(roleId: number, permissions: string[]): void {
     this.rolePermissionsCache.set(roleId, {
       data: permissions,
@@ -144,27 +132,18 @@ export class PermissionCache {
     logger.info(`[PermissionCache] Invalidated cache for role ${roleId} and all user permissions`);
   }
 
-  /**
-   * Invalidate all user permissions
-   */
   static invalidateAllUsers(): void {
     const count = this.userPermissionsCache.size;
     this.userPermissionsCache.clear();
     logger.info(`[PermissionCache] Invalidated all user permissions (${count} entries)`);
   }
 
-  /**
-   * Invalidate all role permissions
-   */
   static invalidateAllRoles(): void {
     const count = this.rolePermissionsCache.size;
     this.rolePermissionsCache.clear();
     logger.info(`[PermissionCache] Invalidated all role permissions (${count} entries)`);
   }
 
-  /**
-   * Clear all caches
-   */
   static clearAll(): void {
     const userCount = this.userPermissionsCache.size;
     const roleCount = this.rolePermissionsCache.size;
@@ -175,9 +154,6 @@ export class PermissionCache {
     logger.info(`[PermissionCache] Cleared all caches (${userCount} users, ${roleCount} roles)`);
   }
 
-  /**
-   * Cleanup expired entries
-   */
   static cleanup(): void {
     const now = Date.now();
     let userExpired = 0;
@@ -206,9 +182,6 @@ export class PermissionCache {
     }
   }
 
-  /**
-   * Get cache statistics
-   */
   static getStats(): {
     userCacheSize: number;
     roleCacheSize: number;

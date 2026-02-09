@@ -1,21 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface UseLazyLoadOptions {
-  /** IntersectionObserver root margin (default: "50px") */
   rootMargin?: string;
-  /** Visibility threshold 0-1 (default: 0.01) */
   threshold?: number;
-  /** Callback when element enters viewport */
   onIntersect?: () => void;
 }
 
-/**
- * Hook for lazy loading with IntersectionObserver
- *
- * @example
- * const { ref, isInView } = useLazyLoad();
- * return <div ref={ref}>{isInView && <HeavyComponent />}</div>;
- */
+/** @example const { ref, isInView } = useLazyLoad(); */
 export function useLazyLoad<T extends HTMLElement = HTMLDivElement>(
   options: UseLazyLoadOptions = {}
 ) {
@@ -43,7 +34,6 @@ export function useLazyLoad<T extends HTMLElement = HTMLDivElement>(
           if (entry.isIntersecting) {
             setIsInView(true);
             onIntersectRef.current?.();
-            // Stop observing after first intersection
             observer.unobserve(element);
           }
         });
@@ -64,14 +54,7 @@ export function useLazyLoad<T extends HTMLElement = HTMLDivElement>(
   return { ref, isInView };
 }
 
-/**
- * Hook for lazy loading images
- * Returns a ref to attach to img element and loading state
- *
- * @example
- * const { ref, isLoaded, hasError } = useLazyImage();
- * return <img ref={ref} src="/image.jpg" alt="..." />;
- */
+/** @example const { ref, isLoaded, hasError } = useLazyImage(); */
 export function useLazyImage<T extends HTMLImageElement = HTMLImageElement>(
   options: UseLazyLoadOptions = {}
 ) {
@@ -86,7 +69,6 @@ export function useLazyImage<T extends HTMLImageElement = HTMLImageElement>(
     const handleLoad = () => setIsLoaded(true);
     const handleError = () => setHasError(true);
 
-    // If image is already loaded (cached)
     if (img.complete) {
       setIsLoaded(true);
       return;

@@ -28,17 +28,11 @@ class JobSchedulerService {
   private currentExecutions: Map<string, number> = new Map(); // jobId -> logId
   private lastRunTimes: Map<string, number> = new Map(); // jobId -> timestamp
 
-  /**
-   * Register a job with the scheduler
-   */
   registerJob(job: Job): void {
     this.jobs.set(job.id, job);
     logger.info(`Job registered: ${job.name} (${job.id})`);
   }
 
-  /**
-   * Start a specific job with cron scheduling
-   */
   startJob(jobId: string): void {
     const job = this.jobs.get(jobId);
     if (!job) {
@@ -71,9 +65,6 @@ class JobSchedulerService {
     logger.info(`Job started: ${job.name} (schedule: ${job.cronSchedule})`);
   }
 
-  /**
-   * Run job with execution logging
-   */
   async runJobWithLogging(jobId: string, triggeredBy: string): Promise<void> {
     const job = this.jobs.get(jobId);
     if (!job) return;
@@ -129,9 +120,6 @@ class JobSchedulerService {
     });
   }
 
-  /**
-   * Stop a specific job
-   */
   stopJob(jobId: string): void {
     const task = this.cronTasks.get(jobId);
     if (task) {
@@ -143,9 +131,6 @@ class JobSchedulerService {
     }
   }
 
-  /**
-   * Update job configuration and restart if enabled
-   */
   updateJob(jobId: string, updates: Partial<Job>): void {
     const job = this.jobs.get(jobId);
     if (!job) {
@@ -166,9 +151,6 @@ class JobSchedulerService {
     logger.info(`Job updated: ${job.name}`);
   }
 
-  /**
-   * Update only the enabled state of a job
-   */
   updateJobEnabled(jobId: string, enabled: boolean): void {
     const job = this.jobs.get(jobId);
     if (!job) {
@@ -181,9 +163,6 @@ class JobSchedulerService {
     logger.info(`Job ${job.name} enabled state updated to: ${enabled}`);
   }
 
-  /**
-   * Get job status
-   */
   getJobStatus(jobId: string): { enabled: boolean; running: boolean; cronSchedule: string } | null {
     const job = this.jobs.get(jobId);
     if (!job) {
@@ -197,16 +176,10 @@ class JobSchedulerService {
     };
   }
 
-  /**
-   * Get all jobs
-   */
   getAllJobs(): Map<string, Job> {
     return new Map(this.jobs);
   }
 
-  /**
-   * Get enriched job status with execution info
-   */
   getJobStatusEnriched(jobId: string): JobStatusEnriched | null {
     const job = this.jobs.get(jobId);
     if (!job) return null;
@@ -237,9 +210,6 @@ class JobSchedulerService {
     };
   }
 
-  /**
-   * Get all jobs with enriched status
-   */
   getAllJobsEnriched(): JobStatusEnriched[] {
     const enriched: JobStatusEnriched[] = [];
     for (const [jobId] of this.jobs) {
@@ -249,9 +219,6 @@ class JobSchedulerService {
     return enriched;
   }
 
-  /**
-   * Start all enabled jobs
-   */
   startAllEnabledJobs(): void {
     logger.info('Starting all enabled jobs...');
     for (const [jobId, job] of this.jobs) {
@@ -261,9 +228,6 @@ class JobSchedulerService {
     }
   }
 
-  /**
-   * Stop all jobs
-   */
   stopAllJobs(): void {
     logger.info('Stopping all jobs...');
     for (const jobId of this.cronTasks.keys()) {

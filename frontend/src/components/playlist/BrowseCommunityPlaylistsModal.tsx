@@ -42,7 +42,6 @@ export function BrowseCommunityPlaylistsModal({
   const downloadMutation = useDownloadCommunityPlaylist();
   const { showToast } = useDialog();
 
-  // Get set of downloaded playlist titles (normalized for comparison)
   const downloadedTitles = useMemo(() => {
     const titles = new Set<string>();
     if (localPlaylists) {
@@ -50,30 +49,25 @@ export function BrowseCommunityPlaylistsModal({
         titles.add(playlist.title.toLowerCase().trim());
       });
     }
-    // Also add playlists downloaded in this session
     downloadedInSession.forEach((title) => {
       titles.add(title.toLowerCase().trim());
     });
     return titles;
   }, [localPlaylists, downloadedInSession]);
 
-  // Flatten all playlists and filter by category and search
   const filteredPlaylists = useMemo(() => {
     if (!data?.categories) return [];
 
     let allPlaylists: CommunityPlaylist[] = [];
 
-    // Flatten all playlists from all categories
     data.categories.forEach((category) => {
       allPlaylists.push(...category.playlists);
     });
 
-    // Filter by category
     if (selectedCategory !== 'all') {
       allPlaylists = allPlaylists.filter((p) => p.category === selectedCategory);
     }
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       allPlaylists = allPlaylists.filter(
@@ -84,13 +78,11 @@ export function BrowseCommunityPlaylistsModal({
       );
     }
 
-    // Filter out already downloaded playlists
     allPlaylists = allPlaylists.filter((p) => !downloadedTitles.has(p.name.toLowerCase().trim()));
 
     return allPlaylists;
   }, [data, selectedCategory, searchQuery, downloadedTitles]);
 
-  // Get all unique categories
   const categories = useMemo(() => {
     if (!data?.categories) return [];
     return data.categories.map((cat) => cat.name);
@@ -101,15 +93,12 @@ export function BrowseCommunityPlaylistsModal({
     try {
       await downloadMutation.mutateAsync(playlist.downloadUrl);
 
-      // Track downloaded playlist in session
       setDownloadedInSession((prev) => new Set([...prev, playlist.name]));
 
       showToast(`"${playlist.name}" downloaded successfully!`, 'success');
-      // Modal stays open for more downloads
     } catch (error) {
       if (isApiError(error) && error.response?.status === 409) {
         showToast('You already have this playlist', 'info');
-        // Also track as downloaded since it already exists
         setDownloadedInSession((prev) => new Set([...prev, playlist.name]));
       } else {
         showToast('Failed to download playlist', 'error');
@@ -122,7 +111,6 @@ export function BrowseCommunityPlaylistsModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="max-w-4xl flex flex-col">
-        {/* Header */}
         <DialogHeader>
           <div className="flex items-center gap-2">
             <Globe size={24} className="text-primary-400" />
@@ -134,7 +122,6 @@ export function BrowseCommunityPlaylistsModal({
         </DialogHeader>
 
         <DialogBody className="flex flex-col">
-          {/* Filters */}
           <div className="flex gap-3 mb-4">
             <div className="flex-1">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -166,9 +153,7 @@ export function BrowseCommunityPlaylistsModal({
             </div>
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto space-y-3">
-            {/* Loading State */}
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
@@ -176,7 +161,6 @@ export function BrowseCommunityPlaylistsModal({
               </div>
             ) : null}
 
-            {/* Error State */}
             {error ? (
               <div className="text-center py-12">
                 <p className="text-red-400 mb-4">Failed to load community playlists</p>
@@ -186,7 +170,6 @@ export function BrowseCommunityPlaylistsModal({
               </div>
             ) : null}
 
-            {/* Empty State */}
             {!isLoading && !error && filteredPlaylists.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 {searchQuery || selectedCategory !== 'all'
@@ -195,7 +178,6 @@ export function BrowseCommunityPlaylistsModal({
               </div>
             ) : null}
 
-            {/* Playlist Cards */}
             {!isLoading && !error
               ? filteredPlaylists.map((playlist, index) => (
                   <div
@@ -232,7 +214,6 @@ export function BrowseCommunityPlaylistsModal({
               : null}
           </div>
 
-          {/* Footer Info */}
           {!isLoading && !error && filteredPlaylists.length > 0 ? (
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-sm text-muted-foreground text-center">

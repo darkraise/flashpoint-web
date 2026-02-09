@@ -5,17 +5,13 @@ const REFRESH_COOKIE_NAME = 'fp_refresh';
 const ACCESS_COOKIE_NAME = 'fp_access';
 const isProduction = config.nodeEnv === 'production';
 
-// ===================================
-// Refresh Token Cookie (30 days, /api/auth path)
-// ===================================
-
 function getRefreshCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
     secure: isProduction,
     sameSite: 'lax',
     path: '/api/auth',
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in ms
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   };
 }
 
@@ -36,17 +32,13 @@ export function getRefreshTokenFromCookie(cookies: Record<string, string>): stri
   return cookies?.[REFRESH_COOKIE_NAME];
 }
 
-// ===================================
-// Access Token Cookie (1 hour, /api path)
-// ===================================
-
 function getAccessCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
     secure: isProduction,
     sameSite: 'lax',
     path: '/api',
-    maxAge: 60 * 60 * 1000, // 1 hour in ms
+    maxAge: 60 * 60 * 1000,
   };
 }
 

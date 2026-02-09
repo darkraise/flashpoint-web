@@ -12,12 +12,6 @@ interface PlayerErrorBoundaryState {
   errorInfo: React.ErrorInfo | null;
 }
 
-/**
- * Error boundary component that wraps the game player to prevent crashes
- * from Ruffle or player errors from taking down the entire app.
- *
- * Provides a friendly error UI with retry option when errors occur.
- */
 export class PlayerErrorBoundary extends Component<
   PlayerErrorBoundaryProps,
   PlayerErrorBoundaryState
@@ -32,7 +26,6 @@ export class PlayerErrorBoundary extends Component<
   }
 
   static getDerivedStateFromError(error: Error): Partial<PlayerErrorBoundaryState> {
-    // Update state so the next render will show the fallback UI
     return {
       hasError: true,
       error,
@@ -40,7 +33,6 @@ export class PlayerErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    // Log error details to the logger
     logger.error('[PlayerErrorBoundary] Caught error:', {
       error: error.toString(),
       errorMessage: error.message,
@@ -48,14 +40,12 @@ export class PlayerErrorBoundary extends Component<
       componentStack: errorInfo.componentStack,
     });
 
-    // Update state with error info
     this.setState({
       errorInfo,
     });
   }
 
   handleReset = (): void => {
-    // Reset error state to retry rendering the player
     this.setState({
       hasError: false,
       error: null,

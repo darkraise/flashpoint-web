@@ -16,7 +16,6 @@ const GamesDistributionChart = lazy(() =>
   import('./GamesDistributionChart').then((m) => ({ default: m.GamesDistributionChart }))
 );
 
-// Skeleton loader for chart components
 function ChartSkeleton({ height = 'h-80' }: { height?: string }) {
   return (
     <div className="bg-card rounded-lg p-6 border border-border shadow-md">
@@ -88,14 +87,12 @@ export function UserStatsPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="bg-card rounded-lg p-6 border border-border shadow-md">
         <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
           <BarChart3 size={28} className="text-primary" />
           Play Statistics & Analytics
         </h3>
 
-        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {statCards.map((stat) => {
             const Icon = stat.icon;
@@ -118,7 +115,6 @@ export function UserStatsPanel() {
           })}
         </div>
 
-        {/* Activity Dates */}
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
           <div>
             <p className="text-muted-foreground text-sm">First Played</p>
@@ -142,7 +138,6 @@ export function UserStatsPanel() {
         </Suspense>
       </ChartErrorBoundary>
 
-      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Games Bar Chart */}
         <ChartErrorBoundary fallbackTitle="Top Games Chart Error">

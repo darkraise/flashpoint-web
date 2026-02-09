@@ -10,9 +10,6 @@ import { AppError } from '../middleware/errorHandler';
 const router = Router();
 const domainService = DomainService.getInstance();
 
-// ===================================
-// GET ALL DOMAINS
-// ===================================
 router.get(
   '/',
   authenticate,
@@ -23,9 +20,6 @@ router.get(
   })
 );
 
-// ===================================
-// ADD DOMAIN
-// ===================================
 const hostnameSchema = z
   .string()
   .trim()
@@ -144,9 +138,6 @@ router.post(
   })
 );
 
-// ===================================
-// DELETE DOMAIN
-// ===================================
 router.delete(
   '/:id',
   authenticate,
@@ -163,9 +154,6 @@ router.delete(
   })
 );
 
-// ===================================
-// SET DEFAULT DOMAIN
-// ===================================
 router.patch(
   '/:id/default',
   authenticate,

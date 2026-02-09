@@ -29,51 +29,24 @@ import cacheRouter from './cache';
 import metricsRouter from './metrics';
 
 export function setupRoutes(app: Express): void {
-  // Health check routes
   app.use('/api/health', healthRouter);
-
-  // Cache management routes
   app.use('/api/cache', cacheRouter);
-
-  // Performance metrics routes
   app.use('/api/metrics', metricsRouter);
-
-  // Authentication routes
   app.use('/api/auth', authRouter);
-
-  // Error reporting routes
   app.use('/api/errors', errorsRouter);
-
-  // Settings routes
   app.use('/api/settings/auth', authSettingsRouter);
   app.use('/api/settings', systemSettingsRouter);
-
-  // Ruffle management routes
   app.use('/api/ruffle', ruffleRouter);
-
-  // GitHub integration routes
   app.use('/api/github', githubRouter);
-
-  // Domain settings routes
   app.use('/api/domains', domainsRouter);
-
-  // Jobs routes
   app.use('/api/jobs', jobsRouter);
-
-  // User management routes
   app.use('/api/users', usersRouter);
   app.use('/api/roles', rolesRouter);
   app.use('/api/activities', activitiesRouter);
-
-  // Play tracking routes
   app.use('/api/play', playTrackingRouter);
-
-  // User playlists and favorites
   app.use('/api/user-playlists', userPlaylistsRouter);
   app.use('/api/playlists/shared', sharedPlaylistsRouter);
   app.use('/api/favorites', favoritesRouter);
-
-  // API routes
   app.use('/api/games', gamesRouter);
   app.use('/api/games', downloadsRouter);
   app.use('/api/platforms', platformsRouter);
@@ -83,10 +56,8 @@ export function setupRoutes(app: Express): void {
   app.use('/api/updates', updatesRouter);
   app.use('/api/statistics', statisticsRouter);
   app.use('/api/database', databaseRouter);
-
   app.use('/proxy', proxyRouter);
 
-  // 404 handler
   app.use('*', (req, res) => {
     res.status(404).json({
       error: {

@@ -12,24 +12,9 @@ const ICON_SIZE = 26; // Optimal icon size for 56px button with visual balance
 const CHECK_SIZE = 12; // Check icon size inside selection badge
 
 interface VirtualizedIconGridProps {
-  /**
-   * Array of icon names to display
-   */
   icons: readonly PlaylistIconName[];
-
-  /**
-   * Currently selected icon (if any)
-   */
   selectedIcon: PlaylistIconName | null | undefined;
-
-  /**
-   * Callback when an icon is selected
-   */
   onSelectIcon: (iconName: PlaylistIconName) => void;
-
-  /**
-   * Function to format icon names for display
-   */
   formatIconName: (name: string) => string;
 }
 

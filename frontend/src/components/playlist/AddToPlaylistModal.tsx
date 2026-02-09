@@ -35,21 +35,17 @@ export function AddToPlaylistModal({
   const [selectedPlaylists, setSelectedPlaylists] = useState<Set<number>>(new Set());
 
   const { isAuthenticated } = useAuthStore();
-  // Only fetch playlists when modal is open to avoid unnecessary API calls
   const { data: playlists = [], isLoading } = useUserPlaylists(isOpen);
   const addGamesMutation = useAddGamesToUserPlaylist();
 
-  // Initialize state when opening
   const handleOpenChange = (open: boolean) => {
     if (open) {
-      // Check authentication
       if (!isAuthenticated) {
         toast.error('Please log in to add games to playlists');
         onClose();
         return;
       }
 
-      // Reset selected playlists
       setSelectedPlaylists(new Set());
     }
     if (!open) {
@@ -94,7 +90,6 @@ export function AddToPlaylistModal({
 
   const handleCreatePlaylistSuccess = (playlist: UserPlaylist) => {
     setIsCreatingPlaylist(false);
-    // Automatically select the newly created playlist
     const newSelected = new Set(selectedPlaylists);
     newSelected.add(playlist.id);
     setSelectedPlaylists(newSelected);
@@ -116,7 +111,6 @@ export function AddToPlaylistModal({
           </DialogHeader>
 
           <DialogBody className="space-y-4">
-            {/* Create New Playlist Button */}
             <Button
               variant="outline"
               className="w-full justify-start gap-2"
@@ -126,7 +120,6 @@ export function AddToPlaylistModal({
               Create New Playlist
             </Button>
 
-            {/* Playlists List */}
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">Loading playlists...</div>
             ) : playlists.length === 0 ? (
@@ -170,7 +163,6 @@ export function AddToPlaylistModal({
               </ScrollArea>
             )}
 
-            {/* Action Buttons */}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={onClose}>
                 Cancel
@@ -186,7 +178,6 @@ export function AddToPlaylistModal({
         </DialogContent>
       </Dialog>
 
-      {/* Create Playlist Dialog */}
       <CreateUserPlaylistDialog
         isOpen={isCreatingPlaylist}
         onClose={() => setIsCreatingPlaylist(false)}

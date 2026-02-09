@@ -14,9 +14,6 @@ export class AppError extends Error {
   }
 }
 
-/**
- * Sanitize request body by redacting sensitive fields
- */
 function sanitizeBody(body: unknown): unknown {
   if (!body || typeof body !== 'object') {
     return body;
@@ -75,7 +72,6 @@ export function errorHandler(
     });
   }
 
-  // Handle Zod validation errors
   if (err instanceof ZodError) {
     logger.error(`[ValidationError] Zod validation failed`, {
       path: req.path,
@@ -91,7 +87,6 @@ export function errorHandler(
     });
   }
 
-  // Unhandled errors - Log full details with sanitization
   logger.error(`[UnhandledError] ${err.message}`, {
     name: err.name,
     message: err.message,

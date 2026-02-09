@@ -12,15 +12,10 @@ import { Monitor, Smartphone } from 'lucide-react';
 
 const STORAGE_KEY = 'flashpoint-mobile-warning-dismissed';
 
-/**
- * Detect if user is on a mobile device
- */
 function isMobileDevice(): boolean {
-  // Check user agent for mobile devices
   const userAgent = navigator.userAgent || navigator.vendor || '';
   const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
 
-  // Also check screen size (less than 768px width)
   const isSmallScreen = window.innerWidth < 768;
 
   return mobileRegex.test(userAgent) || isSmallScreen;
@@ -30,11 +25,9 @@ export function MobileWarningDialog() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // Check if warning has been dismissed before
     const dismissed = localStorage.getItem(STORAGE_KEY);
 
     if (!dismissed && isMobileDevice()) {
-      // Show warning after a short delay (500ms) for better UX
       const timer = setTimeout(() => {
         setIsOpen(true);
       }, 500);
@@ -44,7 +37,6 @@ export function MobileWarningDialog() {
   }, []);
 
   const handleDismiss = () => {
-    // Store dismissal in localStorage
     localStorage.setItem(STORAGE_KEY, 'true');
     setIsOpen(false);
   };

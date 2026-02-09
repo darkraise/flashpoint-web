@@ -1,10 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from './errorHandler';
 
-/**
- * Check if user has required permission
- * User must have at least one of the specified permissions
- */
 export const requirePermission = (...permissions: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
@@ -12,8 +8,6 @@ export const requirePermission = (...permissions: string[]) => {
     }
 
     const userPermissions = req.user.permissions || [];
-
-    // Check if user has any of the required permissions
     const hasPermission = permissions.some((permission) => userPermissions.includes(permission));
 
     if (!hasPermission) {
@@ -24,10 +18,6 @@ export const requirePermission = (...permissions: string[]) => {
   };
 };
 
-/**
- * Check if user has required role
- * User must have one of the specified roles
- */
 export const requireRole = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {

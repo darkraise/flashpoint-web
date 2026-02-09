@@ -26,9 +26,6 @@ export class FavoritesService {
     this.gameService = new GameService();
   }
 
-  /**
-   * Check if game is favorited by user
-   */
   isFavorited(userId: number, gameId: string): boolean {
     const db = this.userDb.getDatabase();
 
@@ -41,9 +38,6 @@ export class FavoritesService {
     return stmt.get(userId, gameId) !== undefined;
   }
 
-  /**
-   * Toggle favorite status for a game
-   */
   toggleFavorite(userId: number, gameId: string): { isFavorited: boolean } {
     const db = this.userDb.getDatabase();
 
@@ -72,9 +66,6 @@ export class FavoritesService {
     return toggle();
   }
 
-  /**
-   * Add game to favorites
-   */
   addFavorite(userId: number, gameId: string): boolean {
     const db = this.userDb.getDatabase();
 
@@ -98,9 +89,6 @@ export class FavoritesService {
     }
   }
 
-  /**
-   * Remove game from favorites
-   */
   removeFavorite(userId: number, gameId: string): boolean {
     const db = this.userDb.getDatabase();
 
@@ -119,9 +107,6 @@ export class FavoritesService {
     return false;
   }
 
-  /**
-   * Get all favorites for a user
-   */
   getUserFavorites(userId: number, limit?: number, offset?: number): Favorite[] {
     const db = this.userDb.getDatabase();
 
@@ -135,13 +120,11 @@ export class FavoritesService {
     const params: (number | string)[] = [userId];
 
     if (limit !== undefined) {
-      // Validate limit is a positive integer
       const safeLimit = Math.max(1, Math.min(limit ?? 50, 1000));
       query += ` LIMIT ?`;
       params.push(safeLimit);
 
       if (offset !== undefined) {
-        // Validate offset is a non-negative integer
         const safeOffset = Math.max(0, offset ?? 0);
         query += ` OFFSET ?`;
         params.push(safeOffset);
@@ -153,9 +136,6 @@ export class FavoritesService {
     return stmt.all(...params) as Favorite[];
   }
 
-  /**
-   * Get favorite game IDs for a user
-   */
   getUserFavoriteGameIds(userId: number): string[] {
     const db = this.userDb.getDatabase();
 
@@ -170,9 +150,6 @@ export class FavoritesService {
     return results.map((r) => r.game_id);
   }
 
-  /**
-   * Get favorite games with full game data for a user
-   */
   async getUserFavoriteGames(
     userId: number,
     limit?: number,
@@ -182,18 +159,15 @@ export class FavoritesService {
   ): Promise<FavoriteGame[]> {
     const db = this.userDb.getDatabase();
 
-    // Default values
     const effectiveSortBy = sortBy || 'dateAdded';
     const effectiveSortOrder = sortOrder || 'desc';
 
-    // Get favorites with addedAt
     let query = `
       SELECT game_id, added_at
       FROM user_favorites
       WHERE user_id = ?
     `;
 
-    // Sort by date added at SQL level (efficient)
     if (effectiveSortBy === 'dateAdded') {
       query += ` ORDER BY added_at ${effectiveSortOrder.toUpperCase()}`;
     }
@@ -216,14 +190,12 @@ export class FavoritesService {
       return [];
     }
 
-    // Get full game data for these IDs
     const gameIds = favorites.map((f) => f.game_id);
     const games = await this.gameService.getGamesByIds(gameIds);
 
-    // Build Map for O(1) lookup (was O(N²) with .find() in loop)
+    // Map for O(1) lookup instead of O(N^2) with .find() in loop
     const gamesMap = new Map(games.map((g) => [g.id, g]));
 
-    // Merge game data with addedAt timestamps
     const favoriteGames: FavoriteGame[] = favorites
       .map((fav) => {
         const game = gamesMap.get(fav.game_id);
@@ -237,7 +209,6 @@ export class FavoritesService {
       })
       .filter((game): game is FavoriteGame => game !== null);
 
-    // Sort by title if requested (after fetching game data)
     if (effectiveSortBy === 'title') {
       favoriteGames.sort((a, b) => {
         const comparison = a.title.localeCompare(b.title);
@@ -248,11 +219,7 @@ export class FavoritesService {
     return favoriteGames;
   }
 
-  /**
-   * Batch add favorites
-   */
   addFavoritesBatch(userId: number, gameIds: string[]): { added: number } {
-    // Validate batch size
     if (gameIds.length > FavoritesService.MAX_BATCH_SIZE) {
       throw new AppError(
         400,
@@ -285,11 +252,7 @@ export class FavoritesService {
     return { added };
   }
 
-  /**
-   * Batch remove favorites
-   */
   removeFavoritesBatch(userId: number, gameIds: string[]): { removed: number } {
-    // Validate batch size
     if (gameIds.length > FavoritesService.MAX_BATCH_SIZE) {
       throw new AppError(
         400,
@@ -322,9 +285,6 @@ export class FavoritesService {
     return { removed };
   }
 
-  /**
-   * Get favorites count for a user
-   */
   getFavoritesCount(userId: number): number {
     const db = this.userDb.getDatabase();
 
@@ -338,9 +298,6 @@ export class FavoritesService {
     return result.count;
   }
 
-  /**
-   * Clear all favorites for a user
-   */
   clearAllFavorites(userId: number): number {
     const db = this.userDb.getDatabase();
 
@@ -356,9 +313,6 @@ export class FavoritesService {
     return result.changes;
   }
 
-  /**
-   * Get favorites statistics
-   */
   getFavoritesStats(userId: number): {
     totalFavorites: number;
     oldestFavoriteDate: string | null;

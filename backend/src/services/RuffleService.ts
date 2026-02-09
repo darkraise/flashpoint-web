@@ -10,15 +10,11 @@ interface GitHubAsset {
   browser_download_url: string;
 }
 
-/**
- * Service for managing Ruffle emulator versions
- */
 export class RuffleService {
   private readonly frontendPublicPath: string;
   private readonly githubApiUrl = 'https://api.github.com/repos/ruffle-rs/ruffle/releases';
 
   constructor() {
-    // Path to frontend's public/ruffle directory
     this.frontendPublicPath = path.resolve(__dirname, '../../../frontend/public/ruffle');
   }
 
@@ -47,9 +43,6 @@ export class RuffleService {
     return version;
   }
 
-  /**
-   * Get the currently installed Ruffle version from local files
-   */
   getCurrentVersion(): string | null {
     try {
       const packageJsonPath = path.join(this.frontendPublicPath, 'package.json');
@@ -64,9 +57,6 @@ export class RuffleService {
     }
   }
 
-  /**
-   * Get latest nightly release from GitHub
-   */
   async getLatestVersion(): Promise<{
     version: string;
     downloadUrl: string;
@@ -107,9 +97,6 @@ export class RuffleService {
     }
   }
 
-  /**
-   * Check if a Ruffle update is available
-   */
   async checkForUpdate(): Promise<{
     currentVersion: string | null;
     latestVersion: string;
@@ -135,9 +122,6 @@ export class RuffleService {
     };
   }
 
-  /**
-   * Download and install Ruffle from GitHub release
-   */
   async updateRuffle(): Promise<{
     success: boolean;
     version: string;
@@ -233,9 +217,6 @@ export class RuffleService {
     }
   }
 
-  /**
-   * Verify Ruffle files exist in the public directory
-   */
   verifyInstallation(): boolean {
     try {
       const ruffleJsPath = path.join(this.frontendPublicPath, 'ruffle.js');

@@ -27,7 +27,6 @@ export class GameSearchCache {
     updateAgeOnGet: true, // Reset TTL on cache hit
     allowStale: false, // Never return stale data
 
-    // Calculate size based on number of results (larger result sets = more memory)
     sizeCalculation: (value) => {
       if (!value || !value.data || !Array.isArray(value.data)) {
         logger.error('[GameSearchCache] Invalid value in sizeCalculation', { value });
@@ -37,7 +36,6 @@ export class GameSearchCache {
       return value.data.length + 1;
     },
 
-    // Optional: Log evictions for monitoring
     dispose: (value, key) => {
       logger.debug(`[GameSearchCache] Evicted cache entry: ${key}`);
     },
@@ -46,10 +44,7 @@ export class GameSearchCache {
   private static gameService = new GameService();
   private static fallbackCache = new FallbackCache<PaginatedResult<Game>>(500);
 
-  /**
-   * Generate cache key from search query
-   * Ensures consistent key generation for same queries regardless of parameter order
-   */
+  /** Ensures consistent key generation regardless of parameter order */
   private static generateCacheKey(query: GameSearchQuery): string {
     const normalizedQuery = {
       search: query.search || '',
@@ -77,19 +72,11 @@ export class GameSearchCache {
     return JSON.stringify(normalizedQuery);
   }
 
-  /**
-   * Search games with caching, request coalescing, and graceful degradation
-   * - Checks cache first
-   * - Coalesces concurrent requests for the same query (cache stampede prevention)
-   * - Falls back to database query if cache miss
-   * - If database fails, returns stale data from fallback cache
-   */
   static async searchGames(
     query: GameSearchQuery
   ): Promise<PaginatedResult<Game> & { fromCache?: boolean; cacheAge?: number }> {
     const cacheKey = this.generateCacheKey(query);
 
-    // Try to get from primary cache
     const cached = this.cache.get(cacheKey);
     if (cached) {
       logger.debug(`[GameSearchCache] Cache HIT: ${cacheKey.substring(0, 100)}...`);
@@ -97,18 +84,16 @@ export class GameSearchCache {
       return cached;
     }
 
-    // Check if request is already in-flight (cache stampede prevention)
+    // Cache stampede prevention: coalesce concurrent requests for the same query
     const inFlight = this.inFlightRequests.get(cacheKey);
     if (inFlight) {
       logger.debug(`[GameSearchCache] Coalescing request for: ${cacheKey.substring(0, 100)}...`);
       return inFlight;
     }
 
-    // Cache miss - query database
     logger.debug(`[GameSearchCache] Cache MISS: ${cacheKey.substring(0, 100)}...`);
     PerformanceMetrics.recordCacheMiss('gameSearch');
 
-    // Execute query and track the promise for coalescing
     const queryPromise = this.executeQuery(query, cacheKey);
     this.inFlightRequests.set(cacheKey, queryPromise);
 
@@ -204,9 +189,6 @@ export class GameSearchCache {
     );
   }
 
-  /**
-   * Get cache statistics for monitoring
-   */
   static getStats(): {
     primary: { size: number; max: number; ttl: number };
     fallback: { size: number; max: number };
@@ -221,9 +203,6 @@ export class GameSearchCache {
     };
   }
 
-  /**
-   * Check if a query is cached
-   */
   static has(query: GameSearchQuery): boolean {
     const cacheKey = this.generateCacheKey(query);
     return this.cache.has(cacheKey);
@@ -317,9 +296,6 @@ export class GameSearchCache {
     });
   }
 
-  /**
-   * Get pre-warm status
-   */
   static isPrewarmed(): boolean {
     // Check if at least the default games query is cached
     const defaultQuery: GameSearchQuery = {

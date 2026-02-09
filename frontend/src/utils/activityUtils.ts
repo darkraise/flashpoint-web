@@ -23,9 +23,6 @@ export function categorizeAction(action: string): ActionCategory {
   return 'crud';
 }
 
-/**
- * Get the appropriate badge variant for an action based on its category.
- */
 export function getActionBadgeVariant(action: string): BadgeVariant {
   const category = categorizeAction(action);
   switch (category) {
