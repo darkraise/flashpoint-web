@@ -19,13 +19,23 @@ const DEFAULT_TREND_DAYS = 7;
 const MAX_TREND_DAYS = 30;
 const DEFAULT_TIME_RANGE = '24h' as const;
 
+const VALID_TIME_RANGES = ['24h', '7d', '30d'] as const;
+type TimeRange = (typeof VALID_TIME_RANGES)[number];
+
+function parseTimeRange(raw: string | undefined): TimeRange | { error: string } {
+  if (raw && !VALID_TIME_RANGES.includes(raw as TimeRange)) {
+    return { error: 'Invalid timeRange. Must be 24h, 7d, or 30d' };
+  }
+  return (raw as TimeRange) ?? DEFAULT_TIME_RANGE;
+}
+
 const activityQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(DEFAULT_PAGE),
   limit: z.coerce.number().int().min(1).max(MAX_PAGE_LIMIT).default(DEFAULT_LIMIT),
   userId: z.coerce.number().int().optional(),
   username: z.string().optional(),
-  action: z.string().optional(),
-  resource: z.string().optional(),
+  action: z.string().max(200).optional(),
+  resource: z.string().max(200).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   sortBy: z.enum(['createdAt', 'username', 'action', 'resource', 'ipAddress']).default('createdAt'),
@@ -89,26 +99,30 @@ router.get(
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    const validTimeRanges = ['24h', '7d', '30d'] as const;
-    const rawTimeRange = req.query.timeRange as string | undefined;
-    if (
-      rawTimeRange &&
-      !validTimeRanges.includes(rawTimeRange as (typeof validTimeRanges)[number])
-    ) {
+    const timeRangeResult = parseTimeRange(req.query.timeRange as string | undefined);
+    if (typeof timeRangeResult === 'object' && 'error' in timeRangeResult) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid timeRange. Must be 24h, 7d, or 30d',
+        error: timeRangeResult.error,
       });
     }
-    const timeRange = (rawTimeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
+    const timeRange = timeRangeResult;
 
-    const customRange =
-      req.query.startDate && req.query.endDate
-        ? {
-            startDate: req.query.startDate as string,
-            endDate: req.query.endDate as string,
-          }
-        : undefined;
+    // Validate customRange date strings if provided
+    let customRange: { startDate: string; endDate: string } | undefined;
+    if (req.query.startDate && req.query.endDate) {
+      const startDate = req.query.startDate as string;
+      const endDate = req.query.endDate as string;
+
+      if (isNaN(Date.parse(startDate)) || isNaN(Date.parse(endDate))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid date format. Must be valid ISO date strings.',
+        });
+      }
+
+      customRange = { startDate, endDate };
+    }
 
     const stats = await activityService.getStats(timeRange, customRange);
 
@@ -128,7 +142,11 @@ router.get(
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    const days = Math.min(parseInt(req.query.days as string) || DEFAULT_TREND_DAYS, MAX_TREND_DAYS);
+    const rawDays = parseInt(req.query.days as string, 10);
+    const days = Math.min(
+      isNaN(rawDays) || rawDays < 1 ? DEFAULT_TREND_DAYS : rawDays,
+      MAX_TREND_DAYS
+    );
 
     const result = await activityService.getTrend(days);
 
@@ -144,19 +162,17 @@ router.get(
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, MAX_ACTIONS_LIMIT);
-    const validTimeRanges = ['24h', '7d', '30d'] as const;
-    const rawTimeRange = req.query.timeRange as string | undefined;
-    if (
-      rawTimeRange &&
-      !validTimeRanges.includes(rawTimeRange as (typeof validTimeRanges)[number])
-    ) {
+    const rawLimit = parseInt(req.query.limit as string, 10);
+    const limit = Math.min(isNaN(rawLimit) || rawLimit < 1 ? 10 : rawLimit, MAX_ACTIONS_LIMIT);
+
+    const timeRangeResult = parseTimeRange(req.query.timeRange as string | undefined);
+    if (typeof timeRangeResult === 'object' && 'error' in timeRangeResult) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid timeRange. Must be 24h, 7d, or 30d',
+        error: timeRangeResult.error,
       });
     }
-    const timeRange = (rawTimeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
+    const timeRange = timeRangeResult;
 
     const result = await activityService.getTopActions(limit, timeRange);
 
@@ -172,24 +188,29 @@ router.get(
   authenticate,
   requirePermission('activities.read'),
   asyncHandler(async (req, res) => {
-    const groupBy = (req.query.groupBy as 'resource' | 'user' | 'ip') || 'resource';
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, MAX_BREAKDOWN_LIMIT);
-    const timeRange = (req.query.timeRange as '24h' | '7d' | '30d') || DEFAULT_TIME_RANGE;
-
-    if (!['resource', 'user', 'ip'].includes(groupBy)) {
+    // Validate groupBy BEFORE assignment
+    const rawGroupBy = req.query.groupBy as string | undefined;
+    if (rawGroupBy && !['resource', 'user', 'ip'].includes(rawGroupBy)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid groupBy parameter. Must be one of: resource, user, ip',
       });
     }
+    const groupBy = (rawGroupBy as 'resource' | 'user' | 'ip') ?? 'resource';
 
-    const validTimeRanges = ['24h', '7d', '30d'] as const;
-    if (req.query.timeRange && !validTimeRanges.includes(timeRange)) {
+    // Validate limit with proper parseInt
+    const rawLimit = parseInt(req.query.limit as string, 10);
+    const limit = Math.min(isNaN(rawLimit) || rawLimit < 1 ? 10 : rawLimit, MAX_BREAKDOWN_LIMIT);
+
+    // Validate timeRange BEFORE assignment
+    const timeRangeResult = parseTimeRange(req.query.timeRange as string | undefined);
+    if (typeof timeRangeResult === 'object' && 'error' in timeRangeResult) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid timeRange. Must be 24h, 7d, or 30d',
+        error: timeRangeResult.error,
       });
     }
+    const timeRange = timeRangeResult;
 
     const result = await activityService.getBreakdown(groupBy, limit, timeRange);
 

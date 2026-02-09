@@ -82,7 +82,7 @@ export class ActivityService {
     return { sql, params };
   }
 
-  async log(data: LogActivityData): Promise<void> {
+  log(data: LogActivityData): void {
     const detailsJson = data.details ? JSON.stringify(data.details) : null;
 
     UserDatabaseService.run(
@@ -235,9 +235,10 @@ export class ActivityService {
     // Format peak hour
     const formatHourRange = (hour: number) => {
       const start = hour % 12 === 0 ? 12 : hour % 12;
-      const end = (hour + 1) % 12 === 0 ? 12 : (hour + 1) % 12;
+      const nextHour = (hour + 1) % 24;
+      const end = nextHour % 12 === 0 ? 12 : nextHour % 12;
       const startPeriod = hour < 12 ? 'AM' : 'PM';
-      const endPeriod = hour + 1 < 12 ? 'AM' : 'PM';
+      const endPeriod = nextHour < 12 ? 'AM' : 'PM';
       return `${start}:00 ${startPeriod} - ${end}:00 ${endPeriod}`;
     };
 

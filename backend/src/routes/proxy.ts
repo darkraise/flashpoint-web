@@ -42,11 +42,30 @@ async function serveFileWithFallback(
   relativePath: string,
   externalBaseUrls: string[],
   res: Response,
-  next: NextFunction
+  next: NextFunction,
+  allowedBasePath: string
 ) {
   try {
     if (fs.existsSync(localPath)) {
       logger.debug(`[Proxy] Serving local file: ${localPath}`);
+
+      // Resolve symlinks to prevent bypass via symlink to unauthorized location
+      try {
+        const realPath = await fsPromises.realpath(localPath);
+        const realBase = await fsPromises.realpath(allowedBasePath);
+        if (!realPath.startsWith(realBase + path.sep) && realPath !== realBase) {
+          logger.warn(`[Security] Symlink escape detected: ${localPath} -> ${realPath}`);
+          return res.status(403).json({ error: { message: 'Access denied', statusCode: 403 } });
+        }
+      } catch (realpathError) {
+        logger.error('[Security] Symlink resolution error:', realpathError);
+        return res.status(500).json({ error: { message: 'Internal error', statusCode: 500 } });
+      }
+
+      const ext = path.extname(localPath).slice(1).toLowerCase();
+      if (ext === 'svg') {
+        res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
+      }
       res.setHeader('X-Content-Type-Options', 'nosniff');
       return res.sendFile(localPath);
     }
@@ -71,7 +90,7 @@ async function serveFileWithFallback(
 
           const imageBuffer = Buffer.from(response.data);
 
-          if (!pendingCacheWrites.has(localPath)) {
+          if (!pendingCacheWrites.has(localPath) && pendingCacheWrites.size < 100) {
             pendingCacheWrites.add(localPath);
             (async () => {
               try {
@@ -106,6 +125,12 @@ async function serveFileWithFallback(
           const contentType = mimeMap[ext] || 'application/octet-stream';
 
           res.setHeader('Content-Type', contentType);
+          if (ext === 'svg') {
+            res.setHeader(
+              'Content-Security-Policy',
+              "default-src 'none'; style-src 'unsafe-inline'"
+            );
+          }
           res.setHeader('X-Content-Type-Options', 'nosniff');
           res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
 
@@ -148,7 +173,14 @@ router.get(
 
     const externalImageUrls = await getExternalImageUrls();
 
-    await serveFileWithFallback(localPath, relativePath, externalImageUrls, res, next);
+    await serveFileWithFallback(
+      localPath,
+      relativePath,
+      externalImageUrls,
+      res,
+      next,
+      config.flashpointImagesPath
+    );
   })
 );
 
@@ -183,7 +215,14 @@ router.get(
       }
     });
 
-    await serveFileWithFallback(localPath, relativePath, externalUrls, res, next);
+    await serveFileWithFallback(
+      localPath,
+      relativePath,
+      externalUrls,
+      res,
+      next,
+      config.flashpointLogosPath
+    );
   })
 );
 
@@ -205,7 +244,14 @@ router.get(
 
     const externalImageUrls = await getExternalImageUrls();
 
-    await serveFileWithFallback(localPath, relativePath, externalImageUrls, res, next);
+    await serveFileWithFallback(
+      localPath,
+      relativePath,
+      externalImageUrls,
+      res,
+      next,
+      config.flashpointImagesPath
+    );
   })
 );
 

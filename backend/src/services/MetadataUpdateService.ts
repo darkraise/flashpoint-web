@@ -93,8 +93,8 @@ export class MetadataUpdateService {
       const tagsUpdateAvailable = tagsUpdateCount > 0;
       const hasUpdates = gamesUpdateAvailable || tagsUpdateAvailable;
 
-      logger.info(`[MetadataUpdate] Games: ${gamesUpdateCount} updates available`);
-      logger.info(
+      logger.debug(`[MetadataUpdate] Games: ${gamesUpdateCount} updates available`);
+      logger.debug(
         `[MetadataUpdate] Tags: ${tagsUpdateCount} updates available (synced via game records)`
       );
 
@@ -175,7 +175,7 @@ export class MetadataUpdateService {
       const source = sources[0];
       const fpfssUrl = `${source.baseUrl}/api/info`;
 
-      logger.info(`[MetadataUpdate] Checking remote updates from: ${fpfssUrl}`);
+      logger.debug(`[MetadataUpdate] Checking remote updates from: ${fpfssUrl}`);
 
       // Query FPFSS API for latest metadata info
       const response = await axios.get(fpfssUrl, {

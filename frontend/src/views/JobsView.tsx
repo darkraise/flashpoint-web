@@ -84,6 +84,7 @@ export function JobsView() {
   };
 
   const handleViewLogs = (jobId: string) => {
+    queryClient.invalidateQueries({ queryKey: ['jobLogs', jobId] });
     setSelectedJobId(jobId);
     setShowLogsDialog(true);
   };
@@ -116,8 +117,8 @@ export function JobsView() {
       ) : null}
 
       {error ? (
-        <div className="bg-red-950/20 border border-red-500 rounded-lg p-4">
-          <p className="text-red-400">Failed to load jobs. Please try again.</p>
+        <div className="bg-destructive/10 border border-destructive rounded-lg p-4">
+          <p className="text-destructive">Failed to load jobs. Please try again.</p>
         </div>
       ) : null}
 

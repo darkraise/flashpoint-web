@@ -26,7 +26,6 @@ class JobSchedulerService {
   private cronTasks: Map<string, cron.ScheduledTask> = new Map();
   private executionService = new JobExecutionService();
   private currentExecutions: Map<string, number> = new Map(); // jobId -> logId
-  private lastRunTimes: Map<string, number> = new Map(); // jobId -> timestamp
 
   registerJob(job: Job): void {
     this.jobs.set(job.id, job);
@@ -78,7 +77,6 @@ class JobSchedulerService {
     // Start execution log
     const logId = this.executionService.startExecution(jobId, job.name, triggeredBy);
     this.currentExecutions.set(jobId, logId);
-    this.lastRunTimes.set(jobId, Date.now());
 
     try {
       logger.info(`[JobScheduler] Running job: ${job.name}`);
@@ -138,8 +136,9 @@ class JobSchedulerService {
       return;
     }
 
-    // Update job configuration
-    Object.assign(job, updates);
+    // Update job configuration (only allowed fields)
+    if (updates.enabled !== undefined) job.enabled = updates.enabled;
+    if (updates.cronSchedule !== undefined) job.cronSchedule = updates.cronSchedule;
     this.jobs.set(jobId, job);
 
     // Restart job if enabled
@@ -161,23 +160,6 @@ class JobSchedulerService {
     job.enabled = enabled;
     this.jobs.set(jobId, job);
     logger.info(`Job ${job.name} enabled state updated to: ${enabled}`);
-  }
-
-  getJobStatus(jobId: string): { enabled: boolean; running: boolean; cronSchedule: string } | null {
-    const job = this.jobs.get(jobId);
-    if (!job) {
-      return null;
-    }
-
-    return {
-      enabled: job.enabled,
-      running: this.cronTasks.has(jobId),
-      cronSchedule: job.cronSchedule,
-    };
-  }
-
-  getAllJobs(): Map<string, Job> {
-    return new Map(this.jobs);
   }
 
   getJobStatusEnriched(jobId: string): JobStatusEnriched | null {

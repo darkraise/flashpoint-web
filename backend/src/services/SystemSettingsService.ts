@@ -64,6 +64,14 @@ export class SystemSettingsService {
   }
 
   set(key: string, value: SettingValue, updatedBy?: number): void {
+    const existing = UserDatabaseService.get<{ key: string }>(
+      'SELECT key FROM system_settings WHERE key = ?',
+      [key]
+    );
+    if (!existing) {
+      throw new Error(`Setting '${key}' does not exist`);
+    }
+
     // Validate before setting
     this.validate(key, value);
 
@@ -73,7 +81,7 @@ export class SystemSettingsService {
       `UPDATE system_settings
        SET value = ?, updated_by = ?, updated_at = ?
        WHERE key = ?`,
-      [stringValue, updatedBy || null, new Date().toISOString(), key]
+      [stringValue, updatedBy ?? null, new Date().toISOString(), key]
     );
   }
 
@@ -126,7 +134,7 @@ export class SystemSettingsService {
       `UPDATE system_settings
        SET value = default_value, updated_by = ?, updated_at = ?
        WHERE key = ?`,
-      [updatedBy || null, new Date().toISOString(), key]
+      [updatedBy ?? null, new Date().toISOString(), key]
     );
   }
 

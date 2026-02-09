@@ -15,25 +15,33 @@ import type { CustomTooltipProps } from '@/types/chart';
 
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (active && payload && payload.length) {
+    const colorMap: Record<string, string> = {
+      total: 'bg-blue-500',
+      authEvents: 'bg-amber-500',
+      failedActions: 'bg-red-500',
+    };
+
+    const labelMap: Record<string, string> = {
+      total: 'Total',
+      authEvents: 'Auth Events',
+      failedActions: 'Failed Actions',
+    };
+
     return (
       <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
         <p className="font-medium mb-2">{label}</p>
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span className="text-muted-foreground text-sm">Total:</span>
-            <span className="font-semibold text-sm">{payload[0].value}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-            <span className="text-muted-foreground text-sm">Auth Events:</span>
-            <span className="font-semibold text-sm">{payload[1].value}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <span className="text-muted-foreground text-sm">Failed Actions:</span>
-            <span className="font-semibold text-sm">{payload[2].value}</span>
-          </div>
+          {payload.map((entry, index) => (
+            <div key={`tooltip-${index}`} className="flex items-center gap-2">
+              <div
+                className={`w-3 h-3 rounded-full ${colorMap[entry.dataKey as string] ?? 'bg-gray-500'}`}
+              ></div>
+              <span className="text-muted-foreground text-sm">
+                {labelMap[entry.dataKey as string] ?? entry.dataKey}:
+              </span>
+              <span className="font-semibold text-sm">{entry.value}</span>
+            </div>
+          ))}
         </div>
       </div>
     );

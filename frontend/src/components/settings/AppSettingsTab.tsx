@@ -193,7 +193,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
                 Default theme mode for new users (light, dark, or system).
               </p>
               <Select
-                value={appSettings.defaultTheme || 'dark'}
+                value={appSettings.defaultTheme ?? 'dark'}
                 onValueChange={(value: string) => {
                   updateSystemSettings.mutate({
                     category: 'app',
@@ -220,7 +220,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
               </Label>
               <p className="text-sm text-muted-foreground">Default primary color for new users.</p>
               <Select
-                value={appSettings.defaultPrimaryColor || 'blue'}
+                value={appSettings.defaultPrimaryColor ?? 'blue'}
                 onValueChange={(value: string) => {
                   updateSystemSettings.mutate({
                     category: 'app',

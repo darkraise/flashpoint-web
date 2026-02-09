@@ -49,8 +49,10 @@ export class RuffleService {
       if (!fs.existsSync(packageJsonPath)) {
         return null;
       }
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-      return packageJson.version || null;
+      const packageJson: { version?: string } = JSON.parse(
+        fs.readFileSync(packageJsonPath, 'utf-8')
+      );
+      return packageJson.version ?? null;
     } catch (error) {
       logger.error('Error reading Ruffle version:', error);
       return null;
@@ -111,7 +113,7 @@ export class RuffleService {
     const normalizedCurrent = currentVersion ? this.normalizeVersion(currentVersion) : null;
     const normalizedLatest = this.normalizeVersion(latest.version);
 
-    const updateAvailable = normalizedCurrent !== null && normalizedCurrent !== normalizedLatest;
+    const updateAvailable = normalizedCurrent === null || normalizedCurrent !== normalizedLatest;
 
     return {
       currentVersion,

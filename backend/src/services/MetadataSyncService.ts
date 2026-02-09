@@ -94,6 +94,7 @@ interface FlashpointPreferences {
  * See: https://github.com/FlashpointProject/launcher/blob/master/src/back/sync.ts
  */
 export class MetadataSyncService {
+  private static readonly ALLOWED_HOSTS = ['fpfss.unstable.life', 'fpfss.flashpointarchive.org'];
   private preferencesPath: string;
   private syncStatusService: SyncStatusService;
 
@@ -106,7 +107,21 @@ export class MetadataSyncService {
     return config.flashpointEdition;
   }
 
-  async syncMetadata(): Promise<SyncResult> {
+  private validateBaseUrl(baseUrl: string): void {
+    try {
+      const url = new URL(baseUrl);
+      if (!MetadataSyncService.ALLOWED_HOSTS.includes(url.hostname)) {
+        throw new Error(`Untrusted metadata source host: ${url.hostname}`);
+      }
+    } catch (e) {
+      if (e instanceof TypeError) {
+        throw new Error(`Invalid metadata source URL: ${baseUrl}`);
+      }
+      throw e;
+    }
+  }
+
+  async syncMetadata(alreadyStarted = false): Promise<SyncResult> {
     // Ultimate edition does not support metadata sync
     if (this.getEdition() === 'ultimate') {
       logger.warn('[MetadataSync] Metadata sync is not available for Ultimate edition');
@@ -130,8 +145,10 @@ export class MetadataSyncService {
     let latestPlatformDate: string | null = null;
 
     try {
-      // Mark sync as started
-      this.syncStatusService.startSync();
+      // Mark sync as started (skip if already started atomically)
+      if (!alreadyStarted) {
+        this.syncStatusService.startSync();
+      }
 
       // Read preferences file
       this.syncStatusService.updateProgress('reading-config', 5, 'Reading preferences...');
@@ -144,6 +161,8 @@ export class MetadataSyncService {
       }
 
       const source = sources[0];
+      // Validate baseUrl before making any HTTP requests
+      this.validateBaseUrl(source.baseUrl);
       logger.info(`[MetadataSync] Starting metadata sync from: ${source.baseUrl}`);
 
       // Sync platforms first (data embedded in game records)
@@ -396,7 +415,7 @@ export class MetadataSyncService {
       }
 
       // Delete games from database
-      await this.deleteGames(deletedIds);
+      this.deleteGames(deletedIds);
 
       logger.info(`[MetadataSync] Deleted ${deletedIds.length} games`);
       return deletedIds.length;
@@ -494,34 +513,34 @@ export class MetadataSyncService {
     chunk.forEach((game) => {
       values.push(
         game.id,
-        game.parent_game_id || null,
-        game.title || '',
-        game.alternate_titles || '',
-        game.series || '',
-        game.developer || '',
-        game.publisher || '',
-        game.platform || game.platform_name || '',
-        game.play_mode || '',
-        game.status || '',
+        game.parent_game_id ?? null,
+        game.title ?? '',
+        game.alternate_titles ?? '',
+        game.series ?? '',
+        game.developer ?? '',
+        game.publisher ?? '',
+        game.platform ?? game.platform_name ?? '',
+        game.play_mode ?? '',
+        game.status ?? '',
         game.broken ? 1 : 0,
         game.extreme ? 1 : 0,
-        game.notes || '',
-        game.source || '',
-        game.application_path || '',
-        game.launch_command || '',
-        game.release_date || '',
-        game.version || '',
-        game.original_description || '',
-        game.language || '',
-        game.order_title || game.title || '',
-        game.library || 'arcade',
-        game.tags_str || '',
-        game.date_added || new Date().toISOString(),
-        game.date_modified || new Date().toISOString(),
-        game.active_data_id || null,
+        game.notes ?? '',
+        game.source ?? '',
+        game.application_path ?? '',
+        game.launch_command ?? '',
+        game.release_date ?? '',
+        game.version ?? '',
+        game.original_description ?? '',
+        game.language ?? '',
+        game.order_title ?? game.title ?? '',
+        game.library ?? 'arcade',
+        game.tags_str ?? '',
+        game.date_added ?? new Date().toISOString(),
+        game.date_modified ?? new Date().toISOString(),
+        game.active_data_id ?? null,
         game.active_data_on_disk ? 1 : 0,
-        game.archive_state || 0,
-        game.ruffle_support || ''
+        game.archive_state ?? 0,
+        game.ruffle_support ?? ''
       );
     });
 
@@ -624,57 +643,24 @@ export class MetadataSyncService {
    * Delete games from database
    * Handles parent-child relationships to avoid FOREIGN KEY constraint errors
    */
-  private async deleteGames(gameIds: string[]): Promise<void> {
-    // Safety check: ensure gameIds is an array
-    if (!Array.isArray(gameIds)) {
-      logger.error('[MetadataSync] deleteGames called with non-array:', typeof gameIds);
-      throw new Error('deleteGames requires an array of game IDs');
-    }
-
-    if (gameIds.length === 0) return;
-
+  private deleteGames(gameIds: string[]): void {
+    if (!Array.isArray(gameIds) || gameIds.length === 0) return;
     const db = DatabaseService.getDatabase();
-    const placeholders = gameIds.map(() => '?').join(', ');
 
-    // Check current FK setting
-    const fkEnabled = db.pragma('foreign_keys', { simple: true });
+    // Process in batches to avoid SQL variable limits
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < gameIds.length; i += BATCH_SIZE) {
+      const batch = gameIds.slice(i, i + BATCH_SIZE);
+      const placeholders = batch.map(() => '?').join(', ');
 
-    try {
-      // Temporarily disable foreign key constraints (must be outside transaction)
-      db.pragma('foreign_keys = OFF');
-
-      // Use a transaction for atomicity
-      const transaction = db.transaction(() => {
-        // Find child games that reference parents being deleted
-        const childGamesQuery = `SELECT id FROM game WHERE parentGameId IN (${placeholders})`;
-        const stmt = db.prepare(childGamesQuery);
-        const childGames = stmt.all(gameIds) as Array<{ id: string }>;
-        const childGameIds = childGames.map((row) => row.id);
-
-        // Update child games to set parentGameId to NULL (orphan them instead of cascade delete)
-        // This preserves the games but removes the broken reference
-        if (childGameIds.length > 0) {
-          const updatePlaceholders = childGameIds.map(() => '?').join(', ');
-          const updateSql = `UPDATE game SET parentGameId = NULL WHERE id IN (${updatePlaceholders})`;
-          const updateStmt = db.prepare(updateSql);
-          updateStmt.run(childGameIds);
-          logger.debug(
-            `[MetadataSync] Orphaned ${childGameIds.length} child games (set parentGameId to NULL)`
-          );
-        }
-
-        // Now safe to delete the games
-        const deleteSql = `DELETE FROM game WHERE id IN (${placeholders})`;
-        const deleteStmt = db.prepare(deleteSql);
-        deleteStmt.run(gameIds);
-        logger.debug(`[MetadataSync] Deleted ${gameIds.length} games`);
-      });
-
-      // Execute the transaction
-      transaction();
-    } finally {
-      // Restore original FK setting
-      db.pragma(`foreign_keys = ${fkEnabled ? 'ON' : 'OFF'}`);
+      db.transaction(() => {
+        // Orphan children first (prevents FK violation)
+        db.prepare(
+          `UPDATE game SET parentGameId = NULL WHERE parentGameId IN (${placeholders})`
+        ).run(batch);
+        // Then delete
+        db.prepare(`DELETE FROM game WHERE id IN (${placeholders})`).run(batch);
+      })();
     }
   }
 

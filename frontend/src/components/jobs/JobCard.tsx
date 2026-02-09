@@ -33,7 +33,7 @@ export function JobCard({
     const { status } = job.lastExecution;
     if (status === 'success') {
       return (
-        <Badge variant="default" className="bg-green-600 gap-1">
+        <Badge variant="default" className="bg-green-600 dark:bg-green-600 gap-1">
           <CheckCircle size={12} /> Success
         </Badge>
       );

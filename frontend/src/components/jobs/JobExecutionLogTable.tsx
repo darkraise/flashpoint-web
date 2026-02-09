@@ -1,9 +1,9 @@
+import React, { useState } from 'react';
 import { JobExecutionLog } from '@/types/jobs';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { formatDuration } from '@/lib/cron-utils';
 import { CheckCircle, XCircle, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
 
 interface JobExecutionLogTableProps {
   logs: JobExecutionLog[];
@@ -29,7 +29,7 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
     switch (status) {
       case 'success':
         return (
-          <Badge variant="default" className="bg-green-600 gap-1">
+          <Badge variant="default" className="bg-green-600 dark:bg-green-600 gap-1">
             <CheckCircle size={12} /> Success
           </Badge>
         );
@@ -73,8 +73,8 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
         </thead>
         <tbody>
           {logs.map((log) => (
-            <>
-              <tr key={log.id} className="border-t hover:bg-accent/50">
+            <React.Fragment key={log.id}>
+              <tr className="border-t hover:bg-accent/50">
                 <td className="p-3">
                   {log.errorDetails ? (
                     <button
@@ -98,16 +98,16 @@ export function JobExecutionLogTable({ logs, loading }: JobExecutionLogTableProp
                 <td className="p-3 text-sm text-muted-foreground">{log.message || '-'}</td>
               </tr>
               {expandedRows.has(log.id) && log.errorDetails ? (
-                <tr className="border-t bg-red-950/20">
+                <tr className="border-t bg-destructive/10">
                   <td colSpan={6} className="p-3">
-                    <div className="text-xs font-mono bg-red-950/50 p-3 rounded">
-                      <p className="font-semibold text-red-400 mb-2">Error Details:</p>
-                      <pre className="whitespace-pre-wrap text-red-300">{log.errorDetails}</pre>
+                    <div className="text-xs font-mono bg-destructive/20 p-3 rounded">
+                      <p className="font-semibold text-destructive mb-2">Error Details:</p>
+                      <pre className="whitespace-pre-wrap text-destructive">{log.errorDetails}</pre>
                     </div>
                   </td>
                 </tr>
               ) : null}
-            </>
+            </React.Fragment>
           ))}
         </tbody>
       </table>

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import cron from 'node-cron';
 import { config } from '../config';
 import { CachedSystemSettingsService } from '../services/CachedSystemSettingsService';
 import { DomainService } from '../services/DomainService';
@@ -27,7 +28,32 @@ function updateJobScheduler(category: string, settings: CategorySettings): void 
         currentSettings.metadataSyncSchedule ??
         '0 * * * *') as string;
 
+      if (cronSchedule && !cron.validate(cronSchedule)) {
+        logger.warn(`[Settings] Invalid cron expression: ${cronSchedule}`);
+        return;
+      }
+
       JobScheduler.updateJob('metadata-sync', {
+        enabled,
+        cronSchedule,
+      });
+    }
+
+    if ('ruffleUpdateEnabled' in settings || 'ruffleUpdateSchedule' in settings) {
+      const currentSettings = systemSettings.getCategory('jobs');
+      const enabled = (settings.ruffleUpdateEnabled ??
+        currentSettings.ruffleUpdateEnabled ??
+        false) as boolean;
+      const cronSchedule = (settings.ruffleUpdateSchedule ??
+        currentSettings.ruffleUpdateSchedule ??
+        '0 0 * * *') as string;
+
+      if (cronSchedule && !cron.validate(cronSchedule)) {
+        logger.warn(`[Settings] Invalid cron expression: ${cronSchedule}`);
+        return;
+      }
+
+      JobScheduler.updateJob('ruffle-update', {
         enabled,
         cronSchedule,
       });
@@ -99,6 +125,11 @@ router.post(
     const { category } = req.body;
 
     if (category) {
+      if (typeof category !== 'string' || !isValidCategory(category)) {
+        return res
+          .status(400)
+          .json({ error: { message: `Invalid settings category: ${category}` } });
+      }
       systemSettings.clearCategoryCache(category);
     } else {
       systemSettings.clearCache();
@@ -179,7 +210,21 @@ router.post(
   })
 );
 
-const VALID_CATEGORIES = ['app', 'auth', 'jobs', 'metadata', 'theme', 'features', 'maintenance'];
+const VALID_CATEGORIES = [
+  'app',
+  'auth',
+  'jobs',
+  'metadata',
+  'theme',
+  'features',
+  'maintenance',
+] as const;
+
+type ValidCategory = (typeof VALID_CATEGORIES)[number];
+
+function isValidCategory(category: string): category is ValidCategory {
+  return VALID_CATEGORIES.includes(category as ValidCategory);
+}
 
 router.get(
   '/:category',
@@ -188,7 +233,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { category } = req.params;
 
-    if (!VALID_CATEGORIES.includes(category)) {
+    if (!isValidCategory(category)) {
       return res.status(400).json({
         error: { message: `Invalid settings category: ${category}` },
       });
@@ -212,7 +257,7 @@ router.patch(
   asyncHandler(async (req: Request, res: Response) => {
     const { category } = req.params;
 
-    if (!VALID_CATEGORIES.includes(category)) {
+    if (!isValidCategory(category)) {
       return res.status(400).json({
         error: { message: `Invalid settings category: ${category}` },
       });
@@ -246,7 +291,7 @@ router.get(
   requirePermission('settings.read'),
   asyncHandler(async (req: Request, res: Response) => {
     const { category, key } = req.params;
-    if (!VALID_CATEGORIES.includes(category)) {
+    if (!isValidCategory(category)) {
       return res.status(400).json({
         error: { message: `Invalid category: ${category}` },
       });
@@ -275,7 +320,7 @@ router.patch(
   logActivity('settings.update', 'system_settings'),
   asyncHandler(async (req: Request, res: Response) => {
     const { category, key } = req.params;
-    if (!VALID_CATEGORIES.includes(category)) {
+    if (!isValidCategory(category)) {
       return res.status(400).json({
         error: { message: `Invalid category: ${category}` },
       });

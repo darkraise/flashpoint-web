@@ -21,6 +21,7 @@ import { PlayTrackingService } from './services/PlayTrackingService';
 import { AuthService } from './services/AuthService';
 import { GameSearchCache } from './services/GameSearchCache';
 import { JobScheduler } from './services/JobScheduler';
+import { JobExecutionService } from './services/JobExecutionService';
 import { MetadataSyncJob } from './jobs/MetadataSyncJob';
 import { RuffleUpdateJob } from './jobs/RuffleUpdateJob';
 import { CachedSystemSettingsService } from './services/CachedSystemSettingsService';
@@ -320,6 +321,19 @@ async function startServer() {
     logger.error('Failed to cleanup old activity logs:', error);
   });
 
+  const jobExecutionService = new JobExecutionService();
+  const jobLogCleanupInterval = setInterval(
+    () => {
+      try {
+        jobExecutionService.cleanupOldLogs(30);
+      } catch (error) {
+        logger.error('Failed to cleanup old job execution logs:', error);
+      }
+    },
+    24 * 60 * 60 * 1000
+  );
+  jobLogCleanupInterval.unref();
+
   const shutdown = async () => {
     logger.info('Shutting down gracefully...');
 
@@ -328,6 +342,7 @@ async function startServer() {
     clearInterval(playSessionCleanupInterval);
     clearInterval(loginAttemptsCleanupInterval);
     clearInterval(activityLogsCleanupInterval);
+    clearInterval(jobLogCleanupInterval);
 
     try {
       gameZipServer.dispose();

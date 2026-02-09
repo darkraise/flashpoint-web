@@ -7,8 +7,9 @@ import { asyncHandler } from '../middleware/asyncHandler';
 const router = Router();
 const ruffleService = new RuffleService();
 
-router.get('/version', (req, res, next) => {
-  try {
+router.get(
+  '/version',
+  asyncHandler(async (req, res) => {
     const currentVersion = ruffleService.getCurrentVersion();
     const isInstalled = ruffleService.verifyInstallation();
 
@@ -16,10 +17,8 @@ router.get('/version', (req, res, next) => {
       currentVersion,
       isInstalled,
     });
-  } catch (error) {
-    next(error);
-  }
-});
+  })
+);
 
 router.get(
   '/check-update',
