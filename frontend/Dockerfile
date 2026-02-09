@@ -31,7 +31,7 @@ RUN npm run build
 # =============================================================================
 # Stage 2: Production - Nginx serving static files
 # =============================================================================
-FROM nginx:alpine
+FROM nginx:1.27-alpine
 
 # Metadata labels
 LABEL org.opencontainers.image.title="Flashpoint Web Frontend"

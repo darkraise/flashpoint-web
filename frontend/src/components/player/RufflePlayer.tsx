@@ -287,30 +287,33 @@ export function RufflePlayer({
 
       {isLoading ? (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10"
+          className="absolute inset-0 flex items-center justify-center bg-background/90 z-10"
           role="status"
           aria-label="Loading Flash game"
         >
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-white">Loading Flash game...</p>
-            <p className="text-xs text-gray-400 mt-2">Powered by Ruffle</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-foreground">Loading Flash game...</p>
+            <p className="text-xs text-muted-foreground mt-2">Powered by Ruffle</p>
           </div>
         </div>
       ) : null}
 
       {error ? (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-10" role="alert">
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-background/95 z-10"
+          role="alert"
+        >
           <div className="text-center max-w-md p-6">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h3 className="text-xl font-bold text-white mb-2">Failed to Load Game</h3>
-            <p className="text-gray-300 mb-4">{error}</p>
-            <div className="bg-gray-800 rounded p-3 mb-4">
-              <p className="text-sm text-gray-400 text-left">
+            <h3 className="text-xl font-bold text-foreground mb-2">Failed to Load Game</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <div className="bg-muted rounded p-3 mb-4">
+              <p className="text-sm text-muted-foreground text-left">
                 <strong>URL:</strong> {swfUrl}
               </p>
             </div>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               This game may require additional files or may not be compatible with Ruffle yet.
             </p>
           </div>

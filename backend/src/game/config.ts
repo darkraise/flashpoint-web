@@ -105,12 +105,12 @@ export class ConfigManager {
           ? proxySettings.infinityServerURL.replace(/^http:\/\//, 'https://')
           : 'https://infinity.flashpointarchive.org/Flashpoint/Legacy/htdocs/',
 
-        externalFilePaths: (proxySettings.externalFilePaths || []).map((url: string) =>
+        externalFilePaths: (proxySettings.externalFilePaths ?? []).map((url: string) =>
           url.replace(/^http:\/\//, 'https://')
         ),
 
-        mad4fpEnabled: proxySettings.mad4fpEnabled || false,
-        mad4fpPaths: proxySettings.mad4fpPaths || [],
+        mad4fpEnabled: proxySettings.mad4fpEnabled ?? false,
+        mad4fpPaths: proxySettings.mad4fpPaths ?? [],
 
         allowCrossDomain: true,
         enableBrotli: true,
@@ -125,8 +125,8 @@ export class ConfigManager {
             process.platform === 'win32' ? 'php-cgi.exe' : 'php-cgi'
           ),
         cgiTimeout: proxySettings.cgiTimeout ?? 30000, // 30 seconds
-        cgiMaxBodySize: proxySettings.cgiMaxBodySize || 10 * 1024 * 1024, // 10MB
-        cgiMaxResponseSize: proxySettings.cgiMaxResponseSize || 50 * 1024 * 1024, // 50MB
+        cgiMaxBodySize: proxySettings.cgiMaxBodySize ?? 10 * 1024 * 1024, // 10MB
+        cgiMaxResponseSize: proxySettings.cgiMaxResponseSize ?? 50 * 1024 * 1024, // 50MB
       };
 
       logger.info('[ConfigManager] Configuration loaded successfully');

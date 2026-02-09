@@ -294,26 +294,44 @@ export class GameDataDownloader {
       );
     }
 
-    // DNS rebinding protection: resolve hostname and check for private IPs
+    // DNS rebinding protection: resolve hostname and pin the IP for the connection
     const hostname = parsedUrl.hostname;
+    let resolvedAddress: string | undefined;
+    let resolvedFamily: number | undefined;
     if (!net.isIPv4(hostname) && !net.isIPv6(hostname)) {
       try {
-        const { address } = await dnsLookup(hostname);
+        const { address, family } = await dnsLookup(hostname);
         if (this.isPrivateIPv4(address) || this.isPrivateIPv6(address)) {
           logger.warn(
             `[GameDataDownloader] Blocked: ${hostname} resolves to private address ${address}`
           );
           throw new Error(`Blocked: ${hostname} resolves to private address ${address}`);
         }
+        resolvedAddress = address;
+        resolvedFamily = family;
       } catch (error) {
         if (error instanceof Error && error.message.startsWith('Blocked:')) {
           throw error;
         }
-        // DNS lookup failed - allow the request to proceed (it will fail on connect anyway)
+        // DNS lookup failed - reject to prevent unpinned connection (SSRF protection)
+        logger.warn(`[GameDataDownloader] DNS lookup failed for ${hostname}, rejecting request`);
+        throw new Error(`DNS lookup failed for ${hostname}`);
       }
     }
 
     const protocol = parsedUrl.protocol === 'https:' ? https : http;
+
+    // Pin the validated DNS resolution to prevent DNS rebinding between check and connect
+    const requestOptions: Record<string, unknown> = { timeout: this.DOWNLOAD_TIMEOUT_MS };
+    if (resolvedAddress) {
+      requestOptions.lookup = (
+        _hostname: string,
+        _options: unknown,
+        callback: (err: Error | null, address: string, family: number) => void
+      ) => {
+        callback(null, resolvedAddress!, resolvedFamily!);
+      };
+    }
 
     // Synchronous Promise executor — redirect is signalled via resolve value
     // instead of recursing inside the executor
@@ -336,7 +354,7 @@ export class GameDataDownloader {
 
       let writeStream: ReturnType<typeof createWriteStream> | null = null;
 
-      const request = protocol.get(url, { timeout: this.DOWNLOAD_TIMEOUT_MS }, (response) => {
+      const request = protocol.get(url, requestOptions, (response) => {
         // Handle redirects — signal back instead of recursing inside Promise
         if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400) {
           const redirectUrl = response.headers.location;

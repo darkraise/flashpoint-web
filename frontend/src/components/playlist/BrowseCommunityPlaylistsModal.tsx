@@ -154,7 +154,7 @@ export function BrowseCommunityPlaylistsModal({
             <div className="flex-1 relative">
               <Search
                 size={18}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10"
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10"
               />
               <Input
                 type="text"
@@ -171,8 +171,8 @@ export function BrowseCommunityPlaylistsModal({
             {/* Loading State */}
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mb-4"></div>
-                <p className="text-gray-400">Loading community playlists...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                <p className="text-muted-foreground">Loading community playlists...</p>
               </div>
             ) : null}
 
@@ -188,7 +188,7 @@ export function BrowseCommunityPlaylistsModal({
 
             {/* Empty State */}
             {!isLoading && !error && filteredPlaylists.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-muted-foreground">
                 {searchQuery || selectedCategory !== 'all'
                   ? 'No playlists match your search'
                   : 'No community playlists available'}
@@ -200,16 +200,16 @@ export function BrowseCommunityPlaylistsModal({
               ? filteredPlaylists.map((playlist, index) => (
                   <div
                     key={`${playlist.downloadUrl}-${index}`}
-                    className="bg-gray-700 rounded-lg p-4 hover:bg-gray-650 transition-colors"
+                    className="bg-muted rounded-lg p-4 hover:bg-muted/80 transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-lg mb-1">{playlist.name}</h3>
-                        <p className="text-sm text-gray-400 mb-2">
+                        <p className="text-sm text-muted-foreground mb-2">
                           by {playlist.author} • {playlist.category}
                         </p>
                         {playlist.description ? (
-                          <p className="text-sm text-gray-300 line-clamp-2">
+                          <p className="text-sm text-foreground/80 line-clamp-2">
                             {playlist.description}
                           </p>
                         ) : null}
@@ -234,8 +234,8 @@ export function BrowseCommunityPlaylistsModal({
 
           {/* Footer Info */}
           {!isLoading && !error && filteredPlaylists.length > 0 ? (
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <p className="text-sm text-gray-400 text-center">
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground text-center">
                 Showing {filteredPlaylists.length} playlist
                 {filteredPlaylists.length !== 1 ? 's' : ''}
                 {selectedCategory !== 'all' && ` in ${selectedCategory}`}

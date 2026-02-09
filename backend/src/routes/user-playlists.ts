@@ -25,14 +25,14 @@ router.use(requireFeature('enablePlaylists'));
 // Validation schemas
 const createPlaylistSchema = z.object({
   title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  icon: z.string().optional(),
+  description: z.string().max(2000).optional(),
+  icon: z.string().max(100).optional(),
 });
 
 const updatePlaylistSchema = z.object({
   title: z.string().min(1).max(255).optional(),
-  description: z.string().optional(),
-  icon: z.string().optional(),
+  description: z.string().max(2000).optional(),
+  icon: z.string().max(100).optional(),
 });
 
 const addGamesSchema = z.object({

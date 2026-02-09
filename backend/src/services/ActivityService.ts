@@ -41,18 +41,30 @@ export class ActivityService {
     }
 
     if (filters?.username) {
-      conditions.push('username LIKE ?');
-      params.push(`%${filters.username}%`);
+      conditions.push("username LIKE ? ESCAPE '\\'");
+      const escaped = filters.username
+        .replace(/\\/g, '\\\\')
+        .replace(/%/g, '\\%')
+        .replace(/_/g, '\\_');
+      params.push(`%${escaped}%`);
     }
 
     if (filters?.action) {
-      conditions.push('action LIKE ?');
-      params.push(`${filters.action}%`);
+      conditions.push("action LIKE ? ESCAPE '\\'");
+      const escaped = filters.action
+        .replace(/\\/g, '\\\\')
+        .replace(/%/g, '\\%')
+        .replace(/_/g, '\\_');
+      params.push(`${escaped}%`);
     }
 
     if (filters?.resource) {
-      conditions.push('resource LIKE ?');
-      params.push(`${filters.resource}%`);
+      conditions.push("resource LIKE ? ESCAPE '\\'");
+      const escaped = filters.resource
+        .replace(/\\/g, '\\\\')
+        .replace(/%/g, '\\%')
+        .replace(/_/g, '\\_');
+      params.push(`${escaped}%`);
     }
 
     if (filters?.startDate) {
@@ -81,14 +93,14 @@ export class ActivityService {
        (user_id, username, action, resource, resource_id, details, ip_address, user_agent)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        data.userId || null,
-        data.username || null,
+        data.userId ?? null,
+        data.username ?? null,
         data.action,
-        data.resource || null,
-        data.resourceId || null,
+        data.resource ?? null,
+        data.resourceId ?? null,
         detailsJson,
-        data.ipAddress || null,
-        data.userAgent || null,
+        data.ipAddress ?? null,
+        data.userAgent ?? null,
       ]
     );
   }
@@ -113,7 +125,7 @@ export class ActivityService {
       ipAddress: 'ip_address',
     };
     const dbColumn = columnMap[sortBy] || 'created_at';
-    const order = sortOrder.toUpperCase();
+    const order = sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
     const { sql: whereClause, params: whereParams } = this.buildWhereClause(filters);
 
@@ -129,7 +141,7 @@ export class ActivityService {
     const logs = UserDatabaseService.all<ActivityLog>(sql, [...whereParams, limit, offset]).map(
       (log) => ({
         ...log,
-        details: log.details ? JSON.parse(log.details as string) : null,
+        details: log.details ? JSON.parse(log.details as unknown as string) : null,
       })
     );
 

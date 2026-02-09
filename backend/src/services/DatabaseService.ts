@@ -270,7 +270,7 @@ export class DatabaseService {
           }
 
           this.reloadTimeout = setTimeout(() => {
-            this.syncAndReload();
+            this.syncAndReload().catch((err) => logger.error('syncAndReload failed:', err));
           }, 500);
         }
       });

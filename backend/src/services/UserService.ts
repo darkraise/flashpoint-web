@@ -1,5 +1,6 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { PermissionCache } from './PermissionCache';
+import { AuthService } from './AuthService';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { AppError } from '../middleware/errorHandler';
 import { User, CreateUserData, UpdateUserData } from '../types/auth';
@@ -103,14 +104,6 @@ export class UserService {
     const params: unknown[] = [];
 
     if (data.email !== undefined) {
-      // Check if email is taken by another user
-      const existing = UserDatabaseService.get('SELECT id FROM users WHERE email = ? AND id != ?', [
-        data.email,
-        id,
-      ]);
-      if (existing) {
-        throw new AppError(409, 'Email already exists');
-      }
       updates.push('email = ?');
       params.push(data.email);
     }
@@ -123,6 +116,13 @@ export class UserService {
     if (data.isActive !== undefined) {
       updates.push('is_active = ?');
       params.push(data.isActive ? 1 : 0);
+
+      // Revoke all refresh tokens when deactivating a user
+      if (!data.isActive) {
+        const authService = new AuthService();
+        await authService.revokeAllUserTokens(id);
+        logger.info(`[UserService] All refresh tokens revoked after deactivating user ${id}`);
+      }
     }
 
     if (updates.length === 0) {
@@ -133,7 +133,19 @@ export class UserService {
     params.push(new Date().toISOString());
     params.push(id);
 
-    UserDatabaseService.run(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+    // Wrap in transaction to prevent TOCTOU race on email uniqueness
+    const db = UserDatabaseService.getDatabase();
+    db.transaction(() => {
+      if (data.email !== undefined) {
+        const existing = db
+          .prepare('SELECT id FROM users WHERE email = ? AND id != ?')
+          .get(data.email, id);
+        if (existing) {
+          throw new AppError(409, 'Email already exists');
+        }
+      }
+      db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    })();
 
     // Invalidate permission cache if role changed
     if (data.roleId !== undefined) {
@@ -214,6 +226,11 @@ export class UserService {
       new Date().toISOString(),
       id,
     ]);
+
+    // Revoke all refresh tokens to invalidate existing sessions
+    const authService = new AuthService();
+    await authService.revokeAllUserTokens(id);
+    logger.info(`[UserService] All refresh tokens revoked after password change for user ${id}`);
   }
 
   /**
@@ -238,7 +255,7 @@ export class UserService {
     );
 
     return results.reduce(
-      (acc: Record<string, string>, row: any) => {
+      (acc: Record<string, string>, row: { setting_key: string; setting_value: string }) => {
         acc[row.setting_key] = row.setting_value;
         return acc;
       },

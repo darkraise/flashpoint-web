@@ -247,7 +247,7 @@ export class DownloadManager {
     const response = await axios.get(url, {
       responseType: 'stream',
       timeout: this.DOWNLOAD_TIMEOUT_MS,
-      signal: abortSignal as any,
+      signal: abortSignal,
       headers: {
         'User-Agent': 'Flashpoint-WebApp/1.0',
       },

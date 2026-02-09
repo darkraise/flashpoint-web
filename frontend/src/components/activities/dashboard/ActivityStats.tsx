@@ -94,7 +94,7 @@ export function ActivityStats({ stats, timeRange = '24h' }: ActivityStatsProps) 
   const getTrendColor = (trend: number) => {
     if (trend > 0) return 'text-green-400';
     if (trend < 0) return 'text-red-400';
-    return 'text-gray-400';
+    return 'text-muted-foreground';
   };
 
   return (

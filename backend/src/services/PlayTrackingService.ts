@@ -89,7 +89,7 @@ export class PlayTrackingService {
       }
 
       // Verify session ownership if userId provided
-      if (userId && session.user_id !== userId) {
+      if (userId !== undefined && session.user_id !== userId) {
         throw new AppError(403, "Cannot end another user's play session");
       }
 

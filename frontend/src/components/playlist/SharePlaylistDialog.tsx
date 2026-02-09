@@ -51,7 +51,7 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
   const [expiresAt, setExpiresAt] = useState<Date | undefined>(
     playlist.shareExpiresAt ? new Date(playlist.shareExpiresAt) : undefined
   );
-  const [showOwner, setShowOwner] = useState(playlist.showOwner || false);
+  const [showOwner, setShowOwner] = useState(playlist.showOwner ?? false);
   const [isLoadingShareData, setIsLoadingShareData] = useState(false);
   // Sentinel value for "use current browser URL" option (Radix Select doesn't support empty string values)
   const CURRENT_URL_VALUE = '__current__';
@@ -92,7 +92,7 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
       setShareData({
         shareToken: playlist.shareToken,
         expiresAt: playlist.shareExpiresAt || null,
-        showOwner: playlist.showOwner || false,
+        showOwner: playlist.showOwner ?? false,
       });
     }
   }, [isOpen, playlist]);
@@ -102,7 +102,7 @@ export function SharePlaylistDialog({ isOpen, onClose, playlist }: SharePlaylist
     if (!isOpen) {
       setIsSharing(playlist.isPublic);
       setExpiresAt(playlist.shareExpiresAt ? new Date(playlist.shareExpiresAt) : undefined);
-      setShowOwner(playlist.showOwner || false);
+      setShowOwner(playlist.showOwner ?? false);
       setShareData(null);
       setHasManuallySelected(false);
     }

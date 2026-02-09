@@ -110,7 +110,7 @@ export function PlaytimeChart() {
             <Legend
               wrapperStyle={{ paddingTop: '20px' }}
               iconType="circle"
-              formatter={(value: string) => <span className="text-gray-300">{value}</span>}
+              formatter={(value: string) => <span className="text-muted-foreground">{value}</span>}
             />
             <Area
               type="monotone"

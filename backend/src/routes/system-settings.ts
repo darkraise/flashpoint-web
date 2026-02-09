@@ -283,6 +283,11 @@ router.get(
   requirePermission('settings.read'),
   asyncHandler(async (req: Request, res: Response) => {
     const { category, key } = req.params;
+    if (!VALID_CATEGORIES.includes(category)) {
+      return res.status(400).json({
+        error: { message: `Invalid category: ${category}` },
+      });
+    }
     const fullKey = `${category}.${key}`;
     const value = systemSettings.get(fullKey);
 
@@ -310,6 +315,11 @@ router.patch(
   logActivity('settings.update', 'system_settings'),
   asyncHandler(async (req: Request, res: Response) => {
     const { category, key } = req.params;
+    if (!VALID_CATEGORIES.includes(category)) {
+      return res.status(400).json({
+        error: { message: `Invalid category: ${category}` },
+      });
+    }
     const fullKey = `${category}.${key}`;
     const validation = updateSettingSchema.safeParse(req.body);
 

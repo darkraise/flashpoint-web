@@ -15,14 +15,15 @@ const activityService = new ActivityService();
 export const logActivity = (
   action: string,
   resource?: string,
-  detailsExtractor?: (req: Request, res: Response) => Record<string, any>
+  detailsExtractor?: (req: Request, res: Response) => Record<string, unknown>
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     // Store original end function
     const originalEnd = res.end;
 
     // Override end function to log activity after response
-    res.end = function (this: Response, ...args: any[]): Response {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    res.end = function (this: Response, ...args: unknown[]): Response {
       // Log activity (non-blocking)
       setImmediate(async () => {
         try {
@@ -48,7 +49,7 @@ export const logActivity = (
       });
 
       // Call original end function
-      return originalEnd.apply(this, args as any);
+      return originalEnd.apply(this, args as Parameters<typeof originalEnd>);
     };
 
     next();

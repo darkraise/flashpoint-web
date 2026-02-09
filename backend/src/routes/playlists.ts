@@ -29,7 +29,7 @@ const createPlaylistSchema = z.object({
 });
 
 const addGamesToPlaylistSchema = z.object({
-  gameIds: z.array(z.string()).min(1),
+  gameIds: z.array(z.string()).min(1).max(100),
 });
 
 // GET /api/playlists - List all playlists

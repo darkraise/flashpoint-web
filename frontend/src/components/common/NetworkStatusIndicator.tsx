@@ -21,7 +21,8 @@ export function NetworkStatusIndicator() {
     // Check if online/offline
     const handleOnline = () => {
       setStatus('online');
-      setTimeout(() => setShowBanner(false), 3000); // Hide after 3s when back online
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setShowBanner(false), 3000); // Hide after 3s when back online
     };
 
     const handleOffline = () => {
@@ -62,7 +63,8 @@ export function NetworkStatusIndicator() {
           } else {
             setStatus((prevStatus) => {
               if (prevStatus === 'slow') {
-                setTimeout(() => setShowBanner(false), 3000);
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+                timeoutRef.current = setTimeout(() => setShowBanner(false), 3000);
                 return 'online';
               }
               return prevStatus;

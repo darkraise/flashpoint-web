@@ -43,7 +43,7 @@ export function RegisterForm() {
 
   // Fetch public settings first to check maintenance mode
   const { data: publicSettings, isSuccess: isPublicSettingsLoaded } = useQuery({
-    queryKey: ['publicSettings'],
+    queryKey: ['system-settings', 'public'],
     queryFn: () => systemSettingsApi.getPublic(),
   });
 

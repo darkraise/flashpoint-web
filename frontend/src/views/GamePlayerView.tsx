@@ -55,11 +55,11 @@ export function GamePlayerView() {
   // Memoize player props to prevent unnecessary re-renders
   const playerProps = useMemo(
     () => ({
-      title: game?.title || '',
-      platform: launchData?.platform || '',
+      title: game?.title ?? '',
+      platform: launchData?.platform ?? '',
       contentUrl: launchData?.contentUrl,
       launchCommand: launchData?.launchCommand,
-      canPlayInBrowser: launchData?.canPlayInBrowser || false,
+      canPlayInBrowser: launchData?.canPlayInBrowser ?? false,
     }),
     [
       game?.title,
@@ -198,7 +198,7 @@ export function GamePlayerView() {
                 <div className="text-center max-w-sm">
                   <Download size={48} className="text-blue-500 mx-auto mb-4 animate-bounce" />
                   <h3 className="text-xl font-bold mb-2 text-white">Downloading Game Data...</h3>
-                  <p className="text-gray-400 text-sm mb-4">
+                  <p className="text-muted-foreground text-sm mb-4">
                     The game files are being downloaded. This page will update automatically when
                     ready.
                   </p>

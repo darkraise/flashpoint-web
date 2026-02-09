@@ -22,7 +22,12 @@ const errorReportSchema = z.object({
   url: z.string().max(2000),
   timestamp: z.string().optional(),
   userAgent: z.string().optional(),
-  context: z.record(z.string(), z.unknown()).optional(),
+  context: z
+    .record(z.string().max(100), z.unknown())
+    .refine((obj) => Object.keys(obj).length <= 20, {
+      message: 'Context object may have at most 20 keys',
+    })
+    .optional(),
 });
 
 const router = Router();
@@ -158,6 +163,8 @@ async function getRecentErrors(limit: number = 100): Promise<ErrorReport[]> {
         });
 
         stream.on('error', (err: NodeJS.ErrnoException) => {
+          rl.close();
+          stream.destroy();
           if (err.code === 'ENOENT') {
             resolve([]);
           } else {

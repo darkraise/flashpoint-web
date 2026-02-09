@@ -88,21 +88,24 @@ router.get(
 
 // Serve files from mounted ZIPs: GET /game-zip/*
 // Handles proxy-style URLs like /game-zip/http://domain.com/path
-router.get('/*', async (req: Request, res: Response) => {
-  try {
-    // Delegate to gameZipServer's file handler
-    await gameZipServer.handleFileRequest(
-      req as unknown as IncomingMessage,
-      res as unknown as ServerResponse
-    );
-  } catch (error) {
-    logger.error('[GameZip] File request error:', error);
-    if (!res.headersSent) {
-      res.status(500).send('Internal Server Error');
-    } else if (!res.writableEnded) {
-      res.end();
+router.get(
+  '/*',
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      // Delegate to gameZipServer's file handler
+      await gameZipServer.handleFileRequest(
+        req as unknown as IncomingMessage,
+        res as unknown as ServerResponse
+      );
+    } catch (error) {
+      logger.error('[GameZip] File request error:', error);
+      if (!res.headersSent) {
+        res.status(500).send('Internal Server Error');
+      } else if (!res.writableEnded) {
+        res.end();
+      }
     }
-  }
-});
+  })
+);
 
 export default router;

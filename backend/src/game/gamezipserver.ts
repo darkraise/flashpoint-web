@@ -187,7 +187,9 @@ export class GameZipServer {
         }
       } catch (realPathError) {
         logger.warn(`[GameZipServer] Failed to resolve real path for ${zipPath}:`, realPathError);
-        // Continue - the file was already successfully opened by zipManager
+        // Fail-closed: unmount if we cannot verify the real path
+        await zipManager.unmount(id);
+        return { success: false, statusCode: 403 };
       }
 
       return { success: true, statusCode: 200 };

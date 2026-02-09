@@ -15,7 +15,7 @@ const badgeVariants = cva(
           'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
         outline: 'text-foreground',
         platform: '',
-        tag: 'bg-gray-700 text-gray-300',
+        tag: 'bg-muted text-muted-foreground',
       },
     },
     defaultVariants: {
@@ -42,7 +42,7 @@ function getPlatformColor(platformName: string): string {
   } else if (platform.includes('activex')) {
     return 'bg-red-900/50 text-red-300 border border-red-700';
   } else {
-    return 'bg-gray-900/50 text-gray-300 border border-gray-700';
+    return 'bg-muted/50 text-muted-foreground border border-border';
   }
 }
 

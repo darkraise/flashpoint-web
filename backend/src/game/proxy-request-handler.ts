@@ -73,18 +73,18 @@ export class ProxyRequestHandler {
         // Proxy-style request: GET http://example.com/path HTTP/1.1
         targetUrl = new URL(normalizedUrl);
         hostname = targetUrl.hostname;
-        urlPath = targetUrl.pathname + targetUrl.search;
+        urlPath = sanitizeUrlPath(targetUrl.pathname + targetUrl.search);
       } else if (normalizedUrl.startsWith('/http://') || normalizedUrl.startsWith('/https://')) {
         // Path-based proxy request: GET /http://example.com/path HTTP/1.1
         // Strip leading slash and parse as URL
         const urlWithoutSlash = normalizedUrl.substring(1);
         targetUrl = new URL(urlWithoutSlash);
         hostname = targetUrl.hostname;
-        urlPath = targetUrl.pathname + targetUrl.search;
+        urlPath = sanitizeUrlPath(targetUrl.pathname + targetUrl.search);
       } else {
         // Regular request: GET /path HTTP/1.1 with Host header
         hostname = req.headers.host || 'localhost';
-        urlPath = req.url;
+        urlPath = sanitizeUrlPath(req.url);
         targetUrl = new URL(`http://${hostname}${urlPath}`);
       }
 
@@ -349,6 +349,7 @@ export class ProxyRequestHandler {
         req.removeListener('data', onData);
         req.removeListener('end', onEnd);
         req.removeListener('error', onError);
+        req.removeListener('close', onClose);
       };
 
       const settle = <T>(fn: () => T): T | undefined => {
@@ -380,9 +381,13 @@ export class ProxyRequestHandler {
 
       const onError = (error: Error) => settle(() => reject(error));
 
+      const onClose = () =>
+        settle(() => reject(new Error('Client disconnected during body collection')));
+
       req.on('data', onData);
       req.on('end', onEnd);
       req.on('error', onError);
+      req.on('close', onClose);
     });
   }
 }

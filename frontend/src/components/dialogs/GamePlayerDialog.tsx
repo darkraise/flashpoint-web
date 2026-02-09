@@ -35,10 +35,10 @@ export function GamePlayerDialog({
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="max-w-7xl h-[90vh] p-0 gap-0">
         {/* Dialog Header */}
-        <div className="flex items-center justify-between bg-gray-800 px-6 py-4 border-b border-gray-700 rounded-t-lg">
+        <div className="flex items-center justify-between bg-muted px-6 py-4 border-b border-border rounded-t-lg">
           <div>
             <h2 className="text-xl font-bold">{title}</h2>
-            <p className="text-sm text-gray-400">Platform: {platform}</p>
+            <p className="text-sm text-muted-foreground">Platform: {platform}</p>
           </div>
         </div>
 

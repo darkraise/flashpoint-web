@@ -181,13 +181,15 @@ export function GameListItem({
         </div>
       </CardContent>
 
-      {/* Add to Playlist Modal */}
-      <AddToPlaylistModal
-        isOpen={isPlaylistModalOpen}
-        onClose={() => setIsPlaylistModalOpen(false)}
-        gameId={game.id}
-        gameTitle={game.title}
-      />
+      {/* Add to Playlist Modal — conditionally rendered to avoid hundreds of hidden instances */}
+      {isPlaylistModalOpen && (
+        <AddToPlaylistModal
+          isOpen={isPlaylistModalOpen}
+          onClose={() => setIsPlaylistModalOpen(false)}
+          gameId={game.id}
+          gameTitle={game.title}
+        />
+      )}
     </Card>
   );
 }

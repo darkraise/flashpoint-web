@@ -176,31 +176,6 @@ router.post(
 );
 
 /**
- * DELETE /api/favorites/:gameId
- * Remove a game from favorites
- */
-router.delete(
-  '/:gameId',
-  authenticate,
-  requirePermission('playlists.delete'),
-  logActivity('favorites.remove', 'user_favorites'),
-  asyncHandler(async (req, res) => {
-    if (!req.user) {
-      throw new AppError(401, 'Authentication required');
-    }
-
-    const { gameId } = req.params;
-    const success = favoritesService.removeFavorite(req.user.id, gameId);
-
-    if (!success) {
-      throw new AppError(404, 'Favorite not found');
-    }
-
-    res.status(204).send();
-  })
-);
-
-/**
  * POST /api/favorites/batch
  * Batch add favorites
  */
@@ -224,6 +199,7 @@ router.post(
 /**
  * DELETE /api/favorites/batch
  * Batch remove favorites
+ * NOTE: Static route must be registered before parameterized /:gameId route
  */
 router.delete(
   '/batch',
@@ -239,6 +215,31 @@ router.delete(
     const result = favoritesService.removeFavoritesBatch(req.user.id, gameIds);
 
     res.json(result);
+  })
+);
+
+/**
+ * DELETE /api/favorites/:gameId
+ * Remove a game from favorites
+ */
+router.delete(
+  '/:gameId',
+  authenticate,
+  requirePermission('playlists.delete'),
+  logActivity('favorites.remove', 'user_favorites'),
+  asyncHandler(async (req, res) => {
+    if (!req.user) {
+      throw new AppError(401, 'Authentication required');
+    }
+
+    const { gameId } = req.params;
+    const success = favoritesService.removeFavorite(req.user.id, gameId);
+
+    if (!success) {
+      throw new AppError(404, 'Favorite not found');
+    }
+
+    res.status(204).send();
   })
 );
 

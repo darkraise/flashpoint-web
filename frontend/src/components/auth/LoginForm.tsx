@@ -41,11 +41,11 @@ export function LoginForm() {
   const { login, loginAsGuest } = useAuth();
 
   const from = (location.state as LocationState)?.from?.pathname || '/';
-  const setupComplete = (location.state as LocationState)?.setupComplete || false;
+  const setupComplete = (location.state as LocationState)?.setupComplete ?? false;
 
   // Fetch public settings first to check maintenance mode
   const { data: publicSettings, isSuccess: isPublicSettingsLoaded } = useQuery({
-    queryKey: ['publicSettings'],
+    queryKey: ['system-settings', 'public'],
     queryFn: () => systemSettingsApi.getPublic(),
   });
 

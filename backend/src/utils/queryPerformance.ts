@@ -12,7 +12,7 @@ const SLOW_QUERY_THRESHOLD_MS = 100;
 
 interface QueryMetrics {
   sql: string;
-  params?: any[];
+  params?: unknown[];
   executionTime: number;
   timestamp: string;
 }
@@ -21,7 +21,7 @@ interface QueryMetrics {
  * Sanitize query parameters for logging
  * Redacts sensitive values like passwords and tokens
  */
-function sanitizeParams(params: any[] = []): any[] {
+function sanitizeParams(params: unknown[] = []): unknown[] {
   return params.map((param) => {
     if (typeof param === 'string') {
       // Redact if it looks like a password or token
@@ -70,7 +70,11 @@ function logSlowQuery(metrics: QueryMetrics): void {
  * @param params - Query parameters
  * @returns The result of the query function
  */
-export function measureQueryPerformance<T>(queryFn: () => T, sql: string, params: any[] = []): T {
+export function measureQueryPerformance<T>(
+  queryFn: () => T,
+  sql: string,
+  params: unknown[] = []
+): T {
   const start = performance.now();
 
   try {
@@ -116,7 +120,7 @@ export function getSlowQueryThreshold(): number {
 export async function measureQueryPerformanceAsync<T>(
   queryFn: () => Promise<T>,
   sql: string,
-  params: any[] = []
+  params: unknown[] = []
 ): Promise<T> {
   const start = performance.now();
 

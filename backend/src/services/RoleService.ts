@@ -131,21 +131,22 @@ export class RoleService {
     priority: number = 0,
     permissionIds: number[] = []
   ): Promise<Role> {
-    // Check if role name exists
-    const existing = UserDatabaseService.get('SELECT id FROM roles WHERE name = ?', [name]);
-    if (existing) {
-      throw new AppError(409, 'Role name already exists');
-    }
+    // Wrap in transaction to prevent TOCTOU race on name uniqueness
+    const db = UserDatabaseService.getDatabase();
+    const roleId = db.transaction(() => {
+      const existing = db.prepare('SELECT id FROM roles WHERE name = ?').get(name);
+      if (existing) {
+        throw new AppError(409, 'Role name already exists');
+      }
 
-    // Create role
-    const result = UserDatabaseService.run(
-      'INSERT INTO roles (name, description, priority) VALUES (?, ?, ?)',
-      [name, description, priority]
-    );
+      const result = db
+        .prepare('INSERT INTO roles (name, description, priority) VALUES (?, ?, ?)')
+        .run(name, description, priority);
 
-    const roleId = result.lastInsertRowid as number;
+      return result.lastInsertRowid as number;
+    })();
 
-    // Assign permissions
+    // Assign permissions (outside transaction since it uses its own)
     if (permissionIds.length > 0) {
       await this.updateRolePermissions(roleId, permissionIds);
     }
@@ -176,13 +177,6 @@ export class RoleService {
     const params: unknown[] = [];
 
     if (name !== undefined) {
-      const existing = UserDatabaseService.get('SELECT id FROM roles WHERE name = ? AND id != ?', [
-        name,
-        id,
-      ]);
-      if (existing) {
-        throw new AppError(409, 'Role name already exists');
-      }
       updates.push('name = ?');
       params.push(name);
     }
@@ -205,7 +199,19 @@ export class RoleService {
     params.push(new Date().toISOString());
     params.push(id);
 
-    UserDatabaseService.run(`UPDATE roles SET ${updates.join(', ')} WHERE id = ?`, params);
+    // Wrap in transaction to prevent TOCTOU race on name uniqueness
+    const db = UserDatabaseService.getDatabase();
+    db.transaction(() => {
+      if (name !== undefined) {
+        const existing = db
+          .prepare('SELECT id FROM roles WHERE name = ? AND id != ?')
+          .get(name, id);
+        if (existing) {
+          throw new AppError(409, 'Role name already exists');
+        }
+      }
+      db.prepare(`UPDATE roles SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    })();
 
     return (await this.getRoleById(id))!;
   }

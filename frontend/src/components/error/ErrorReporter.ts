@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth';
+import { logger } from '@/lib/logger';
 
 // Create a separate axios instance for error reporting without interceptors
 // This prevents infinite loops when error reporting itself fails
@@ -31,7 +32,7 @@ export interface ErrorReport {
   timestamp: string;
   userAgent: string;
   userId?: number;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 interface QueuedError extends ErrorReport {
@@ -61,7 +62,7 @@ export async function reportError(
     if (!navigator.onLine) {
       queueErrorReport(report);
       if (isDev) {
-        console.log('[ErrorReporter] Offline - queued error for later:', report);
+        logger.debug('[ErrorReporter] Offline - queued error for later:', report);
       }
       return false;
     }
@@ -70,14 +71,14 @@ export async function reportError(
     await errorReportingApi.post('/errors/report', report);
 
     if (isDev) {
-      console.log('[ErrorReporter] Error reported successfully:', report);
+      logger.debug('[ErrorReporter] Error reported successfully:', report);
     }
 
     toast.success('Error reported successfully');
     return true;
   } catch (error) {
     if (isDev) {
-      console.error('[ErrorReporter] Failed to report error:', error);
+      logger.error('[ErrorReporter] Failed to report error:', error);
     }
 
     // Queue for later if sending failed
@@ -110,7 +111,7 @@ export function queueErrorReport(report: ErrorReport): void {
     localStorage.setItem(ERROR_QUEUE_KEY, JSON.stringify(queue));
   } catch (error) {
     if (import.meta.env.DEV) {
-      console.error('[ErrorReporter] Failed to queue error:', error);
+      logger.error('[ErrorReporter] Failed to queue error:', error);
     }
   }
 }
@@ -128,7 +129,7 @@ function getErrorQueue(): QueuedError[] {
     return Array.isArray(queue) ? queue : [];
   } catch (error) {
     if (import.meta.env.DEV) {
-      console.error('[ErrorReporter] Failed to read error queue:', error);
+      logger.error('[ErrorReporter] Failed to read error queue:', error);
     }
     return [];
   }
@@ -147,7 +148,7 @@ export async function sendQueuedErrors(): Promise<void> {
   const isDev = import.meta.env.DEV;
 
   if (isDev) {
-    console.log(`[ErrorReporter] Sending ${queue.length} queued errors...`);
+    logger.debug(`[ErrorReporter] Sending ${queue.length} queued errors...`);
   }
 
   const successfullyReported: number[] = [];
@@ -160,20 +161,20 @@ export async function sendQueuedErrors(): Promise<void> {
       successfullyReported.push(i);
 
       if (isDev) {
-        console.log('[ErrorReporter] Queued error sent successfully:', queuedError);
+        logger.debug('[ErrorReporter] Queued error sent successfully:', queuedError);
       }
     } catch (error) {
       queuedError.retryCount++;
 
       if (isDev) {
-        console.error('[ErrorReporter] Failed to send queued error:', error);
+        logger.error('[ErrorReporter] Failed to send queued error:', error);
       }
 
       // Give up after 3 retries
       if (queuedError.retryCount >= 3) {
         successfullyReported.push(i);
         if (isDev) {
-          console.warn('[ErrorReporter] Giving up on error after 3 retries:', queuedError);
+          logger.warn('[ErrorReporter] Giving up on error after 3 retries:', queuedError);
         }
       }
     }
@@ -185,7 +186,7 @@ export async function sendQueuedErrors(): Promise<void> {
     localStorage.setItem(ERROR_QUEUE_KEY, JSON.stringify(remainingQueue));
 
     if (isDev) {
-      console.log(`[ErrorReporter] ${successfullyReported.length} queued errors processed`);
+      logger.debug(`[ErrorReporter] ${successfullyReported.length} queued errors processed`);
     }
   }
 }
@@ -198,13 +199,13 @@ export function initErrorReporter(): void {
   const isDev = import.meta.env.DEV;
 
   if (isDev) {
-    console.log('[ErrorReporter] Initialized');
+    logger.debug('[ErrorReporter] Initialized');
   }
 
   // Send queued errors when connection is restored
   window.addEventListener('online', () => {
     if (isDev) {
-      console.log('[ErrorReporter] Connection restored, sending queued errors...');
+      logger.debug('[ErrorReporter] Connection restored, sending queued errors...');
     }
     sendQueuedErrors();
   });

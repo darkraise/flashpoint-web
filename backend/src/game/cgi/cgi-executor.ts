@@ -66,7 +66,6 @@ const ALLOWED_CGI_HEADERS = new Set([
   'accept-language',
   'accept-encoding',
   'accept-charset',
-  'cookie',
   'referer',
   'origin',
   'if-modified-since',
@@ -332,7 +331,9 @@ export class CgiExecutor {
     // Add content headers if body is present
     if (request.body && request.body.length > 0) {
       env.CONTENT_LENGTH = request.body.length.toString();
-      env.CONTENT_TYPE = headers['content-type'] || 'application/x-www-form-urlencoded';
+      // Sanitize content-type: strip null bytes, CR, LF (injection vectors)
+      const rawContentType = headers['content-type'] || 'application/x-www-form-urlencoded';
+      env.CONTENT_TYPE = rawContentType.replace(/[\x00\x0a\x0d]/g, '');
     }
 
     // Convert HTTP headers to CGI HTTP_* variables

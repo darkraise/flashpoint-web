@@ -98,7 +98,7 @@ export interface ActivityLog {
   action: string;
   resource?: string;
   resourceId?: string;
-  details?: any;
+  details?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
   createdAt: string;
@@ -110,7 +110,7 @@ export interface LogActivityData {
   action: string;
   resource?: string;
   resourceId?: string;
-  details?: any;
+  details?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
 }

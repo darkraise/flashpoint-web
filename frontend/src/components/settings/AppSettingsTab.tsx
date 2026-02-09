@@ -182,7 +182,7 @@ export function AppSettingsTab({ tabContentVariants }: AppSettingsTabProps) {
               </div>
               <Switch
                 id="maintenance-mode"
-                checked={appSettings.maintenanceMode || false}
+                checked={appSettings.maintenanceMode ?? false}
                 onCheckedChange={(checked: boolean) => {
                   updateSystemSettings.mutate({
                     category: 'app',

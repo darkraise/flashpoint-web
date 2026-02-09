@@ -58,10 +58,18 @@ export function GameBrowseLayout({
       languages: searchParams.get('languages') || undefined,
       library,
       tags: searchParams.get('tags') || undefined,
-      yearFrom: searchParams.get('yearFrom')
-        ? parseInt(searchParams.get('yearFrom')!, 10)
-        : undefined,
-      yearTo: searchParams.get('yearTo') ? parseInt(searchParams.get('yearTo')!, 10) : undefined,
+      yearFrom: (() => {
+        const raw = searchParams.get('yearFrom');
+        if (!raw) return undefined;
+        const parsed = parseInt(raw, 10);
+        return isNaN(parsed) ? undefined : parsed;
+      })(),
+      yearTo: (() => {
+        const raw = searchParams.get('yearTo');
+        if (!raw) return undefined;
+        const parsed = parseInt(raw, 10);
+        return isNaN(parsed) ? undefined : parsed;
+      })(),
       sortBy: searchParams.get('sortBy') || 'title',
       sortOrder: (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc',
       page: parseInt(searchParams.get('page') || '1', 10),

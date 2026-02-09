@@ -18,13 +18,14 @@ interface MountedZip {
   mountTime: Date;
   entryIndex: Set<string>; // Set of all entry names for O(1) lookup
   entryMeta: Map<string, EntryMeta>; // Cached entry metadata for directory/size checks
+  _manuallyClosed?: boolean; // Flag to prevent double-close from unmount + LRU dispose
 }
 
 export class ZipManager {
   // Use LRU cache to prevent memory leaks from unlimited ZIP mounts
   // Max 100 concurrent mounts, 30-minute TTL, auto-close on eviction
   private mountedZips: LRUCache<string, MountedZip>;
-  private mountingInProgress = new Set<string>();
+  private mountingInProgress = new Map<string, Promise<void>>();
   private pendingCloses: Set<Promise<void>> = new Set();
   private shuttingDown = false;
 
@@ -33,6 +34,9 @@ export class ZipManager {
       max: 100, // Maximum 100 ZIPs mounted simultaneously
       ttl: 30 * 60 * 1000, // 30-minute TTL
       dispose: async (value, key) => {
+        // Skip if already manually closed (prevents double-close from unmount + dispose)
+        if (value._manuallyClosed) return;
+
         // Automatically close ZIP when evicted from cache
         // Track the close operation to ensure cleanup completes
         const closePromise = (async () => {
@@ -73,13 +77,22 @@ export class ZipManager {
       return;
     }
 
-    // Check if currently mounting
-    if (this.mountingInProgress.has(id)) {
-      logger.debug(`[ZipManager] ZIP mount already in progress: ${id}`);
+    // Check if currently mounting — await the existing mount instead of returning early
+    const existingMount = this.mountingInProgress.get(id);
+    if (existingMount) {
+      logger.debug(`[ZipManager] ZIP mount already in progress, awaiting: ${id}`);
+      await existingMount;
       return;
     }
 
-    this.mountingInProgress.add(id);
+    // Create a deferred promise so concurrent callers can await this mount
+    let resolveMounting!: () => void;
+    let rejectMounting!: (err: Error) => void;
+    const mountPromise = new Promise<void>((resolve, reject) => {
+      resolveMounting = resolve;
+      rejectMounting = reject;
+    });
+    this.mountingInProgress.set(id, mountPromise);
 
     try {
       // Verify ZIP file exists
@@ -125,6 +138,10 @@ export class ZipManager {
         await zip.close().catch(() => {});
         throw innerError;
       }
+      resolveMounting();
+    } catch (error) {
+      rejectMounting(error instanceof Error ? error : new Error(String(error)));
+      throw error;
     } finally {
       this.mountingInProgress.delete(id);
     }
@@ -145,6 +162,8 @@ export class ZipManager {
 
     try {
       await mounted.zip.close();
+      // Mark as manually closed AFTER successful close so LRU dispose callback skips the double-close
+      mounted._manuallyClosed = true;
       this.mountedZips.delete(id);
       logger.info(`[ZipManager] ✓ Unmounted ZIP: ${id}`);
       return true;
@@ -321,11 +340,10 @@ export class ZipManager {
   async unmountAll(): Promise<void> {
     this.shuttingDown = true;
 
-    // Wait for in-progress mounts to complete (with timeout)
-    const maxWait = 10000; // 10 seconds
-    const start = Date.now();
-    while (this.mountingInProgress.size > 0 && Date.now() - start < maxWait) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for in-progress mounts to complete
+    if (this.mountingInProgress.size > 0) {
+      logger.info(`[ZipManager] Waiting for ${this.mountingInProgress.size} in-progress mounts...`);
+      await Promise.allSettled(Array.from(this.mountingInProgress.values()));
     }
 
     logger.info(`[ZipManager] Unmounting all ZIPs (${this.mountedZips.size})...`);

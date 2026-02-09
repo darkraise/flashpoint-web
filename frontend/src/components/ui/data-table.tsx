@@ -143,7 +143,9 @@ export function DataTable<TData, TValue>({
                                 (e.key === 'Enter' || e.key === ' ')
                               ) {
                                 e.preventDefault();
-                                header.column.getToggleSortingHandler()?.(e as any);
+                                header.column.getToggleSortingHandler()?.(
+                                  e as unknown as React.MouseEvent
+                                );
                               }
                             }}
                             aria-sort={

@@ -241,15 +241,23 @@ export function LazyBackgroundImage({
   useEffect(() => {
     if (!isInView) return;
 
+    let cancelled = false;
     const img = new Image();
     img.onload = () => {
-      setBgImage(src);
-      onLoadRef.current?.();
+      if (!cancelled) {
+        setBgImage(src);
+        onLoadRef.current?.();
+      }
     };
     img.onerror = () => {
-      onErrorRef.current?.();
+      if (!cancelled) {
+        onErrorRef.current?.();
+      }
     };
     img.src = src;
+    return () => {
+      cancelled = true;
+    };
   }, [isInView, src]);
 
   return (

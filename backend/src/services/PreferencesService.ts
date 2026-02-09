@@ -21,7 +21,7 @@ export interface FlashpointPreferences {
   onDemandBaseUrl?: string;
   onDemandImagesCompressed?: boolean;
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -91,7 +91,7 @@ export class PreferencesService {
   /**
    * Validate that preferences contain required fields.
    */
-  private static validatePreferences(prefs: any): void {
+  private static validatePreferences(prefs: Record<string, unknown>): void {
     if (!prefs || typeof prefs !== 'object') {
       throw new Error('Preferences must be an object');
     }
