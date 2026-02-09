@@ -8,6 +8,7 @@ import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../
 import { logger } from '../utils/logger';
 
 export class UserService {
+  private authService = new AuthService();
   async getUsers(page: number = 1, limit: number = 50): Promise<PaginatedResponse<User>> {
     const offset = calculateOffset(page, limit);
 
@@ -26,12 +27,13 @@ export class UserService {
 
     const total = users.length > 0 ? users[0].total_count : 0;
 
-    // Remove total_count from result objects
-    users.forEach((user) => {
-      delete (user as unknown as Record<string, unknown>).total_count;
-    });
+    // Remove total_count from result objects and coerce isActive to boolean
+    const cleaned = users.map(({ total_count, ...rest }) => ({
+      ...rest,
+      isActive: Boolean(rest.isActive),
+    })) as User[];
 
-    return createPaginatedResponse(users as User[], total, page, limit);
+    return createPaginatedResponse(cleaned, total, page, limit);
   }
 
   async getUserById(id: number): Promise<User | null> {
@@ -45,7 +47,7 @@ export class UserService {
       [id]
     );
 
-    return user || null;
+    return user ? { ...user, isActive: Boolean(user.isActive) } : null;
   }
 
   async createUser(data: CreateUserData): Promise<User> {
@@ -106,8 +108,7 @@ export class UserService {
 
       // Revoke all refresh tokens when deactivating a user
       if (!data.isActive) {
-        const authService = new AuthService();
-        await authService.revokeAllUserTokens(id);
+        await this.authService.revokeAllUserTokens(id);
         logger.info(`[UserService] All refresh tokens revoked after deactivating user ${id}`);
       }
     }
@@ -153,7 +154,7 @@ export class UserService {
     if (user.roleName === 'admin') {
       const adminCount =
         UserDatabaseService.get(
-          'SELECT COUNT(*) as count FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = "admin"',
+          "SELECT COUNT(*) as count FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'admin'",
           []
         )?.count || 0;
 
@@ -169,6 +170,7 @@ export class UserService {
       db.prepare('DELETE FROM user_favorites WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM user_game_plays WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM user_game_stats WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM user_stats WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM user_settings WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM user_playlists WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM users WHERE id = ?').run(id);
@@ -209,8 +211,7 @@ export class UserService {
     ]);
 
     // Revoke all refresh tokens to invalidate existing sessions
-    const authService = new AuthService();
-    await authService.revokeAllUserTokens(id);
+    await this.authService.revokeAllUserTokens(id);
     logger.info(`[UserService] All refresh tokens revoked after password change for user ${id}`);
   }
 

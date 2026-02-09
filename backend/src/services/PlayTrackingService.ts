@@ -88,7 +88,7 @@ export class PlayTrackingService {
         throw new AppError(403, "Cannot end another user's play session");
       }
 
-      const durationSeconds = session.duration_seconds || 0;
+      const durationSeconds = session.duration_seconds ?? 0;
 
       // Use the duration value from the SELECT query to avoid race condition
       // (time passes between SELECT and UPDATE, causing inconsistent values)
@@ -150,28 +150,23 @@ export class PlayTrackingService {
    */
   private async updateUserStats(userId: number, durationSeconds: number): Promise<void> {
     try {
-      // Single query to get both aggregates (was 2 separate queries)
-      const counts = UserDatabaseService.get(
-        `SELECT
-          (SELECT COUNT(DISTINCT game_id) FROM user_game_stats WHERE user_id = ?) as games_played,
-          (SELECT COUNT(*) FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL) as total_sessions`,
-        [userId, userId]
-      ) as { games_played: number; total_sessions: number } | undefined;
-
-      const gamesPlayed = counts?.games_played ?? 0;
-      const totalSessions = counts?.total_sessions ?? 0;
-
-      // UPSERT user stats
       UserDatabaseService.run(
         `INSERT INTO user_stats (user_id, total_games_played, total_playtime_seconds, total_sessions, first_play_at, last_play_at)
-         VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+         VALUES (
+           ?,
+           (SELECT COUNT(DISTINCT game_id) FROM user_game_stats WHERE user_id = ?),
+           ?,
+           (SELECT COUNT(*) FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL),
+           strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         )
          ON CONFLICT(user_id) DO UPDATE SET
-           total_games_played = excluded.total_games_played,
+           total_games_played = (SELECT COUNT(DISTINCT game_id) FROM user_game_stats WHERE user_id = ?),
            total_playtime_seconds = total_playtime_seconds + ?,
-           total_sessions = excluded.total_sessions,
+           total_sessions = (SELECT COUNT(*) FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL),
            last_play_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
-        [userId, gamesPlayed, durationSeconds, totalSessions, durationSeconds]
+        [userId, userId, durationSeconds, userId, userId, durationSeconds, userId]
       );
     } catch (error) {
       logger.error('Failed to update user stats:', error);

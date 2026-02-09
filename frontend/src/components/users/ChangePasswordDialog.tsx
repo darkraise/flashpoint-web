@@ -26,9 +26,15 @@ import {
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(6, 'Password must be at least 6 characters'),
-    newPassword: z.string().min(6, 'Password must be at least 6 characters'),
-    confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
+    currentPassword: z.string(),
+    newPassword: z
+      .string()
+      .min(6, 'Password must be at least 6 characters')
+      .max(128, 'Password must be at most 128 characters'),
+    confirmPassword: z
+      .string()
+      .min(6, 'Password must be at least 6 characters')
+      .max(128, 'Password must be at most 128 characters'),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords don't match",
@@ -40,6 +46,7 @@ type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 interface ChangePasswordDialogProps {
   isOpen: boolean;
   user: UserDetails;
+  isAdminReset?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -47,6 +54,7 @@ interface ChangePasswordDialogProps {
 export function ChangePasswordDialog({
   isOpen,
   user,
+  isAdminReset,
   onClose,
   onSuccess,
 }: ChangePasswordDialogProps) {
@@ -62,6 +70,10 @@ export function ChangePasswordDialog({
   });
 
   const onSubmit = async (values: ChangePasswordFormValues) => {
+    if (!isAdminReset && !values.currentPassword) {
+      form.setError('currentPassword', { message: 'Current password is required' });
+      return;
+    }
     try {
       await changePasswordMutation.mutateAsync({
         id: user.id,
@@ -95,19 +107,21 @@ export function ChangePasswordDialog({
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="currentPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="******************" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!isAdminReset && (
+                <FormField
+                  control={form.control}
+                  name="currentPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="******************" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}

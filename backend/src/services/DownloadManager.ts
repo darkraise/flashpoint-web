@@ -35,6 +35,7 @@ export class DownloadManager {
   private static readonly TEMP_DIR = path.join(process.cwd(), 'backend', 'temp-downloads');
   private static readonly DOWNLOAD_TIMEOUT_MS = 300000; // 5 minutes per source
   private static readonly MAX_RETRIES = 3;
+  private static readonly MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
   // Track active downloads to prevent duplicates
   private static activeDownloads: Map<number, AbortController> = new Map();
@@ -248,6 +249,8 @@ export class DownloadManager {
       responseType: 'stream',
       timeout: this.DOWNLOAD_TIMEOUT_MS,
       signal: abortSignal,
+      maxContentLength: this.MAX_FILE_SIZE,
+      maxBodyLength: this.MAX_FILE_SIZE,
       headers: {
         'User-Agent': 'Flashpoint-WebApp/1.0',
       },
@@ -259,7 +262,11 @@ export class DownloadManager {
     const writer = fs.createWriteStream(destPath);
 
     return new Promise((resolve, reject) => {
+      let settled = false;
+
       const onAbort = () => {
+        if (settled) return;
+        settled = true;
         response.data.destroy();
         writer.destroy();
         reject(new Error('Download cancelled'));
@@ -273,6 +280,18 @@ export class DownloadManager {
 
       response.data.on('data', (chunk: Buffer) => {
         downloadedBytes += chunk.length;
+        if (downloadedBytes > DownloadManager.MAX_FILE_SIZE) {
+          if (settled) return;
+          settled = true;
+          response.data.destroy();
+          writer.destroy();
+          reject(
+            new Error(
+              `Download exceeds maximum file size of ${DownloadManager.MAX_FILE_SIZE} bytes`
+            )
+          );
+          return;
+        }
         onProgress?.(downloadedBytes, totalBytes);
       });
 
@@ -281,16 +300,22 @@ export class DownloadManager {
       });
 
       writer.on('finish', () => {
+        if (settled) return;
+        settled = true;
         cleanup();
         resolve();
       });
 
       writer.on('error', (error) => {
+        if (settled) return;
+        settled = true;
         cleanup();
         reject(new Error(`Failed to write file: ${error.message}`));
       });
 
       response.data.on('error', (error: Error) => {
+        if (settled) return;
+        settled = true;
         cleanup();
         writer.destroy();
         reject(new Error(`Download stream error: ${error.message}`));

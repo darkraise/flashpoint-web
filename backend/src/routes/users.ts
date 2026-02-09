@@ -13,7 +13,7 @@ const userService = new UserService();
 const createUserSchema = z.object({
   username: z.string().min(3).max(50),
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(6).max(128),
   roleId: z.number().int().positive(),
   isActive: z.boolean().optional(),
 });
@@ -25,8 +25,8 @@ const updateUserSchema = z.object({
 });
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(6).optional(),
-  newPassword: z.string().min(6),
+  currentPassword: z.string().min(1).optional(),
+  newPassword: z.string().min(6).max(128),
 });
 
 const updateThemeSchema = z.object({
@@ -89,7 +89,7 @@ router.patch(
     res.json({
       success: true,
       themeColor: data.themeColor,
-      surfaceColor: data.surfaceColor || 'slate-700',
+      surfaceColor: data.surfaceColor ?? 'slate-700',
     });
   })
 );
@@ -220,6 +220,10 @@ router.delete(
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
+    }
+
+    if (req.user?.id === id) {
+      throw new AppError(400, 'Cannot delete your own account');
     }
 
     await userService.deleteUser(id);

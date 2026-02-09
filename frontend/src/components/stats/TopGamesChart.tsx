@@ -10,23 +10,7 @@ import {
 } from 'recharts';
 import { useTopGames } from '../../hooks/usePlayTracking';
 import type { CustomTooltipProps } from '@/types/chart';
-
-function formatPlaytime(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds}s`;
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m`;
-  } else {
-    const hours = (seconds / 3600).toFixed(1);
-    return `${hours}h`;
-  }
-}
-
-function truncateTitle(title: string, maxLength = 30): string {
-  if (title.length <= maxLength) return title;
-  return title.substring(0, maxLength) + '...';
-}
+import { CHART_COLORS, truncateTitle, formatPlaytimeCompact, getCSSVar } from './chart-utils';
 
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (active && payload && payload.length) {
@@ -42,7 +26,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Playtime:</span>
-            <span className="font-semibold text-sm">{formatPlaytime(playtime)}</span>
+            <span className="font-semibold text-sm">{formatPlaytimeCompact(playtime)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Total Plays:</span>
@@ -55,21 +39,18 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   return null;
 }
 
-const COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#84cc16', // lime
-  '#6366f1', // indigo
-];
-
 export function TopGamesChart() {
   const { data, isLoading } = useTopGames(10);
+
+  // Get theme-aware colors
+  const mutedForeground = getCSSVar('--muted-foreground') || '#9ca3af';
+  const borderColor = getCSSVar('--border') || '#374151';
+
+  // Convert HSL to hex if needed (shadcn/ui uses HSL format)
+  const mutedForegroundColor = mutedForeground.includes(' ')
+    ? `hsl(${mutedForeground})`
+    : mutedForeground;
+  const borderColorValue = borderColor.includes(' ') ? `hsl(${borderColor})` : borderColor;
 
   if (isLoading) {
     return (
@@ -95,11 +76,11 @@ export function TopGamesChart() {
   }
 
   const chartData = data.map((game, index) => ({
-    name: truncateTitle(game.gameTitle),
+    name: truncateTitle(game.gameTitle, 30),
     fullTitle: game.gameTitle,
     playtime: game.totalPlaytimeSeconds,
     plays: game.totalPlays,
-    color: COLORS[index % COLORS.length],
+    color: CHART_COLORS[index % CHART_COLORS.length],
   }));
 
   return (
@@ -112,18 +93,18 @@ export function TopGamesChart() {
             layout="vertical"
             margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={borderColorValue} horizontal={false} />
             <XAxis
               type="number"
-              stroke="#9ca3af"
-              tick={{ fill: '#9ca3af', fontSize: 12 }}
-              tickFormatter={(value: number) => formatPlaytime(value)}
+              stroke={mutedForegroundColor}
+              tick={{ fill: mutedForegroundColor, fontSize: 12 }}
+              tickFormatter={(value: number) => formatPlaytimeCompact(value)}
             />
             <YAxis
               type="category"
               dataKey="name"
-              stroke="#9ca3af"
-              tick={{ fill: '#9ca3af', fontSize: 12 }}
+              stroke={mutedForegroundColor}
+              tick={{ fill: mutedForegroundColor, fontSize: 12 }}
               width={120}
             />
             <Tooltip content={<CustomTooltip />} />

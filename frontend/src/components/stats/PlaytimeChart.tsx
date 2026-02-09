@@ -11,18 +11,7 @@ import {
 import { usePlayActivityOverTime } from '../../hooks/usePlayTracking';
 import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
 import type { CustomTooltipProps } from '@/types/chart';
-
-function formatPlaytime(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds}s`;
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m`;
-  } else {
-    const hours = (seconds / 3600).toFixed(1);
-    return `${hours}h`;
-  }
-}
+import { formatPlaytimeCompact, getCSSVar } from './chart-utils';
 
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (active && payload && payload.length >= 2) {
@@ -36,7 +25,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
             <span className="text-muted-foreground text-sm">Playtime:</span>
-            <span className="font-semibold text-sm">{formatPlaytime(playtimeValue)}</span>
+            <span className="font-semibold text-sm">{formatPlaytimeCompact(playtimeValue)}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
@@ -53,6 +42,16 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 export function PlaytimeChart() {
   const { data, isLoading } = usePlayActivityOverTime(30);
   const { formatDate } = useDateTimeFormat();
+
+  // Get theme-aware colors
+  const mutedForeground = getCSSVar('--muted-foreground') || '#9ca3af';
+  const borderColor = getCSSVar('--border') || '#374151';
+
+  // Convert HSL to hex if needed (shadcn/ui uses HSL format)
+  const mutedForegroundColor = mutedForeground.includes(' ')
+    ? `hsl(${mutedForeground})`
+    : mutedForeground;
+  const borderColorValue = borderColor.includes(' ') ? `hsl(${borderColor})` : borderColor;
 
   if (isLoading) {
     return (
@@ -99,12 +98,16 @@ export function PlaytimeChart() {
                 <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="date" stroke="#9ca3af" tick={{ fill: '#9ca3af', fontSize: 12 }} />
+            <CartesianGrid strokeDasharray="3 3" stroke={borderColorValue} />
+            <XAxis
+              dataKey="date"
+              stroke={mutedForegroundColor}
+              tick={{ fill: mutedForegroundColor, fontSize: 12 }}
+            />
             <YAxis
-              stroke="#9ca3af"
-              tick={{ fill: '#9ca3af', fontSize: 12 }}
-              tickFormatter={(value: number) => formatPlaytime(value)}
+              stroke={mutedForegroundColor}
+              tick={{ fill: mutedForegroundColor, fontSize: 12 }}
+              tickFormatter={(value: number) => formatPlaytimeCompact(value)}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend

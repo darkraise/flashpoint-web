@@ -89,7 +89,7 @@ export function GameBrowseLayout({
 
     if (filters.tags) {
       const tagList = filters.tags
-        .split(';')
+        .split(',')
         .map((t) => t.trim())
         .join(', ');
       if (parts.length > 0) {
@@ -301,7 +301,7 @@ export function GameBrowseLayout({
       ) : null}
 
       {error ? (
-        <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300">
+        <div className="bg-destructive/10 border border-destructive rounded-lg p-4 text-destructive">
           Error loading games: {error.message}
         </div>
       ) : null}

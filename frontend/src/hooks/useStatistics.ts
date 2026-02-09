@@ -1,14 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { statisticsApi } from '@/lib/api';
+import { statisticsApi, type Statistics } from '@/lib/api';
 
-export interface Statistics {
-  totalGames: number;
-  totalAnimations: number;
-  totalPlatforms: number;
-  webPlayableGames: number;
-  totalPlaylists: number;
-  totalTags: number;
-}
+export type { Statistics };
 
 export function useStatistics() {
   return useQuery({

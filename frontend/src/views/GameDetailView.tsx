@@ -165,7 +165,7 @@ export function GameDetailView() {
   if (error || !game) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-400">Error loading game</p>
+        <p className="text-destructive">Error loading game</p>
         <button
           onClick={() => navigate(-1)}
           className="text-primary hover:underline mt-4 inline-block"
@@ -311,7 +311,7 @@ export function GameDetailView() {
                   )}
 
                   {downloadError ? (
-                    <p className="text-sm text-red-500 font-medium">{downloadError}</p>
+                    <p className="text-sm text-destructive font-medium">{downloadError}</p>
                   ) : null}
                 </>
               ) : (

@@ -22,6 +22,7 @@ export { favoritesApi } from './favorites';
 export { activitiesApi } from './activities';
 
 export { statisticsApi } from './statistics';
+export type { Statistics } from './statistics';
 
 export { playTrackingApi } from './playTracking';
 

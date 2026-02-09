@@ -75,7 +75,7 @@ export function UserPlaylistsView() {
 
   if (error) {
     return (
-      <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300">
+      <div className="bg-destructive/10 border border-destructive rounded-lg p-4 text-destructive">
         Error loading playlists: {error instanceof Error ? error.message : 'Unknown error'}
       </div>
     );

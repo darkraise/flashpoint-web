@@ -113,7 +113,7 @@ export function BrowseCommunityPlaylistsModal({
       <DialogContent className="max-w-4xl flex flex-col">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <Globe size={24} className="text-primary-400" />
+            <Globe size={24} className="text-primary" />
             <DialogTitle>Browse Community Playlists</DialogTitle>
           </div>
           <DialogDescription>
@@ -163,7 +163,7 @@ export function BrowseCommunityPlaylistsModal({
 
             {error ? (
               <div className="text-center py-12">
-                <p className="text-red-400 mb-4">Failed to load community playlists</p>
+                <p className="text-destructive mb-4">Failed to load community playlists</p>
                 <Button onClick={() => refetch()} variant="secondary">
                   Try Again
                 </Button>

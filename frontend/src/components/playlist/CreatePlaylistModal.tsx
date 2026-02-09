@@ -36,8 +36,8 @@ import {
 } from '@/components/ui/dialog';
 
 const playlistSchema = z.object({
-  title: z.string().min(1, 'Title is required').trim(),
-  description: z.string().optional(),
+  title: z.string().min(1, 'Title is required').max(200).trim(),
+  description: z.string().max(2000).optional(),
   author: z.string().optional(),
   library: z.string(),
 });
@@ -87,7 +87,7 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <ListPlus size={24} className="text-primary-400" />
+            <ListPlus size={24} className="text-primary" />
             <DialogTitle>Create Playlist</DialogTitle>
           </div>
           <DialogDescription>
@@ -113,7 +113,7 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
                   <FormItem>
                     <FormLabel>Playlist Title *</FormLabel>
                     <FormControl>
-                      <Input placeholder="My Awesome Playlist" {...field} />
+                      <Input placeholder="My Awesome Playlist" maxLength={200} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -130,6 +130,7 @@ export function CreatePlaylistModal({ isOpen, onClose }: CreatePlaylistModalProp
                       <Textarea
                         placeholder="A collection of my favorite games..."
                         rows={3}
+                        maxLength={2000}
                         {...field}
                       />
                     </FormControl>

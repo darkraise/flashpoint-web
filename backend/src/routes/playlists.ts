@@ -6,7 +6,7 @@ import {
 } from '../services/PlaylistService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { authenticate } from '../middleware/auth';
+import { authenticate, optionalAuth } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { requireFeature } from '../middleware/featureFlags';
 import { logActivity } from '../middleware/activityLogger';
@@ -28,6 +28,7 @@ const addGamesToPlaylistSchema = z.object({
 
 router.get(
   '/',
+  optionalAuth,
   asyncHandler(async (req, res) => {
     const playlists = await playlistService.getAllPlaylists();
     res.json(playlists);
@@ -36,6 +37,7 @@ router.get(
 
 router.get(
   '/:id',
+  optionalAuth,
   asyncHandler(async (req, res) => {
     const playlist = await playlistService.getPlaylistById(req.params.id);
 
