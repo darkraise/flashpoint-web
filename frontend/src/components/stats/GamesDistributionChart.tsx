@@ -24,7 +24,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
     const data = payload[0];
     if (!data?.payload) return null;
 
-    const gameData = data.payload as any;
+    const gameData = data.payload as { fullName?: string; percentage?: number; topAction?: string };
     const percentage = gameData.percentage;
     const value = typeof data.value === 'number' ? data.value : 0;
 
@@ -38,7 +38,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Percentage:</span>
-            <span className="font-semibold text-sm">{percentage.toFixed(1)}%</span>
+            <span className="font-semibold text-sm">{percentage?.toFixed(1) ?? '0'}%</span>
           </div>
         </div>
       </div>

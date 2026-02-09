@@ -42,23 +42,14 @@ export class SyncStatusService {
     return SyncStatusService.instance;
   }
 
-  /**
-   * Get current sync status
-   */
   getStatus(): SyncStatus {
     return { ...this.status };
   }
 
-  /**
-   * Check if a sync is currently running
-   */
   isRunning(): boolean {
     return this.status.isRunning;
   }
 
-  /**
-   * Start a new sync operation
-   */
   startSync(): void {
     if (this.status.isRunning) {
       throw new Error('Sync already in progress');
@@ -75,9 +66,6 @@ export class SyncStatusService {
     logger.info('[SyncStatus] Sync started');
   }
 
-  /**
-   * Update sync progress
-   */
   updateProgress(stage: string, progress: number, message: string): void {
     this.status.stage = stage;
     this.status.progress = Math.min(100, Math.max(0, progress));
@@ -86,9 +74,6 @@ export class SyncStatusService {
     logger.debug(`[SyncStatus] Progress: ${this.status.progress}% - ${stage} - ${message}`);
   }
 
-  /**
-   * Complete sync successfully
-   */
   completeSync(result: SyncStatus['result']): void {
     this.status.isRunning = false;
     this.status.stage = 'completed';
@@ -100,9 +85,6 @@ export class SyncStatusService {
     logger.info('[SyncStatus] Sync completed successfully', result);
   }
 
-  /**
-   * Mark sync as failed
-   */
   failSync(error: string): void {
     this.status.isRunning = false;
     this.status.stage = 'failed';
@@ -113,9 +95,6 @@ export class SyncStatusService {
     logger.error('[SyncStatus] Sync failed:', error);
   }
 
-  /**
-   * Reset sync status
-   */
   reset(): void {
     this.status = {
       isRunning: false,

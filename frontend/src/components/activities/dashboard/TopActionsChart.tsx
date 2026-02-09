@@ -15,7 +15,13 @@ import type { CustomTooltipProps } from '@/types/chart';
 
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (active && payload && payload.length) {
-    const action = payload[0]?.payload as any;
+    const action = payload[0]?.payload as {
+      fullAction?: string;
+      count?: number;
+      percentage?: number;
+      category?: string;
+      topResource?: string;
+    };
     if (!action) return null;
 
     return (
@@ -24,11 +30,11 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Count:</span>
-            <span className="font-semibold text-sm">{action.count.toLocaleString()}</span>
+            <span className="font-semibold text-sm">{action.count?.toLocaleString() ?? 0}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Percentage:</span>
-            <span className="font-semibold text-sm">{action.percentage.toFixed(1)}%</span>
+            <span className="font-semibold text-sm">{action.percentage?.toFixed(1) ?? '0'}%</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Category:</span>
@@ -162,7 +168,6 @@ export function TopActionsChart({ autoRefresh = false }: TopActionsChartProps) {
         </ResponsiveContainer>
       </div>
 
-      {/* Legend */}
       <div className="flex gap-4 mt-4 justify-center flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-green-500"></div>

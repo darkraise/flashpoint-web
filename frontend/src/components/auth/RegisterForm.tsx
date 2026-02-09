@@ -41,14 +41,12 @@ export function RegisterForm() {
   const navigate = useNavigate();
   const registerMutation = useRegister();
 
-  // Fetch public settings first to check maintenance mode
   const { data: publicSettings, isSuccess: isPublicSettingsLoaded } = useQuery({
-    queryKey: ['publicSettings'],
+    queryKey: ['system-settings', 'public'],
     queryFn: () => systemSettingsApi.getPublic(),
   });
 
-  // Only check if registration is enabled if NOT in maintenance mode (to avoid 503 errors)
-  // Wait for public settings to load first, then only fetch if maintenance mode is disabled
+  // Skip auth settings fetch during maintenance mode to avoid 503 errors
   const { data: settings } = useQuery({
     queryKey: ['authSettings'],
     queryFn: () => authSettingsApi.get(),
@@ -73,16 +71,14 @@ export function RegisterForm() {
         password: values.password,
       });
       navigate('/', { replace: true });
-    } catch (error) {
-      // Error is already logged in the hook
+    } catch {
+      // Error handled by mutation state
     }
   };
 
-  // Only show registration disabled screen if NOT in maintenance mode and registration is disabled
   if (!publicSettings?.app?.maintenanceMode && settings && !settings.userRegistrationEnabled) {
     return (
       <div className="w-full max-w-md animate-fade-in-up">
-        {/* Gradient Border Wrapper */}
         <div
           className="p-[2px] rounded-2xl relative"
           style={{
@@ -94,9 +90,7 @@ export function RegisterForm() {
               hsl(var(--primary) / 0.6) 100%)`,
           }}
         >
-          {/* Glassmorphism card with backdrop-blur */}
           <div className="bg-card/70 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-6 relative overflow-hidden">
-            {/* Multi-layer gradient backgrounds */}
             <div
               className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-primary/12 pointer-events-none"
               aria-hidden="true"
@@ -106,7 +100,6 @@ export function RegisterForm() {
               aria-hidden="true"
             />
 
-            {/* Prismatic Light Glow */}
             <div
               className="absolute inset-0 pointer-events-none prismatic-form-glow"
               style={{
@@ -119,12 +112,10 @@ export function RegisterForm() {
               aria-hidden="true"
             />
 
-            {/* Theme Toggle in top-right corner */}
             <div className="absolute top-4 right-4 z-10">
               <ThemePicker />
             </div>
 
-            {/* Logo Section */}
             <div className="relative mb-6 flex flex-col items-center">
               <div className="mb-4 w-24 h-24 flex items-center justify-center">
                 <img
@@ -157,7 +148,6 @@ export function RegisterForm() {
 
   return (
     <div className="w-full max-w-md animate-fade-in-up">
-      {/* Gradient Border Wrapper */}
       <div
         className="p-[2px] rounded-2xl relative"
         style={{
@@ -169,9 +159,7 @@ export function RegisterForm() {
             hsl(var(--primary) / 0.6) 100%)`,
         }}
       >
-        {/* Glassmorphism card with backdrop-blur */}
         <div className="bg-card/70 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-6 relative overflow-hidden">
-          {/* Multi-layer gradient backgrounds */}
           <div
             className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-primary/12 pointer-events-none"
             aria-hidden="true"
@@ -181,7 +169,6 @@ export function RegisterForm() {
             aria-hidden="true"
           />
 
-          {/* Prismatic Light Glow */}
           <div
             className="absolute inset-0 pointer-events-none prismatic-form-glow"
             style={{
@@ -194,12 +181,10 @@ export function RegisterForm() {
             aria-hidden="true"
           />
 
-          {/* Theme Toggle in top-right corner */}
           <div className="absolute top-4 right-4 z-10">
             <ThemePicker />
           </div>
 
-          {/* Logo and Title Section */}
           <div className="relative mb-6 flex flex-col items-center">
             <div className="mb-4 w-24 h-24 flex items-center justify-center">
               <img
@@ -214,7 +199,6 @@ export function RegisterForm() {
             </p>
           </div>
 
-          {/* Maintenance Mode Notice */}
           {publicSettings?.app?.maintenanceMode ? (
             <Alert
               className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100"

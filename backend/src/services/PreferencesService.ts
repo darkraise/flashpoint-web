@@ -21,7 +21,7 @@ export interface FlashpointPreferences {
   onDemandBaseUrl?: string;
   onDemandImagesCompressed?: boolean;
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -58,12 +58,10 @@ export class PreferencesService {
     try {
       const preferencesPath = path.join(config.flashpointPath, 'preferences.json');
 
-      // Check if file exists
       if (!fs.existsSync(preferencesPath)) {
         throw new Error(`Preferences file not found at: ${preferencesPath}`);
       }
 
-      // Read and parse preferences
       const content = await fs.promises.readFile(preferencesPath, 'utf-8');
       const parsed = JSON.parse(content);
 
@@ -88,10 +86,7 @@ export class PreferencesService {
     }
   }
 
-  /**
-   * Validate that preferences contain required fields.
-   */
-  private static validatePreferences(prefs: any): void {
+  private static validatePreferences(prefs: Record<string, unknown>): void {
     if (!prefs || typeof prefs !== 'object') {
       throw new Error('Preferences must be an object');
     }
@@ -118,17 +113,11 @@ export class PreferencesService {
     }
   }
 
-  /**
-   * Get game data sources from preferences.
-   */
   static async getGameDataSources(): Promise<GameDataSource[]> {
     const prefs = await this.getPreferences();
     return prefs.gameDataSources || [];
   }
 
-  /**
-   * Get the absolute path to the data packs folder.
-   */
   static async getDataPacksPath(): Promise<string> {
     const prefs = await this.getPreferences();
     const dataPacksPath = prefs.dataPacksFolderPath || 'Data/Games';
@@ -137,9 +126,6 @@ export class PreferencesService {
     return path.resolve(config.flashpointPath, dataPacksPath);
   }
 
-  /**
-   * Force reload preferences from disk.
-   */
   static async reload(): Promise<void> {
     this.preferences = null;
     this.lastLoadTime = 0;

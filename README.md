@@ -26,10 +26,6 @@ browser.
   <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
 </p>
 
-[Features](#key-features) | [Quick Start](#quick-start) |
-[Docker](#docker-deployment) | [Documentation](#documentation) |
-[Contributing](#contributing)
-
 </div>
 
 ---
@@ -59,256 +55,136 @@ support, play tracking, and an intuitive interface.
 - **Database Hot-Reload** - Automatically syncs when Flashpoint Launcher updates
   metadata
 
-## Architecture
-
-Flashpoint Web consists of two independent services:
-
-| Service      | Port | Description                                                     |
-| ------------ | ---- | --------------------------------------------------------------- |
-| **Backend**  | 3100 | REST API for metadata, users, auth, and game content serving   |
-| **Frontend** | 5173 | React web application                                           |
-
-Game content is served directly by the backend via `/game-proxy/*` and
-`/game-zip/*` routes, enabling efficient file serving and ZIP archive mounting.
-
-## Quick Start
+## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20+ and npm 9+
+- [Docker](https://docs.docker.com/get-docker/) and
+  [Docker Compose](https://docs.docker.com/compose/install/)
 - [Flashpoint Archive](https://flashpointarchive.org/) installed locally
 
-### Installation
+### 1. Create a project directory
 
 ```bash
-# Clone the repository
-git clone https://github.com/darkraise/flashpoint-web.git
-cd flashpoint-web
-
-# Install dependencies for all services
-npm run install:all
+mkdir flashpoint-web && cd flashpoint-web
 ```
 
-### Configuration
+### 2. Create `docker-compose.yml`
 
-**1. Backend** (`backend/.env`)
+<!-- prettier-ignore -->
+```yaml
+services:
+  backend:
+    image: darkraise/flashpoint-backend:${IMAGE_TAG:-latest}
+    container_name: flashpoint-backend
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3100}:3100"
+    volumes:
+      - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint:ro
+      - ${DATA_PATH:-./data}:/app/data
+      - ${LOGS_PATH:-./logs}:/app/logs
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - NODE_ENV=production
+      - TZ=${TZ:-UTC}
+      - DOMAIN=${DOMAIN:-http://localhost:${WEB_PORT:-80}}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - ENABLE_LOCAL_DB_COPY=${ENABLE_LOCAL_DB_COPY:-false}
+      - SQLITE_CACHE_SIZE=${SQLITE_CACHE_SIZE:--64000}
+      - SQLITE_MMAP_SIZE=${SQLITE_MMAP_SIZE:-268435456}
+      - ENABLE_CACHE_PREWARM=${ENABLE_CACHE_PREWARM:-true}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-```bash
-cp backend/.env.example backend/.env
+  frontend:
+    image: darkraise/flashpoint-frontend:${IMAGE_TAG:-latest}
+    container_name: flashpoint-frontend
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:8080"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - BACKEND_HOST=${BACKEND_HOST:-backend}
+      - BACKEND_PORT=${BACKEND_PORT:-3100}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 ```
 
-Edit `backend/.env`:
+### 3. Create `.env`
 
 ```env
-# Required
-FLASHPOINT_PATH=D:/Flashpoint
-JWT_SECRET=your-secure-random-string
+# Required — path to your Flashpoint installation on the host machine
+FLASHPOINT_HOST_PATH=/path/to/Flashpoint
 
-# Optional
-DOMAIN=http://localhost:5173
-LOG_LEVEL=info
+# Required — secret key for JWT authentication (use a long random string)
+JWT_SECRET=your-secure-secret-key
+
+# Optional — uncomment and edit as needed
+# WEB_PORT=80              # Frontend port (default: 80)
+# API_PORT=3100            # Backend API port (default: 3100)
+# PUID=1000                # Host user ID (Linux — run 'id -u')
+# PGID=1000                # Host group ID (Linux — run 'id -g')
+# DOMAIN=http://localhost  # Public URL of the frontend
+# LOG_LEVEL=info           # debug, info, warn, error
+# TZ=UTC                   # Timezone
+# DATA_PATH=./data         # Persistent app data
+# LOGS_PATH=./logs         # Log files
+
+# Database performance (for network storage / large collections)
+# ENABLE_LOCAL_DB_COPY=false       # Copy flashpoint.sqlite to local storage
+# SQLITE_CACHE_SIZE=-64000         # SQLite cache in KB (64MB default)
+# SQLITE_MMAP_SIZE=268435456       # Memory-mapped I/O in bytes (256MB default)
+# ENABLE_CACHE_PREWARM=true        # Pre-warm common queries on startup
 ```
 
-> **Note:** All database, asset, and game content paths are automatically
-> derived from `FLASHPOINT_PATH`. Frontend requires no `.env` file for local
-> development - API calls are proxied through Vite.
-
-### Run Development Servers
+### 4. Start the services
 
 ```bash
-# Start all services concurrently
-npm run dev
-
-# Or start individually
-npm run dev:backend  # http://localhost:3100
-npm run dev:frontend # http://localhost:5173
-```
-
-Open http://localhost:5173 in your browser.
-
-## Docker Deployment
-
-For production or easier setup, use Docker Compose:
-
-```bash
-# Set required environment variables
-export FLASHPOINT_HOST_PATH=/path/to/Flashpoint  # Linux/Mac
-export JWT_SECRET="your-secure-secret-key"       # Required for auth
-
-# Windows PowerShell
-$env:FLASHPOINT_HOST_PATH="D:\Flashpoint"
-$env:JWT_SECRET="your-secure-secret-key"
-
-# Start all services (uses pre-built images)
 docker compose up -d
-
-# Or build locally for development
-docker compose -f docker-compose.dev.yml up -d --build
-
-# View logs
-docker compose logs -f
 ```
 
-**Default ports:**
+Open **http://localhost** in your browser. The first user to register
+automatically becomes the **admin**.
 
-| Service | URL |
-| --- | --- |
-| Frontend | http://localhost (port 80) |
-| Backend API | http://localhost:3100 |
-| Game Content Routes | http://localhost:3100/game-proxy/* and /game-zip/* |
+### Default Ports
 
-See [Docker Deployment Guide](docs/09-deployment/docker-deployment.md) for
-advanced configuration.
+| Service  | URL                   |
+| -------- | --------------------- |
+| Frontend | http://localhost      |
+| Backend  | http://localhost:3100 |
 
-## Development Commands
+### Common Commands
 
-| Command             | Description                             |
-| ------------------- | --------------------------------------- |
-| `npm run dev`       | Start all services in development mode  |
-| `npm run build`     | Build all services for production       |
-| `npm run typecheck` | Run TypeScript type checking            |
-| `npm run format`    | Format code with Prettier               |
-| `npm run clean`     | Remove build artifacts and node_modules |
-
-See [Commands Reference](docs/08-development/commands.md) for the complete list.
+```bash
+docker compose up -d                # Start services
+docker compose down                 # Stop services
+docker compose logs -f              # View logs
+docker compose logs -f backend      # Logs for a specific service
+docker compose restart backend      # Restart a service
+docker compose pull && docker compose up -d  # Update to latest images
+```
 
 ## Documentation
 
-Comprehensive documentation is available in the [`docs/`](docs/) directory:
-
-### Getting Started
-
-- [Project Overview](docs/01-overview/project-overview.md) - What is Flashpoint
-  Web
-- [Setup Guide](docs/08-development/setup-guide.md) - Complete development setup
-- [Commands Reference](docs/08-development/commands.md) - All available commands
-
-### Architecture
-
-- [System Architecture](docs/02-architecture/system-architecture.md) - Service
-  design overview
-- [Authentication Flow](docs/02-architecture/authentication-flow.md) - JWT-based
-  auth system
-- [Game Launch Flow](docs/02-architecture/game-launch-flow.md) - How games are
-  served
-
-### Services
-
-- [Backend](docs/03-backend/README.md) - REST API documentation
-- [Frontend](docs/04-frontend/README.md) - React application guide
-- [Game Service](docs/05-game-service/README.md) - File serving architecture
-
-### API Reference
-
-- [Authentication API](docs/06-api-reference/authentication-api.md)
-- [Games API](docs/06-api-reference/games-api.md)
-- [Playlists API](docs/06-api-reference/playlists-api.md)
-- [Full API Reference](docs/06-api-reference/README.md)
-
-### Deployment
-
-- [Docker Deployment](docs/09-deployment/docker-deployment.md)
-- [Production Setup](docs/09-deployment/production-setup.md)
-- [Environment Variables](docs/08-development/setup-guide.md#environment-variables-reference)
-
-### Features
-
-- [Authentication & Authorization](docs/10-features/01-authentication-authorization.md)
-- [Game Browsing & Filtering](docs/10-features/02-game-browsing-filtering.md)
-- [Play Session Tracking](docs/10-features/04-play-session-tracking.md)
-- [All Features](docs/10-features/README.md)
-
-## Technology Stack
-
-<table>
-<tr>
-<td align="center" width="33%">
-
-### Backend
-
-<p>
-  <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white" alt="Express" />
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-</p>
-
-- Express 4.18
-- BetterSqlite3 12.6
-- JWT + bcrypt
-- Winston logging
-- Zod validation
-
-</td>
-<td align="center" width="33%">
-
-### Frontend
-
-<p>
-  <img src="https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React" />
-  <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
-  <img src="https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind" />
-</p>
-
-- React 18.3 + TypeScript
-- TanStack Query 5.28
-- Zustand 4.5
-- Shadcn UI + Radix
-- Ruffle Flash Emulator
-
-</td>
-</tr>
-</table>
-
-See [Technology Stack](docs/01-overview/technology-stack.md) for detailed
-explanations of each choice.
-
-## Troubleshooting
-
-### Common Issues
-
-**Port already in use:**
-
-```bash
-# Find and kill process on port
-lsof -i :3100  # Linux/Mac
-netstat -ano | findstr :3100  # Windows
-```
-
-**Database not found:**
-
-- Verify `FLASHPOINT_PATH` points to a valid Flashpoint installation
-- Check that `$FLASHPOINT_PATH/Data/flashpoint.sqlite` exists
-
-**Ruffle not loading:**
-
-```bash
-cd frontend
-npm run copy-ruffle
-```
-
-**Games not loading:**
-
-- Ensure backend is running on port 3100
-- Check backend logs: `npm run dev:backend`
-- Verify game content routes are accessible at `/game-proxy/*` and `/game-zip/*`
-
-See [Common Pitfalls](docs/08-development/common-pitfalls.md) for more
-solutions.
-
-## Contributing
-
-We welcome contributions! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Make** your changes and ensure tests pass: `npm run typecheck`
-4. **Commit** your changes following our
-   [commit guidelines](CONTRIBUTING.md#commit-guidelines)
-5. **Push** to the branch: `git push origin feature/amazing-feature`
-6. **Open** a Pull Request
-
-Please read our [Contributing Guide](CONTRIBUTING.md) for detailed instructions,
-coding standards, and development setup.
+For architecture details, API reference, development setup, contributing
+guidelines, and more, visit the
+**[Wiki](https://github.com/darkraise/flashpoint-web/wiki)**.
 
 ## Related Projects
 
@@ -333,7 +209,7 @@ This project is licensed under the GNU General Public License v3.0 - see the
 
 <div align="center">
 
-**[Documentation](docs/)** |
+**[Wiki](https://github.com/darkraise/flashpoint-web/wiki)** |
 **[Report Bug](https://github.com/darkraise/flashpoint-web/issues)** |
 **[Request Feature](https://github.com/darkraise/flashpoint-web/issues)**
 

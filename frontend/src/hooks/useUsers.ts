@@ -4,21 +4,15 @@ import { CreateUserData, UpdateUserData, ChangePasswordData } from '@/types/auth
 import { useDialog } from '@/contexts/DialogContext';
 import { getErrorMessage } from '@/types/api-error';
 
-/**
- * Hook to fetch all users with pagination
- */
 export function useUsers(page = 1, limit = 50) {
   return useQuery({
     queryKey: ['users', page, limit],
     queryFn: () => usersApi.getAll(page, limit),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 }
 
-/**
- * Hook to fetch a single user by ID
- */
 export function useUser(id: number) {
   return useQuery({
     queryKey: ['users', id],
@@ -29,10 +23,6 @@ export function useUser(id: number) {
   });
 }
 
-/**
- * Hook to create a new user
- * Uses cache updates for immediate UI feedback
- */
 export function useCreateUser() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -40,10 +30,7 @@ export function useCreateUser() {
   return useMutation({
     mutationFn: (userData: CreateUserData) => usersApi.create(userData),
     onSuccess: (newUser) => {
-      // Add to single-item cache
       queryClient.setQueryData(['users', newUser.id], newUser);
-
-      // Invalidate paginated lists (safer for paginated data)
       queryClient.invalidateQueries({ queryKey: ['users'], exact: false });
 
       showToast('User created successfully', 'success');
@@ -55,10 +42,6 @@ export function useCreateUser() {
   });
 }
 
-/**
- * Hook to update an existing user
- * Uses cache updates for immediate UI feedback
- */
 export function useUpdateUser() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -67,10 +50,7 @@ export function useUpdateUser() {
     mutationFn: ({ id, userData }: { id: number; userData: UpdateUserData }) =>
       usersApi.update(id, userData),
     onSuccess: (updatedUser) => {
-      // Update single-item cache
       queryClient.setQueryData(['users', updatedUser.id], updatedUser);
-
-      // Invalidate paginated lists (safer for paginated data)
       queryClient.invalidateQueries({ queryKey: ['users'], exact: false });
 
       showToast('User updated successfully', 'success');
@@ -82,10 +62,6 @@ export function useUpdateUser() {
   });
 }
 
-/**
- * Hook to delete a user
- * Uses optimistic updates for immediate UI feedback
- */
 export function useDeleteUser() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -95,8 +71,6 @@ export function useDeleteUser() {
 
     onMutate: async (_id) => {
       await queryClient.cancelQueries({ queryKey: ['users'] });
-
-      // Store snapshot for rollback (paginated queries)
       const previousQueries = queryClient.getQueriesData({ queryKey: ['users'] });
 
       return { previousQueries };
@@ -104,7 +78,6 @@ export function useDeleteUser() {
 
     onError: (err: unknown, _id, context) => {
       if (context?.previousQueries) {
-        // Restore all user queries
         context.previousQueries.forEach(([queryKey, data]) => {
           queryClient.setQueryData(queryKey, data);
         });
@@ -114,10 +87,7 @@ export function useDeleteUser() {
     },
 
     onSuccess: (_, id) => {
-      // Remove single-item cache
       queryClient.removeQueries({ queryKey: ['users', id] });
-
-      // Invalidate paginated lists to refetch
       queryClient.invalidateQueries({ queryKey: ['users'], exact: false });
 
       showToast('User deleted successfully', 'success');
@@ -125,10 +95,6 @@ export function useDeleteUser() {
   });
 }
 
-/**
- * Hook to change user password
- * Uses toast notifications for feedback
- */
 export function useChangePassword() {
   const { showToast } = useDialog();
 

@@ -15,25 +15,18 @@ const router = Router();
 const playlistService = new UserPlaylistService();
 const userService = new UserService();
 
-// Validation schema
 const clonePlaylistSchema = z.object({
   newTitle: z.string().min(1).max(255).optional(),
 });
 
-/**
- * GET /api/playlists/shared/:shareToken
- * Get shared playlist metadata (anonymous access)
- *
- * Rate limited to 10 requests/minute per IP to prevent scraping
- */
 router.get(
   '/:shareToken',
-  rateLimitStrict, // 10 req/min per IP
+  rateLimitStrict,
   validateSharedPlaylist,
   asyncHandler(async (req, res) => {
     const playlist = req.sharedPlaylist!;
 
-    // Sanitize response - don't expose sensitive fields
+    // Don't expose userId, shareToken, isPublic, shareExpiresAt, showOwner
     const response: {
       id: number;
       title: string;
@@ -53,25 +46,17 @@ router.get(
       updatedAt: playlist.updatedAt,
     };
 
-    // Conditionally include owner username if showOwner flag is true
     if (playlist.showOwner) {
       const user = await userService.getUserById(playlist.userId);
-      response.ownerUsername = user?.username || 'Unknown';
+      response.ownerUsername = user?.username ?? 'Unknown';
     }
 
-    // Don't expose: userId, shareToken, isPublic, shareExpiresAt, showOwner
     logger.debug(`Shared playlist ${playlist.id} accessed via token`);
 
     res.json(response);
   })
 );
 
-/**
- * GET /api/playlists/shared/:shareToken/games
- * Get games in shared playlist (anonymous access)
- *
- * Rate limited to prevent scraping
- */
 router.get(
   '/:shareToken/games',
   rateLimitStrict,
@@ -87,32 +72,14 @@ router.get(
   })
 );
 
-/**
- * GET /api/playlists/shared/:shareToken/games/:gameId/validate
- * Validate if a game is accessible via shared playlist (anonymous access)
- *
- * Returns: { valid: boolean }
- * Rate limited to prevent abuse
- */
 router.get(
   '/:shareToken/games/:gameId/validate',
   rateLimitStrict,
   validateSharedPlaylist,
   asyncHandler(async (req, res) => {
-    const { shareToken, gameId } = req.params;
+    const { gameId } = req.params;
 
-    // Validate UUID format for shareToken
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!UUID_REGEX.test(shareToken)) {
-      return res.json({ valid: false });
-    }
-
-    // Validate gameId format (Flashpoint uses UUIDs for game IDs)
-    if (!gameId || typeof gameId !== 'string') {
-      return res.json({ valid: false });
-    }
-
-    const isValid = playlistService.isGameInSharedPlaylist(shareToken, gameId);
+    const isValid = playlistService.isGameInSharedPlaylist(req.params.shareToken, gameId);
 
     logger.debug(`Game ${gameId.substring(0, 8)}... access validation via share token: ${isValid}`);
 
@@ -120,12 +87,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/playlists/shared/:shareToken/generate-access-token
- * Generate a temporary shared access token (60 min expiry)
- * Returns: { accessToken, expiresIn, playlistId }
- * Rate limited to prevent abuse
- */
 router.post(
   '/:shareToken/generate-access-token',
   rateLimitStrict,
@@ -148,19 +109,12 @@ router.post(
   })
 );
 
-/**
- * POST /api/playlists/shared/:shareToken/clone
- * Clone shared playlist to authenticated user's account
- *
- * Requires authentication and playlists.create permission
- */
 router.post(
   '/:shareToken/clone',
   authenticate,
   requirePermission('playlists.create'),
   validateSharedPlaylist,
   asyncHandler(async (req, res) => {
-    // Validate request body
     const { newTitle } = clonePlaylistSchema.parse(req.body);
 
     const clonedPlaylist = playlistService.cloneSharedPlaylist(

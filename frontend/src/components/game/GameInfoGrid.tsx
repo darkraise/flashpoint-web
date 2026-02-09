@@ -8,9 +8,6 @@ interface GameInfoGridProps {
   launchData?: GameLaunchData;
 }
 
-/**
- * Check if a string is a valid URL
- */
 function isValidUrl(str?: string): boolean {
   if (!str) return false;
   try {
@@ -21,16 +18,11 @@ function isValidUrl(str?: string): boolean {
   }
 }
 
-/**
- * GameInfoGrid component that displays comprehensive game metadata
- * in a responsive grid layout
- */
 export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
   const isSourceUrl = isValidUrl(game.source);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 py-4 border-y border-border">
-      {/* Platform */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Platform</dt>
         <dd>
@@ -42,7 +34,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Developer */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Developer</dt>
         <dd className="font-medium text-sm">
@@ -50,7 +41,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Publisher */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Publisher</dt>
         <dd className="font-medium text-sm">
@@ -58,7 +48,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Source */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Source</dt>
         <dd className="font-medium text-sm">
@@ -82,7 +71,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Play Mode */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Play Mode</dt>
         <dd className="font-medium text-sm">
@@ -92,7 +80,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Status */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Status</dt>
         <dd className="font-medium text-sm">
@@ -100,7 +87,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Version */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Version</dt>
         <dd className="font-medium text-sm">
@@ -108,7 +94,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Series */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Series</dt>
         <dd className="font-medium text-sm">
@@ -116,7 +101,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Language */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Language</dt>
         <dd className="font-medium text-sm">
@@ -124,7 +108,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Date Added */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Date Added</dt>
         <dd className="font-medium text-sm">
@@ -136,7 +119,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Date Modified */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Date Modified</dt>
         <dd className="font-medium text-sm">
@@ -148,7 +130,6 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
         </dd>
       </div>
 
-      {/* Release Date */}
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Release Date</dt>
         <dd className="font-medium text-sm">

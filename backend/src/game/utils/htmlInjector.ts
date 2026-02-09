@@ -1,14 +1,6 @@
-/**
- * HTML Injector - Injects polyfills and shims into HTML files
- * for better compatibility with Unity WebGL and other game engines
- */
-
 import { logger } from '../../utils/logger';
 
-/**
- * Unity WebGL polyfills
- * These are minimal stubs to prevent errors when Unity games load
- */
+/** Minimal stubs to prevent errors when Unity games load */
 const UNITY_POLYFILLS = `
 <script>
 // Unity WebGL Polyfills
@@ -54,10 +46,7 @@ if (typeof UnityLoader2020 === 'undefined') {
 </script>
 `;
 
-/**
- * General game polyfills
- * These help with compatibility for various game engines
- */
+/** Compatibility polyfills for various game engines */
 const GENERAL_POLYFILLS = `
 <script>
 // General game compatibility polyfills
@@ -74,9 +63,6 @@ if (typeof AudioContext === 'undefined' && typeof webkitAudioContext !== 'undefi
 </script>
 `;
 
-/**
- * Check if HTML content needs Unity polyfills
- */
 function needsUnityPolyfills(html: string): boolean {
   const unityIndicators = [
     /UnityProgress/i,
@@ -90,31 +76,23 @@ function needsUnityPolyfills(html: string): boolean {
   return unityIndicators.some((pattern) => pattern.test(html));
 }
 
-/**
- * Inject polyfills into HTML content
- * Adds necessary polyfills in the <head> section before other scripts load
- */
+/** Injects polyfills into the <head> section before other scripts load */
 export function injectPolyfills(html: Buffer | string): Buffer {
   let htmlString = Buffer.isBuffer(html) ? html.toString('utf-8') : html;
 
-  // Check if this is actually HTML
   if (!htmlString.includes('<html') && !htmlString.includes('<head')) {
-    // Not an HTML file, return as-is
     return Buffer.from(htmlString);
   }
 
   let polyfillsToInject = '';
 
-  // Add Unity polyfills if needed
   if (needsUnityPolyfills(htmlString)) {
     polyfillsToInject += UNITY_POLYFILLS;
     logger.debug('[HTMLInjector] Injecting Unity WebGL polyfills');
   }
 
-  // Always add general polyfills for compatibility
   polyfillsToInject += GENERAL_POLYFILLS;
 
-  // Try to inject into <head> tag
   const headMatch = htmlString.match(/<head[^>]*>/i);
   if (headMatch) {
     const headOpenTag = headMatch[0];
@@ -122,7 +100,6 @@ export function injectPolyfills(html: Buffer | string): Buffer {
     htmlString =
       htmlString.slice(0, insertPosition) + polyfillsToInject + htmlString.slice(insertPosition);
   } else {
-    // No <head> tag, try to inject after <html>
     const htmlMatch = htmlString.match(/<html[^>]*>/i);
     if (htmlMatch) {
       const htmlOpenTag = htmlMatch[0];
@@ -134,7 +111,6 @@ export function injectPolyfills(html: Buffer | string): Buffer {
         '</head>' +
         htmlString.slice(insertPosition);
     } else {
-      // No <html> or <head> tag, prepend to entire content
       htmlString =
         '<!DOCTYPE html><html><head>' +
         polyfillsToInject +

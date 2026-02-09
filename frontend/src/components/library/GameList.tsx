@@ -7,10 +7,10 @@ interface GameListProps {
   games: Game[];
   showFavoriteButton?: boolean;
   showAddToPlaylistButton?: boolean;
-  favoriteGameIds?: Set<string>; // Optional: for performance optimization
+  favoriteGameIds?: Set<string>;
   isFavoritePage?: boolean;
-  shareToken?: string | null; // Optional: for shared playlist navigation
-  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
+  shareToken?: string | null;
+  breadcrumbContext?: BreadcrumbContext;
 }
 
 export function GameList({
@@ -28,7 +28,6 @@ export function GameList({
     return <div className="text-center py-12 text-muted-foreground">No games found</div>;
   }
 
-  // Dynamic grid classes based on column count
   const gridClasses = {
     1: 'grid grid-cols-1 gap-3',
     2: 'grid grid-cols-1 md:grid-cols-2 gap-3',

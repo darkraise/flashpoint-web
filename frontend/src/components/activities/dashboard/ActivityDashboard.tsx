@@ -17,7 +17,6 @@ function ActivityDashboardComponent() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
 
-  // Persist collapsed state
   useEffect(() => {
     localStorage.setItem('activityDashboardCollapsed', String(isCollapsed));
   }, [isCollapsed]);
@@ -34,7 +33,6 @@ function ActivityDashboardComponent() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="bg-card rounded-lg p-4 border border-border shadow-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -102,10 +100,8 @@ function ActivityDashboardComponent() {
         </div>
       </div>
 
-      {/* Dashboard Content */}
       {!isCollapsed ? (
         <div className="space-y-6">
-          {/* Loading State */}
           {isLoading ? (
             <div className="bg-card rounded-lg p-6 border border-border shadow-md">
               <div className="animate-pulse space-y-4">
@@ -119,22 +115,15 @@ function ActivityDashboardComponent() {
             </div>
           ) : null}
 
-          {/* Stats Cards */}
           {stats ? <ActivityStats stats={stats.data} timeRange={timeRange} /> : null}
 
-          {/* Activity Trend Chart */}
           <ActivityTrendChart autoRefresh={autoRefresh} />
 
-          {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Actions Bar Chart */}
             <TopActionsChart autoRefresh={autoRefresh} />
-
-            {/* Resource Distribution Pie Chart */}
             <ResourceDistributionChart autoRefresh={autoRefresh} />
           </div>
 
-          {/* User Leaderboard */}
           <UserLeaderboard autoRefresh={autoRefresh} />
         </div>
       ) : null}

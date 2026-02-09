@@ -4,9 +4,6 @@ import { useAuth as useAuthContext } from '@/contexts/AuthContext';
 import { LoginCredentials, RegisterData } from '@/types/auth';
 import { logger } from '@/lib/logger';
 
-/**
- * Hook for login mutation
- */
 export function useLogin() {
   const { login } = useAuthContext();
 
@@ -18,9 +15,6 @@ export function useLogin() {
   });
 }
 
-/**
- * Hook for register mutation
- */
 export function useRegister() {
   const { register } = useAuthContext();
   const queryClient = useQueryClient();
@@ -28,7 +22,6 @@ export function useRegister() {
   return useMutation({
     mutationFn: (userData: RegisterData) => register(userData),
     onSuccess: () => {
-      // Invalidate setup status query so app knows a user now exists
       queryClient.invalidateQueries({ queryKey: ['setupStatus'] });
     },
     onError: (error) => {
@@ -37,9 +30,6 @@ export function useRegister() {
   });
 }
 
-/**
- * Hook for logout mutation
- */
 export function useLogout() {
   const { logout } = useAuthContext();
   const queryClient = useQueryClient();
@@ -47,7 +37,6 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => logout(),
     onSuccess: () => {
-      // Clear all queries on logout
       queryClient.clear();
     },
     onError: (error) => {
@@ -56,15 +45,12 @@ export function useLogout() {
   });
 }
 
-/**
- * Hook to get current user
- */
 export function useCurrentUser() {
   return useQuery({
     queryKey: ['auth', 'me'],
     queryFn: () => authApi.getMe(),
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }

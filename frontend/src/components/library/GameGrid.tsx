@@ -7,10 +7,10 @@ interface GameGridProps {
   games: Game[];
   showFavoriteButton?: boolean;
   showAddToPlaylistButton?: boolean;
-  favoriteGameIds?: Set<string>; // Optional: for performance optimization
+  favoriteGameIds?: Set<string>;
   isFavoritePage?: boolean;
-  shareToken?: string | null; // Optional: for shared playlist navigation
-  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
+  shareToken?: string | null;
+  breadcrumbContext?: BreadcrumbContext;
 }
 
 export function GameGrid({
@@ -28,7 +28,6 @@ export function GameGrid({
     return <div className="text-center py-12 text-muted-foreground">No games found</div>;
   }
 
-  // Dynamic grid classes based on card size
   const gridClasses = {
     small:
       'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 py-2',

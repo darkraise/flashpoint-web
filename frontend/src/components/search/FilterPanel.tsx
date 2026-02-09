@@ -41,10 +41,8 @@ interface FilterPanelProps {
 export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Consolidated dropdown state management
   const dropdowns = useFilterDropdowns();
 
-  // Fetch all filter options in one call
   const { data: filterOptions } = useFilterOptions();
 
   const updateFilter = (key: string, value: string) => {
@@ -143,27 +141,18 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
 
   return (
     <fieldset className="space-y-4 border-0 p-0">
-      {/* Filter Header */}
       <legend className="flex items-center gap-2 text-lg font-semibold mb-4">
         <Filter size={20} className="text-primary" aria-hidden="true" />
         Filters
       </legend>
 
-      {/* All Filters */}
       <div className="space-y-3">
-        {/* Desktop Layout: Single Row */}
-        <div className="hidden md:flex items-center gap-3 flex-wrap">
-          {/* Filters - Data-driven rendering */}
-          {renderFilters(false)}
-        </div>
+        {/* Desktop Layout */}
+        <div className="hidden md:flex items-center gap-3 flex-wrap">{renderFilters(false)}</div>
 
         {/* Mobile Layout */}
-        <div className="md:hidden flex items-center gap-2">
-          {/* Filters - Data-driven rendering */}
-          {renderFilters(true)}
-        </div>
+        <div className="md:hidden flex items-center gap-2">{renderFilters(true)}</div>
 
-        {/* Filter Badges - Data-driven rendering */}
         <div className="space-y-2">{renderFilterBadges()}</div>
       </div>
     </fieldset>

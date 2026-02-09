@@ -6,13 +6,9 @@ import { rateLimitStandard } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// Apply rate limiting to prevent abuse
 router.use(rateLimitStandard);
-
-// Apply optional auth middleware to all routes
 router.use(optionalAuth);
 
-// GET /api/platforms - List all platforms
 router.get(
   '/',
   asyncHandler(async (req, res) => {

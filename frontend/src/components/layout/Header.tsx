@@ -33,18 +33,12 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
   const { logout } = useAuth();
   const { data: publicSettings } = usePublicSettings();
 
-  // Get site name from settings or use default
-  // Public settings are grouped by category: { app: { siteName: "..." }, auth: { ... } }
   const siteName = publicSettings?.app?.siteName || 'Flashpoint Archive';
 
-  // On mobile, always show site name. On desktop, hide when sidebar is collapsed.
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
   const effectiveCollapsed = isMobile ? false : sidebarCollapsed;
 
-  // Handle menu button click - different behavior for mobile vs desktop
   const handleMenuClick = () => {
-    // On mobile (<1024px): toggle sidebar open/closed
-    // On desktop (>=1024px): toggle sidebar collapsed (icon-only vs icon+label)
     if (window.innerWidth < 1024) {
       toggleSidebar();
     } else {
@@ -74,7 +68,6 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
     <header className="border-b bg-card">
       <div className="pr-4 py-3">
         <div className="flex items-center justify-between gap-4 w-full">
-          {/* Left: Logo, Title, then Hamburger */}
           <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
             <Link
               to="/"
@@ -113,24 +106,18 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
             ) : null}
           </div>
 
-          {/* Center: Search Bar (Desktop only) */}
           {!hideSearch ? (
             <div className="flex-1 max-w-2xl mx-auto hidden md:block">
               <SearchBar />
             </div>
           ) : null}
 
-          {/* Right: GitHub, Theme Settings & User Menu */}
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            {/* GitHub Star Button */}
             <GitHubButton />
-
-            {/* Theme Settings (mode + color) - For all users */}
             <ThemePicker />
 
             {(isAuthenticated || isGuest) && user ? (
               <div className="relative bg-primary/10 rounded-lg">
-                {/* Guest Mode - Show guest badge + Login button */}
                 {isGuest ? (
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted">
@@ -145,7 +132,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
                     </Button>
                   </div>
                 ) : (
-                  /* Authenticated User - Full menu with logout */ <DropdownMenu>
+                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
@@ -189,7 +176,6 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
         </div>
       </div>
 
-      {/* Mobile Search Bar (below main header) */}
       {!hideSearch ? (
         <div className="md:hidden px-4 pb-3">
           <SearchBar />

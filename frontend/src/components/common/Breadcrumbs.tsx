@@ -31,10 +31,6 @@ interface BreadcrumbsProps {
   className?: string;
 }
 
-/**
- * Navigation bar with integrated back button and breadcrumb trail.
- * Helps users understand their location and navigate the app hierarchy.
- */
 export function Breadcrumbs({
   items,
   showHome = true,

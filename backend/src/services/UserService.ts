@@ -1,5 +1,6 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { PermissionCache } from './PermissionCache';
+import { AuthService } from './AuthService';
 import { hashPassword, verifyPassword } from '../utils/password';
 import { AppError } from '../middleware/errorHandler';
 import { User, CreateUserData, UpdateUserData } from '../types/auth';
@@ -7,9 +8,6 @@ import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../
 import { logger } from '../utils/logger';
 
 export class UserService {
-  /**
-   * Get all users with pagination
-   */
   async getUsers(page: number = 1, limit: number = 50): Promise<PaginatedResponse<User>> {
     const offset = calculateOffset(page, limit);
 
@@ -36,9 +34,6 @@ export class UserService {
     return createPaginatedResponse(users as User[], total, page, limit);
   }
 
-  /**
-   * Get user by ID
-   */
   async getUserById(id: number): Promise<User | null> {
     const user = UserDatabaseService.get(
       `SELECT u.id, u.username, u.email, u.role_id as roleId, r.name as roleName,
@@ -53,9 +48,6 @@ export class UserService {
     return user || null;
   }
 
-  /**
-   * Create new user
-   */
   async createUser(data: CreateUserData): Promise<User> {
     // Hash password before transaction
     const passwordHash = await hashPassword(data.password);
@@ -75,7 +67,6 @@ export class UserService {
         throw new AppError(409, 'Email already exists');
       }
 
-      // Create user
       const result = db
         .prepare(
           'INSERT INTO users (username, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, ?)'
@@ -89,9 +80,6 @@ export class UserService {
     return (await this.getUserById(userId))!;
   }
 
-  /**
-   * Update user
-   */
   async updateUser(id: number, data: UpdateUserData): Promise<User> {
     const user = await this.getUserById(id);
     if (!user) {
@@ -103,14 +91,6 @@ export class UserService {
     const params: unknown[] = [];
 
     if (data.email !== undefined) {
-      // Check if email is taken by another user
-      const existing = UserDatabaseService.get('SELECT id FROM users WHERE email = ? AND id != ?', [
-        data.email,
-        id,
-      ]);
-      if (existing) {
-        throw new AppError(409, 'Email already exists');
-      }
       updates.push('email = ?');
       params.push(data.email);
     }
@@ -123,6 +103,13 @@ export class UserService {
     if (data.isActive !== undefined) {
       updates.push('is_active = ?');
       params.push(data.isActive ? 1 : 0);
+
+      // Revoke all refresh tokens when deactivating a user
+      if (!data.isActive) {
+        const authService = new AuthService();
+        await authService.revokeAllUserTokens(id);
+        logger.info(`[UserService] All refresh tokens revoked after deactivating user ${id}`);
+      }
     }
 
     if (updates.length === 0) {
@@ -133,7 +120,19 @@ export class UserService {
     params.push(new Date().toISOString());
     params.push(id);
 
-    UserDatabaseService.run(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+    // Wrap in transaction to prevent TOCTOU race on email uniqueness
+    const db = UserDatabaseService.getDatabase();
+    db.transaction(() => {
+      if (data.email !== undefined) {
+        const existing = db
+          .prepare('SELECT id FROM users WHERE email = ? AND id != ?')
+          .get(data.email, id);
+        if (existing) {
+          throw new AppError(409, 'Email already exists');
+        }
+      }
+      db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+    })();
 
     // Invalidate permission cache if role changed
     if (data.roleId !== undefined) {
@@ -144,9 +143,6 @@ export class UserService {
     return (await this.getUserById(id))!;
   }
 
-  /**
-   * Delete user
-   */
   async deleteUser(id: number): Promise<void> {
     const user = await this.getUserById(id);
     if (!user) {
@@ -182,9 +178,6 @@ export class UserService {
     PermissionCache.invalidateUser(id);
   }
 
-  /**
-   * Change user password
-   */
   async changePassword(
     id: number,
     currentPassword: string,
@@ -214,11 +207,13 @@ export class UserService {
       new Date().toISOString(),
       id,
     ]);
+
+    // Revoke all refresh tokens to invalidate existing sessions
+    const authService = new AuthService();
+    await authService.revokeAllUserTokens(id);
+    logger.info(`[UserService] All refresh tokens revoked after password change for user ${id}`);
   }
 
-  /**
-   * Get user setting by key
-   */
   async getUserSetting(userId: number, key: string): Promise<string | null> {
     const result = UserDatabaseService.get(
       `SELECT setting_value FROM user_settings
@@ -228,9 +223,6 @@ export class UserService {
     return result?.setting_value ?? null;
   }
 
-  /**
-   * Get all settings for a user
-   */
   async getUserSettings(userId: number): Promise<Record<string, string>> {
     const results = UserDatabaseService.all(
       `SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?`,
@@ -238,7 +230,7 @@ export class UserService {
     );
 
     return results.reduce(
-      (acc: Record<string, string>, row: any) => {
+      (acc: Record<string, string>, row: { setting_key: string; setting_value: string }) => {
         acc[row.setting_key] = row.setting_value;
         return acc;
       },
@@ -246,9 +238,6 @@ export class UserService {
     );
   }
 
-  /**
-   * Set user setting (upsert)
-   */
   async setUserSetting(userId: number, key: string, value: string): Promise<void> {
     const user = await this.getUserById(userId);
     if (!user) {
@@ -266,9 +255,6 @@ export class UserService {
     );
   }
 
-  /**
-   * Update theme settings in user_settings table (atomic transaction)
-   */
   async updateThemeSettings(userId: number, mode: string, primaryColor: string): Promise<void> {
     const user = await this.getUserById(userId);
     if (!user) {
@@ -282,9 +268,6 @@ export class UserService {
     ]);
   }
 
-  /**
-   * Get theme settings from user_settings table
-   */
   async getThemeSettings(userId: number): Promise<{ mode: string; primaryColor: string }> {
     const mode = await this.getUserSetting(userId, 'theme_mode');
     const primaryColor = await this.getUserSetting(userId, 'primary_color');

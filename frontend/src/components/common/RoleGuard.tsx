@@ -10,11 +10,6 @@ interface RoleGuardProps {
   fallback?: ReactNode;
 }
 
-/**
- * RoleGuard component
- * Conditionally renders children based on permissions or roles
- * Used for showing/hiding UI elements based on user permissions
- */
 export function RoleGuard({
   children,
   permission,
@@ -25,12 +20,10 @@ export function RoleGuard({
 }: RoleGuardProps) {
   const { hasPermission, hasAnyPermission, hasAllPermissions, hasRole } = useAuthStore();
 
-  // Check single permission
   if (permission && !hasPermission(permission)) {
     return <>{fallback}</>;
   }
 
-  // Check multiple permissions (any or all)
   if (permissions && permissions.length > 0) {
     const hasRequiredPermissions = requireAllPermissions
       ? hasAllPermissions(permissions)
@@ -41,7 +34,6 @@ export function RoleGuard({
     }
   }
 
-  // Check role
   if (role && !hasRole(role)) {
     return <>{fallback}</>;
   }

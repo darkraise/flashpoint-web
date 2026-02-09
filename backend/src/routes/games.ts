@@ -13,28 +13,24 @@ import { z } from 'zod';
 const router = Router();
 const gameService = new GameService();
 
-// Apply rate limiting to prevent abuse
 router.use(rateLimitStandard);
-
-// Apply shared access auth middleware to all routes
 router.use(sharedAccessAuth);
 
-// Custom boolean parser that handles string 'false' correctly
+// z.coerce.boolean() treats 'false' as truthy; this handles string→boolean correctly
 const booleanSchema = z.preprocess((val) => {
   if (val === 'false' || val === '0' || val === false) return false;
   if (val === 'true' || val === '1' || val === true) return true;
   return val;
 }, z.boolean());
 
-// Validation schemas
 const searchQuerySchema = z.object({
   search: z.string().optional(),
-  platform: z.string().optional(), // Comma-separated platforms
-  series: z.string().optional(), // Comma-separated series
-  developers: z.string().optional(), // Comma-separated developers
-  publishers: z.string().optional(), // Comma-separated publishers
-  playModes: z.string().optional(), // Comma-separated play modes
-  languages: z.string().optional(), // Comma-separated languages
+  platform: z.string().optional(),
+  series: z.string().optional(),
+  developers: z.string().optional(),
+  publishers: z.string().optional(),
+  playModes: z.string().optional(),
+  languages: z.string().optional(),
   library: z.enum(['arcade', 'theatre']).optional(),
   tags: z.string().optional(),
   yearFrom: z.coerce.number().int().min(1970).max(2100).optional(),
@@ -51,11 +47,9 @@ const searchQuerySchema = z.object({
   showExtreme: booleanSchema.default(false),
 });
 
-// GET /api/games - List games with pagination and filters
 router.get(
   '/',
   logActivity('games.search', 'games', (req, res) => {
-    // Count active filters
     const filters = [
       'platform',
       'series',
@@ -80,7 +74,6 @@ router.get(
   asyncHandler(async (req, res) => {
     const query = searchQuerySchema.parse(req.query);
 
-    // Use cached search for performance (5-minute TTL)
     const result = await GameSearchCache.searchGames({
       search: query.search,
       platforms: query.platform?.split(',').filter(Boolean),
@@ -101,17 +94,15 @@ router.get(
       limit: query.limit,
       showBroken: query.showBroken,
       showExtreme: query.showExtreme,
-      fields: 'list', // Only return essential columns for browse/search views
+      fields: 'list',
     });
 
-    // Store result count for activity logging
     res.locals.resultCount = result.total;
 
     res.json(result);
   })
 );
 
-// GET /api/games/filter-options - Get all filter options for dropdowns
 router.get(
   '/filter-options',
   asyncHandler(async (req, res) => {
@@ -120,7 +111,6 @@ router.get(
   })
 );
 
-// GET /api/games/most-played - Get most played games globally
 router.get(
   '/most-played',
   asyncHandler(async (req, res) => {
@@ -135,8 +125,7 @@ router.get(
   })
 );
 
-// GET /api/games/random - Get random game
-// IMPORTANT: Must be defined BEFORE /:id to avoid being shadowed by the wildcard
+// Must be defined BEFORE /:id to avoid being shadowed
 router.get(
   '/random',
   asyncHandler(async (req, res) => {
@@ -152,7 +141,6 @@ router.get(
   })
 );
 
-// GET /api/games/:id - Get single game by ID
 router.get(
   '/:id',
   validateSharedGameAccess('id'),
@@ -169,14 +157,12 @@ router.get(
       throw new AppError(404, 'Game not found');
     }
 
-    // Store game for activity logging
     res.locals.game = game;
 
     res.json(game);
   })
 );
 
-// GET /api/games/:id/related - Get related games
 router.get(
   '/:id/related',
   validateSharedGameAccess('id'),
@@ -188,7 +174,6 @@ router.get(
   })
 );
 
-// GET /api/games/:id/launch - Get game launch data
 router.get(
   '/:id/launch',
   validateSharedGameAccess('id'),
@@ -204,15 +189,14 @@ router.get(
       throw new AppError(404, 'Game not found');
     }
 
-    // Mount the game ZIP (awaited so local ZIPs are ready before we return the URL).
-    // For downloads, mountGameZip returns quickly with { mounted: false, downloading: true }.
+    // Awaited so local ZIPs are ready before we return the URL.
+    // For downloads, returns quickly with { mounted: false, downloading: true }.
     const mountResult = await gameDataService.mountGameZip(game.id);
     const downloading = mountResult.downloading || false;
 
-    // Extract launch command (usually the SWF file path for Flash games)
     let launchCommand = game.launchCommand || '';
 
-    // If no launch command, try to get path from game_data table
+    // Fallback: get path from game_data table
     if (!launchCommand) {
       const gameDataPath = await gameService.getGameDataPath(game.id);
       if (gameDataPath) {
@@ -220,34 +204,23 @@ router.get(
       }
     }
 
-    // For Flash games, the launch command is typically the SWF file path
-    // For HTML5 games, it's usually an index.html file
-    // The path is relative to the htdocs folder OR an absolute URL
-
     let contentUrl = '';
     if (launchCommand) {
-      // Game content is served via /game-proxy route (integrated in backend)
       const proxyUrl = '/game-proxy';
 
-      // Check if launch command is an absolute URL
       if (launchCommand.startsWith('http://') || launchCommand.startsWith('https://')) {
-        // Use the full URL as-is with the proxy
         contentUrl = `${proxyUrl}/${launchCommand}`;
       } else {
-        // For relative paths, construct full URL with domain from source
+        // Relative paths need a domain derived from game.source
         let fullUrl = launchCommand;
 
         if (game.source) {
           try {
-            // Extract domain from source URL
             const sourceUrl = new URL(game.source);
             const domain = sourceUrl.hostname;
-
-            // Construct full URL: http://domain/path
             const urlPath = launchCommand.startsWith('/') ? launchCommand : `/${launchCommand}`;
             fullUrl = `http://${domain}${urlPath}`;
           } catch {
-            // If source is not a valid URL, assume launchCommand is already domain/path
             fullUrl = launchCommand.startsWith('http') ? launchCommand : `http://${launchCommand}`;
           }
         }
@@ -258,13 +231,9 @@ router.get(
 
     const hasContent = launchCommand.trim().length > 0;
 
-    // Game can be played in browser if:
-    // 1. It's a web-playable platform (Flash or HTML5)
-    // 2. It has content (launch command)
     const isWebPlayablePlatform = game.platformName === 'Flash' || game.platformName === 'HTML5';
     const canPlayInBrowser = isWebPlayablePlatform && hasContent;
 
-    // Store in res.locals for activity logging
     res.locals.platform = game.platformName;
     res.locals.canPlayInBrowser = canPlayInBrowser;
     res.locals.launchCommand = launchCommand;

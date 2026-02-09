@@ -33,7 +33,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
     const data = payload[0];
     if (!data?.payload) return null;
 
-    const game = data.payload as any;
+    const game = data.payload as { fullTitle?: string; playtime?: number; plays?: number };
     const playtime = typeof game.playtime === 'number' ? game.playtime : 0;
 
     return (
@@ -46,7 +46,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Total Plays:</span>
-            <span className="font-semibold text-sm">{game.plays}</span>
+            <span className="font-semibold text-sm">{game.plays ?? 0}</span>
           </div>
         </div>
       </div>

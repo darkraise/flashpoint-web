@@ -12,12 +12,10 @@ import { logActivity } from '../middleware/activityLogger';
 const router = Router();
 const communityPlaylistService = new CommunityPlaylistService();
 
-// Validation schema
 const downloadSchema = z.object({
   downloadUrl: z.string().url().max(2000),
 });
 
-// GET /api/community-playlists - Fetch list of community playlists from wiki
 router.get(
   '/',
   optionalAuth,
@@ -27,7 +25,6 @@ router.get(
   asyncHandler(async (req, res) => {
     const playlists = await communityPlaylistService.fetchCommunityPlaylists();
 
-    // Store count for activity logging (sum all playlists across categories)
     res.locals.playlistCount = playlists.categories.reduce(
       (total, category) => total + category.playlists.length,
       0
@@ -37,7 +34,6 @@ router.get(
   })
 );
 
-// POST /api/community-playlists/download - Download a specific playlist
 router.post(
   '/download',
   optionalAuth,
@@ -48,7 +44,6 @@ router.post(
     gameCount: res.locals.gameCount || 0,
   })),
   asyncHandler(async (req, res) => {
-    // Validate request body
     const { downloadUrl } = downloadSchema.parse(req.body);
 
     try {
@@ -78,7 +73,6 @@ router.post(
       throw new AppError(500, 'Failed to download playlist');
     }
 
-    // Store metadata for activity logging
     res.locals.playlistTitle = result.playlist?.title;
     res.locals.playlistId = result.playlist?.id;
     res.locals.gameCount = result.playlist?.games?.length || 0;

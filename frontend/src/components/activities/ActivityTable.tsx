@@ -29,11 +29,9 @@ interface ActivityLog {
   createdAt: string;
 }
 
-// Constants
 const PAGINATION_LIMIT = 20;
 const DEBOUNCE_DELAY = 500;
 
-// Columns definition - moved outside component to prevent recreation on every render
 const ACTIVITY_TABLE_COLUMNS: ColumnDef<ActivityLog>[] = [
   {
     accessorKey: 'createdAt',
@@ -129,24 +127,19 @@ function ActivityTableComponent() {
   const [showFilters, setShowFilters] = useState(false);
   const limit = PAGINATION_LIMIT;
 
-  // Sorting state
   const [sortBy, setSortBy] = useState<
     'createdAt' | 'username' | 'action' | 'resource' | 'ipAddress'
   >('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Transition for deferred state updates
   const [, startTransition] = useTransition();
 
-  // Consolidated filter state with date range validation
   const { filters: filterState, updateFilter, clearFilters } = useActivityFilters();
 
-  // Debounced values for API calls
   const debouncedUsername = useDebounce(filterState.username, DEBOUNCE_DELAY);
   const debouncedAction = useDebounce(filterState.action, DEBOUNCE_DELAY);
   const debouncedResource = useDebounce(filterState.resource, DEBOUNCE_DELAY);
 
-  // Build filters object - convert Date objects to ISO strings for API
   // Only include dates if the range is valid
   const hasValidDateRange =
     !filterState.dateRangeError || (!filterState.startDate && !filterState.endDate);
@@ -178,22 +171,18 @@ function ActivityTableComponent() {
 
   const { data, isLoading, isError, error } = useActivities(page, limit, filters);
 
-  // Convert sorting state to TanStack Table format
   const sortingState: SortingState = useMemo(
     () => [{ id: sortBy, desc: sortOrder === 'desc' }],
     [sortBy, sortOrder]
   );
 
-  // Handle sorting changes from DataTable
   const handleSortingChange = useCallback(
     (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
       const newSorting =
         typeof updaterOrValue === 'function' ? updaterOrValue(sortingState) : updaterOrValue;
 
-      // Wrap state updates in transition to defer prop changes
       startTransition(() => {
         if (newSorting.length === 0) {
-          // Reset to default when cleared
           setSortBy('createdAt');
           setSortOrder('desc');
         } else {
@@ -201,7 +190,7 @@ function ActivityTableComponent() {
           setSortBy(id as typeof sortBy);
           setSortOrder(desc ? 'desc' : 'asc');
         }
-        setPage(1); // Reset to first page on sort change
+        setPage(1);
       });
     },
     [sortingState]
@@ -212,7 +201,6 @@ function ActivityTableComponent() {
     setPage(1);
   }, [clearFilters]);
 
-  // Check if any filters are active
   const hasActiveFilters =
     filterState.username ||
     filterState.action ||
@@ -220,7 +208,6 @@ function ActivityTableComponent() {
     filterState.startDate ||
     filterState.endDate;
 
-  // Count active filters
   const activeFilterCount = [
     filterState.username,
     filterState.action,

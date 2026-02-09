@@ -12,6 +12,9 @@ import {
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
   getRefreshTokenFromCookie,
+  setAccessTokenCookie,
+  clearAccessTokenCookie,
+  getAccessTokenFromCookie,
 } from '../utils/cookies';
 import { z } from 'zod';
 
@@ -19,11 +22,9 @@ const router = Router();
 const authService = new AuthService();
 const activityService = new ActivityService();
 
-// Rate limiters for authentication endpoints
-// Stricter limits on login to prevent brute force attacks
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per window per IP
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: {
     error: {
       message: 'Too many login attempts from this IP, please try again after 15 minutes',
@@ -32,7 +33,7 @@ const loginLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: false, // Count all attempts
+  skipSuccessfulRequests: false,
   handler: (req, res) => {
     logger.warn(`[Security] Rate limit exceeded for login from IP: ${req.ip}`);
     res.status(429).json({
@@ -44,10 +45,9 @@ const loginLimiter = rateLimit({
   },
 });
 
-// Moderate limits on registration
 const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 registration attempts per hour per IP
+  windowMs: 60 * 60 * 1000,
+  max: 3,
   message: {
     error: {
       message: 'Too many registration attempts from this IP, please try again after an hour',
@@ -67,10 +67,9 @@ const registerLimiter = rateLimit({
   },
 });
 
-// Moderate limits on token refresh
 const refreshLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 refresh requests per minute per IP
+  windowMs: 60 * 1000,
+  max: 30,
   message: {
     error: {
       message: 'Too many token refresh attempts from this IP, please try again later',
@@ -90,7 +89,6 @@ const refreshLimiter = rateLimit({
   },
 });
 
-// Validation schemas
 const loginSchema = z.object({
   username: z.string().min(3).max(50),
   password: z.string().min(6),
@@ -102,11 +100,7 @@ const registerSchema = z.object({
   password: z.string().min(6),
 });
 
-/**
- * GET /api/auth/setup-status
- * Check if the system needs initial setup (no users exist)
- * Public endpoint - no authentication required
- */
+// Public: no auth required. Returns whether the system needs initial admin setup.
 router.get('/setup-status', (req, res) => {
   const needsSetup = UserDatabaseService.needsInitialSetup();
   res.json({
@@ -117,10 +111,6 @@ router.get('/setup-status', (req, res) => {
   });
 });
 
-/**
- * POST /api/auth/login
- * Login with username and password
- */
 router.post(
   '/login',
   loginLimiter,
@@ -133,7 +123,6 @@ router.post(
 
       const result = await authService.login(credentials, ipAddress);
 
-      // Log activity
       await activityService.log({
         userId: result.user.id,
         username: result.user.username,
@@ -145,13 +134,12 @@ router.post(
 
       logger.info(`[Auth] Login successful for user: ${credentials.username}`);
 
-      // Set refresh token as HTTP-only cookie
       setRefreshTokenCookie(res, result.tokens.refreshToken);
+      setAccessTokenCookie(res, result.tokens.accessToken);
 
       res.json({
         user: result.user,
         tokens: {
-          accessToken: result.tokens.accessToken,
           expiresIn: result.tokens.expiresIn,
         },
       });
@@ -166,7 +154,6 @@ router.post(
         );
       }
 
-      // Log failed login attempt
       const ipAddress = req.ip || '';
       const username =
         typeof req.body?.username === 'string' ? req.body.username.substring(0, 50) : 'unknown';
@@ -192,7 +179,6 @@ router.post(
         logger.error('[Auth] Failed to log failed login attempt:', logError);
       }
 
-      // Log the error with full details before passing to error handler
       logger.warn(`[Auth] Login failed for user: ${username}`, {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
@@ -203,16 +189,8 @@ router.post(
   })
 );
 
-/**
- * POST /api/auth/register
- * Register new user
- *
- * Dual Purpose:
- * 1. Initial Setup: When no users exist, creates first admin account (bypasses registration settings)
- * 2. Regular Registration: When users exist, creates regular user account (requires registration enabled)
- *
- * The AuthService.register() method automatically detects which scenario applies
- */
+// Dual purpose: first call creates admin (bypasses settings); subsequent calls create regular users.
+// AuthService.register() auto-detects which scenario applies.
 router.post(
   '/register',
   registerLimiter,
@@ -224,7 +202,6 @@ router.post(
 
       const result = await authService.register(data);
 
-      // Log activity
       await activityService.log({
         userId: result.user.id,
         username: result.user.username,
@@ -236,13 +213,12 @@ router.post(
 
       logger.info(`[Auth] Registration successful for user: ${data.username}`);
 
-      // Set refresh token as HTTP-only cookie
       setRefreshTokenCookie(res, result.tokens.refreshToken);
+      setAccessTokenCookie(res, result.tokens.accessToken);
 
       res.status(201).json({
         user: result.user,
         tokens: {
-          accessToken: result.tokens.accessToken,
           expiresIn: result.tokens.expiresIn,
         },
       });
@@ -269,10 +245,6 @@ router.post(
   })
 );
 
-/**
- * POST /api/auth/logout
- * Logout and revoke refresh token
- */
 router.post(
   '/logout',
   softAuth,
@@ -285,15 +257,12 @@ router.post(
     }
 
     clearRefreshTokenCookie(res);
+    clearAccessTokenCookie(res);
 
     res.json({ success: true, message: 'Logged out successfully' });
   })
 );
 
-/**
- * POST /api/auth/refresh
- * Refresh access token using refresh token
- */
 router.post(
   '/refresh',
   refreshLimiter,
@@ -306,29 +275,29 @@ router.post(
 
     const tokens = await authService.refreshToken(refreshToken);
 
-    // Set new refresh token cookie (token rotation)
+    // Token rotation: both tokens are replaced on every refresh
     setRefreshTokenCookie(res, tokens.refreshToken);
+    setAccessTokenCookie(res, tokens.accessToken);
 
     res.json({
-      accessToken: tokens.accessToken,
       expiresIn: tokens.expiresIn,
     });
   })
 );
 
-/**
- * GET /api/auth/me
- * Get current authenticated user
- */
 router.get(
   '/me',
   asyncHandler(async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token =
+      getAccessTokenFromCookie(req.cookies) ||
+      (req.headers.authorization?.startsWith('Bearer ')
+        ? req.headers.authorization.substring(7)
+        : undefined);
+
+    if (!token) {
       throw new AppError(401, 'No token provided');
     }
 
-    const token = authHeader.substring(7);
     const user = await authService.verifyAccessToken(token);
 
     res.json(user);

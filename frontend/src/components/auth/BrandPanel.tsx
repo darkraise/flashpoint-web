@@ -1,9 +1,4 @@
-/**
- * BrandPanel - Desktop-only brand showcase panel with museum theme
- * Features: Large logo with float animation, stats counter, architectural grid overlay
- */
 export function BrandPanel() {
-  // Archive stats - could be fetched from API in the future
   const stats = [
     { label: 'Games Preserved', value: '200,000+' },
     { label: 'Animations Archived', value: '10,000+' },
@@ -12,7 +7,6 @@ export function BrandPanel() {
 
   return (
     <div className="hidden lg:flex lg:flex-col lg:justify-center lg:items-center lg:w-[60%] relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background backdrop-blur-[1px]">
-      {/* Architectural grid overlay - very subtle */}
       <div
         className="absolute inset-0 opacity-[0.02] pointer-events-none"
         style={{
@@ -25,7 +19,6 @@ export function BrandPanel() {
         aria-hidden="true"
       />
 
-      {/* Multi-layer gradient backgrounds */}
       <div
         className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent pointer-events-none"
         aria-hidden="true"
@@ -35,9 +28,7 @@ export function BrandPanel() {
         aria-hidden="true"
       />
 
-      {/* Content container */}
       <div className="relative z-10 flex flex-col items-center px-12 animate-fade-in-up">
-        {/* Logo with float animation */}
         <div className="mb-8 w-40 h-40 flex items-center justify-center animate-float">
           <img
             src="/images/logo.png"
@@ -46,7 +37,6 @@ export function BrandPanel() {
           />
         </div>
 
-        {/* Title and tagline */}
         <h1 className="text-5xl font-bold text-foreground mb-4 text-center tracking-tight">
           Flashpoint Archive
         </h1>
@@ -54,7 +44,6 @@ export function BrandPanel() {
           Preserving digital history, one game at a time
         </p>
 
-        {/* Stats counter */}
         <div className="grid grid-cols-3 gap-8 w-full max-w-2xl">
           {stats.map((stat, index) => (
             <div

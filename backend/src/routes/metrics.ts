@@ -6,11 +6,6 @@ import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
-/**
- * GET /api/metrics/summary
- * Get performance metrics summary
- * Requires: settings.view permission
- */
 router.get(
   '/summary',
   authenticate,
@@ -25,11 +20,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/metrics/endpoints
- * Get detailed endpoint statistics
- * Requires: settings.view permission
- */
 router.get(
   '/endpoints',
   authenticate,
@@ -44,11 +34,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/metrics/endpoints/slowest
- * Get slowest endpoints
- * Requires: settings.view permission
- */
 router.get(
   '/endpoints/slowest',
   authenticate,
@@ -64,11 +49,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/metrics/caches
- * Get cache hit rates
- * Requires: settings.view permission
- */
 router.get(
   '/caches',
   authenticate,
@@ -83,11 +63,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/metrics/queries
- * Get database query statistics
- * Requires: settings.view permission
- */
 router.get(
   '/queries',
   authenticate,
@@ -102,11 +77,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/metrics/reset
- * Reset all metrics
- * Requires: settings.update permission
- */
 router.post(
   '/reset',
   authenticate,

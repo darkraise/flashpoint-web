@@ -65,9 +65,6 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     this.clearCache();
   }
 
-  /**
-   * Get a single setting by key (with caching)
-   */
   get(key: string): SettingValue | null {
     const cached = this.cache.get(key);
 
@@ -75,10 +72,9 @@ export class CachedSystemSettingsService extends SystemSettingsService {
       return cached.value as SettingValue | null;
     }
 
-    // Cache miss - fetch from database
     const value = super.get(key);
 
-    // Cache both non-null and null values to avoid repeated DB queries for missing keys
+    // Cache null values too to avoid repeated DB queries for missing keys
     this.cache.set(key, {
       value,
       timestamp: Date.now(),
@@ -87,9 +83,6 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     return value;
   }
 
-  /**
-   * Get all settings in a category (with caching)
-   */
   getCategory(category: string): CategorySettings {
     const cached = this.categoryCache.get(category);
 
@@ -97,7 +90,6 @@ export class CachedSystemSettingsService extends SystemSettingsService {
       return cached.value as CategorySettings;
     }
 
-    // Cache miss - fetch from database
     const value = super.getCategory(category);
 
     this.categoryCache.set(category, {
@@ -108,63 +100,43 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     return value;
   }
 
-  /**
-   * Set a single setting (invalidates cache)
-   */
   set(key: string, value: SettingValue, updatedBy?: number): void {
     super.set(key, value, updatedBy);
 
-    // Invalidate cache for this key
     this.cache.delete(key);
 
-    // Invalidate category cache (key format is "category.setting_name")
+    // Key format is "category.setting_name"
     const category = key.split('.')[0];
     this.categoryCache.delete(category);
   }
 
-  /**
-   * Update multiple settings in a category (invalidates cache)
-   */
   updateCategory(category: string, settings: CategorySettings, updatedBy?: number): void {
     super.updateCategory(category, settings, updatedBy);
 
-    // Invalidate all keys in this category
     for (const key of this.cache.keys()) {
       if (key.startsWith(`${category}.`)) {
         this.cache.delete(key);
       }
     }
 
-    // Invalidate category cache
     this.categoryCache.delete(category);
   }
 
-  /**
-   * Clear all caches
-   */
   clearCache(): void {
     this.cache.clear();
     this.categoryCache.clear();
   }
 
-  /**
-   * Clear cache for a specific category
-   */
   clearCategoryCache(category: string): void {
-    // Clear individual key caches for this category
     for (const key of this.cache.keys()) {
       if (key.startsWith(`${category}.`)) {
         this.cache.delete(key);
       }
     }
 
-    // Clear category cache
     this.categoryCache.delete(category);
   }
 
-  /**
-   * Get cache statistics
-   */
   getCacheStats(): {
     keyCount: number;
     categoryCount: number;
@@ -179,27 +151,19 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     };
   }
 
-  /**
-   * Check if cached entry is still valid
-   */
   private isValid(timestamp: number): boolean {
     return Date.now() - timestamp < this.cacheTTL;
   }
 
-  /**
-   * Clean up expired cache entries
-   */
   private cleanup(): void {
     const now = Date.now();
 
-    // Clean key cache
     for (const [key, entry] of this.cache.entries()) {
       if (now - entry.timestamp >= this.cacheTTL) {
         this.cache.delete(key);
       }
     }
 
-    // Clean category cache
     for (const [category, entry] of this.categoryCache.entries()) {
       if (now - entry.timestamp >= this.cacheTTL) {
         this.categoryCache.delete(category);
@@ -207,9 +171,6 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     }
   }
 
-  /**
-   * Estimate cache size in bytes (approximate)
-   */
   private estimateCacheSize(): number {
     let size = 0;
 

@@ -9,40 +9,12 @@ import { ICON_CATEGORIES, type PlaylistIconName } from '@/lib/playlistIcons';
 import { cn } from '@/lib/utils';
 
 interface IconSelectorProps {
-  /**
-   * Currently selected icon name
-   */
   value?: PlaylistIconName | null;
-
-  /**
-   * Callback when icon selection changes
-   */
   onChange: (iconName: PlaylistIconName | null) => void;
-
-  /**
-   * Optional label for the selector
-   */
   label?: string;
-
-  /**
-   * Whether the selector is disabled
-   * @default false
-   */
   disabled?: boolean;
 }
 
-/**
- * Enhanced icon selector with virtualized rendering
- * Features: 600 icons displayed in virtualized grid, 8 columns, optimized performance
- * Uses @tanstack/react-virtual for rendering only visible icons (83% reduction in DOM nodes)
- *
- * @example
- * <IconSelector
- *   value={selectedIcon}
- *   onChange={setSelectedIcon}
- *   label="Playlist Icon"
- * />
- */
 export function IconSelector({
   value,
   onChange,
@@ -51,13 +23,11 @@ export function IconSelector({
 }: IconSelectorProps) {
   const [open, setOpen] = useState(false);
 
-  // Flatten all icons from all categories into a single array (memoized to prevent GC pressure)
   const allIcons = useMemo(
     () => Object.values(ICON_CATEGORIES).flatMap((category) => category.icons),
-    [] // ICON_CATEGORIES is static, no dependencies needed
+    []
   );
 
-  // Memoized handler to select an icon and close popover
   const handleIconSelect = useCallback(
     (iconName: PlaylistIconName) => {
       onChange(iconName);
@@ -66,19 +36,15 @@ export function IconSelector({
     [onChange]
   );
 
-  // Memoized handler to clear selection
   const handleClear = useCallback(() => {
     onChange(null);
     setOpen(false);
   }, [onChange]);
 
-  // Memoized handler for popover open/close with cleanup
   const handleOpenChange = useCallback((newOpen: boolean) => {
     setOpen(newOpen);
-    // Memory leak prevention: no state to reset since virtualization handles cleanup
   }, []);
 
-  // Format icon name for display (memoized)
   const formatIconName = useCallback((name: string) => {
     return name
       .replace(/([A-Z])/g, ' $1')
@@ -145,7 +111,6 @@ export function IconSelector({
           sideOffset={8}
         >
           <div>
-            {/* Header */}
             <div className="px-4 pt-4 pb-3 border-b bg-muted/30">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -158,7 +123,6 @@ export function IconSelector({
               </div>
             </div>
 
-            {/* Virtualized Icon Grid */}
             <div className="relative bg-background/50">
               <VirtualizedIconGrid
                 icons={allIcons}
@@ -167,13 +131,11 @@ export function IconSelector({
                 formatIconName={formatIconName}
               />
 
-              {/* Scroll Gradient Indicators */}
               <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-background to-transparent pointer-events-none" />
               <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
             </div>
           </div>
 
-          {/* Footer */}
           {value ? (
             <div className="border-t bg-muted/30 p-3">
               <Button

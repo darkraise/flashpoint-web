@@ -38,7 +38,6 @@ export function RuffleManagementCard() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Check for Ruffle update mutation
   const checkRuffleUpdate = useMutation({
     mutationFn: () => ruffleApi.checkUpdate(),
     onSuccess: (data) => {
@@ -64,7 +63,6 @@ export function RuffleManagementCard() {
     },
   });
 
-  // Update Ruffle mutation
   const updateRuffle = useMutation({
     mutationFn: () => ruffleApi.update(),
     onSuccess: (data) => {

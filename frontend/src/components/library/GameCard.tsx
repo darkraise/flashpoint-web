@@ -18,13 +18,13 @@ import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 interface GameCardProps {
   game: Game;
   showFavoriteButton?: boolean;
-  showRemoveButton?: boolean; // NEW: Show remove button (Favorites page only)
-  showFavoriteIndicator?: boolean; // NEW: Show filled heart indicator
+  showRemoveButton?: boolean;
+  showFavoriteIndicator?: boolean;
   showAddToPlaylistButton?: boolean;
-  favoriteGameIds?: Set<string>; // Optional: for performance optimization
-  isFavoritePage?: boolean; // NEW: Are we on favorites page?
-  shareToken?: string | null; // Optional: for shared playlist navigation
-  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
+  favoriteGameIds?: Set<string>;
+  isFavoritePage?: boolean;
+  shareToken?: string | null;
+  breadcrumbContext?: BreadcrumbContext;
 }
 
 const GameCardComponent = function GameCard({
@@ -45,18 +45,14 @@ const GameCardComponent = function GameCard({
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  // Get logo URL from game ID
   const imageUrl = getGameLogoUrl(game.id) || null;
 
-  // Check if game is favorited and playable
   const isFavorited = favoriteGameIds?.has(game.id) ?? false;
   const isPlayable = game.platformName === 'Flash' || game.platformName === 'HTML5';
 
-  // Build URLs with shareToken if present
   const gameDetailUrl = buildSharedGameUrl(`/games/${game.id}`, shareToken);
   const gamePlayUrl = buildSharedGameUrl(`/games/${game.id}/play`, shareToken);
 
-  // Handle navigation to game details (for clicking on image/footer area)
   const handleCardClick = (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (e && 'key' in e && e.key !== 'Enter' && e.key !== ' ') {
       return;
@@ -80,12 +76,10 @@ const GameCardComponent = function GameCard({
       >
         {imageUrl && !imageError ? (
           <>
-            {/* Blur placeholder while loading */}
             {!imageLoaded ? (
               <div className="absolute inset-0 bg-gradient-to-br from-muted to-accent animate-pulse z-0" />
             ) : null}
 
-            {/* Game Image with hover scale effect */}
             <img
               src={imageUrl}
               alt={game.title}
@@ -97,7 +91,6 @@ const GameCardComponent = function GameCard({
               loading="lazy"
             />
 
-            {/* Gradient overlay for depth */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10 pointer-events-none" />
           </>
         ) : (
@@ -107,9 +100,7 @@ const GameCardComponent = function GameCard({
           </div>
         )}
 
-        {/* Glassmorphism Action Bar - slides up on hover (desktop), always visible on mobile */}
         <div className="absolute bottom-0 left-0 right-0 z-20 backdrop-blur-lg bg-black/30 border-t border-white/10 flex items-center justify-start gap-1.5 px-3 py-2 translate-y-0 md:translate-y-full md:group-hover:translate-y-0 motion-safe:transition-all motion-safe:duration-300 motion-safe:ease-out">
-          {/* Favorite Button - Show when not favorited */}
           {showFavoriteButton && !isFavorited ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -132,7 +123,6 @@ const GameCardComponent = function GameCard({
             </Tooltip>
           ) : null}
 
-          {/* Remove from Favorites Button - Show when favorited */}
           {showRemoveButton && isFavorited ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -153,7 +143,6 @@ const GameCardComponent = function GameCard({
             </Tooltip>
           ) : null}
 
-          {/* Add to Playlist Button */}
           {showAddToPlaylistButton ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -179,7 +168,6 @@ const GameCardComponent = function GameCard({
             </Tooltip>
           ) : null}
 
-          {/* Play Button */}
           {isPlayable ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -211,9 +199,7 @@ const GameCardComponent = function GameCard({
         tabIndex={0}
         onKeyDown={handleCardClick}
       >
-        {/* Platform Badge and Favorite Indicator Row - Fixed height */}
         <div className="flex items-center justify-between w-full h-6 min-h-[24px]">
-          {/* Platform Badge */}
           {game.platformName ? (
             <Badge
               className="backdrop-blur-md bg-primary/10 border border-primary/20 h-6 px-2 text-xs font-normal text-primary"
@@ -231,7 +217,6 @@ const GameCardComponent = function GameCard({
             </Badge>
           ) : null}
 
-          {/* Favorite Indicator (non-interactive) */}
           {showFavoriteIndicator && isFavorited && !isFavoritePage ? (
             <div
               className="flex items-center gap-1 text-red-500"
@@ -243,7 +228,6 @@ const GameCardComponent = function GameCard({
           ) : null}
         </div>
 
-        {/* Title - Fixed 2-line height */}
         <h3
           className="text-base font-semibold line-clamp-2 w-full h-12 min-h-[48px] leading-6"
           title={game.title}
@@ -251,7 +235,6 @@ const GameCardComponent = function GameCard({
           {game.title}
         </h3>
 
-        {/* Developer name - Fixed height container */}
         <div className="h-5 min-h-[20px] w-full">
           {game.developer ? (
             <p className="text-sm text-muted-foreground truncate w-full" title={game.developer}>
@@ -261,7 +244,6 @@ const GameCardComponent = function GameCard({
         </div>
       </CardFooter>
 
-      {/* Add to Playlist Modal */}
       {isPlaylistModalOpen ? (
         <AddToPlaylistModal
           isOpen={isPlaylistModalOpen}
@@ -274,22 +256,17 @@ const GameCardComponent = function GameCard({
   );
 };
 
-// Memoize component to prevent unnecessary re-renders
-// Only re-render if game.id changes or favoriteGameIds state changes
 export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
-  // Re-render if game ID or title changed
   if (prevProps.game.id !== nextProps.game.id || prevProps.game.title !== nextProps.game.title) {
     return false;
   }
 
-  // Re-render if favorite status changed for this game
   const prevIsFavorited = prevProps.favoriteGameIds?.has(prevProps.game.id) ?? false;
   const nextIsFavorited = nextProps.favoriteGameIds?.has(nextProps.game.id) ?? false;
   if (prevIsFavorited !== nextIsFavorited) {
     return false;
   }
 
-  // Re-render if props changed
   if (
     prevProps.showFavoriteButton !== nextProps.showFavoriteButton ||
     prevProps.showRemoveButton !== nextProps.showRemoveButton ||
@@ -303,7 +280,6 @@ export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
     return false;
   }
 
-  // Don't re-render - props are effectively the same
   return true;
 });
 GameCard.displayName = 'GameCard';

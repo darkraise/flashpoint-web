@@ -15,13 +15,9 @@ interface State {
   isRetrying: boolean;
 }
 
-/**
- * Error boundary for game library components
- * Includes automatic retry with exponential backoff for transient failures
- */
 export class GameLibraryErrorBoundary extends Component<Props, State> {
   private maxRetries = 3;
-  private retryTimeouts: number[] = [1000, 3000, 5000]; // Exponential backoff
+  private retryTimeouts: number[] = [1000, 3000, 5000];
 
   constructor(props: Props) {
     super(props);
@@ -40,15 +36,11 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logger.error('GameLibraryErrorBoundary caught an error:', error, errorInfo);
 
-    // Attempt automatic retry for transient errors
     if (this.isTransientError(error) && this.state.retryCount < this.maxRetries) {
       this.scheduleRetry();
     }
   }
 
-  /**
-   * Determine if error might be transient (network, timeout, etc.)
-   */
   private isTransientError(error: Error): boolean {
     const transientKeywords = [
       'network',
@@ -64,9 +56,6 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
     return transientKeywords.some((keyword) => errorMessage.includes(keyword));
   }
 
-  /**
-   * Schedule automatic retry with exponential backoff
-   */
   private scheduleRetry(): void {
     const delay = this.retryTimeouts[this.state.retryCount] || 5000;
 
@@ -82,7 +71,6 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
         isRetrying: false,
       }));
 
-      // Call custom retry handler if provided
       if (this.props.onRetry) {
         this.props.onRetry();
       }
@@ -125,7 +113,6 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
               </div>
             </div>
 
-            {/* Error details */}
             {this.state.error && !this.state.isRetrying ? (
               <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
                 <h3 className="text-sm font-semibold text-destructive mb-2">Error Details:</h3>
@@ -135,7 +122,6 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Retry information */}
             {this.state.retryCount > 0 && !this.state.isRetrying ? (
               <div className="mb-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <p className="text-sm text-blue-400">
@@ -145,7 +131,6 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Action buttons */}
             {!this.state.isRetrying ? (
               <div className="flex gap-3">
                 <Button
@@ -159,7 +144,6 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Retry progress */}
             {this.state.isRetrying ? (
               <div className="flex items-center gap-3 text-muted-foreground">
                 <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
@@ -167,7 +151,6 @@ export class GameLibraryErrorBoundary extends Component<Props, State> {
               </div>
             ) : null}
 
-            {/* Help text */}
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground">If this problem persists, try:</p>
               <ul className="mt-2 space-y-1 text-sm text-muted-foreground list-disc list-inside">

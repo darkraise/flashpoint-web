@@ -1,17 +1,6 @@
 import { useEffect, useRef, EffectCallback } from 'react';
 
-/**
- * Hook that runs an effect only once on component mount
- * Similar to componentDidMount in class components
- *
- * @param effect - The effect callback to run on mount
- *
- * @example
- * useMountEffect(() => {
- *   console.log('Component mounted');
- *   fetchInitialData();
- * });
- */
+/** Runs an effect only once on mount, surviving React StrictMode double-mount. */
 export function useMountEffect(effect: EffectCallback) {
   const isMountedRef = useRef(false);
 
@@ -24,23 +13,7 @@ export function useMountEffect(effect: EffectCallback) {
   }, []);
 }
 
-/**
- * Hook that returns whether this is the initial mount
- * Useful for conditional logic that differs between mount and updates
- *
- * @returns true on initial mount, false on subsequent renders
- *
- * @example
- * const isInitialMount = useIsInitialMount();
- *
- * useEffect(() => {
- *   if (isInitialMount) {
- *     // Do something only on mount
- *   } else {
- *     // Do something only on updates
- *   }
- * }, [dependency]);
- */
+/** Returns true on initial mount, false on subsequent renders. */
 export function useIsInitialMount(): boolean {
   const isInitialMountRef = useRef(true);
 

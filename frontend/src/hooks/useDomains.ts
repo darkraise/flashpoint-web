@@ -6,9 +6,6 @@ import { getErrorMessage } from '@/types/api-error';
 
 const DOMAINS_QUERY_KEY = ['domains'];
 
-/**
- * Hook to fetch all configured domains (admin only)
- */
 export function useDomains(enabled = true) {
   return useQuery({
     queryKey: DOMAINS_QUERY_KEY,
@@ -17,9 +14,6 @@ export function useDomains(enabled = true) {
   });
 }
 
-/**
- * Hook to add a domain
- */
 export function useAddDomain() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -28,7 +22,6 @@ export function useAddDomain() {
     mutationFn: (hostname: string) => domainsApi.add(hostname),
     onSuccess: (newDomain) => {
       queryClient.setQueryData<Domain[]>(DOMAINS_QUERY_KEY, (old = []) => [...old, newDomain]);
-      // Invalidate public settings so default domain updates
       queryClient.invalidateQueries({ queryKey: ['system-settings', 'public'] });
       showToast('Domain added', 'success');
     },
@@ -38,9 +31,6 @@ export function useAddDomain() {
   });
 }
 
-/**
- * Hook to delete a domain
- */
 export function useDeleteDomain() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -59,9 +49,6 @@ export function useDeleteDomain() {
   });
 }
 
-/**
- * Hook to set a domain as default
- */
 export function useSetDefaultDomain() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -72,7 +59,6 @@ export function useSetDefaultDomain() {
       await queryClient.cancelQueries({ queryKey: DOMAINS_QUERY_KEY });
       const previous = queryClient.getQueryData<Domain[]>(DOMAINS_QUERY_KEY);
 
-      // Optimistic update: set the new default
       queryClient.setQueryData<Domain[]>(DOMAINS_QUERY_KEY, (old = []) =>
         old.map((d) => ({ ...d, isDefault: d.id === id }))
       );

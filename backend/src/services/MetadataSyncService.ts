@@ -102,16 +102,10 @@ export class MetadataSyncService {
     this.syncStatusService = SyncStatusService.getInstance();
   }
 
-  /**
-   * Get the current Flashpoint edition from config (auto-detected from version.txt)
-   */
   private getEdition(): string {
     return config.flashpointEdition;
   }
 
-  /**
-   * Main sync function - syncs all metadata (games, tags, platforms)
-   */
   async syncMetadata(): Promise<SyncResult> {
     // Ultimate edition does not support metadata sync
     if (this.getEdition() === 'ultimate') {
@@ -220,9 +214,6 @@ export class MetadataSyncService {
     }
   }
 
-  /**
-   * Sync platforms from FPFSS API
-   */
   private async syncPlatforms(
     source: GameMetadataSource
   ): Promise<{ count: number; latestDate: string | null }> {
@@ -258,9 +249,6 @@ export class MetadataSyncService {
     }
   }
 
-  /**
-   * Sync tags from FPFSS API
-   */
   private async syncTags(
     source: GameMetadataSource
   ): Promise<{ count: number; latestDate: string | null }> {
@@ -296,9 +284,6 @@ export class MetadataSyncService {
     }
   }
 
-  /**
-   * Sync games from FPFSS API (with pagination)
-   */
   private async syncGames(
     source: GameMetadataSource
   ): Promise<{ updated: number; deleted: number; latestDate: string | null }> {
@@ -376,9 +361,6 @@ export class MetadataSyncService {
     }
   }
 
-  /**
-   * Sync deleted games from FPFSS API
-   */
   private async syncDeletedGames(source: GameMetadataSource): Promise<number> {
     try {
       const after = source.games?.latestDeleteTime || '1970-01-01';
@@ -696,9 +678,6 @@ export class MetadataSyncService {
     }
   }
 
-  /**
-   * Update preferences.json with new timestamps after successful sync
-   */
   private async updatePreferencesTimestamps(
     source: GameMetadataSource,
     preferences: FlashpointPreferences,

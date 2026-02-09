@@ -29,7 +29,6 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
   // Public settings (cached, no extra request) for edition/version
   const { data: publicSettings } = usePublicSettings();
 
-  // Fetch auth settings
   const { data: authSettings, refetch: refetchAuthSettings } = useQuery({
     queryKey: ['authSettings'],
     queryFn: () => authSettingsApi.get(),
@@ -50,7 +49,6 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Update auth settings mutation
   const updateAuthSettings = useMutation({
     mutationFn: (settings: UpdateAuthSettingsData) => authSettingsApi.update(settings),
     onSuccess: () => {

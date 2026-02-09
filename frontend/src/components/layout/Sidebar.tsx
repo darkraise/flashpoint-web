@@ -53,11 +53,9 @@ export function Sidebar({ isOpen }: SidebarProps) {
     location.pathname.startsWith('/playlists/shared/') &&
     publicSettings?.auth?.guestAccessEnabled === false;
 
-  // On mobile, always show labels (never collapse). On desktop, respect sidebarCollapsed state.
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
   const effectiveCollapsed = isMobile ? false : sidebarCollapsed;
 
-  // Add swipe gesture support for mobile
   const sidebarRef = useSwipeGesture<HTMLElement>({
     onSwipeLeft: () => {
       if (window.innerWidth < 1024) {
@@ -102,21 +100,18 @@ export function Sidebar({ isOpen }: SidebarProps) {
     { path: '/settings', icon: Settings, label: 'Settings' },
   ].filter(Boolean) as NavItem[];
 
-  // Close sidebar on mobile when route changes
   useEffect(() => {
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
   }, [location.pathname, setSidebarOpen]);
 
-  // Close sidebar when clicking outside on mobile
   const handleBackdropClick = () => {
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
   };
 
-  // Close sidebar on mobile after clicking a link
   const handleNavItemClick = () => {
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
@@ -125,7 +120,6 @@ export function Sidebar({ isOpen }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay backdrop - only show when open on mobile */}
       <div
         className={cn(
           'fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm transition-opacity duration-300 ease-out',
@@ -135,16 +129,14 @@ export function Sidebar({ isOpen }: SidebarProps) {
         aria-hidden="true"
       />
 
-      {/* Sidebar */}
       <aside
         id="navigation"
         ref={sidebarRef}
         className={cn(
           'bg-card border-r flex flex-col overflow-hidden',
-          // Mobile: fixed positioning with slide-in animation
           'lg:relative fixed inset-y-0 left-0 z-40',
-          'lg:translate-x-0', // Always visible on desktop
-          isOpen ? 'translate-x-0' : '-translate-x-full' // Slide in/out on mobile
+          'lg:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         style={{
           width: effectiveCollapsed ? '4rem' : '16rem',
@@ -152,7 +144,6 @@ export function Sidebar({ isOpen }: SidebarProps) {
         }}
         aria-label="Main navigation"
       >
-        {/* Main Navigation */}
         <ScrollArea
           className="flex-1 py-4"
           style={{
@@ -161,7 +152,6 @@ export function Sidebar({ isOpen }: SidebarProps) {
             transition: isMobile ? undefined : 'padding 500ms ease-out',
           }}
         >
-          {/* Game Navigation - Hidden when viewing shared playlist without guest access */}
           {!isViewingSharedPlaylistWithoutGuestAccess ? (
             <div className="space-y-1">
               {gameNavItems.map((item) => (
@@ -175,7 +165,6 @@ export function Sidebar({ isOpen }: SidebarProps) {
             </div>
           ) : null}
 
-          {/* Library Navigation - Hidden for guests and when no library features are enabled */}
           {!isGuest && libraryNavItems.length > 0 ? (
             <SidebarSection collapsed={effectiveCollapsed}>
               {libraryNavItems.map((item) => (
@@ -189,7 +178,6 @@ export function Sidebar({ isOpen }: SidebarProps) {
             </SidebarSection>
           ) : null}
 
-          {/* Admin/Management Section */}
           <RoleGuard permissions={['users.read', 'roles.read', 'activities.read']}>
             <SidebarSection title="Management" collapsed={effectiveCollapsed}>
               {managementNavItems.map((item) => (
@@ -205,7 +193,6 @@ export function Sidebar({ isOpen }: SidebarProps) {
           </RoleGuard>
         </ScrollArea>
 
-        {/* Dashboard & Settings at Bottom - Hidden for guests */}
         {!isGuest ? (
           <div
             className="border-t space-y-1"

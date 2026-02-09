@@ -10,10 +10,8 @@ export function HomeView() {
   const { isAuthenticated } = useAuthStore();
   const { data: publicSettings } = usePublicSettings();
 
-  // Get configured hours from backend (default to 24 if not set)
   const recentHours = publicSettings?.app?.homeRecentHours ?? 24;
 
-  // Format time period for display
   const timePeriod = useMemo(() => {
     if (recentHours < 24) {
       return `${recentHours} hour${recentHours !== 1 ? 's' : ''}`;
@@ -29,7 +27,6 @@ export function HomeView() {
     }
   }, [recentHours]);
 
-  // Fetch recent games and most played games
   const { data: recentAdded, isLoading: loadingAdded } = useRecentGames('added', 20, recentHours);
   const { data: recentUpdated, isLoading: loadingUpdated } = useRecentGames(
     'modified',
@@ -38,7 +35,6 @@ export function HomeView() {
   );
   const { data: mostPlayed, isLoading: loadingMostPlayed } = useMostPlayedGames(20);
 
-  // Fetch favorite IDs for performance
   const { data: favoriteGameIdsArray } = useFavoriteGameIds();
   const favoriteGameIds = useMemo(
     () => (favoriteGameIdsArray ? new Set(favoriteGameIdsArray) : undefined),
@@ -47,7 +43,6 @@ export function HomeView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-12">
-      {/* Header */}
       <div className="space-y-2">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           Welcome to Flashpoint Archive
@@ -57,7 +52,6 @@ export function HomeView() {
         </p>
       </div>
 
-      {/* Most Played Games Section */}
       <HomeSection
         title="Most Played Games"
         description="Games with the highest play counts from the community"
@@ -67,7 +61,6 @@ export function HomeView() {
         favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
       />
 
-      {/* Recently Added Games Section */}
       <HomeSection
         title="Recently Added Games"
         description={`Games added in the last ${timePeriod}`}
@@ -77,7 +70,6 @@ export function HomeView() {
         favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
       />
 
-      {/* Recently Updated Games Section */}
       <HomeSection
         title="Recently Updated Games"
         description={`Games updated in the last ${timePeriod}`}

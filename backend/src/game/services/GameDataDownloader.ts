@@ -12,9 +12,6 @@ import { PreferencesService, GameDataSource } from './PreferencesService';
 
 const dnsLookup = promisify(dns.lookup);
 
-/**
- * Parameters for downloading a game data ZIP
- */
 export interface GameDataDownloadParams {
   gameId: string;
   dateAdded: string; // ISO date string from game_data table
@@ -22,9 +19,6 @@ export interface GameDataDownloadParams {
   targetPath?: string; // Override target path (default: Data/Games/)
 }
 
-/**
- * Result of a download attempt
- */
 export interface DownloadResult {
   success: boolean;
   filePath?: string;
@@ -32,25 +26,19 @@ export interface DownloadResult {
   sourceUsed?: string;
 }
 
-/**
- * Progress callback for download tracking
- */
 export type DownloadProgressCallback = (
   downloadedBytes: number,
   totalBytes: number | null,
   sourceName: string
 ) => void;
 
-/**
- * Service for downloading game data ZIPs from configured sources
- * Implements the same logic as Flashpoint Launcher's download.ts
- */
+/** Implements the same logic as Flashpoint Launcher's download.ts */
 export class GameDataDownloader {
   private static instance: GameDataDownloader;
   private readonly MAX_RETRIES = 3;
   private readonly RETRY_DELAY_MS = 1000;
-  private readonly DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
-  private readonly MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB max
+  private readonly DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+  private readonly MAX_FILE_SIZE = 500 * 1024 * 1024;
 
   /**
    * Private/reserved IPv4 and IPv6 CIDR ranges that must be blocked
@@ -83,25 +71,18 @@ export class GameDataDownloader {
     return GameDataDownloader.instance;
   }
 
-  /**
-   * Generate the filename for a game data ZIP
-   * Matches Flashpoint Launcher's getGameDataFilename() logic
-   */
+  /** Matches Flashpoint Launcher's getGameDataFilename() logic */
   static getFilename(gameId: string, dateAdded: string): string {
-    // Handle different date formats (with or without 'T')
     let cleanDate: string;
     if (dateAdded.includes('T')) {
       cleanDate = dateAdded;
     } else {
-      // Insert 'T' between date and time at position 10
       cleanDate = dateAdded.slice(0, 10) + 'T' + dateAdded.slice(11);
     }
 
     const timestamp = new Date(cleanDate).getTime();
 
-    // Validate timestamp with fallback
     if (isNaN(timestamp)) {
-      // Try fallback: append UTC suffix
       const fallbackDate = `${dateAdded} +0000 UTC`;
       const fallbackTimestamp = new Date(fallbackDate).getTime();
       if (!isNaN(fallbackTimestamp)) {
@@ -113,10 +94,6 @@ export class GameDataDownloader {
     return `${gameId}-${timestamp}.zip`;
   }
 
-  /**
-   * Download a game data ZIP from configured sources
-   * Tries each source sequentially until one succeeds
-   */
   async download(
     params: GameDataDownloadParams,
     onProgress?: DownloadProgressCallback
@@ -126,7 +103,6 @@ export class GameDataDownloader {
 
     logger.info(`[GameDataDownloader] Starting download for ${filename}`);
 
-    // Get configured sources
     const prefsService = PreferencesService.getInstance();
     const sources = await prefsService.getGameDataSources();
 
@@ -138,12 +114,10 @@ export class GameDataDownloader {
       };
     }
 
-    // Determine target path
     const targetDir = params.targetPath || (await prefsService.getDataPacksFolderPath());
     const targetPath = path.join(targetDir, filename);
     const tempPath = `${targetPath}.temp`;
 
-    // Ensure target directory exists
     try {
       await fs.mkdir(targetDir, { recursive: true });
     } catch (err) {
@@ -151,11 +125,9 @@ export class GameDataDownloader {
       return { success: false, error: `Failed to create directory: ${errorMsg}` };
     }
 
-    // Try each source sequentially
     const errors: string[] = [];
 
     for (const source of sources) {
-      // Check if source has arguments and at least one URL
       if (!source.arguments?.length || !source.arguments[0]) {
         logger.warn(`[GameDataDownloader] Source "${source.name}" has no arguments, skipping`);
         continue;
@@ -163,23 +135,19 @@ export class GameDataDownloader {
 
       let baseUrl = source.arguments[0];
 
-      // Enforce HTTPS for download sources
       if (new URL(baseUrl).protocol === 'http:') {
         const secureUrl = baseUrl.replace(/^http:/, 'https:');
         logger.warn(`[GameDataDownloader] Upgrading insecure source URL to HTTPS: ${baseUrl}`);
         baseUrl = secureUrl;
       }
 
-      // Normalize baseUrl trailing slash before URL construction
       const normalizedBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
       const fullUrl = new URL(filename, normalizedBase).href;
       logger.info(`[GameDataDownloader] Trying source "${source.name}": ${fullUrl}`);
 
       try {
-        // Download to temp file
         await this.downloadFile(fullUrl, tempPath, source.name, onProgress);
 
-        // Verify SHA256 if provided
         if (sha256) {
           const fileHash = await this.calculateSha256(tempPath);
           if (fileHash.toLowerCase() !== sha256.toLowerCase()) {
@@ -195,7 +163,6 @@ export class GameDataDownloader {
           logger.info(`[GameDataDownloader] SHA256 verified: ${fileHash.substring(0, 16)}...`);
         }
 
-        // Move temp file to final location
         await fs.rename(tempPath, targetPath);
 
         logger.info(
@@ -212,12 +179,10 @@ export class GameDataDownloader {
         logger.error(`[GameDataDownloader] Source "${source.name}" failed: ${errorMsg}`);
         errors.push(`Source "${source.name}": ${errorMsg}`);
 
-        // Clean up temp file if exists
         await this.safeUnlink(tempPath);
       }
     }
 
-    // All sources failed
     const errorSummary = errors.join('\n');
     logger.error(`[GameDataDownloader] All sources failed for ${filename}:\n${errorSummary}`);
 
@@ -227,9 +192,6 @@ export class GameDataDownloader {
     };
   }
 
-  /**
-   * Download a file from URL to local path with retry logic
-   */
   private async downloadFile(
     url: string,
     destPath: string,
@@ -276,7 +238,6 @@ export class GameDataDownloader {
       throw new Error('Too many redirects');
     }
 
-    // Validate URL protocol - only HTTP(S) allowed
     const parsedUrl = new URL(url);
     if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
       throw new Error(
@@ -284,7 +245,6 @@ export class GameDataDownloader {
       );
     }
 
-    // Validate URL is not targeting a private/reserved IP
     if (this.isPrivateHost(parsedUrl.hostname)) {
       logger.warn(
         `[GameDataDownloader] Blocked download to private/reserved address: ${parsedUrl.hostname}`
@@ -294,26 +254,48 @@ export class GameDataDownloader {
       );
     }
 
-    // DNS rebinding protection: resolve hostname and check for private IPs
+    // DNS rebinding protection: resolve hostname and pin the IP for the connection
     const hostname = parsedUrl.hostname;
+    let resolvedAddress: string | undefined;
+    let resolvedFamily: number | undefined;
     if (!net.isIPv4(hostname) && !net.isIPv6(hostname)) {
       try {
-        const { address } = await dnsLookup(hostname);
+        const { address, family } = await dnsLookup(hostname);
         if (this.isPrivateIPv4(address) || this.isPrivateIPv6(address)) {
           logger.warn(
             `[GameDataDownloader] Blocked: ${hostname} resolves to private address ${address}`
           );
           throw new Error(`Blocked: ${hostname} resolves to private address ${address}`);
         }
+        resolvedAddress = address;
+        resolvedFamily = family;
       } catch (error) {
         if (error instanceof Error && error.message.startsWith('Blocked:')) {
           throw error;
         }
-        // DNS lookup failed - allow the request to proceed (it will fail on connect anyway)
+        // DNS lookup failed - reject to prevent unpinned connection (SSRF protection)
+        logger.warn(`[GameDataDownloader] DNS lookup failed for ${hostname}, rejecting request`);
+        throw new Error(`DNS lookup failed for ${hostname}`);
       }
     }
 
     const protocol = parsedUrl.protocol === 'https:' ? https : http;
+
+    // Pin the validated DNS resolution to prevent DNS rebinding between check and connect
+    const requestOptions: Record<string, unknown> = { timeout: this.DOWNLOAD_TIMEOUT_MS };
+    if (resolvedAddress) {
+      requestOptions.lookup = (
+        _hostname: string,
+        options: { all?: boolean },
+        callback: (...args: unknown[]) => void
+      ) => {
+        if (options && options.all) {
+          callback(null, [{ address: resolvedAddress, family: resolvedFamily }]);
+        } else {
+          callback(null, resolvedAddress, resolvedFamily);
+        }
+      };
+    }
 
     // Synchronous Promise executor — redirect is signalled via resolve value
     // instead of recursing inside the executor
@@ -336,8 +318,7 @@ export class GameDataDownloader {
 
       let writeStream: ReturnType<typeof createWriteStream> | null = null;
 
-      const request = protocol.get(url, { timeout: this.DOWNLOAD_TIMEOUT_MS }, (response) => {
-        // Handle redirects — signal back instead of recursing inside Promise
+      const request = protocol.get(url, requestOptions, (response) => {
         if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400) {
           const redirectUrl = response.headers.location;
           if (redirectUrl) {
@@ -355,14 +336,12 @@ export class GameDataDownloader {
           }
         }
 
-        // Check for success status
         if (response.statusCode !== 200) {
           response.resume();
           safeReject(new Error(`HTTP ${response.statusCode}: ${response.statusMessage}`));
           return;
         }
 
-        // Check content length
         const contentLength = response.headers['content-length'];
         const totalBytes = contentLength ? parseInt(contentLength, 10) : null;
 
@@ -372,7 +351,6 @@ export class GameDataDownloader {
           return;
         }
 
-        // Create write stream
         writeStream = createWriteStream(destPath);
         let downloadedBytes = 0;
 
@@ -432,7 +410,6 @@ export class GameDataDownloader {
       });
     });
 
-    // Handle redirect outside the Promise (async recursion is safe here)
     if (result.redirect) {
       logger.info(`[GameDataDownloader] Following redirect to: ${result.redirect}`);
       return this.downloadFileOnce(
@@ -445,11 +422,7 @@ export class GameDataDownloader {
     }
   }
 
-  /**
-   * Validate a redirect URL to prevent SSRF attacks.
-   * Rejects non-HTTP(S) protocols and private/reserved IP addresses.
-   * Throws an Error if the URL is not safe to follow.
-   */
+  /** Rejects non-HTTP(S) protocols and private/reserved IP addresses */
   private validateRedirectUrl(redirectUrl: string): void {
     let parsed: URL;
     try {
@@ -458,7 +431,6 @@ export class GameDataDownloader {
       throw new Error(`Invalid redirect URL: ${redirectUrl}`);
     }
 
-    // Only allow http: and https: protocols
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
       logger.warn(
         `[GameDataDownloader] Blocked redirect to disallowed protocol: ${parsed.protocol} (${redirectUrl})`
@@ -468,7 +440,6 @@ export class GameDataDownloader {
       );
     }
 
-    // Block private/reserved IP addresses
     if (this.isPrivateHost(parsed.hostname)) {
       logger.warn(
         `[GameDataDownloader] Blocked redirect to private/reserved address: ${parsed.hostname} (${redirectUrl})`
@@ -479,25 +450,18 @@ export class GameDataDownloader {
     }
   }
 
-  /**
-   * Check if a hostname is a private or reserved IP address.
-   * Handles both IPv4 and IPv6, including bracketed IPv6 notation.
-   */
+  /** Handles both IPv4 and IPv6, including bracketed IPv6 notation */
   private isPrivateHost(hostname: string): boolean {
-    // Strip brackets from IPv6 addresses (e.g., [::1] -> ::1)
     const cleanHostname = hostname.replace(/^\[|\]$/g, '');
 
-    // Check for 'localhost' hostname
     if (cleanHostname.toLowerCase() === 'localhost') {
       return true;
     }
 
-    // Try to parse as IPv4
     if (net.isIPv4(cleanHostname)) {
       return this.isPrivateIPv4(cleanHostname);
     }
 
-    // Try to parse as IPv6
     if (net.isIPv6(cleanHostname)) {
       return this.isPrivateIPv6(cleanHostname);
     }
@@ -509,9 +473,6 @@ export class GameDataDownloader {
     return false;
   }
 
-  /**
-   * Check if an IPv4 address falls within a private/reserved CIDR range
-   */
   private isPrivateIPv4(ip: string): boolean {
     const ipNum = this.ipv4ToNumber(ip);
     if (ipNum === null) return false;
@@ -529,22 +490,13 @@ export class GameDataDownloader {
     return false;
   }
 
-  /**
-   * Check if an IPv6 address falls within a private/reserved range
-   */
   private isPrivateIPv6(ip: string): boolean {
     const normalized = ip.toLowerCase();
 
-    // Exact loopback check
     if (normalized === '::1') return true;
-
-    // Unique local addresses: fc00::/7 (fc00:: - fdff::)
     if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
-
-    // Link-local: fe80::/10
     if (normalized.startsWith('fe80')) return true;
 
-    // IPv4-mapped IPv6 (::ffff:x.x.x.x) - check the embedded IPv4
     const v4mappedMatch = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
     if (v4mappedMatch) {
       return this.isPrivateIPv4(v4mappedMatch[1]);
@@ -553,9 +505,6 @@ export class GameDataDownloader {
     return false;
   }
 
-  /**
-   * Convert an IPv4 address string to a 32-bit unsigned integer
-   */
   private ipv4ToNumber(ip: string): number | null {
     const parts = ip.split('.');
     if (parts.length !== 4) return null;
@@ -569,9 +518,6 @@ export class GameDataDownloader {
     return num;
   }
 
-  /**
-   * Calculate SHA256 hash of a file
-   */
   private calculateSha256(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const hash = crypto.createHash('sha256');
@@ -583,9 +529,6 @@ export class GameDataDownloader {
     });
   }
 
-  /**
-   * Safely delete a file (ignore errors if file doesn't exist)
-   */
   private async safeUnlink(filePath: string): Promise<void> {
     try {
       await fs.unlink(filePath);
@@ -594,16 +537,10 @@ export class GameDataDownloader {
     }
   }
 
-  /**
-   * Sleep for specified milliseconds
-   */
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  /**
-   * Check if a game data ZIP exists locally
-   */
   async exists(gameId: string, dateAdded: string, targetDir?: string): Promise<boolean> {
     try {
       const filename = GameDataDownloader.getFilename(gameId, dateAdded);
@@ -623,9 +560,6 @@ export class GameDataDownloader {
     }
   }
 
-  /**
-   * Get the full path to a game data ZIP
-   */
   async getFilePath(gameId: string, dateAdded: string, targetDir?: string): Promise<string> {
     try {
       const filename = GameDataDownloader.getFilename(gameId, dateAdded);
@@ -641,5 +575,4 @@ export class GameDataDownloader {
   }
 }
 
-// Export singleton instance
 export const gameDataDownloader = GameDataDownloader.getInstance();

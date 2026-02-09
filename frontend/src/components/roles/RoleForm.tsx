@@ -59,10 +59,10 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
     defaultValues: {
-      name: role?.name || '',
-      description: role?.description || '',
-      priority: role?.priority || 0,
-      permissionIds: role?.permissions?.map((p) => p.id) || [],
+      name: role?.name ?? '',
+      description: role?.description ?? '',
+      priority: role?.priority ?? 0,
+      permissionIds: role?.permissions?.map((p) => p.id) ?? [],
     },
   });
 

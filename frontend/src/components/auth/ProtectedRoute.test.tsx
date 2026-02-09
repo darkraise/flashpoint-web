@@ -3,9 +3,8 @@ import { screen, render } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { useAuthStore } from '@/store/auth';
-import type { User, AuthTokens } from '@/types/auth';
+import type { User } from '@/types/auth';
 
-// Mock hooks
 vi.mock('@/hooks/useFeatureFlags', () => ({
   useFeatureFlags: () => ({
     enablePlaylists: true,
@@ -22,7 +21,6 @@ vi.mock('@/hooks/useSharedPlaylistAccess', () => ({
 }));
 
 describe('ProtectedRoute', () => {
-  // Clear auth state before each test
   beforeEach(() => {
     useAuthStore.getState().clearAuth();
   });
@@ -50,7 +48,6 @@ describe('ProtectedRoute', () => {
     });
 
     it('should allow access when authenticated', () => {
-      // Set authenticated user
       const mockUser: User = {
         id: 1,
         username: 'testuser',
@@ -59,12 +56,7 @@ describe('ProtectedRoute', () => {
         permissions: ['games.play'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       render(
         <MemoryRouter initialEntries={['/protected']}>
@@ -87,7 +79,6 @@ describe('ProtectedRoute', () => {
     });
 
     it('should allow guest access when auth not required', () => {
-      // Set guest mode
       useAuthStore.getState().setGuestMode();
 
       render(
@@ -120,12 +111,7 @@ describe('ProtectedRoute', () => {
         permissions: ['games.play', 'playlists.create'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
     });
 
     it('should allow access with correct permission', () => {
@@ -250,12 +236,7 @@ describe('ProtectedRoute', () => {
         permissions: ['users.manage'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       render(
         <MemoryRouter initialEntries={['/admin']}>
@@ -285,12 +266,7 @@ describe('ProtectedRoute', () => {
         permissions: ['games.play'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       render(
         <MemoryRouter initialEntries={['/admin']}>
@@ -323,12 +299,7 @@ describe('ProtectedRoute', () => {
         permissions: ['playlists.create'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       render(
         <MemoryRouter initialEntries={['/playlists']}>
@@ -358,12 +329,7 @@ describe('ProtectedRoute', () => {
         permissions: ['statistics.view'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       render(
         <MemoryRouter initialEntries={['/statistics']}>

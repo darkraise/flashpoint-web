@@ -24,12 +24,12 @@ export function usePublicSettings() {
       logger.debug('[usePublicSettings] Fetch complete:', result);
       return result;
     },
-    staleTime: Infinity, // Data never goes stale (only refetch manually)
-    gcTime: Infinity, // Keep in cache forever during session
-    refetchOnMount: false, // Don't refetch when component mounts
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnReconnect: false, // Don't refetch on network reconnect
-    retry: false, // Don't retry if already cached
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   });
 
   return query;

@@ -13,13 +13,9 @@ interface ProtectedRouteProps {
   requireRole?: string;
   requireFeature?: 'enablePlaylists' | 'enableFavorites' | 'enableStatistics';
   fallbackPath?: string;
-  allowSharedAccess?: boolean; // NEW: Allow access via shared playlist token
+  allowSharedAccess?: boolean;
 }
 
-/**
- * ProtectedRoute component
- * Protects routes based on authentication, permissions, roles, and feature flags
- */
 export function ProtectedRoute({
   children,
   requireAuth = true,
@@ -29,7 +25,7 @@ export function ProtectedRoute({
   requireRole,
   requireFeature,
   fallbackPath = '/login',
-  allowSharedAccess = false, // NEW
+  allowSharedAccess = false,
 }: ProtectedRouteProps) {
   const location = useLocation();
   const {
@@ -42,16 +38,13 @@ export function ProtectedRoute({
   } = useAuthStore();
   const featureFlags = useFeatureFlags();
 
-  // Get gameId from route params if checking shared access
   const params = useParams<{ id?: string }>();
   const gameId = params.id || null;
 
-  // Check shared playlist access if enabled
   const { hasAccess: hasSharedAccess, isLoading: isCheckingShared } = useSharedPlaylistAccess(
     allowSharedAccess ? gameId : null
   );
 
-  // Show loading while checking shared access
   if (allowSharedAccess && isCheckingShared) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -60,18 +53,15 @@ export function ProtectedRoute({
     );
   }
 
-  // Grant access if shared access is valid (bypass auth requirements)
+  // Shared playlist access bypasses auth requirements
   if (allowSharedAccess && hasSharedAccess) {
     return <>{children}</>;
   }
 
-  // Check authentication - allow guests if not strictly requiring auth
   if (requireAuth && !isAuthenticated && !isGuest) {
-    // Redirect to login, but save the location they were trying to access
     return <Navigate to={fallbackPath} state={{ from: location }} replace />;
   }
 
-  // Check feature flag
   if (requireFeature && !featureFlags[requireFeature]) {
     return (
       <Navigate
@@ -85,7 +75,6 @@ export function ProtectedRoute({
     );
   }
 
-  // Check single permission
   if (requirePermission && !hasPermission(requirePermission)) {
     return (
       <Navigate
@@ -99,7 +88,6 @@ export function ProtectedRoute({
     );
   }
 
-  // Check multiple permissions (any or all)
   if (requirePermissions && requirePermissions.length > 0) {
     const hasRequiredPermissions = requireAllPermissions
       ? hasAll(requirePermissions)
@@ -119,7 +107,6 @@ export function ProtectedRoute({
     }
   }
 
-  // Check role
   if (requireRole && !hasRole(requireRole)) {
     return (
       <Navigate

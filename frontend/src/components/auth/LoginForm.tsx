@@ -41,16 +41,14 @@ export function LoginForm() {
   const { login, loginAsGuest } = useAuth();
 
   const from = (location.state as LocationState)?.from?.pathname || '/';
-  const setupComplete = (location.state as LocationState)?.setupComplete || false;
+  const setupComplete = (location.state as LocationState)?.setupComplete ?? false;
 
-  // Fetch public settings first to check maintenance mode
   const { data: publicSettings, isSuccess: isPublicSettingsLoaded } = useQuery({
-    queryKey: ['publicSettings'],
+    queryKey: ['system-settings', 'public'],
     queryFn: () => systemSettingsApi.getPublic(),
   });
 
-  // Only fetch auth settings if NOT in maintenance mode (to avoid 503 errors)
-  // Wait for public settings to load first, then only fetch if maintenance mode is disabled
+  // Skip auth settings fetch during maintenance mode to avoid 503 errors
   const { data: authSettings } = useQuery({
     queryKey: ['authSettings'],
     queryFn: () => authSettingsApi.get(),
@@ -72,7 +70,6 @@ export function LoginForm() {
     try {
       setIsLoading(true);
       setError(null);
-      // AuthContext will handle navigation (including maintenance mode check)
       await login(values, from);
     } catch (error) {
       logger.error('Login error:', error);
@@ -84,7 +81,6 @@ export function LoginForm() {
 
   return (
     <div className="w-full max-w-md animate-fade-in-up">
-      {/* Gradient Border Wrapper */}
       <div
         className="p-[2px] rounded-2xl relative"
         style={{
@@ -96,9 +92,7 @@ export function LoginForm() {
             hsl(var(--primary) / 0.6) 100%)`,
         }}
       >
-        {/* Glassmorphism card with backdrop-blur */}
         <div className="bg-card/70 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-6 relative overflow-hidden">
-          {/* Multi-layer gradient backgrounds */}
           <div
             className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-primary/12 pointer-events-none"
             aria-hidden="true"
@@ -108,7 +102,6 @@ export function LoginForm() {
             aria-hidden="true"
           />
 
-          {/* Prismatic Light Glow - Simulates light cast through glass */}
           <div
             className="absolute inset-0 pointer-events-none prismatic-form-glow"
             style={{
@@ -121,12 +114,10 @@ export function LoginForm() {
             aria-hidden="true"
           />
 
-          {/* Theme Toggle in top-right corner - always visible */}
           <div className="absolute top-4 right-4 z-10">
             <ThemePicker />
           </div>
 
-          {/* Logo and Title Section */}
           <div className="relative mb-6 flex flex-col items-center">
             <div className="mb-4 w-24 h-24 flex items-center justify-center">
               <img
@@ -143,7 +134,6 @@ export function LoginForm() {
             </p>
           </div>
 
-          {/* Setup Complete Notice */}
           {setupComplete && !error ? (
             <Alert
               className="mb-6 border-green-500/50 bg-green-500/10 text-green-900 dark:text-green-100 animate-slide-in-down"
@@ -158,7 +148,6 @@ export function LoginForm() {
             </Alert>
           ) : null}
 
-          {/* Maintenance Mode Notice */}
           {publicSettings?.app?.maintenanceMode ? (
             <Alert
               className="mb-6 border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100 animate-slide-in-down"

@@ -7,9 +7,6 @@ interface FormattedDateProps {
   className?: string;
 }
 
-/**
- * Component to display formatted dates/times using application settings
- */
 export function FormattedDate({ date, type = 'datetime', className }: FormattedDateProps) {
   const { formatDate, formatTime, formatDateTime } = useDateTimeFormat();
 

@@ -28,17 +28,14 @@ export function GameDetailView() {
   const { isAuthenticated } = useAuthStore();
   const { generateToken, hasValidToken, isGenerating } = useSharedAccessToken();
 
-  // Get breadcrumb context from navigation state
   const breadcrumbContext = location.state?.breadcrumbContext as BreadcrumbContext | undefined;
 
-  // Generate shared access token if accessing via shareToken (for anonymous users)
   useEffect(() => {
     if (shareToken && !isAuthenticated && !hasValidToken) {
       generateToken(shareToken).catch(logger.error);
     }
   }, [shareToken, isAuthenticated, hasValidToken, generateToken]);
 
-  // Wait for token generation before fetching game data
   const canFetchGame = !shareToken || isAuthenticated || hasValidToken;
 
   const {
@@ -48,7 +45,6 @@ export function GameDetailView() {
     refetch,
   } = useGame(id ?? '', { enabled: canFetchGame });
 
-  // Fetch shared playlist metadata if accessed via shareToken
   const { data: sharedPlaylist } = useQuery({
     queryKey: ['sharedPlaylist', shareToken],
     queryFn: () => sharedPlaylistsApi.getByToken(shareToken ?? ''),
@@ -67,7 +63,6 @@ export function GameDetailView() {
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
 
-  // Helper function to format relative time
   const formatRelativeTime = useCallback(
     (dateString: string): string => {
       const date = new Date(dateString);
@@ -82,19 +77,16 @@ export function GameDetailView() {
       if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
       if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
 
-      // Format as date if older than a week
       return formatDate(dateString);
     },
     [formatDate]
   );
 
-  // Find this game's play stats
   const currentGameStats = useMemo(() => {
     if (!gameStatsData?.data || !id) return null;
     return gameStatsData.data.find((stats) => stats.gameId === id);
   }, [gameStatsData, id]);
 
-  // Reset loading states when game changes
   useEffect(() => {
     setImageLoading(true);
     setImageError(false);
@@ -104,11 +96,9 @@ export function GameDetailView() {
     setShouldAutoPlay(false);
   }, [id]);
 
-  // Handle download completion - refetch and wait before auto-play
   const isRefetchingAfterDownload = useRef(false);
   useEffect(() => {
     if (progress?.status === 'complete' && !isRefetchingAfterDownload.current) {
-      // Refetch game data to update activeDataOnDisk, wait for completion
       isRefetchingAfterDownload.current = true;
       refetch().finally(() => {
         isRefetchingAfterDownload.current = false;
@@ -120,7 +110,6 @@ export function GameDetailView() {
     }
   }, [progress, refetch]);
 
-  // Auto-play after download completes and game data is refetched
   useEffect(() => {
     if (
       shouldAutoPlay &&
@@ -129,7 +118,6 @@ export function GameDetailView() {
       !isDownloading &&
       !isRefetchingAfterDownload.current
     ) {
-      // Game is now available, auto-navigate to play page
       setShouldAutoPlay(false);
       navigate(buildSharedGameUrl(`/games/${game.id}/play`, shareToken), {
         state: {
@@ -191,11 +179,9 @@ export function GameDetailView() {
   const screenshotUrl = getGameScreenshotUrl(game.id) || null;
   const logoUrl = getGameLogoUrl(game.id) || null;
 
-  // Check if game requires data download (use presentOnDisk like Flashpoint Launcher)
   // presentOnDisk: null = no data needed, 0 = needs download, 1 = downloaded
   const needsDataDownload = game.presentOnDisk === 0;
 
-  // Build breadcrumb items
   const breadcrumbItems =
     shareToken && sharedPlaylist
       ? [
@@ -217,7 +203,6 @@ export function GameDetailView() {
   return (
     <ErrorBoundary>
       <div className="max-w-6xl mx-auto space-y-6">
-        {/* Breadcrumbs Navigation */}
         <Breadcrumbs
           items={breadcrumbItems}
           homeLabel={shareToken ? 'Shared' : 'Home'}
@@ -225,10 +210,8 @@ export function GameDetailView() {
         />
 
         <div className="bg-card rounded-lg p-6 space-y-6 border border-border shadow-md">
-          {/* Logo and Title Section - At the top */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4 flex-1">
-              {/* Game Logo */}
               {logoUrl && !logoError ? (
                 <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-2 relative">
                   {logoLoading ? (
@@ -261,7 +244,6 @@ export function GameDetailView() {
                   </p>
                 ) : null}
 
-                {/* Play Statistics - Under title */}
                 {currentGameStats?.lastPlayedAt || currentGameStats?.totalPlaytimeSeconds ? (
                   <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                     {currentGameStats?.lastPlayedAt ? (
@@ -281,7 +263,6 @@ export function GameDetailView() {
               </div>
             </div>
 
-            {/* Play Button Logic */}
             <div className="text-center space-y-2 flex-shrink-0">
               {game.platformName === 'Flash' || game.platformName === 'HTML5' ? (
                 <>
@@ -329,7 +310,6 @@ export function GameDetailView() {
                     </Link>
                   )}
 
-                  {/* Error Display */}
                   {downloadError ? (
                     <p className="text-sm text-red-500 font-medium">{downloadError}</p>
                   ) : null}
@@ -346,7 +326,6 @@ export function GameDetailView() {
             </div>
           </div>
 
-          {/* Game Screenshot */}
           {screenshotUrl ? (
             <div className="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center relative">
               {imageLoading && !imageError ? (

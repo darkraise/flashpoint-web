@@ -52,7 +52,6 @@ export function UserPlaylistDetailView() {
   } = useUserPlaylist(playlistId);
   const { data: playlistGames = [], isLoading: isLoadingGames } = useUserPlaylistGames(playlistId);
 
-  // Fetch favorite game IDs for performance optimization
   const { data: favoriteGameIdsArray } = useFavoriteGameIds();
   const favoriteGameIds = useMemo(
     () => (favoriteGameIdsArray ? new Set(favoriteGameIdsArray) : undefined),
@@ -102,7 +101,6 @@ export function UserPlaylistDetailView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Back Button */}
       <Link
         to="/playlists"
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -111,10 +109,8 @@ export function UserPlaylistDetailView() {
         Back to playlists
       </Link>
 
-      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex gap-4">
-          {/* Playlist Icon */}
           {playlist.icon ? (
             <div className="flex-shrink-0">
               <div className="p-4 bg-primary/20 rounded-xl border-2 border-primary/30">
@@ -128,7 +124,6 @@ export function UserPlaylistDetailView() {
             </div>
           ) : null}
 
-          {/* Playlist Info */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold">{playlist.title}</h1>
@@ -143,7 +138,6 @@ export function UserPlaylistDetailView() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-2">
           <ViewOptions />
 
@@ -174,7 +168,6 @@ export function UserPlaylistDetailView() {
         </div>
       </div>
 
-      {/* Games Display */}
       {playlistGames.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground">No games in this playlist yet</p>
@@ -200,21 +193,18 @@ export function UserPlaylistDetailView() {
         </>
       )}
 
-      {/* Edit Dialog */}
       <CreateUserPlaylistDialog
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
         playlist={playlist}
       />
 
-      {/* Share Dialog */}
       <SharePlaylistDialog
         isOpen={isShareDialogOpen}
         onClose={() => setIsShareDialogOpen(false)}
         playlist={playlist}
       />
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

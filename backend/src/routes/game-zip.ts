@@ -8,9 +8,6 @@ import { requirePermission } from '../middleware/rbac';
 import { config } from '../config';
 import { asyncHandler } from '../middleware/asyncHandler';
 
-/**
- * Zod schema for POST /mount/:id request body
- */
 const mountBodySchema = z.object({
   zipPath: z.string().min(1).max(500),
   gameId: z.string().optional(),
@@ -20,7 +17,7 @@ const mountBodySchema = z.object({
 
 const router = Router();
 
-// Restrictive CORS middleware for admin routes
+// Restrictive CORS: only allow requests from the configured domain (admin routes)
 const adminCors = (req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Access-Control-Allow-Origin', config.domain);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
@@ -33,7 +30,6 @@ const adminCors = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-// Mount a ZIP: POST /game-zip/mount/:id
 router.post(
   '/mount/:id',
   adminCors,
@@ -41,7 +37,6 @@ router.post(
   requirePermission('settings.update'),
   json(),
   asyncHandler(async (req: Request, res: Response) => {
-    // Validate request body
     const bodyResult = mountBodySchema.safeParse(req.body);
     if (!bodyResult.success) {
       return res.status(400).json({
@@ -63,7 +58,6 @@ router.post(
   })
 );
 
-// Unmount a ZIP: DELETE /game-zip/mount/:id
 router.delete(
   '/mount/:id',
   adminCors,
@@ -75,7 +69,6 @@ router.delete(
   })
 );
 
-// List mounted ZIPs: GET /game-zip/mounts
 router.get(
   '/mounts',
   adminCors,
@@ -86,23 +79,24 @@ router.get(
   }
 );
 
-// Serve files from mounted ZIPs: GET /game-zip/*
 // Handles proxy-style URLs like /game-zip/http://domain.com/path
-router.get('/*', async (req: Request, res: Response) => {
-  try {
-    // Delegate to gameZipServer's file handler
-    await gameZipServer.handleFileRequest(
-      req as unknown as IncomingMessage,
-      res as unknown as ServerResponse
-    );
-  } catch (error) {
-    logger.error('[GameZip] File request error:', error);
-    if (!res.headersSent) {
-      res.status(500).send('Internal Server Error');
-    } else if (!res.writableEnded) {
-      res.end();
+router.get(
+  '/*',
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      await gameZipServer.handleFileRequest(
+        req as unknown as IncomingMessage,
+        res as unknown as ServerResponse
+      );
+    } catch (error) {
+      logger.error('[GameZip] File request error:', error);
+      if (!res.headersSent) {
+        res.status(500).send('Internal Server Error');
+      } else if (!res.writableEnded) {
+        res.end();
+      }
     }
-  }
-});
+  })
+);
 
 export default router;

@@ -54,10 +54,8 @@ export function ActivityTrendChart({ autoRefresh = false }: ActivityTrendChartPr
 
   const formatTimestamp = (timestamp: string) => {
     if (days === 1) {
-      // For 24h view, show time
       return formatTime(timestamp);
     } else {
-      // For multi-day view, show date
       return formatDate(timestamp);
     }
   };
@@ -151,7 +149,7 @@ export function ActivityTrendChart({ autoRefresh = false }: ActivityTrendChartPr
             <Legend
               wrapperStyle={{ paddingTop: '20px' }}
               iconType="circle"
-              formatter={(value: string) => <span className="text-gray-300">{value}</span>}
+              formatter={(value: string) => <span className="text-muted-foreground">{value}</span>}
             />
             <Area
               type="monotone"

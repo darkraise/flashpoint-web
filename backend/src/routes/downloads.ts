@@ -11,9 +11,6 @@ import { logActivity } from '../middleware/activityLogger';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 
-/**
- * Zod schema for POST /:id/download request body
- */
 const downloadBodySchema = z.object({
   gameDataId: z.number().int().positive().optional(),
 });
@@ -22,23 +19,6 @@ const router = Router();
 const gameService = new GameService();
 const activityService = new ActivityService();
 
-/**
- * POST /api/games/:id/download
- * Start downloading a game's data.
- *
- * Request body: { gameDataId?: number }
- * - If gameDataId not provided, uses game.activeDataId
- *
- * Requires: games.download permission
- *
- * Responses:
- * - 200: Download started successfully
- * - 401: Not authenticated
- * - 403: Insufficient permissions
- * - 404: Game not found or has no game data
- * - 409: Game data already downloaded
- * - 500: Download failed
- */
 router.post(
   '/:id/download',
   authenticate,
@@ -52,7 +32,6 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const gameId = req.params.id;
 
-    // Validate request body
     const bodyResult = downloadBodySchema.safeParse(req.body);
     if (!bodyResult.success) {
       return res.status(400).json({
@@ -65,7 +44,6 @@ router.post(
 
     logger.info('Download request received', { gameId, requestedGameDataId });
 
-    // Get game from database
     const game = await gameService.getGameById(gameId);
     if (!game) {
       return res.status(404).json({
@@ -74,10 +52,8 @@ router.post(
       });
     }
 
-    // Determine which game data to download
     let gameDataId = requestedGameDataId;
     if (!gameDataId) {
-      // Query game_data table to find the game data entry for this game
       const foundGameDataId = await gameService.getGameDataId(gameId);
       if (!foundGameDataId) {
         return res.status(404).json({
@@ -88,7 +64,6 @@ router.post(
       gameDataId = foundGameDataId;
     }
 
-    // Check if already downloaded
     const isDownloaded = await GameDatabaseUpdater.isDownloaded(gameDataId);
     if (isDownloaded) {
       return res.status(409).json({
@@ -97,7 +72,6 @@ router.post(
       });
     }
 
-    // Get game data info
     const gameData = await GameDatabaseUpdater.getGameData(gameDataId);
     if (!gameData) {
       return res.status(404).json({
@@ -106,7 +80,6 @@ router.post(
       });
     }
 
-    // Get data sources from preferences
     const sources = await PreferencesService.getGameDataSources();
     if (sources.length === 0) {
       return res.status(500).json({
@@ -116,12 +89,10 @@ router.post(
       });
     }
 
-    // Store metadata for activity logging
     res.locals.gameDataId = gameDataId;
     res.locals.gameTitle = game.title;
     res.locals.sources = sources.map((s) => s.name);
 
-    // Capture metadata for background error logging
     const downloadMetadata = {
       gameId,
       gameDataId,
@@ -133,42 +104,35 @@ router.post(
       ipAddress: req.ip,
     };
 
-    // Start download (non-blocking)
-    // We don't wait for it to complete - client uses SSE endpoint for progress
-    DownloadManager.downloadGameData(
-      gameDataId,
-      sources,
-      undefined, // Progress callback handled by SSE endpoint
-      undefined, // Details callback handled by SSE endpoint
-      undefined // No abort signal for now
-    ).catch(async (error) => {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Background download failed', {
-        gameId,
-        gameDataId,
-        error: errorMessage,
-      });
-
-      // Log download failure activity
-      await activityService.log({
-        userId: downloadMetadata.userId,
-        username: downloadMetadata.username,
-        action: 'games.download.failed',
-        resource: 'games',
-        resourceId: downloadMetadata.gameId,
-        details: {
-          gameDataId: downloadMetadata.gameDataId,
-          gameTitle: downloadMetadata.gameTitle,
-          sha256: downloadMetadata.sha256,
-          sources: downloadMetadata.sources,
+    // Non-blocking: client uses SSE endpoint for progress
+    DownloadManager.downloadGameData(gameDataId, sources, undefined, undefined, undefined).catch(
+      async (error) => {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Background download failed', {
+          gameId,
+          gameDataId,
           error: errorMessage,
-        },
-        ipAddress: downloadMetadata.ipAddress,
-        userAgent: req.get('user-agent'),
-      });
-    });
+        });
 
-    // Return success immediately
+        await activityService.log({
+          userId: downloadMetadata.userId,
+          username: downloadMetadata.username,
+          action: 'games.download.failed',
+          resource: 'games',
+          resourceId: downloadMetadata.gameId,
+          details: {
+            gameDataId: downloadMetadata.gameDataId,
+            gameTitle: downloadMetadata.gameTitle,
+            sha256: downloadMetadata.sha256,
+            sources: downloadMetadata.sources,
+            error: errorMessage,
+          },
+          ipAddress: downloadMetadata.ipAddress,
+          userAgent: req.get('user-agent'),
+        });
+      }
+    );
+
     res.json({
       success: true,
       message: 'Download started',
@@ -178,23 +142,6 @@ router.post(
   })
 );
 
-/**
- * GET /api/games/:id/download/progress
- * Server-Sent Events endpoint for download progress tracking.
- *
- * Streams progress updates for active download.
- * Closes connection when download completes or errors.
- *
- * Requires: games.download permission
- *
- * Event data format:
- * {
- *   percent: number (0-100),
- *   status: 'downloading' | 'validating' | 'importing' | 'complete' | 'error',
- *   details: string,
- *   error?: string
- * }
- */
 router.get(
   '/:id/download/progress',
   authenticate,
@@ -202,7 +149,6 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const gameId = req.params.id;
 
-    // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -210,7 +156,6 @@ router.get(
 
     logger.info('SSE connection established', { gameId });
 
-    // Get game to find gameDataId
     const game = await gameService.getGameById(gameId);
     if (!game) {
       res.write(
@@ -235,7 +180,6 @@ router.get(
       return;
     }
 
-    // Send initial status
     res.write(
       `data: ${JSON.stringify({
         percent: 0,
@@ -244,7 +188,6 @@ router.get(
       })}\n\n`
     );
 
-    // Poll for download progress
     // Note: This is a simplified implementation. In production, you'd want
     // a proper event emitter system to push updates rather than polling.
     let closed = false;
@@ -253,13 +196,11 @@ router.get(
       if (closed) return;
 
       try {
-        // Check if download is still active
         const isActive = DownloadManager.isDownloadActive(gameDataId);
 
         if (closed) return; // Re-check after await
 
         if (!isActive) {
-          // Check if download completed successfully
           const isDownloaded = await GameDatabaseUpdater.isDownloaded(gameDataId);
 
           if (closed) return; // Re-check after await
@@ -275,7 +216,6 @@ router.get(
               );
             }
 
-            // Log download completion activity
             const gameData = await GameDatabaseUpdater.getGameData(gameDataId);
 
             if (closed) return; // Re-check after await
@@ -311,7 +251,6 @@ router.get(
             res.end();
           }
         } else {
-          // Send heartbeat
           if (!closed) {
             res.write(
               `data: ${JSON.stringify({
@@ -331,9 +270,8 @@ router.get(
           res.end();
         }
       }
-    }, 1000); // Poll every second
+    }, 1000);
 
-    // Clean up on client disconnect
     req.on('close', () => {
       closed = true;
       logger.info('SSE connection closed', { gameId });
@@ -342,19 +280,6 @@ router.get(
   })
 );
 
-/**
- * DELETE /api/games/:id/download
- * Cancel an active download.
- *
- * Requires: games.download permission
- *
- * Responses:
- * - 200: Download cancelled successfully
- * - 401: Not authenticated
- * - 403: Insufficient permissions
- * - 404: No active download found
- * - 500: Error cancelling download
- */
 router.delete(
   '/:id/download',
   authenticate,
@@ -365,7 +290,6 @@ router.delete(
 
     logger.info('Download cancel request', { gameId });
 
-    // Get game to find gameDataId
     const game = await gameService.getGameById(gameId);
     if (!game) {
       return res.status(404).json({
@@ -382,7 +306,6 @@ router.delete(
       });
     }
 
-    // Attempt to cancel download
     const cancelled = DownloadManager.cancelDownload(gameDataId);
 
     if (!cancelled) {

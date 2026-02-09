@@ -23,7 +23,6 @@ export function MetadataUpdateCard() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFetchingMetadata = useRef(false);
 
-  // Fetch metadata update info from backend using typed API
   const fetchMetadataInfo = async () => {
     if (isFetchingMetadata.current) {
       return;
@@ -47,7 +46,6 @@ export function MetadataUpdateCard() {
     }
   };
 
-  // Load metadata update info on component mount
   useMountEffect(() => {
     fetchMetadataInfo();
   });
@@ -63,7 +61,6 @@ export function MetadataUpdateCard() {
     setSyncMessage('Starting sync...');
     setError(null);
 
-    // Clear any existing polling
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
@@ -84,7 +81,6 @@ export function MetadataUpdateCard() {
 
       showToast('Metadata sync started. Polling for progress...', 'info');
 
-      // Poll for status updates
       pollIntervalRef.current = setInterval(async () => {
         try {
           const status = await updatesApi.getMetadataSyncStatus();
@@ -173,7 +169,6 @@ export function MetadataUpdateCard() {
     }
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) {

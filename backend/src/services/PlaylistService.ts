@@ -284,7 +284,9 @@ export class PlaylistService {
    * Returns file path and parsed data, or null if not found.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async findPlaylistFile(id: string): Promise<{ filePath: string; data: any } | null> {
+  private async findPlaylistFile(
+    id: string
+  ): Promise<{ filePath: string; data: Record<string, any> } | null> {
     const playlistsPath = config.flashpointPlaylistsPath;
 
     // Validate ID format to prevent path traversal

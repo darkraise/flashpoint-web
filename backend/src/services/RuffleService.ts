@@ -10,15 +10,11 @@ interface GitHubAsset {
   browser_download_url: string;
 }
 
-/**
- * Service for managing Ruffle emulator versions
- */
 export class RuffleService {
   private readonly frontendPublicPath: string;
   private readonly githubApiUrl = 'https://api.github.com/repos/ruffle-rs/ruffle/releases';
 
   constructor() {
-    // Path to frontend's public/ruffle directory
     this.frontendPublicPath = path.resolve(__dirname, '../../../frontend/public/ruffle');
   }
 
@@ -47,9 +43,6 @@ export class RuffleService {
     return version;
   }
 
-  /**
-   * Get the currently installed Ruffle version from local files
-   */
   getCurrentVersion(): string | null {
     try {
       const packageJsonPath = path.join(this.frontendPublicPath, 'package.json');
@@ -64,9 +57,6 @@ export class RuffleService {
     }
   }
 
-  /**
-   * Get latest nightly release from GitHub
-   */
   async getLatestVersion(): Promise<{
     version: string;
     downloadUrl: string;
@@ -107,9 +97,6 @@ export class RuffleService {
     }
   }
 
-  /**
-   * Check if a Ruffle update is available
-   */
   async checkForUpdate(): Promise<{
     currentVersion: string | null;
     latestVersion: string;
@@ -135,9 +122,6 @@ export class RuffleService {
     };
   }
 
-  /**
-   * Download and install Ruffle from GitHub release
-   */
   async updateRuffle(): Promise<{
     success: boolean;
     version: string;
@@ -168,7 +152,20 @@ export class RuffleService {
       }
       fs.mkdirSync(tempDir, { recursive: true });
 
-      // Extract all files
+      // Zip Slip protection: validate all entry paths BEFORE extraction
+      const resolvedTempDir = path.resolve(tempDir);
+      for (const entry of zip.getEntries()) {
+        const resolvedEntry = path.resolve(tempDir, entry.entryName);
+        if (
+          !resolvedEntry.startsWith(resolvedTempDir + path.sep) &&
+          resolvedEntry !== resolvedTempDir
+        ) {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+          throw new Error('Zip Slip detected: archive contains path traversal entry');
+        }
+      }
+
+      // Extract all files (safe after validation)
       zip.extractAllTo(tempDir, true);
 
       logger.info('[RuffleService] Extraction complete, installing...');
@@ -180,21 +177,6 @@ export class RuffleService {
           fs.rmSync(backupDir, { recursive: true, force: true });
         }
         fs.renameSync(this.frontendPublicPath, backupDir);
-      }
-
-      // Verify extracted files are within tempDir (Zip Slip protection)
-      const extractedFiles = fs.readdirSync(tempDir, { recursive: true }) as string[];
-      const resolvedTempDir = path.resolve(tempDir);
-      for (const file of extractedFiles) {
-        const resolvedFile = path.resolve(tempDir, file);
-        if (
-          !resolvedFile.startsWith(resolvedTempDir + path.sep) &&
-          resolvedFile !== resolvedTempDir
-        ) {
-          // Clean up and abort
-          fs.rmSync(tempDir, { recursive: true, force: true });
-          throw new Error('Zip Slip detected: extracted file outside target directory');
-        }
       }
 
       // Move extracted files to public/ruffle
@@ -235,9 +217,6 @@ export class RuffleService {
     }
   }
 
-  /**
-   * Verify Ruffle files exist in the public directory
-   */
   verifyInstallation(): boolean {
     try {
       const ruffleJsPath = path.join(this.frontendPublicPath, 'ruffle.js');

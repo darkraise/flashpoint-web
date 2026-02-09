@@ -21,13 +21,9 @@ interface GameBrowseLayoutProps {
   library: 'arcade' | 'theatre';
   platform?: string;
   headerContent?: ReactNode;
-  breadcrumbContext?: BreadcrumbContext; // Optional: Context for breadcrumb navigation
+  breadcrumbContext?: BreadcrumbContext;
 }
 
-/**
- * Reusable layout component for browsing games with filters and pagination
- * Used by FlashGamesView, HTML5GamesView, and BrowseView
- */
 export function GameBrowseLayout({
   title,
   library,
@@ -39,14 +35,12 @@ export function GameBrowseLayout({
   const viewMode = useUIStore((state) => state.viewMode);
   const { isAuthenticated } = useAuthStore();
 
-  // Fetch favorite game IDs for performance optimization (single API call)
   const { data: favoriteGameIdsArray } = useFavoriteGameIds();
   const favoriteGameIds = useMemo(
     () => (favoriteGameIdsArray ? new Set(favoriteGameIdsArray) : undefined),
     [favoriteGameIdsArray]
   );
 
-  // Build filters from URL params - memoize to prevent unnecessary recalculations
   const filters: GameFilters = useMemo(
     () => ({
       search: searchParams.get('search') || undefined,
@@ -58,10 +52,18 @@ export function GameBrowseLayout({
       languages: searchParams.get('languages') || undefined,
       library,
       tags: searchParams.get('tags') || undefined,
-      yearFrom: searchParams.get('yearFrom')
-        ? parseInt(searchParams.get('yearFrom')!, 10)
-        : undefined,
-      yearTo: searchParams.get('yearTo') ? parseInt(searchParams.get('yearTo')!, 10) : undefined,
+      yearFrom: (() => {
+        const raw = searchParams.get('yearFrom');
+        if (!raw) return undefined;
+        const parsed = parseInt(raw, 10);
+        return isNaN(parsed) ? undefined : parsed;
+      })(),
+      yearTo: (() => {
+        const raw = searchParams.get('yearTo');
+        if (!raw) return undefined;
+        const parsed = parseInt(raw, 10);
+        return isNaN(parsed) ? undefined : parsed;
+      })(),
       sortBy: searchParams.get('sortBy') || 'title',
       sortOrder: (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc',
       page: parseInt(searchParams.get('page') || '1', 10),
@@ -70,26 +72,21 @@ export function GameBrowseLayout({
     [searchParams, platform, library]
   );
 
-  // Compute dynamic page title based on active filters
   const pageTitle = useMemo(() => {
     const parts: string[] = [];
 
-    // Search query takes priority
     if (filters.search) {
       return `Search result for "${filters.search}"`;
     }
 
-    // Platform filter (show as main title if no other filters)
     if (filters.platform && !filters.tags) {
-      return title; // Use the provided title when only platform is filtered
+      return title;
     }
 
-    // Platform filter with other filters
     if (filters.platform) {
       parts.push(title);
     }
 
-    // Tags filter
     if (filters.tags) {
       const tagList = filters.tags
         .split(';')
@@ -102,13 +99,11 @@ export function GameBrowseLayout({
       }
     }
 
-    // Default title
     return parts.length > 0 ? parts.join(' ') : title;
   }, [filters.search, filters.platform, filters.tags, title]);
 
   const { data, isLoading, error } = useGames(filters);
 
-  // Build filter chips from active filters
   const filterChips = useMemo(() => {
     const chips: FilterChip[] = [];
 
@@ -203,13 +198,11 @@ export function GameBrowseLayout({
     (chipId: string) => {
       const newParams = new URLSearchParams(searchParams);
 
-      // Handle search separately
       if (chipId === 'search') {
         newParams.delete('search');
       } else if (chipId === 'platform') {
         newParams.delete('platform');
       } else {
-        // Data-driven approach for multi-value fields
         const paramMap: Record<string, { param: string; value: string | undefined }> = {
           'series-': { param: 'series', value: filters.series },
           'developers-': { param: 'developers', value: filters.developers },
@@ -219,7 +212,6 @@ export function GameBrowseLayout({
           'tags-': { param: 'tags', value: filters.tags },
         };
 
-        // Find which prefix matches
         const prefix = Object.keys(paramMap).find((p) => chipId.startsWith(p));
         if (prefix) {
           const { param, value } = paramMap[prefix];
@@ -245,7 +237,6 @@ export function GameBrowseLayout({
 
   const handleClearAllFilters = useCallback(() => {
     const newParams = new URLSearchParams();
-    // Keep sort params if they exist
     const sortBy = searchParams.get('sortBy');
     const sortOrder = searchParams.get('sortOrder');
     if (sortBy) newParams.set('sortBy', sortBy);
@@ -274,7 +265,6 @@ export function GameBrowseLayout({
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header with Title and View Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">{pageTitle}</h1>
@@ -288,7 +278,6 @@ export function GameBrowseLayout({
           {headerContent}
         </div>
 
-        {/* Sort and View Mode Controls - Right Side */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <SortControls
             sortBy={filters.sortBy}
@@ -299,12 +288,10 @@ export function GameBrowseLayout({
         </div>
       </div>
 
-      {/* Filter Panel - Separate Section */}
       <div className="bg-card rounded-lg p-4 border border-border relative">
         <FilterPanel filters={filters} showPlatformFilter={!platform} />
       </div>
 
-      {/* Active Filter Chips */}
       {filterChips.length > 0 ? (
         <FilterChips
           chips={filterChips}

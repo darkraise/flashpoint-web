@@ -14,15 +14,12 @@ export class AppError extends Error {
   }
 }
 
-/**
- * Sanitize request body by redacting sensitive fields
- */
-function sanitizeBody(body: any): any {
+function sanitizeBody(body: unknown): unknown {
   if (!body || typeof body !== 'object') {
     return body;
   }
 
-  const sanitized = { ...body };
+  const sanitized = { ...(body as Record<string, unknown>) };
   const sensitiveFields = [
     'password',
     'currentPassword',
@@ -49,6 +46,15 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ) {
+  // If headers are already sent (e.g., during SSE streaming), delegate to Express default handler
+  if (res.headersSent) {
+    logger.error(`[ErrorHandler] Error after headers sent: ${err.message}`, {
+      path: req.path,
+      method: req.method,
+    });
+    return _next(err);
+  }
+
   if (err instanceof AppError) {
     logger.error(`[AppError] ${err.message}`, {
       statusCode: err.statusCode,
@@ -66,7 +72,6 @@ export function errorHandler(
     });
   }
 
-  // Handle Zod validation errors
   if (err instanceof ZodError) {
     logger.error(`[ValidationError] Zod validation failed`, {
       path: req.path,
@@ -82,7 +87,6 @@ export function errorHandler(
     });
   }
 
-  // Unhandled errors - Log full details with sanitization
   logger.error(`[UnhandledError] ${err.message}`, {
     name: err.name,
     message: err.message,

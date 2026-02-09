@@ -30,7 +30,6 @@ export type PrimaryColor =
   | 'pink'
   | 'rose';
 
-// Color definitions with light and dark mode values
 export const colorPalette: Record<PrimaryColor, { light: string; dark: string; label: string }> = {
   blue: { light: '221.2 83.2% 53.3%', dark: '217.2 91.2% 59.8%', label: 'Blue' },
   slate: { light: '215.4 16.3% 46.9%', dark: '215.3 25% 56.9%', label: 'Slate' },
@@ -66,14 +65,10 @@ interface ThemeState {
   syncThemeToServer: () => Promise<void>;
 }
 
-// Apply theme to document
 const applyTheme = (mode: ThemeMode) => {
   const root = document.documentElement;
-
-  // Remove existing theme classes
   root.classList.remove('light', 'dark');
 
-  // Determine actual theme to apply
   const actualTheme: 'light' | 'dark' =
     mode === 'system'
       ? window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -81,11 +76,9 @@ const applyTheme = (mode: ThemeMode) => {
         : 'light'
       : mode;
 
-  // Apply theme class
   root.classList.add(actualTheme);
 };
 
-// Apply primary color to document
 const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
   const root = document.documentElement;
   const actualTheme: 'light' | 'dark' =
@@ -97,26 +90,19 @@ const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
 
   const colorValue = colorPalette[color][actualTheme];
 
-  // Apply primary color CSS variables
   root.style.setProperty('--primary', colorValue);
   root.style.setProperty('--ring', colorValue);
 
-  // Parse HSL values to create toned-down versions for scrollbar
   const [hue, saturation, lightness] = colorValue.split(' ').map((v) => parseFloat(v));
 
-  // Scrollbar thumb: Use primary color with adjusted lightness for better visibility
-  // Light mode: Slightly darker, Dark mode: Slightly lighter
   const scrollbarLightness =
     actualTheme === 'light'
       ? Math.max(lightness - 15, 30) // Darker in light mode (min 30%)
       : Math.min(lightness + 10, 70); // Lighter in dark mode (max 70%)
 
   const scrollbarThumb = `${hue} ${saturation}% ${scrollbarLightness}%`;
-
-  // Scrollbar hover: Full primary color
   const scrollbarThumbHover = colorValue;
 
-  // Apply scrollbar colors
   root.style.setProperty('--scrollbar-thumb', scrollbarThumb);
   root.style.setProperty('--scrollbar-thumb-hover', scrollbarThumbHover);
 };
@@ -131,10 +117,8 @@ export const useThemeStore = create<ThemeState>()(
       setMode: (mode) => {
         set({ mode });
         applyTheme(mode);
-        // Reapply primary color for new theme mode
         applyPrimaryColor(get().primaryColor, mode);
 
-        // Sync to server if authenticated (not guest)
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated && !authState.isGuest) {
           get()
@@ -149,7 +133,6 @@ export const useThemeStore = create<ThemeState>()(
         set({ primaryColor: color });
         applyPrimaryColor(color, get().mode);
 
-        // Sync to server if authenticated (not guest)
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated && !authState.isGuest) {
           get()
@@ -177,10 +160,8 @@ export const useThemeStore = create<ThemeState>()(
             ? (settings.primaryColor as PrimaryColor)
             : 'blue';
 
-          // Update store without triggering sync
           set({ mode, primaryColor, isLoading: false });
 
-          // Apply theme
           applyTheme(mode);
           applyPrimaryColor(primaryColor, mode);
         } catch (error) {
@@ -206,12 +187,10 @@ export const useThemeStore = create<ThemeState>()(
         primaryColor: state.primaryColor,
       }),
       onRehydrateStorage: () => (state) => {
-        // Apply theme after rehydration
         if (state) {
           applyTheme(state.mode);
           applyPrimaryColor(state.primaryColor, state.mode);
 
-          // Load from server after rehydration if authenticated (not guest)
           const authState = useAuthStore.getState();
           if (authState.isAuthenticated && !authState.isGuest) {
             state.loadThemeFromServer().catch((error) => {
@@ -224,7 +203,6 @@ export const useThemeStore = create<ThemeState>()(
   )
 );
 
-// Listen for system theme changes when in system mode
 if (typeof window !== 'undefined') {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     const state = useThemeStore.getState();
@@ -234,7 +212,6 @@ if (typeof window !== 'undefined') {
     }
   });
 
-  // Apply initial theme
   const initialState = useThemeStore.getState();
   applyTheme(initialState.mode);
   applyPrimaryColor(initialState.primaryColor, initialState.mode);

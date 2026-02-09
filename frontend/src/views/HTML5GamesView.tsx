@@ -1,9 +1,5 @@
 import { GameBrowseLayout } from '@/components/library/GameBrowseLayout';
 
-/**
- * View for browsing HTML5 games only
- * Uses the reusable GameBrowseLayout with HTML5 platform filter
- */
 export function HTML5GamesView() {
   return (
     <GameBrowseLayout

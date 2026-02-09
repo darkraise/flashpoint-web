@@ -1,25 +1,21 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { User, AuthTokens } from '../types/auth';
+import { User } from '../types/auth';
 import { useThemeStore } from './theme';
 import { logger } from '@/lib/logger';
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isGuest: boolean;
   isMaintenanceMode: boolean;
 
-  // Actions
-  setAuth: (user: User, tokens: AuthTokens) => void;
+  setAuth: (user: User) => void;
   setGuestMode: () => void;
   clearAuth: () => void;
-  updateAccessToken: (token: string) => void;
   updateUser: (user: User) => void;
   setMaintenanceMode: (isActive: boolean) => void;
 
-  // Permission helpers
   hasPermission: (permission: string) => boolean;
   hasRole: (role: string) => boolean;
   hasAnyPermission: (permissions: string[]) => boolean;
@@ -30,20 +26,17 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
       isAuthenticated: false,
       isGuest: false,
       isMaintenanceMode: false,
 
-      setAuth: (user: User, tokens: AuthTokens) => {
+      setAuth: (user: User) => {
         set({
           user,
-          accessToken: tokens.accessToken,
           isAuthenticated: true,
           isGuest: false,
         });
 
-        // Load theme settings from server after successful login (not guest)
         if (user.role !== 'guest') {
           const themeStore = useThemeStore.getState();
           themeStore.loadThemeFromServer().catch((error) => {
@@ -53,7 +46,6 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setGuestMode: () => {
-        // Create a temporary guest user with limited permissions
         const guestUser: User = {
           id: 0,
           username: 'Guest',
@@ -63,7 +55,6 @@ export const useAuthStore = create<AuthState>()(
         };
         set({
           user: guestUser,
-          accessToken: null,
           isAuthenticated: false,
           isGuest: true,
         });
@@ -72,14 +63,9 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () => {
         set({
           user: null,
-          accessToken: null,
           isAuthenticated: false,
           isGuest: false,
         });
-      },
-
-      updateAccessToken: (token: string) => {
-        set({ accessToken: token });
       },
 
       updateUser: (user: User) => {
@@ -116,9 +102,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'flashpoint-auth',
+      // Guest sessions → sessionStorage (tab-scoped); authenticated → localStorage (persistent)
       storage: createJSONStorage(() => ({
         getItem: (name) => {
-          // For guest users, use sessionStorage; for authenticated users, use localStorage
           const sessionValue = sessionStorage.getItem(name);
           if (sessionValue) {
             try {
@@ -136,12 +122,9 @@ export const useAuthStore = create<AuthState>()(
           try {
             const parsed = JSON.parse(value);
             if (parsed?.state?.isGuest) {
-              // Guest sessions go to sessionStorage only
               sessionStorage.setItem(name, value);
             } else {
-              // Authenticated sessions go to localStorage
               localStorage.setItem(name, value);
-              // Clear any guest session from sessionStorage
               sessionStorage.removeItem(name);
             }
           } catch {

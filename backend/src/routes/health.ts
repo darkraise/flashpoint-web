@@ -9,12 +9,7 @@ import { requirePermission } from '../middleware/rbac';
 
 const router = Router();
 
-/**
- * GET /api/health
- * Basic health check - publicly accessible
- * Returns minimal status information
- * NOTE: A simpler /health endpoint also exists for load balancer checks (registered before middleware)
- */
+// A simpler /health endpoint also exists for load balancer checks (registered before middleware)
 router.get('/', (req, res) => {
   const isHealthy = DatabaseService.isConnected() && UserDatabaseService.isConnected();
 
@@ -24,11 +19,6 @@ router.get('/', (req, res) => {
   });
 });
 
-/**
- * GET /api/health/detailed
- * Detailed health check - requires authentication and admin permissions
- * Returns comprehensive system status including database connections, cache stats, and uptime
- */
 router.get(
   '/detailed',
   authenticate,
@@ -36,14 +26,12 @@ router.get(
   asyncHandler(async (req, res) => {
     const startTime = performance.now();
 
-    // Check Flashpoint database connection
     let flashpointDbStatus: 'connected' | 'error' = 'error';
     let flashpointDbError: string | null = null;
     let flashpointDbRecordCount = 0;
 
     try {
       if (DatabaseService.isConnected()) {
-        // Test query to verify database is accessible
         const result = DatabaseService.get('SELECT COUNT(*) as count FROM game', []) as {
           count: number;
         } | null;
@@ -55,14 +43,12 @@ router.get(
       flashpointDbError = error instanceof Error ? error.message : String(error);
     }
 
-    // Check User database connection
     let userDbStatus: 'connected' | 'error' = 'error';
     let userDbError: string | null = null;
     let userCount = 0;
 
     try {
       if (UserDatabaseService.isConnected()) {
-        // Test query to verify database is accessible
         const result = UserDatabaseService.get('SELECT COUNT(*) as count FROM users', []) as {
           count: number;
         } | null;
@@ -74,20 +60,16 @@ router.get(
       userDbError = error instanceof Error ? error.message : String(error);
     }
 
-    // Get cache statistics
     const permissionCacheStats = {
       enabled: true,
       ttl: '5 minutes',
-      // Note: PermissionCache doesn't expose size, just that it's active
     };
 
     const gameSearchCacheStats = GameSearchCache.getStats();
 
-    // Calculate uptime
     const uptimeSeconds = Math.floor(process.uptime());
     const uptimeFormatted = formatUptime(uptimeSeconds);
 
-    // Get memory usage
     const memoryUsage = process.memoryUsage();
     const memoryFormatted = {
       rss: formatBytes(memoryUsage.rss),
@@ -98,7 +80,6 @@ router.get(
 
     const healthCheckTime = Math.round(performance.now() - startTime);
 
-    // Determine overall health status
     const isHealthy = flashpointDbStatus === 'connected' && userDbStatus === 'connected';
 
     res.status(isHealthy ? 200 : 503).json({
@@ -148,9 +129,6 @@ router.get(
   })
 );
 
-/**
- * Format uptime in human-readable format
- */
 function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
@@ -166,9 +144,6 @@ function formatUptime(seconds: number): string {
   return parts.join(' ');
 }
 
-/**
- * Format bytes in human-readable format
- */
 function formatBytes(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB'];
   let size = bytes;

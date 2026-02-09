@@ -11,7 +11,6 @@ import { z } from 'zod';
 const router = Router();
 const playTrackingService = new PlayTrackingService();
 
-// Validation schemas
 const startPlaySessionSchema = z.object({
   gameId: z.string().min(1).max(36),
   gameTitle: z.string().min(1).max(255),
@@ -21,7 +20,6 @@ const endPlaySessionSchema = z.object({
   sessionId: z.string().uuid(),
 });
 
-// Pagination and limit constants
 const LIMITS = {
   GAME_STATS_DEFAULT: 50,
   GAME_STATS_MAX: 100,
@@ -35,18 +33,10 @@ const LIMITS = {
   GAMES_DISTRIBUTION_MAX: 20,
 } as const;
 
-// Apply feature flag check to all routes in this router
 router.use(requireFeature('enableStatistics'));
-
-// All routes require authentication and games.play permission
-// Note: authenticate middleware guarantees req.user is populated
 router.use(authenticate);
 router.use(requirePermission('games.play'));
 
-/**
- * POST /api/play/start
- * Start a new play session
- */
 router.post(
   '/start',
   logActivity('play.start', 'games', (req, res) => ({
@@ -59,7 +49,6 @@ router.post(
 
     const sessionId = await playTrackingService.startPlaySession(req.user!.id, gameId, gameTitle);
 
-    // Store sessionId for activity logging
     res.locals.sessionId = sessionId;
 
     res.json({
@@ -69,10 +58,6 @@ router.post(
   })
 );
 
-/**
- * POST /api/play/end
- * End a play session
- */
 router.post(
   '/end',
   logActivity('play.end', 'games'),
@@ -88,10 +73,6 @@ router.post(
   })
 );
 
-/**
- * GET /api/play/stats
- * Get current user's overall stats
- */
 router.get(
   '/stats',
   asyncHandler(async (req: Request, res: Response) => {
@@ -101,10 +82,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/play/game-stats
- * Get current user's game-specific stats
- */
 router.get(
   '/game-stats',
   asyncHandler(async (req: Request, res: Response) => {
@@ -124,10 +101,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/play/history
- * Get current user's play history
- */
 router.get(
   '/history',
   asyncHandler(async (req: Request, res: Response) => {
@@ -147,10 +120,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/play/top-games
- * Get current user's top played games
- */
 router.get(
   '/top-games',
   asyncHandler(async (req: Request, res: Response) => {
@@ -165,10 +134,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/play/activity-over-time
- * Get play activity over time (daily aggregation)
- */
 router.get(
   '/activity-over-time',
   asyncHandler(async (req: Request, res: Response) => {
@@ -183,10 +148,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/play/games-distribution
- * Get games distribution by playtime
- */
 router.get(
   '/games-distribution',
   asyncHandler(async (req: Request, res: Response) => {

@@ -12,7 +12,6 @@ export function PlaylistDetailView() {
   const { data: playlist, isLoading, error } = usePlaylist(id ?? '');
   const { isAuthenticated } = useAuthStore();
 
-  // Fetch favorite game IDs for performance optimization
   const { data: favoriteGameIdsArray } = useFavoriteGameIds();
   const favoriteGameIds = useMemo(
     () => (favoriteGameIdsArray ? new Set(favoriteGameIdsArray) : undefined),
@@ -43,7 +42,7 @@ export function PlaylistDetailView() {
     <div className="max-w-7xl mx-auto space-y-6">
       <Link
         to="/flashpoint-playlists"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-gray-200 transition-colors"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft size={20} />
         Back to playlists

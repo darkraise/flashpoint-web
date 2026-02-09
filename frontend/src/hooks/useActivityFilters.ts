@@ -18,10 +18,6 @@ const INITIAL_FILTER_STATE: ActivityFilterState = {
   dateRangeError: '',
 };
 
-/**
- * Custom hook that manages activity filter state with date range validation.
- * Consolidates 7 separate filter state variables into a single object.
- */
 export function useActivityFilters() {
   const [filters, setFilters] = useState<ActivityFilterState>(INITIAL_FILTER_STATE);
 
@@ -36,7 +32,6 @@ export function useActivityFilters() {
     setFilters(INITIAL_FILTER_STATE);
   }, []);
 
-  // Date range validation
   useEffect(() => {
     if (filters.startDate && filters.endDate) {
       if (filters.endDate < filters.startDate) {

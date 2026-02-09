@@ -4,9 +4,6 @@ import fs from 'fs/promises';
 import { logger } from '../../utils/logger';
 import { sanitizeAndValidatePath } from '../utils/pathSecurity';
 
-/**
- * CGI Request representation
- */
 export interface CgiRequest {
   method: string;
   url: URL;
@@ -14,36 +11,22 @@ export interface CgiRequest {
   body?: Buffer;
 }
 
-/**
- * CGI Response representation
- */
 export interface CgiResponse {
   statusCode: number;
   headers: Record<string, string>;
   body: Buffer;
 }
 
-/**
- * CGI Executor configuration
- */
 export interface CgiExecutorConfig {
-  /** Path to php-cgi executable */
   phpCgiPath: string;
-  /** Document root (htdocs path) */
   documentRoot: string;
-  /** CGI-BIN path for script validation */
   cgiBinPath: string;
-  /** Execution timeout in milliseconds (default: 30000) */
   timeout: number;
-  /** Maximum request body size in bytes (default: 10MB) */
   maxBodySize: number;
-  /** Maximum response size in bytes (default: 50MB) */
   maxResponseSize: number;
 }
 
-/**
- * Allowed environment variables to pass to CGI scripts
- */
+// Security: only these environment variables are passed to CGI scripts
 const ALLOWED_ENV_VARS = [
   'PATH',
   'TEMP',
@@ -56,9 +39,6 @@ const ALLOWED_ENV_VARS = [
   'LC_ALL',
 ];
 
-/**
- * Allowed HTTP headers to pass to CGI scripts
- */
 const ALLOWED_CGI_HEADERS = new Set([
   'host',
   'user-agent',
@@ -66,7 +46,6 @@ const ALLOWED_CGI_HEADERS = new Set([
   'accept-language',
   'accept-encoding',
   'accept-charset',
-  'cookie',
   'referer',
   'origin',
   'if-modified-since',
@@ -75,12 +54,7 @@ const ALLOWED_CGI_HEADERS = new Set([
   'pragma',
 ]);
 
-/**
- * CGI Executor - Executes PHP scripts via php-cgi
- *
- * Implements CGI/1.1 specification (RFC 3875) for executing PHP scripts
- * in a secure manner with proper environment setup and output parsing.
- */
+/** Implements CGI/1.1 (RFC 3875) for executing PHP scripts via php-cgi */
 export class CgiExecutor {
   private config: CgiExecutorConfig;
 
@@ -88,9 +62,6 @@ export class CgiExecutor {
     this.config = config;
   }
 
-  /**
-   * Validate that php-cgi binary exists and is executable
-   */
   async validateBinary(): Promise<boolean> {
     try {
       await fs.access(this.config.phpCgiPath, fs.constants.X_OK);
@@ -102,19 +73,8 @@ export class CgiExecutor {
     }
   }
 
-  /**
-   * Execute a CGI script and return the response
-   *
-   * @param scriptPath - Absolute path to the script file
-   * @param request - The incoming HTTP request
-   * @returns CGI response with status code, headers, and body
-   * @throws Error if execution fails or times out
-   */
   async execute(scriptPath: string, request: CgiRequest): Promise<CgiResponse> {
-    // Validate script path is within allowed directories (resolves symlinks)
     await this.validateScriptPath(scriptPath);
-
-    // Build CGI environment variables
     const env = this.buildCgiEnvironment(scriptPath, request);
 
     logger.info(`[CGI] Executing: ${scriptPath}`);
@@ -138,7 +98,6 @@ export class CgiExecutor {
       let processExited = false;
       let forceKillHandle: NodeJS.Timeout | null = null;
 
-      // Set up timeout
       const timeoutHandle = setTimeout(() => {
         timedOut = true;
         logger.warn(`[CGI] Script execution timed out after ${this.config.timeout}ms`);
@@ -152,7 +111,6 @@ export class CgiExecutor {
         }, 5000);
       }, this.config.timeout);
 
-      // Handle stdout
       proc.stdout.on('data', (chunk: Buffer) => {
         stdoutSize += chunk.length;
         if (stdoutSize > this.config.maxResponseSize) {
@@ -163,17 +121,13 @@ export class CgiExecutor {
         stdout.push(chunk);
       });
 
-      // Handle stderr (for logging)
       proc.stderr.on('data', (chunk: Buffer) => {
         stderrSize += chunk.length;
-        // Limit stderr collection to prevent memory issues
         if (stderrSize <= 1024 * 1024) {
-          // 1MB max for stderr
           stderr.push(chunk);
         }
       });
 
-      // Handle process completion
       proc.on('close', (code, signal) => {
         processExited = true;
         clearTimeout(timeoutHandle);
@@ -181,7 +135,6 @@ export class CgiExecutor {
           clearTimeout(forceKillHandle);
         }
 
-        // Log stderr if present
         if (stderr.length > 0) {
           const stderrOutput = Buffer.concat(stderr).toString('utf-8');
           if (stderrOutput.trim()) {
@@ -215,7 +168,6 @@ export class CgiExecutor {
         }
       });
 
-      // Handle process errors
       proc.on('error', (error) => {
         processExited = true;
         clearTimeout(timeoutHandle);
@@ -226,7 +178,6 @@ export class CgiExecutor {
         reject(new Error(`Failed to execute CGI script: ${error.message}`));
       });
 
-      // Write request body to stdin
       if (request.body && request.body.length > 0) {
         proc.stdin.write(request.body);
       }
@@ -234,10 +185,7 @@ export class CgiExecutor {
     });
   }
 
-  /**
-   * Validate that the script path is within allowed directories
-   * Resolves symlinks to prevent bypass attacks
-   */
+  /** Resolves symlinks to prevent bypass attacks */
   private async validateScriptPath(scriptPath: string): Promise<void> {
     let realPath: string;
     try {
@@ -246,7 +194,6 @@ export class CgiExecutor {
       throw new Error('CGI script not found');
     }
 
-    // Script must be in either htdocs or cgi-bin
     try {
       sanitizeAndValidatePath(this.config.documentRoot, realPath);
       return;
@@ -289,30 +236,24 @@ export class CgiExecutor {
     return safeParams.join('&');
   }
 
-  /**
-   * Build CGI environment variables according to RFC 3875
-   */
+  /** Build CGI environment variables according to RFC 3875 */
   private buildCgiEnvironment(scriptPath: string, request: CgiRequest): Record<string, string> {
     const url = request.url;
     const headers = request.headers;
 
-    // Sanitize query string to prevent argument injection (CVE-2012-1823)
     const rawQueryString = url.search.startsWith('?') ? url.search.substring(1) : url.search;
     const sanitizedQueryString = this.sanitizeQueryString(rawQueryString);
 
-    // Build base CGI environment
     const env: Record<string, string> = {
       // Required by PHP-CGI security (prevents direct execution attacks)
       REDIRECT_STATUS: 'CGI',
 
-      // CGI/1.1 specification variables (RFC 3875)
       GATEWAY_INTERFACE: 'CGI/1.1',
       SERVER_SOFTWARE: 'flashpoint-game-service/1.0',
       SERVER_PROTOCOL: 'HTTP/1.1',
       SERVER_NAME: url.hostname || 'localhost',
       SERVER_PORT: url.port || '80',
 
-      // Request information
       REQUEST_METHOD: request.method.toUpperCase(),
       REQUEST_URI: url.pathname + url.search,
       SCRIPT_NAME: url.pathname,
@@ -321,35 +262,30 @@ export class CgiExecutor {
       PATH_TRANSLATED: scriptPath,
       QUERY_STRING: sanitizedQueryString,
 
-      // Document root
       DOCUMENT_ROOT: this.config.documentRoot,
 
-      // Client information (localhost since this is proxied)
       REMOTE_ADDR: '127.0.0.1',
       REMOTE_HOST: 'localhost',
     };
 
-    // Add content headers if body is present
     if (request.body && request.body.length > 0) {
       env.CONTENT_LENGTH = request.body.length.toString();
-      env.CONTENT_TYPE = headers['content-type'] || 'application/x-www-form-urlencoded';
+      // Sanitize content-type: strip null bytes, CR, LF (injection vectors)
+      const rawContentType = headers['content-type'] || 'application/x-www-form-urlencoded';
+      env.CONTENT_TYPE = rawContentType.replace(/[\x00\x0a\x0d]/g, '');
     }
 
-    // Convert HTTP headers to CGI HTTP_* variables
     for (const [key, value] of Object.entries(headers)) {
       const lowerKey = key.toLowerCase();
 
-      // Skip content headers (handled separately)
       if (lowerKey === 'content-type' || lowerKey === 'content-length') {
         continue;
       }
 
-      // Only pass allowed headers
       if (!ALLOWED_CGI_HEADERS.has(lowerKey)) {
         continue;
       }
 
-      // Convert header name to CGI format: X-Custom-Header → HTTP_X_CUSTOM_HEADER
       const cgiKey = 'HTTP_' + key.toUpperCase().replace(/-/g, '_');
       env[cgiKey] = value;
     }
@@ -357,9 +293,6 @@ export class CgiExecutor {
     return env;
   }
 
-  /**
-   * Pass only allowed environment variables to CGI scripts
-   */
   private sanitizeProcessEnv(): Record<string, string> {
     const env: Record<string, string> = {};
 
@@ -385,14 +318,11 @@ export class CgiExecutor {
    * Note: Some PHP configurations may use \n instead of \r\n.
    */
   private parseCgiOutput(output: Buffer): CgiResponse {
-    // Find the header/body separator (empty line)
-    // Try CRLF first (standard), then LF-only (some PHP configs)
     const outputStr = output.toString('binary');
     let separatorIndex = outputStr.indexOf('\r\n\r\n');
     let separatorLength = 4;
     let lineEnding = '\r\n';
 
-    // Fallback to LF-only if CRLF not found
     if (separatorIndex === -1) {
       separatorIndex = outputStr.indexOf('\n\n');
       separatorLength = 2;
@@ -409,12 +339,10 @@ export class CgiExecutor {
       };
     }
 
-    // Split headers and body
     const headerSection = outputStr.substring(0, separatorIndex);
     const bodyStart = separatorIndex + separatorLength;
     const body = output.slice(bodyStart);
 
-    // Parse headers
     const headers: Record<string, string> = {};
     let statusCode = 200;
 
@@ -427,7 +355,6 @@ export class CgiExecutor {
       const value = line.substring(colonIndex + 1).trim();
 
       if (name.toLowerCase() === 'status') {
-        // Parse status code from "Status: 200 OK" or "Status: 302 Found"
         const statusMatch = value.match(/^(\d{3})/);
         if (statusMatch) {
           statusCode = parseInt(statusMatch[1], 10);
@@ -437,7 +364,6 @@ export class CgiExecutor {
       }
     }
 
-    // Ensure Content-Type is set
     if (!headers['Content-Type'] && !headers['content-type']) {
       headers['Content-Type'] = 'text/html';
     }

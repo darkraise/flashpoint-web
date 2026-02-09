@@ -247,7 +247,7 @@ export class DownloadManager {
     const response = await axios.get(url, {
       responseType: 'stream',
       timeout: this.DOWNLOAD_TIMEOUT_MS,
-      signal: abortSignal as any,
+      signal: abortSignal,
       headers: {
         'User-Agent': 'Flashpoint-WebApp/1.0',
       },
@@ -327,16 +327,10 @@ export class DownloadManager {
     return this.activeDownloads.has(gameDataId);
   }
 
-  /**
-   * Get count of active downloads.
-   */
   static getActiveDownloadCount(): number {
     return this.activeDownloads.size;
   }
 
-  /**
-   * Ensure temp directory exists.
-   */
   private static async ensureTempDir(): Promise<void> {
     try {
       await fs.promises.mkdir(this.TEMP_DIR, { recursive: true });

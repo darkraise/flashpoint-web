@@ -1,15 +1,5 @@
-/**
- * System Settings Types
- *
- * Type definitions for all system settings categories.
- * These types match the backend settings structure.
- */
-
 import { AuthSettings } from './auth';
 
-/**
- * Application settings (general app configuration)
- */
 export interface AppSettings {
   siteName: string;
   maintenanceMode: boolean;
@@ -19,9 +9,6 @@ export interface AppSettings {
   homeRecentHours?: number;
 }
 
-/**
- * Feature flags/toggles
- */
 export interface FeatureSettings {
   enableDownloads: boolean;
   enablePlayTracking: boolean;
@@ -31,45 +18,30 @@ export interface FeatureSettings {
   enableStatistics: boolean;
 }
 
-/**
- * Game-related settings
- */
 export interface GameSettings {
   defaultScaleMode: 'exactfit' | 'noborder' | 'showall' | 'noscale';
   enableFlashPlayer: boolean;
   enableHTML5Player: boolean;
 }
 
-/**
- * Metadata and content sync settings
- */
 export interface MetadataSettings {
   enableExtendedMetadata: boolean;
   cacheImages: boolean;
   imageCacheExpiryDays: number;
 }
 
-/**
- * Storage and cleanup settings
- */
 export interface StorageSettings {
   maxStorageGB: number;
   autoCleanup: boolean;
   cleanupThresholdGB: number;
 }
 
-/**
- * Rate limiting configuration
- */
 export interface RateLimitSettings {
   enableRateLimiting: boolean;
   requestsPerMinute: number;
   burstLimit: number;
 }
 
-/**
- * Complete system settings (all categories)
- */
 export interface SystemSettings {
   app: AppSettings;
   auth: AuthSettings;
@@ -80,9 +52,6 @@ export interface SystemSettings {
   rateLimit: RateLimitSettings;
 }
 
-/**
- * Configured domain for sharing
- */
 export interface Domain {
   id: number;
   hostname: string;
@@ -90,9 +59,6 @@ export interface Domain {
   createdAt: string;
 }
 
-/**
- * Public settings available without authentication
- */
 export interface PublicSettings {
   app: Pick<AppSettings, 'siteName' | 'maintenanceMode' | 'maintenanceMessage' | 'homeRecentHours'>;
   auth: Pick<AuthSettings, 'guestAccessEnabled' | 'userRegistrationEnabled'>;
@@ -101,12 +67,6 @@ export interface PublicSettings {
   domains?: { defaultDomain?: string | null };
 }
 
-/**
- * Settings category names
- */
 export type SettingsCategory = keyof SystemSettings;
 
-/**
- * Generic setting value type
- */
 export type SettingValue = string | number | boolean | Record<string, unknown> | unknown[];

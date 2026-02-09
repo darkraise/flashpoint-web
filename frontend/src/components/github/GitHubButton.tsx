@@ -20,7 +20,6 @@ export function GitHubButton() {
         logger.debug(`GitHub stars fetched: ${result.stars}`);
       } catch (error) {
         logger.warn('Failed to fetch GitHub stars:', error);
-        // Keep stars at 0 if fetch fails
       } finally {
         setIsLoading(false);
       }

@@ -29,14 +29,12 @@ export function SharedPlaylistView() {
   const clonePlaylist = useCloneSharedPlaylist();
   const { generateToken, hasValidToken, isGenerating } = useSharedAccessToken();
 
-  // Generate shared access token on mount (for anonymous users)
   useEffect(() => {
     if (shareToken && !isAuthenticated && !hasValidToken) {
       generateToken(shareToken).catch(logger.error);
     }
   }, [shareToken, isAuthenticated, hasValidToken, generateToken]);
 
-  // Fetch shared playlist metadata
   const {
     data: playlist,
     isLoading: isLoadingPlaylist,
@@ -48,7 +46,6 @@ export function SharedPlaylistView() {
     retry: false,
   });
 
-  // Fetch shared playlist games
   const { data: games = [], isLoading: isLoadingGames } = useQuery({
     queryKey: ['sharedPlaylistGames', shareToken],
     queryFn: () => sharedPlaylistsApi.getGames(shareToken ?? ''),
@@ -113,14 +110,12 @@ export function SharedPlaylistView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      {/* Breadcrumbs Navigation */}
       <Breadcrumbs
         items={[{ label: playlist.title, active: true }]}
         homeLabel="Shared"
         homeHref="#"
       />
 
-      {/* Info Banner */}
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription className="flex items-center justify-between gap-4">
@@ -145,10 +140,8 @@ export function SharedPlaylistView() {
         </AlertDescription>
       </Alert>
 
-      {/* Playlist Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex gap-4">
-          {/* Playlist Icon */}
           {playlist.icon ? (
             <div className="flex-shrink-0">
               <div className="p-4 bg-primary/20 rounded-xl border-2 border-primary/30">
@@ -162,7 +155,6 @@ export function SharedPlaylistView() {
             </div>
           ) : null}
 
-          {/* Playlist Info */}
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold">{playlist.title}</h1>
@@ -184,7 +176,6 @@ export function SharedPlaylistView() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center gap-2">
           <ViewOptions />
           {isAuthenticated ? (
@@ -195,7 +186,6 @@ export function SharedPlaylistView() {
         </div>
       </div>
 
-      {/* Games Display */}
       {games.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground">This playlist is empty</p>

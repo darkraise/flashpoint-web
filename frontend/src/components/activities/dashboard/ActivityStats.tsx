@@ -94,7 +94,7 @@ export function ActivityStats({ stats, timeRange = '24h' }: ActivityStatsProps) 
   const getTrendColor = (trend: number) => {
     if (trend > 0) return 'text-green-400';
     if (trend < 0) return 'text-red-400';
-    return 'text-gray-400';
+    return 'text-muted-foreground';
   };
 
   return (
@@ -114,7 +114,6 @@ export function ActivityStats({ stats, timeRange = '24h' }: ActivityStatsProps) 
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-muted-foreground text-xs mb-1">{stat.label}</p>
-                {/* Peak Hour: use smaller font and break text instead of truncate */}
                 <p
                   className={`font-bold ${isPeakHour ? 'text-base break-words' : 'text-xl truncate'}`}
                 >

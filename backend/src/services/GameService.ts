@@ -320,7 +320,8 @@ export class GameService {
 
       // Apply sorting
       const sortColumn = this.getSortColumn(query.sortBy);
-      sql += ` ORDER BY ${sortColumn} ${query.sortOrder.toUpperCase()}`;
+      const safeOrder = query.sortOrder.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+      sql += ` ORDER BY ${sortColumn} ${safeOrder}`;
 
       // Apply pagination
       sql += ` LIMIT ? OFFSET ?`;
@@ -366,9 +367,9 @@ export class GameService {
         );
 
         // Merge presentOnDisk into game objects and remove total_count
-        games.forEach((game: Game & { total_count: number }) => {
+        games.forEach((game: Game & { total_count?: number }) => {
           game.presentOnDisk = presentOnDiskMap.get(game.id) || 0;
-          delete (game as any).total_count;
+          delete game.total_count;
         });
       }
 
@@ -580,6 +581,7 @@ export class GameService {
           g.tagsStr, g.orderTitle
         FROM game g
         WHERE (g.broken = 0 OR g.broken IS NULL)
+          AND ${this.getFlashSwfCondition('g')}
       `;
 
       const params: unknown[] = [];
@@ -792,7 +794,7 @@ export class GameService {
 
       const results = DatabaseService.all(sql, []) as Array<{ tagsStr: string }>;
 
-      // Parse pipe-delimited tags and count occurrences
+      // Tags are semicolon-delimited
       const tagCounts = new Map<string, number>();
 
       for (const row of results) {

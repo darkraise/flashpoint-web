@@ -56,20 +56,18 @@ export function InitialSetupView() {
         email: values.email,
         password: values.password,
       });
-      // Navigate to login page after successful setup
       navigate('/login', {
         replace: true,
         state: { setupComplete: true },
       });
-    } catch (error) {
-      // Error is already logged in the hook
+    } catch {
+      // Error handling is done by the mutation hook
     }
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
-        {/* Gradient Border Wrapper */}
         <div
           className="p-[2px] rounded-2xl relative animate-fade-in-up"
           style={{
@@ -81,9 +79,7 @@ export function InitialSetupView() {
               hsl(var(--primary) / 0.6) 100%)`,
           }}
         >
-          {/* Glassmorphism card with backdrop-blur */}
           <div className="bg-card/70 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-6 relative overflow-hidden">
-            {/* Multi-layer gradient backgrounds */}
             <div
               className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-primary/12 pointer-events-none"
               aria-hidden="true"
@@ -93,7 +89,6 @@ export function InitialSetupView() {
               aria-hidden="true"
             />
 
-            {/* Prismatic Light Glow */}
             <div
               className="absolute inset-0 pointer-events-none prismatic-form-glow"
               style={{
@@ -106,12 +101,10 @@ export function InitialSetupView() {
               aria-hidden="true"
             />
 
-            {/* Theme Toggle in top-right corner */}
             <div className="absolute top-4 right-4 z-10">
               <ThemePicker />
             </div>
 
-            {/* Logo and Title Section */}
             <div className="relative mb-6 flex flex-col items-center">
               <div className="mb-4 w-20 h-20 flex items-center justify-center">
                 <img
@@ -131,7 +124,6 @@ export function InitialSetupView() {
               </p>
             </div>
 
-            {/* Info Alert */}
             <Alert className="mb-6 animate-fade-in-up border-primary/50 bg-muted/50">
               <Shield className="h-4 w-4 text-primary" />
               <AlertDescription className="text-sm">
@@ -252,7 +244,6 @@ export function InitialSetupView() {
               </form>
             </Form>
 
-            {/* Security Notice */}
             <div className="relative mt-4 pt-4 border-t border-border/50">
               <p className="text-center text-xs text-muted-foreground">
                 🔒 Password is encrypted. Remember your credentials.

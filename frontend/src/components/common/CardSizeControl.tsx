@@ -21,7 +21,6 @@ export function CardSizeControl() {
 
   return (
     <div className="flex items-center gap-4">
-      {/* View Mode Toggle */}
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">View:</span>
         <ToggleGroup
@@ -40,7 +39,6 @@ export function CardSizeControl() {
         </ToggleGroup>
       </div>
 
-      {/* Grid Size Controls */}
       {viewMode === 'grid' ? (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Size:</span>
@@ -64,7 +62,6 @@ export function CardSizeControl() {
         </div>
       ) : null}
 
-      {/* List Column Controls */}
       {viewMode === 'list' ? (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Columns:</span>

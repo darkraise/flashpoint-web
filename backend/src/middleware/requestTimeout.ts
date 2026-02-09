@@ -1,46 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 
-/**
- * Default timeout in milliseconds (30 seconds)
- */
 const DEFAULT_TIMEOUT_MS = 30000;
 
-/**
- * Request timeout middleware
- *
- * Terminates requests that exceed the specified timeout duration.
- * Prevents hanging requests from consuming server resources.
- *
- * Features:
- * - Configurable timeout per route or globally
- * - Automatic cleanup of timed-out requests
- * - Detailed logging for debugging
- * - 408 Request Timeout status code
- *
- * Usage:
- * ```typescript
- * // Global timeout (30s default)
- * app.use(requestTimeout());
- *
- * // Custom timeout (60s)
- * app.use(requestTimeout(60000));
- *
- * // Per-route timeout
- * router.get('/slow-endpoint', requestTimeout(120000), handler);
- * ```
- */
+/** Terminates requests that exceed the specified timeout, preventing hanging connections. */
 export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const startTime = Date.now();
     let isTimedOut = false;
     let hasResponded = false;
 
-    // Set up timeout handler
     const timeoutId = setTimeout(() => {
       isTimedOut = true;
 
-      // Only send response if not already sent
       if (!hasResponded && !res.headersSent) {
         const elapsed = Date.now() - startTime;
 
@@ -66,7 +38,6 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
       }
     }, timeoutMs);
 
-    // Override res.send/json/end to clear timeout on response
     const originalSend = res.send.bind(res);
     const originalJson = res.json.bind(res);
     const originalEnd = res.end.bind(res);
@@ -106,7 +77,6 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
       }
     }
 
-    // Handle request abortion
     req.on('close', () => {
       if (!hasResponded) {
         hasResponded = true;
@@ -125,22 +95,10 @@ export function requestTimeout(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
   };
 }
 
-/**
- * Timeout configurations for different endpoint types
- */
 export const TimeoutConfig = {
-  /** Default timeout for most endpoints (30s) */
   DEFAULT: 30000,
-
-  /** Short timeout for fast operations (10s) */
   SHORT: 10000,
-
-  /** Medium timeout for database queries (60s) */
   MEDIUM: 60000,
-
-  /** Long timeout for file operations (120s) */
   LONG: 120000,
-
-  /** Extended timeout for batch operations (300s / 5 minutes) */
   EXTENDED: 300000,
 };

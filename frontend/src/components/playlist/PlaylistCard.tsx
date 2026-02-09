@@ -66,7 +66,6 @@ const PlaylistCardComponent = function PlaylistCard({
   return (
     <Card className="group overflow-hidden hover:ring-2 hover:ring-primary/80 hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
       <div className="flex items-start gap-4 p-4">
-        {/* COLUMN 1: Icon + Game Count */}
         <Link to={`/playlists/${playlist.id}`} className="flex-shrink-0">
           <div className="flex flex-col items-center gap-2">
             <div className="p-3 bg-primary/10 rounded-lg">
@@ -83,24 +82,19 @@ const PlaylistCardComponent = function PlaylistCard({
           </div>
         </Link>
 
-        {/* COLUMN 2: Content */}
         <Link to={`/playlists/${playlist.id}`} className="flex-1 min-w-0">
           <div className="space-y-1">
-            {/* Row 1: Playlist Name */}
             <CardTitle className="text-lg font-semibold truncate" title={playlist.title}>
               {playlist.title}
             </CardTitle>
 
-            {/* Row 2: Description */}
             <CardDescription className="text-sm line-clamp-2">
               {playlist.description || 'No description'}
             </CardDescription>
           </div>
         </Link>
 
-        {/* COLUMN 3: Action Buttons */}
         <div className="flex flex-col gap-2 flex-shrink-0">
-          {/* Menu Button (always visible) */}
           {showActions && (onEdit || onDelete || onShare) ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.preventDefault()}>
@@ -139,7 +133,6 @@ const PlaylistCardComponent = function PlaylistCard({
             </DropdownMenu>
           ) : null}
 
-          {/* Share Indicator Button (icon only) */}
           {playlist.isPublic && playlist.shareToken ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -162,15 +155,11 @@ const PlaylistCardComponent = function PlaylistCard({
   );
 };
 
-// Memoize component to prevent unnecessary re-renders
-// Only re-render if playlist properties change
 export const PlaylistCard = memo(PlaylistCardComponent, (prevProps, nextProps) => {
-  // Re-render if playlist ID changed
   if (prevProps.playlist.id !== nextProps.playlist.id) {
     return false;
   }
 
-  // Re-render if playlist data changed
   if (
     prevProps.playlist.title !== nextProps.playlist.title ||
     prevProps.playlist.description !== nextProps.playlist.description ||
@@ -182,11 +171,9 @@ export const PlaylistCard = memo(PlaylistCardComponent, (prevProps, nextProps) =
     return false;
   }
 
-  // Re-render if showActions changed
   if (prevProps.showActions !== nextProps.showActions) {
     return false;
   }
 
-  // Don't re-render - props are effectively the same
   return true;
 });

@@ -124,7 +124,6 @@ export function ErrorPage({
         await onReport();
         setHasReported(true);
       } catch (error) {
-        // Error already handled by reportError function
         logger.error('Failed to report error:', error);
       } finally {
         setIsReporting(false);

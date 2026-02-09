@@ -4,7 +4,6 @@ import { GameCardSkeleton } from './GameCardSkeleton';
 export function GameGridSkeleton() {
   const cardSize = useUIStore((state) => state.cardSize);
 
-  // Dynamic grid columns based on card size (matching GameGrid)
   const gridClasses = {
     small:
       'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 py-2',
@@ -14,7 +13,6 @@ export function GameGridSkeleton() {
       'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 py-2',
   };
 
-  // Show 20 skeleton cards
   return (
     <div className={gridClasses[cardSize]}>
       {Array.from({ length: 20 }).map((_, index) => (

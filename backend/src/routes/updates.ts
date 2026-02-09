@@ -15,10 +15,6 @@ router.use(rateLimitStandard);
 const metadataUpdateService = new MetadataUpdateService();
 const metadataSyncService = new MetadataSyncService();
 
-/**
- * GET /api/updates/check
- * Check for available updates
- */
 router.get(
   '/check',
   asyncHandler(async (req, res) => {
@@ -28,12 +24,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/updates/install
- * Install available updates
- *
- * Requires: Admin permission (settings.update)
- */
 router.post(
   '/install',
   authenticate,
@@ -46,12 +36,6 @@ router.post(
   })
 );
 
-/**
- * GET /api/updates/system-info
- * Get system information for debugging
- *
- * Requires: Admin permission (settings.update)
- */
 router.get(
   '/system-info',
   authenticate,
@@ -63,12 +47,7 @@ router.get(
   })
 );
 
-/**
- * GET /api/updates/metadata
- * Check for game metadata updates (like Flashpoint Launcher)
- * Returns info about game database updates from FPFSS
- * Includes edition info so frontend knows whether sync is available
- */
+// Includes edition info so frontend knows whether sync is available
 router.get(
   '/metadata',
   asyncHandler(async (req, res) => {
@@ -79,14 +58,7 @@ router.get(
   })
 );
 
-/**
- * POST /api/updates/metadata/sync
- * Start metadata sync in background (non-blocking)
- * Returns immediately with sync started status
- * Frontend should poll /api/updates/metadata/sync/status for progress
- *
- * Requires: Admin permission (settings.update)
- */
+// Non-blocking: returns immediately. Frontend polls /api/updates/metadata/sync/status for progress.
 router.post(
   '/metadata/sync',
   authenticate,
@@ -95,7 +67,6 @@ router.post(
   asyncHandler(async (req, res) => {
     const syncStatus = SyncStatusService.getInstance();
 
-    // Check if sync is already running
     if (syncStatus.isRunning()) {
       return res.status(409).json({
         success: false,
@@ -108,12 +79,10 @@ router.post(
       `[Updates API] Starting metadata sync in background (requested by ${req.user?.username})...`
     );
 
-    // Start sync in background (don't await - let it run async)
     metadataSyncService.syncMetadata().catch((error) => {
       logger.error('[Updates API] Background sync error:', error);
     });
 
-    // Return immediately
     res.json({
       success: true,
       message: 'Sync started',
@@ -122,11 +91,6 @@ router.post(
   })
 );
 
-/**
- * GET /api/updates/metadata/sync/status
- * Get current metadata sync status and progress
- * Frontend polls this endpoint to get real-time updates
- */
 router.get(
   '/metadata/sync/status',
   asyncHandler(async (req, res) => {

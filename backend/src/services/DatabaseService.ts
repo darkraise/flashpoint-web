@@ -73,9 +73,6 @@ export class DatabaseService {
     }
   }
 
-  /**
-   * Open database with optimized PRAGMA settings
-   */
   private static openDatabase(dbPath: string): BetterSqlite3.Database {
     const db = new BetterSqlite3(dbPath, {
       fileMustExist: true,
@@ -270,7 +267,7 @@ export class DatabaseService {
           }
 
           this.reloadTimeout = setTimeout(() => {
-            this.syncAndReload();
+            this.syncAndReload().catch((err) => logger.error('syncAndReload failed:', err));
           }, 500);
         }
       });
@@ -284,9 +281,6 @@ export class DatabaseService {
     }
   }
 
-  /**
-   * Stop watching the database file
-   */
   private static stopWatching(): void {
     if (this.watcher) {
       this.watcher.close();
@@ -427,9 +421,6 @@ export class DatabaseService {
     return this.db !== null;
   }
 
-  /**
-   * Get database status information
-   */
   static getStatus(): {
     connected: boolean;
     sourcePath: string;

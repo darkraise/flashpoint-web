@@ -7,10 +7,6 @@ import { asyncHandler } from '../middleware/asyncHandler';
 const router = Router();
 const ruffleService = new RuffleService();
 
-/**
- * GET /api/ruffle/version
- * Get current Ruffle version (public endpoint)
- */
 router.get('/version', (req, res, next) => {
   try {
     const currentVersion = ruffleService.getCurrentVersion();
@@ -25,10 +21,6 @@ router.get('/version', (req, res, next) => {
   }
 });
 
-/**
- * GET /api/ruffle/check-update
- * Check for Ruffle updates (admin only)
- */
 router.get(
   '/check-update',
   authenticate,
@@ -39,10 +31,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/ruffle/update
- * Update Ruffle to latest version (admin only)
- */
 router.post(
   '/update',
   authenticate,

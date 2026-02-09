@@ -28,9 +28,6 @@ export interface JobExecutionLog {
 }
 
 export class JobExecutionService {
-  /**
-   * Start logging a job execution
-   */
   startExecution(jobId: string, jobName: string, triggeredBy: string): number {
     const startedAt = new Date().toISOString();
     const result = UserDatabaseService.run(
@@ -42,9 +39,6 @@ export class JobExecutionService {
     return result.lastInsertRowid as number;
   }
 
-  /**
-   * Complete a job execution log
-   */
   completeExecution(
     id: number,
     status: 'success' | 'failed',
@@ -77,9 +71,6 @@ export class JobExecutionService {
     logger.info(`[JobExecution] Completed log ${id}: ${status} (${durationSeconds}s)`);
   }
 
-  /**
-   * Get logs for a specific job
-   */
   getJobLogs(jobId: string, limit = 50, offset = 0): { data: JobExecutionLog[]; total: number } {
     const total = UserDatabaseService.get(
       'SELECT COUNT(*) as count FROM job_execution_logs WHERE job_id = ?',
@@ -100,9 +91,6 @@ export class JobExecutionService {
     };
   }
 
-  /**
-   * Get all recent logs
-   */
   getAllLogs(limit = 100, offset = 0): { data: JobExecutionLog[]; total: number } {
     const total = UserDatabaseService.get(
       'SELECT COUNT(*) as count FROM job_execution_logs',
@@ -122,9 +110,6 @@ export class JobExecutionService {
     };
   }
 
-  /**
-   * Get latest execution for a job
-   */
   getLatestExecution(jobId: string): JobExecutionLog | null {
     const log = UserDatabaseService.get(
       `SELECT * FROM job_execution_logs
@@ -137,9 +122,6 @@ export class JobExecutionService {
     return log ? this.mapToJobExecutionLog(log) : null;
   }
 
-  /**
-   * Cleanup old logs (older than retention days)
-   */
   cleanupOldLogs(retentionDays = 30): number {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);

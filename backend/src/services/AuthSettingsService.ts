@@ -2,26 +2,16 @@ import { CachedSystemSettingsService } from './CachedSystemSettingsService';
 import { UserDatabaseService } from './UserDatabaseService';
 import { AuthSettings } from '../types/auth';
 
-/**
- * Auth Settings Service
- * Provides typed interface for auth-related settings from system_settings table
- * Uses CachedSystemSettingsService for performance optimization
- */
 export class AuthSettingsService {
   private systemSettings: CachedSystemSettingsService;
 
   constructor() {
-    // Use cached singleton for better performance (auth settings accessed frequently)
     this.systemSettings = CachedSystemSettingsService.getInstance();
   }
 
-  /**
-   * Get auth settings
-   */
   getSettings(): AuthSettings {
     const authSettings = this.systemSettings.getCategory('auth');
 
-    // Get the latest updated_at and updated_by from any auth setting
     const latestUpdate = this.getLatestUpdate();
 
     return {
@@ -52,28 +42,19 @@ export class AuthSettingsService {
     };
   }
 
-  /**
-   * Update auth settings
-   */
   updateSettings(data: Partial<AuthSettings>, updatedBy: number): AuthSettings {
-    // Filter out non-setting fields (updatedAt, updatedBy)
     const { updatedAt: _updatedAt, updatedBy: _updatedBy, ...settingsToUpdate } = data;
 
     if (Object.keys(settingsToUpdate).length === 0) {
       return this.getSettings();
     }
 
-    // Update each setting individually to track updated_by
     this.systemSettings.updateCategory('auth', settingsToUpdate, updatedBy);
 
     return this.getSettings();
   }
 
-  /**
-   * Get the latest update timestamp and user from auth settings
-   */
   private getLatestUpdate(): { updatedAt: string; updatedBy: number | undefined } {
-    // Get metadata for the most recently updated auth setting
     const query = `
       SELECT updated_at, updated_by
       FROM system_settings

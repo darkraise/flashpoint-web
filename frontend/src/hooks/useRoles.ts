@@ -4,9 +4,6 @@ import { Role, UpdateRoleData } from '@/types/auth';
 import { useDialog } from '@/contexts/DialogContext';
 import { getErrorMessage } from '@/types/api-error';
 
-/**
- * Hook to fetch all roles
- */
 export function useRoles(enabled = true) {
   return useQuery({
     queryKey: ['roles'],
@@ -15,10 +12,6 @@ export function useRoles(enabled = true) {
   });
 }
 
-/**
- * Hook to create a new role
- * Uses cache updates for immediate UI feedback
- */
 export function useCreateRole() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -37,10 +30,6 @@ export function useCreateRole() {
   });
 }
 
-/**
- * Hook to update an existing role
- * Uses cache updates for immediate UI feedback
- */
 export function useUpdateRole() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -59,10 +48,6 @@ export function useUpdateRole() {
   });
 }
 
-/**
- * Hook to delete a role
- * Uses optimistic updates for immediate UI feedback
- */
 export function useDeleteRole() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -81,9 +66,6 @@ export function useDeleteRole() {
   });
 }
 
-/**
- * Hook to fetch a single role by ID
- */
 export function useRole(id: number) {
   return useQuery({
     queryKey: ['roles', id],
@@ -94,22 +76,15 @@ export function useRole(id: number) {
   });
 }
 
-/**
- * Hook to fetch all available permissions
- */
 export function usePermissions() {
   return useQuery({
     queryKey: ['permissions'],
     queryFn: () => rolesApi.getPermissions(),
-    staleTime: 10 * 60 * 1000, // 10 minutes (permissions rarely change)
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
-/**
- * Hook to update role permissions
- * Uses cache updates for immediate UI feedback
- */
 export function useUpdateRolePermissions() {
   const queryClient = useQueryClient();
   const { showToast } = useDialog();
@@ -118,10 +93,7 @@ export function useUpdateRolePermissions() {
     mutationFn: ({ id, permissionIds }: { id: number; permissionIds: number[] }) =>
       rolesApi.updatePermissions(id, permissionIds),
     onSuccess: (updatedRole) => {
-      // Update single-item cache
       queryClient.setQueryData(['roles', updatedRole.id], updatedRole);
-
-      // Update in list cache
       queryClient.setQueryData<Role[]>(['roles'], (old = []) => {
         return old.map((role) => (role.id === updatedRole.id ? updatedRole : role));
       });

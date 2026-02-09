@@ -21,10 +21,8 @@ export function SidebarItem({
 }: SidebarItemProps) {
   const location = useLocation();
 
-  // Detect mobile for conditional animations
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
-  // Check if this item is active
   const isActive = (() => {
     const itemPath = path.split('?')[0];
     const itemQuery = path.split('?')[1];

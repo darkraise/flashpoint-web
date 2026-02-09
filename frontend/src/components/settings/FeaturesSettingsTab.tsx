@@ -19,19 +19,16 @@ export function FeaturesSettingsTab({ tabContentVariants }: FeaturesSettingsTabP
   const queryClient = useQueryClient();
   const isAdmin = user?.permissions.includes('settings.update');
 
-  // Fetch feature settings
   const { data: featureSettings } = useQuery({
     queryKey: ['systemSettings', 'features'],
     queryFn: () => systemSettingsApi.getCategory('features'),
     enabled: isAdmin,
   });
 
-  // Update system settings mutation
   const updateSystemSettings = useMutation({
     mutationFn: ({ category, settings }: { category: string; settings: Record<string, unknown> }) =>
       systemSettingsApi.updateCategory(category, settings),
     onSuccess: (updatedSettings, variables) => {
-      // Use response data instead of refetching
       queryClient.setQueryData(['systemSettings', variables.category], updatedSettings);
 
       showToast('Settings updated successfully', 'success');

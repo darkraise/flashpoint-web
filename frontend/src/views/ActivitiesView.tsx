@@ -5,7 +5,6 @@ import { ActivityErrorBoundary } from '@/components/error/ActivityErrorBoundary'
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { Activity } from 'lucide-react';
 
-// Memoize header to prevent re-renders
 const ActivityHeader = memo(() => (
   <div className="mb-6">
     <div className="flex items-center gap-3 mb-2">
@@ -26,14 +25,12 @@ export function ActivitiesView() {
       <div className="container mx-auto px-4 py-8">
         <ActivityHeader />
 
-        {/* Dashboard - only render if statistics feature is enabled */}
         {enableStatistics ? (
           <div className="mb-6">
             <ActivityDashboard />
           </div>
         ) : null}
 
-        {/* Activity Table */}
         <ActivityTable />
       </div>
     </ActivityErrorBoundary>

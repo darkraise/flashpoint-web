@@ -9,15 +9,7 @@ import type {
   TimeRange,
 } from '@/types/auth';
 
-/**
- * Activities API
- *
- * Manages activity logging and analytics
- */
 export const activitiesApi = {
-  /**
-   * Get all activities with pagination and filtering
-   */
   getAll: async (page = 1, limit = 50, filters?: ActivityFilters): Promise<ActivitiesResponse> => {
     const { data } = await apiClient.get<ActivitiesResponse>('/activities', {
       params: { page, limit, ...filters },
@@ -25,9 +17,6 @@ export const activitiesApi = {
     return data;
   },
 
-  /**
-   * Get activity statistics for a time range
-   */
   getStats: async (
     timeRange: TimeRange = '24h',
     customRange?: { startDate?: string; endDate?: string }
@@ -38,9 +27,6 @@ export const activitiesApi = {
     return data;
   },
 
-  /**
-   * Get activity trend over days
-   */
   getTrend: async (days = 7): Promise<ActivityTrendResponse> => {
     const { data } = await apiClient.get<ActivityTrendResponse>('/activities/trend', {
       params: { days },
@@ -48,9 +34,6 @@ export const activitiesApi = {
     return data;
   },
 
-  /**
-   * Get top actions by frequency
-   */
   getTopActions: async (limit = 10, timeRange: TimeRange = '24h'): Promise<TopActionsResponse> => {
     const { data } = await apiClient.get<TopActionsResponse>('/activities/top-actions', {
       params: { limit, timeRange },
@@ -58,9 +41,6 @@ export const activitiesApi = {
     return data;
   },
 
-  /**
-   * Get activity breakdown by resource, user, or IP
-   */
   getBreakdown: async (
     groupBy: 'resource' | 'user' | 'ip',
     limit = 10,

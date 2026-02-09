@@ -8,18 +8,12 @@ import { hashPassword, verifyPassword } from '../utils/password';
 import { AppError } from '../middleware/errorHandler';
 import { LoginCredentials, RegisterData, AuthTokens, AuthUser } from '../types/auth';
 
-/**
- * User data for token generation
- */
 interface UserTokenData {
   id: number;
   username: string;
   role_name: string;
 }
 
-/**
- * Auth settings shape from system_settings
- */
 interface AuthSettings {
   guest_access_enabled: number;
   user_registration_enabled: number;
@@ -36,9 +30,6 @@ export class AuthService {
     this.cachedSystemSettings = CachedSystemSettingsService.getInstance();
   }
 
-  /**
-   * Login user with username/password
-   */
   async login(
     credentials: LoginCredentials,
     ipAddress: string
@@ -46,10 +37,9 @@ export class AuthService {
     try {
       const { username, password } = credentials;
 
-      // Check login attempts and lockout
       await this.checkLoginAttempts(username, ipAddress);
 
-      // Find user (select only needed columns — avoid passing password_hash beyond verification)
+      // Select only needed columns — avoid passing password_hash beyond verification
       const user = UserDatabaseService.get(
         `SELECT u.id, u.username, u.email, u.password_hash,
                 r.name as role_name, r.priority
@@ -64,27 +54,22 @@ export class AuthService {
         throw new AppError(401, 'Invalid username or password');
       }
 
-      // Verify password
       const isValid = await verifyPassword(password, user.password_hash);
       if (!isValid) {
         await this.recordLoginAttempt(username, ipAddress, false);
         throw new AppError(401, 'Invalid username or password');
       }
 
-      // Record successful login
       await this.recordLoginAttempt(username, ipAddress, true);
 
-      // Update last login
       UserDatabaseService.run('UPDATE users SET last_login_at = ? WHERE id = ?', [
         new Date().toISOString(),
         user.id,
       ]);
 
-      // Get user permissions
       const permissions = this.getUserPermissions(user.id);
       logger.debug(`[AuthService] User ${username} has ${permissions.length} permissions`);
 
-      // Generate tokens
       const tokens = await this.generateTokens(user);
 
       const authUser: AuthUser = {
@@ -116,19 +101,16 @@ export class AuthService {
    * The method automatically detects which scenario applies based on whether users exist
    */
   async register(data: RegisterData): Promise<{ user: AuthUser; tokens: AuthTokens }> {
-    // Hash password before transaction
     const passwordHash = await hashPassword(data.password);
 
-    // Wrap setup check + uniqueness checks + insert in transaction to prevent race condition
+    // Wrap setup check + uniqueness checks + insert in transaction to prevent TOCTOU race
     const db = UserDatabaseService.getDatabase();
     const registerTransaction = db.transaction(() => {
-      // Check username uniqueness inside transaction
       const existingUser = db.prepare('SELECT id FROM users WHERE username = ?').get(data.username);
       if (existingUser) {
         throw new AppError(409, 'Username already exists');
       }
 
-      // Check email uniqueness inside transaction
       const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(data.email);
       if (existingEmail) {
         throw new AppError(409, 'Email already exists');
@@ -166,12 +148,10 @@ export class AuthService {
 
     const userId = registerTransaction();
 
-    // Apply default theme and primary color from system settings
     const appSettings = this.cachedSystemSettings.getCategory('app');
     const defaultTheme = appSettings.defaultTheme || 'dark';
     const defaultPrimaryColor = appSettings.defaultPrimaryColor || 'blue';
 
-    // Insert default user settings
     UserDatabaseService.run(
       `INSERT INTO user_settings (user_id, setting_key, setting_value) VALUES
        (?, 'theme_mode', ?),
@@ -183,7 +163,6 @@ export class AuthService {
       `[AuthService] Created user ${data.username} with default theme: ${defaultTheme}, primary color: ${defaultPrimaryColor}`
     );
 
-    // Get created user
     const user = UserDatabaseService.get(
       `SELECT u.id, u.username, u.email, r.name as role_name
        FROM users u
@@ -192,10 +171,7 @@ export class AuthService {
       [userId]
     );
 
-    // Get permissions
     const permissions = this.getUserPermissions(userId);
-
-    // Generate tokens
     const tokens = await this.generateTokens(user);
 
     const authUser: AuthUser = {
@@ -209,9 +185,6 @@ export class AuthService {
     return { user: authUser, tokens };
   }
 
-  /**
-   * Logout user (revoke refresh token)
-   */
   async logout(refreshToken: string): Promise<void> {
     UserDatabaseService.run('UPDATE refresh_tokens SET revoked_at = ? WHERE token = ?', [
       new Date().toISOString(),
@@ -232,11 +205,7 @@ export class AuthService {
     logger.info(`[AuthService] Revoked all refresh tokens for user ${userId}`);
   }
 
-  /**
-   * Refresh access token using refresh token
-   */
   async refreshToken(refreshToken: string): Promise<AuthTokens> {
-    // Verify token is valid and not revoked
     const tokenRecord = UserDatabaseService.get(
       `SELECT * FROM refresh_tokens
        WHERE token = ? AND revoked_at IS NULL AND expires_at > ?`,
@@ -247,7 +216,6 @@ export class AuthService {
       throw new AppError(401, 'Invalid or expired refresh token');
     }
 
-    // Get user
     const user = UserDatabaseService.get(
       `SELECT u.id, u.username, u.email, r.name as role_name
        FROM users u
@@ -268,18 +236,13 @@ export class AuthService {
 
     logger.debug(`[AuthService] Revoked old refresh token for user ${user.id}`);
 
-    // Generate new tokens
     return this.generateTokens(user);
   }
 
-  /**
-   * Verify access token and get user
-   */
   async verifyAccessToken(token: string): Promise<AuthUser> {
     try {
       const payload = verifyToken(token);
 
-      // Get user with current data
       const user = UserDatabaseService.get(
         `SELECT u.id, u.username, u.email, r.name as role_name
          FROM users u
@@ -306,17 +269,12 @@ export class AuthService {
     }
   }
 
-  /**
-   * Get user permissions (with caching)
-   */
   private getUserPermissions(userId: number): string[] {
-    // Try to get from cache first
     const cached = PermissionCache.getUserPermissions(userId);
     if (cached !== null) {
       return cached;
     }
 
-    // Cache miss - query database
     const permissions = UserDatabaseService.all(
       `SELECT DISTINCT p.name
        FROM permissions p
@@ -328,15 +286,11 @@ export class AuthService {
 
     const permissionNames = permissions.map((p) => p.name);
 
-    // Store in cache
     PermissionCache.setUserPermissions(userId, permissionNames);
 
     return permissionNames;
   }
 
-  /**
-   * Generate access and refresh tokens
-   */
   private async generateTokens(user: UserTokenData): Promise<AuthTokens> {
     const accessToken = generateAccessToken({
       userId: user.id,
@@ -346,7 +300,6 @@ export class AuthService {
 
     const refreshToken = generateRefreshToken();
 
-    // Store refresh token
     UserDatabaseService.run(
       `INSERT INTO refresh_tokens (user_id, token, expires_at)
        VALUES (?, ?, datetime('now', '+30 days'))`,
@@ -360,9 +313,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Check login attempts and enforce lockout
-   */
   private async checkLoginAttempts(username: string, ipAddress: string): Promise<void> {
     const settings = this.getAuthSettings();
     const lockoutDuration = settings.lockout_duration_minutes;
@@ -403,9 +353,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Record login attempt
-   */
   private async recordLoginAttempt(
     username: string,
     ipAddress: string,
@@ -432,14 +379,10 @@ export class AuthService {
     }
   }
 
-  /**
-   * Get auth settings from system_settings
-   */
   private getAuthSettings(): AuthSettings {
     try {
       const authSettings = this.systemSettings.getCategory('auth');
 
-      // Return settings with defaults if not found
       return {
         guest_access_enabled:
           authSettings.guestAccessEnabled !== undefined
@@ -462,7 +405,6 @@ export class AuthService {
       };
     } catch (error) {
       logger.error('Failed to get auth settings, using defaults:', error);
-      // Return defaults if settings can't be retrieved
       return {
         guest_access_enabled: 1,
         user_registration_enabled: 1,
@@ -472,9 +414,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Check if guest access is enabled
-   */
   isGuestAccessEnabled(): boolean {
     const settings = this.getAuthSettings();
     return settings.guest_access_enabled === 1;

@@ -6,11 +6,10 @@ export function useGames(filters: GameFilters) {
   return useQuery({
     queryKey: ['games', filters],
     queryFn: ({ signal }) => gamesApi.search(filters, signal),
-    // OPTIMIZATION: Configure caching to reduce redundant API calls
-    staleTime: 1000 * 60 * 5, // 5 minutes - game metadata rarely changes
-    gcTime: 1000 * 60 * 30, // 30 minutes - keep in memory longer
-    refetchOnWindowFocus: false, // Don't refetch when user switches tabs
-    refetchOnMount: false, // Use cached data if available on component mount
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 }
 

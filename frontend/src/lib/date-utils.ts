@@ -1,8 +1,3 @@
-/**
- * Format an ISO date string to a readable format like "Jan 15, 2024"
- * @param dateString - ISO date string or null/undefined
- * @returns Formatted date string or "Unknown" if invalid
- */
 export function formatDate(dateString?: string | null): string {
   if (!dateString) {
     return 'Unknown';
@@ -26,11 +21,7 @@ export function formatDate(dateString?: string | null): string {
   }
 }
 
-/**
- * Format a release date string which might be partial (YYYY or YYYY-MM)
- * @param dateString - Date string in various formats
- * @returns Formatted date string or "Unknown"
- */
+/** Handles partial dates (YYYY or YYYY-MM) in addition to full dates */
 export function formatReleaseDate(dateString?: string | null): string {
   if (!dateString) {
     return 'Unknown';

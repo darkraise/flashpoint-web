@@ -1,23 +1,14 @@
 import axios from 'axios';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/store/auth';
+import { logger } from '@/lib/logger';
 
-// Create a separate axios instance for error reporting without interceptors
-// This prevents infinite loops when error reporting itself fails
+// Separate instance without interceptors to prevent infinite loops on failure
 const errorReportingApi = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-// Add auth token to error reporting requests
-errorReportingApi.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true,
 });
 
 const ERROR_QUEUE_KEY = 'flashpoint-error-queue';
@@ -31,18 +22,13 @@ export interface ErrorReport {
   timestamp: string;
   userAgent: string;
   userId?: number;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 interface QueuedError extends ErrorReport {
   retryCount: number;
 }
 
-/**
- * Report an error to the backend
- * @param errorInfo Error information (omit timestamp and userAgent)
- * @returns Promise<boolean> Success status
- */
 export async function reportError(
   errorInfo: Omit<ErrorReport, 'timestamp' | 'userAgent'>
 ): Promise<boolean> {
@@ -52,45 +38,37 @@ export async function reportError(
     ...errorInfo,
     timestamp: new Date().toISOString(),
     userAgent: navigator.userAgent,
-    // Don't send stack traces in production
     stack: isDev ? errorInfo.stack : undefined,
   };
 
   try {
-    // Check if online
     if (!navigator.onLine) {
       queueErrorReport(report);
       if (isDev) {
-        console.log('[ErrorReporter] Offline - queued error for later:', report);
+        logger.debug('[ErrorReporter] Offline - queued error for later:', report);
       }
       return false;
     }
 
-    // Send to backend using dedicated axios instance (no error interceptors)
     await errorReportingApi.post('/errors/report', report);
 
     if (isDev) {
-      console.log('[ErrorReporter] Error reported successfully:', report);
+      logger.debug('[ErrorReporter] Error reported successfully:', report);
     }
 
     toast.success('Error reported successfully');
     return true;
   } catch (error) {
     if (isDev) {
-      console.error('[ErrorReporter] Failed to report error:', error);
+      logger.error('[ErrorReporter] Failed to report error:', error);
     }
 
-    // Queue for later if sending failed
     queueErrorReport(report);
     toast.error('Failed to report error. It will be sent when connection is restored.');
     return false;
   }
 }
 
-/**
- * Queue an error report for later sending (when offline)
- * @param report Complete error report
- */
 export function queueErrorReport(report: ErrorReport): void {
   try {
     const queue = getErrorQueue();
@@ -102,23 +80,18 @@ export function queueErrorReport(report: ErrorReport): void {
 
     queue.push(queuedError);
 
-    // Limit queue size
     if (queue.length > MAX_QUEUE_SIZE) {
-      queue.shift(); // Remove oldest error
+      queue.shift();
     }
 
     localStorage.setItem(ERROR_QUEUE_KEY, JSON.stringify(queue));
   } catch (error) {
     if (import.meta.env.DEV) {
-      console.error('[ErrorReporter] Failed to queue error:', error);
+      logger.error('[ErrorReporter] Failed to queue error:', error);
     }
   }
 }
 
-/**
- * Get the current error queue from localStorage
- * @returns Array of queued errors
- */
 function getErrorQueue(): QueuedError[] {
   try {
     const queueJson = localStorage.getItem(ERROR_QUEUE_KEY);
@@ -128,16 +101,13 @@ function getErrorQueue(): QueuedError[] {
     return Array.isArray(queue) ? queue : [];
   } catch (error) {
     if (import.meta.env.DEV) {
-      console.error('[ErrorReporter] Failed to read error queue:', error);
+      logger.error('[ErrorReporter] Failed to read error queue:', error);
     }
     return [];
   }
 }
 
-/**
- * Send all queued errors to the backend
- * Called automatically when connection is restored
- */
+/** Flush queued errors to the backend. Called on reconnect and on init. */
 export async function sendQueuedErrors(): Promise<void> {
   if (!navigator.onLine) return;
 
@@ -147,7 +117,7 @@ export async function sendQueuedErrors(): Promise<void> {
   const isDev = import.meta.env.DEV;
 
   if (isDev) {
-    console.log(`[ErrorReporter] Sending ${queue.length} queued errors...`);
+    logger.debug(`[ErrorReporter] Sending ${queue.length} queued errors...`);
   }
 
   const successfullyReported: number[] = [];
@@ -160,56 +130,48 @@ export async function sendQueuedErrors(): Promise<void> {
       successfullyReported.push(i);
 
       if (isDev) {
-        console.log('[ErrorReporter] Queued error sent successfully:', queuedError);
+        logger.debug('[ErrorReporter] Queued error sent successfully:', queuedError);
       }
     } catch (error) {
       queuedError.retryCount++;
 
       if (isDev) {
-        console.error('[ErrorReporter] Failed to send queued error:', error);
+        logger.error('[ErrorReporter] Failed to send queued error:', error);
       }
 
-      // Give up after 3 retries
       if (queuedError.retryCount >= 3) {
         successfullyReported.push(i);
         if (isDev) {
-          console.warn('[ErrorReporter] Giving up on error after 3 retries:', queuedError);
+          logger.warn('[ErrorReporter] Giving up on error after 3 retries:', queuedError);
         }
       }
     }
   }
 
-  // Remove successfully reported errors
   if (successfullyReported.length > 0) {
     const remainingQueue = queue.filter((_, index) => !successfullyReported.includes(index));
     localStorage.setItem(ERROR_QUEUE_KEY, JSON.stringify(remainingQueue));
 
     if (isDev) {
-      console.log(`[ErrorReporter] ${successfullyReported.length} queued errors processed`);
+      logger.debug(`[ErrorReporter] ${successfullyReported.length} queued errors processed`);
     }
   }
 }
 
-/**
- * Initialize the error reporter
- * Sets up the online event listener to send queued errors
- */
 export function initErrorReporter(): void {
   const isDev = import.meta.env.DEV;
 
   if (isDev) {
-    console.log('[ErrorReporter] Initialized');
+    logger.debug('[ErrorReporter] Initialized');
   }
 
-  // Send queued errors when connection is restored
   window.addEventListener('online', () => {
     if (isDev) {
-      console.log('[ErrorReporter] Connection restored, sending queued errors...');
+      logger.debug('[ErrorReporter] Connection restored, sending queued errors...');
     }
     sendQueuedErrors();
   });
 
-  // Try to send queued errors on init (in case we're online)
   if (navigator.onLine) {
     setTimeout(() => {
       sendQueuedErrors();

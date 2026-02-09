@@ -31,7 +31,6 @@ export function PlaylistsView() {
   const [isBrowseModalOpen, setIsBrowseModalOpen] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
 
-  // Filter out the Favorites playlist
   const playlists = useMemo(() => {
     if (!allPlaylists) return [];
     return allPlaylists.filter((playlist) => playlist.id !== FAVORITES_PLAYLIST_ID);
@@ -157,7 +156,6 @@ export function PlaylistsView() {
           onClose={() => setIsBrowseModalOpen(false)}
         />
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!playlistToDelete} onOpenChange={() => setPlaylistToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>

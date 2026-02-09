@@ -24,24 +24,13 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const {
-    setAuth,
-    setGuestMode,
-    clearAuth,
-    isAuthenticated,
-    updateAccessToken,
-    setMaintenanceMode,
-  } = useAuthStore();
+  const { setAuth, setGuestMode, clearAuth, isAuthenticated, setMaintenanceMode } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  /**
-   * Check if maintenance mode is enabled
-   * Uses React Query cache to avoid duplicate API calls
-   */
+  /** Check maintenance mode, preferring React Query cache over a fresh API call */
   const checkMaintenanceMode = useCallback(async (): Promise<boolean> => {
     try {
-      // Get from React Query cache instead of making a new API call
       const cachedData = queryClient.getQueryData<PublicSettings>(['system-settings', 'public']);
 
       if (cachedData) {
@@ -51,7 +40,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return isMaintenanceActive;
       }
 
-      // Fallback: if not in cache, fetch it (shouldn't happen with prefetch)
       logger.warn('[AuthContext] Cache miss! Making authenticated API call to /settings/public');
       const response = await apiClient.get('/settings/public');
       const isMaintenanceActive = response.data.app?.maintenanceMode === true;
@@ -63,30 +51,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [setMaintenanceMode, queryClient]);
 
-  /**
-   * Login function
-   */
   const login = useCallback(
     async (credentials: LoginCredentials, redirectPath?: string) => {
       try {
         const result = await authApi.login(credentials);
 
-        // Clear all cached queries EXCEPT public settings when user logs in
-        // Public settings are not user-specific and should persist across sessions
+        // Clear user-specific cached queries, but keep public settings (not user-specific)
         queryClient.removeQueries({
           predicate: (query) => {
             const queryKey = query.queryKey;
-            // Keep public settings in cache
             return !(queryKey[0] === 'system-settings' && queryKey[1] === 'public');
           },
         });
 
-        setAuth(result.user, result.tokens);
+        setAuth(result.user);
 
-        // Check maintenance mode after login
         const isMaintenanceActive = await checkMaintenanceMode();
-
-        // If maintenance mode is active and user is not admin, redirect to maintenance page
         const isAdmin = result.user.permissions?.includes('settings.update');
 
         if (isMaintenanceActive && !isAdmin) {
@@ -94,7 +74,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        // Normal login - redirect to requested page or home
         navigate(redirectPath || '/', { replace: true });
       } catch (error) {
         logger.error('Login failed:', error);
@@ -104,22 +83,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [setAuth, queryClient, checkMaintenanceMode, navigate]
   );
 
-  /**
-   * Login as guest function (temporary session)
-   */
   const loginAsGuest = useCallback(() => {
     setGuestMode();
     navigate('/');
   }, [setGuestMode, navigate]);
 
-  /**
-   * Register function
-   */
   const register = useCallback(
     async (userData: RegisterData) => {
       try {
         const result = await authApi.register(userData);
-        setAuth(result.user, result.tokens);
+        setAuth(result.user);
       } catch (error) {
         logger.error('Registration failed:', error);
         throw error;
@@ -128,21 +101,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [setAuth]
   );
 
-  /**
-   * Logout function
-   */
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } catch (error) {
       logger.error('Logout error:', error);
     } finally {
-      // Clear all cached queries EXCEPT public settings when user logs out
-      // Public settings are not user-specific and should persist across sessions
+      // Clear user-specific cached queries, but keep public settings (not user-specific)
       queryClient.removeQueries({
         predicate: (query) => {
           const queryKey = query.queryKey;
-          // Keep public settings in cache
           return !(queryKey[0] === 'system-settings' && queryKey[1] === 'public');
         },
       });
@@ -151,58 +119,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [clearAuth, navigate, queryClient]);
 
-  /**
-   * Refresh access token function
-   */
+  /** Both cookies (access + refresh) are rotated automatically by the backend. */
   const refreshAccessToken = useCallback(async () => {
     try {
-      const tokens = await authApi.refreshToken();
-      updateAccessToken(tokens.accessToken);
+      await authApi.refreshToken();
     } catch (error) {
       logger.error('Token refresh failed:', error);
-      // The axios interceptor will handle logout and redirect
-      // Just clear auth here to ensure clean state
       clearAuth();
       throw error;
     }
-  }, [updateAccessToken, clearAuth]);
+  }, [clearAuth]);
 
-  /**
-   * On page reload: if authenticated but no access token (memory-only), refresh via cookie
-   */
-  useEffect(() => {
-    const state = useAuthStore.getState();
-    if (state.isAuthenticated && !state.accessToken) {
-      refreshAccessToken()
-        .then(async () => {
-          // Refresh user data to ensure permissions are server-authoritative
-          try {
-            const user = await authApi.getMe();
-            useAuthStore.getState().updateUser(user);
-          } catch (error) {
-            logger.error('Failed to refresh user data:', error);
-          }
-        })
-        .catch(() => {
-          clearAuth();
-          navigate('/login');
-        });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /**
-   * Set up token refresh interval (refresh every 50 minutes)
-   * Access tokens expire in 1 hour, so we refresh 10 minutes before expiry
-   */
+  // Refresh every 50 minutes (access tokens expire in 1 hour)
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const refreshInterval = setInterval(
       () => {
-        refreshAccessToken().catch(() => {
-          // Error already handled in refreshAccessToken
-        });
+        refreshAccessToken().catch(() => {});
       },
       50 * 60 * 1000 // 50 minutes
     );
@@ -222,9 +156,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/**
- * Hook to use auth context
- */
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {

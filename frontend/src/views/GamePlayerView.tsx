@@ -36,7 +36,6 @@ export function GamePlayerView() {
     error: launchError,
   } = useGameLaunchData(id ?? '');
 
-  // Track play session for authenticated users
   usePlaySession(game?.id || null, game?.title || null);
 
   // Auto-enter fullscreen for HTML5 games
@@ -46,20 +45,18 @@ export function GamePlayerView() {
     }
   }, [launchData?.platform, launchData?.canPlayInBrowser]);
 
-  // Reset logo loading states when game changes
   useEffect(() => {
     setLogoLoading(true);
     setLogoError(false);
   }, [id]);
 
-  // Memoize player props to prevent unnecessary re-renders
   const playerProps = useMemo(
     () => ({
-      title: game?.title || '',
-      platform: launchData?.platform || '',
+      title: game?.title ?? '',
+      platform: launchData?.platform ?? '',
       contentUrl: launchData?.contentUrl,
       launchCommand: launchData?.launchCommand,
-      canPlayInBrowser: launchData?.canPlayInBrowser || false,
+      canPlayInBrowser: launchData?.canPlayInBrowser ?? false,
     }),
     [
       game?.title,
@@ -70,11 +67,9 @@ export function GamePlayerView() {
     ]
   );
 
-  // Build breadcrumb items for navigation bar
   const breadcrumbItems = useMemo((): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [];
 
-    // Upstream context
     if (playerContext?.shareToken && playerContext.sharedPlaylistTitle) {
       items.push({
         label: playerContext.sharedPlaylistTitle,
@@ -89,7 +84,6 @@ export function GamePlayerView() {
       items.push({ label: 'Browse', href: '/browse' });
     }
 
-    // Game detail link
     const gameDetailHref =
       playerContext?.gameDetailHref ?? buildSharedGameUrl(`/games/${id}`, shareToken);
     items.push({
@@ -97,7 +91,6 @@ export function GamePlayerView() {
       href: gameDetailHref,
     });
 
-    // Play (active)
     items.push({ label: 'Play', active: true });
 
     return items;
@@ -139,7 +132,6 @@ export function GamePlayerView() {
   return (
     <ErrorBoundary>
       <div className={isFullscreen ? 'fixed inset-0 z-50 bg-black' : 'max-w-6xl mx-auto space-y-6'}>
-        {/* Breadcrumb navigation - only shown in normal mode */}
         {!isFullscreen ? (
           <Breadcrumbs
             items={breadcrumbItems}
@@ -148,7 +140,6 @@ export function GamePlayerView() {
           />
         ) : null}
 
-        {/* Game Player Card - adjusts styling based on fullscreen */}
         <div
           className={
             isFullscreen
@@ -156,11 +147,9 @@ export function GamePlayerView() {
               : 'bg-card rounded-lg overflow-hidden shadow-xl border border-border'
           }
         >
-          {/* Game Header - only shown in normal mode */}
           {!isFullscreen ? (
             <div className="px-6 py-4 border-b border-border">
               <div className="flex items-start gap-4">
-                {/* Game Logo */}
                 {getGameLogoUrl(game.id) && !logoError ? (
                   <div className="flex-shrink-0 w-16 h-16 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-1.5 relative">
                     {logoLoading ? (
@@ -198,7 +187,7 @@ export function GamePlayerView() {
                 <div className="text-center max-w-sm">
                   <Download size={48} className="text-blue-500 mx-auto mb-4 animate-bounce" />
                   <h3 className="text-xl font-bold mb-2 text-white">Downloading Game Data...</h3>
-                  <p className="text-gray-400 text-sm mb-4">
+                  <p className="text-muted-foreground text-sm mb-4">
                     The game files are being downloaded. This page will update automatically when
                     ready.
                   </p>
@@ -219,13 +208,10 @@ export function GamePlayerView() {
             )}
           </div>
 
-          {/* Game Info Below Player - only shown in normal mode */}
           {!isFullscreen ? (
             <div className="px-6 py-6 space-y-6">
-              {/* Game Info Grid */}
               <GameInfoGrid game={game} launchData={launchData} />
 
-              {/* Description */}
               {game.originalDescription ? (
                 <div>
                   <h2 className="text-lg font-semibold mb-2">Description</h2>
@@ -233,7 +219,6 @@ export function GamePlayerView() {
                 </div>
               ) : null}
 
-              {/* Tags */}
               {game.tagsStr ? (
                 <div>
                   <h2 className="text-lg font-semibold mb-2">Tags</h2>
@@ -247,7 +232,6 @@ export function GamePlayerView() {
                 </div>
               ) : null}
 
-              {/* Notes */}
               {game.notes ? (
                 <div className="bg-muted/50 rounded p-4">
                   <h3 className="text-sm font-semibold text-muted-foreground mb-1">Notes</h3>

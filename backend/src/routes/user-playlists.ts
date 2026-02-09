@@ -12,27 +12,19 @@ import { z } from 'zod';
 const router = Router();
 const playlistService = new UserPlaylistService();
 
-// Apply rate limiting to prevent abuse
 router.use(rateLimitStandard);
-
-// Global softAuth (from server.ts) already populates req.user for all routes
-// No need to apply softAuth again at router level
-
-// Apply feature flag check to all routes in this router
-// Admins with settings.update permission will bypass this check (via global softAuth)
 router.use(requireFeature('enablePlaylists'));
 
-// Validation schemas
 const createPlaylistSchema = z.object({
   title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  icon: z.string().optional(),
+  description: z.string().max(2000).optional(),
+  icon: z.string().max(100).optional(),
 });
 
 const updatePlaylistSchema = z.object({
   title: z.string().min(1).max(255).optional(),
-  description: z.string().optional(),
-  icon: z.string().optional(),
+  description: z.string().max(2000).optional(),
+  icon: z.string().max(100).optional(),
 });
 
 const addGamesSchema = z.object({
@@ -62,10 +54,6 @@ const updateShareSettingsSchema = z.object({
   showOwner: z.boolean().optional(),
 });
 
-/**
- * GET /api/user-playlists
- * Get all playlists for the authenticated user
- */
 router.get(
   '/',
   authenticate,
@@ -80,17 +68,12 @@ router.get(
 
     const playlists = playlistService.getUserPlaylists(req.user.id);
 
-    // Store count for activity logging
     res.locals.playlistCount = playlists.length;
 
     res.json(playlists);
   })
 );
 
-/**
- * GET /api/user-playlists/stats
- * Get playlist statistics for the authenticated user
- */
 router.get(
   '/stats',
   authenticate,
@@ -105,10 +88,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/user-playlists/:id
- * Get a specific playlist by ID
- */
 router.get(
   '/:id',
   authenticate,
@@ -133,7 +112,6 @@ router.get(
       throw new AppError(404, 'Playlist not found');
     }
 
-    // Store for activity logging
     res.locals.playlistTitle = playlist.title;
     res.locals.gameCount = playlist.gameCount;
 
@@ -141,10 +119,6 @@ router.get(
   })
 );
 
-/**
- * GET /api/user-playlists/:id/games
- * Get all games in a playlist with full game data
- */
 router.get(
   '/:id/games',
   authenticate,
@@ -164,10 +138,6 @@ router.get(
   })
 );
 
-/**
- * POST /api/user-playlists
- * Create a new playlist
- */
 router.post(
   '/',
   authenticate,
@@ -185,10 +155,6 @@ router.post(
   })
 );
 
-/**
- * PATCH /api/user-playlists/:id
- * Update a playlist
- */
 router.patch(
   '/:id',
   authenticate,
@@ -218,10 +184,6 @@ router.patch(
   })
 );
 
-/**
- * DELETE /api/user-playlists/:id
- * Delete a playlist
- */
 router.delete(
   '/:id',
   authenticate,
@@ -247,11 +209,6 @@ router.delete(
   })
 );
 
-/**
- * POST /api/user-playlists/:id/games
- * Add games to a playlist
- * Returns the updated playlist with game data
- */
 router.post(
   '/:id/games',
   authenticate,
@@ -277,7 +234,6 @@ router.post(
       throw new AppError(404, 'Playlist not found');
     }
 
-    // Return updated playlist with game data
     const updatedPlaylist = playlistService.getPlaylistById(playlistId, req.user.id);
     const games = await playlistService.getPlaylistGamesWithData(playlistId, req.user.id);
 
@@ -288,11 +244,6 @@ router.post(
   })
 );
 
-/**
- * DELETE /api/user-playlists/:id/games
- * Remove games from a playlist
- * Returns the updated playlist with game data
- */
 router.delete(
   '/:id/games',
   authenticate,
@@ -318,7 +269,6 @@ router.delete(
       throw new AppError(404, 'Playlist not found');
     }
 
-    // Return updated playlist with game data
     const updatedPlaylist = playlistService.getPlaylistById(playlistId, req.user.id);
     const games = await playlistService.getPlaylistGamesWithData(playlistId, req.user.id);
 
@@ -329,11 +279,6 @@ router.delete(
   })
 );
 
-/**
- * PUT /api/user-playlists/:id/games/reorder
- * Reorder games in a playlist
- * Returns the updated playlist with game data
- */
 router.put(
   '/:id/games/reorder',
   authenticate,
@@ -359,7 +304,6 @@ router.put(
       throw new AppError(404, 'Playlist not found');
     }
 
-    // Return updated playlist with game data
     const updatedPlaylist = playlistService.getPlaylistById(playlistId, req.user.id);
     const games = await playlistService.getPlaylistGamesWithData(playlistId, req.user.id);
 
@@ -370,10 +314,6 @@ router.put(
   })
 );
 
-/**
- * POST /api/user-playlists/copy-flashpoint
- * Copy a Flashpoint playlist to user's playlists
- */
 router.post(
   '/copy-flashpoint',
   authenticate,
@@ -399,10 +339,6 @@ router.post(
   })
 );
 
-/**
- * POST /api/user-playlists/:id/share/enable
- * Enable sharing for a playlist
- */
 router.post(
   '/:id/share/enable',
   authenticate,
@@ -433,10 +369,6 @@ router.post(
   })
 );
 
-/**
- * POST /api/user-playlists/:id/share/disable
- * Disable sharing for a playlist
- */
 router.post(
   '/:id/share/disable',
   authenticate,
@@ -462,10 +394,6 @@ router.post(
   })
 );
 
-/**
- * POST /api/user-playlists/:id/share/regenerate
- * Regenerate share token (invalidates old links)
- */
 router.post(
   '/:id/share/regenerate',
   authenticate,
@@ -491,10 +419,6 @@ router.post(
   })
 );
 
-/**
- * PATCH /api/user-playlists/:id/share/settings
- * Update share settings (expiry, show_owner) without regenerating token
- */
 router.patch(
   '/:id/share/settings',
   authenticate,
