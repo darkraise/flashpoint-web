@@ -31,7 +31,6 @@ export interface UserDetails {
 // ===================================
 
 export interface AuthTokens {
-  accessToken: string;
   expiresIn: number;
 }
 

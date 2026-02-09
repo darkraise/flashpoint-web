@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useAuthStore } from './auth';
-import type { User, AuthTokens } from '@/types/auth';
+import type { User } from '@/types/auth';
 
 describe('Auth Store', () => {
   // Clear store and storage before each test
@@ -21,7 +21,6 @@ describe('Auth Store', () => {
       const state = useAuthStore.getState();
 
       expect(state.user).toBeNull();
-      expect(state.accessToken).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isGuest).toBe(false);
       expect(state.isMaintenanceMode).toBe(false);
@@ -29,7 +28,7 @@ describe('Auth Store', () => {
   });
 
   describe('setAuth', () => {
-    it('should set authenticated user and tokens', () => {
+    it('should set authenticated user', () => {
       const mockUser: User = {
         id: 1,
         username: 'testuser',
@@ -38,16 +37,10 @@ describe('Auth Store', () => {
         permissions: ['games.play', 'playlists.create'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'access-token-123',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockUser);
-      expect(state.accessToken).toBe(mockTokens.accessToken);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isGuest).toBe(false);
     });
@@ -61,12 +54,7 @@ describe('Auth Store', () => {
         permissions: ['games.play'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'access-token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       // Check that localStorage was updated
       const stored = localStorage.getItem('flashpoint-auth');
@@ -88,7 +76,6 @@ describe('Auth Store', () => {
       expect(state.user).not.toBeNull();
       expect(state.user?.role).toBe('guest');
       expect(state.user?.username).toBe('Guest');
-      expect(state.accessToken).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isGuest).toBe(true);
     });
@@ -99,7 +86,6 @@ describe('Auth Store', () => {
       const state = useAuthStore.getState();
       expect(state.user?.permissions).toContain('games.read');
       expect(state.user?.permissions).toContain('playlists.read');
-      expect(state.user?.permissions).toContain('games.play');
     });
 
     it('should persist guest session to sessionStorage', () => {
@@ -127,19 +113,13 @@ describe('Auth Store', () => {
         permissions: ['games.play'],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       // Now clear
       useAuthStore.getState().clearAuth();
 
       const state = useAuthStore.getState();
       expect(state.user).toBeNull();
-      expect(state.accessToken).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isGuest).toBe(false);
     });
@@ -153,12 +133,7 @@ describe('Auth Store', () => {
         permissions: [],
       };
 
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
       expect(localStorage.getItem('flashpoint-auth')).not.toBeNull();
 
       useAuthStore.getState().clearAuth();
@@ -172,32 +147,6 @@ describe('Auth Store', () => {
     });
   });
 
-  describe('updateAccessToken', () => {
-    it('should update only the access token', () => {
-      const mockUser: User = {
-        id: 1,
-        username: 'testuser',
-        email: 'test@example.com',
-        role: 'user',
-        permissions: [],
-      };
-
-      const initialTokens: AuthTokens = {
-        accessToken: 'old-token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, initialTokens);
-
-      const newAccessToken = 'new-access-token';
-      useAuthStore.getState().updateAccessToken(newAccessToken);
-
-      const state = useAuthStore.getState();
-      expect(state.accessToken).toBe(newAccessToken);
-      expect(state.user).toEqual(mockUser); // Unchanged
-    });
-  });
-
   describe('updateUser', () => {
     it('should update user information', () => {
       const initialUser: User = {
@@ -208,12 +157,7 @@ describe('Auth Store', () => {
         permissions: ['games.play'],
       };
 
-      const tokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(initialUser, tokens);
+      useAuthStore.getState().setAuth(initialUser);
 
       const updatedUser: User = {
         ...initialUser,
@@ -225,7 +169,6 @@ describe('Auth Store', () => {
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(updatedUser);
-      expect(state.accessToken).toBe(tokens.accessToken); // Unchanged
     });
   });
 
@@ -251,12 +194,7 @@ describe('Auth Store', () => {
         permissions: ['games.play', 'playlists.create', 'playlists.update'],
       };
 
-      const tokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-
-      useAuthStore.getState().setAuth(mockUser, tokens);
+      useAuthStore.getState().setAuth(mockUser);
     });
 
     describe('hasPermission', () => {

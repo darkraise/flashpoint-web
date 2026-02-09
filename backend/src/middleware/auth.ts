@@ -4,9 +4,26 @@ import { AppError } from './errorHandler';
 import { verifySharedAccessToken, SharedAccessPayload } from '../utils/jwt';
 import { UserPlaylistService } from '../services/UserPlaylistService';
 import { asyncHandler } from './asyncHandler';
+import { getAccessTokenFromCookie } from '../utils/cookies';
 
 const authService = new AuthService();
 const playlistService = new UserPlaylistService();
+
+/**
+ * Extract access token from HTTP-only cookie or Authorization header.
+ * Cookie takes priority (regular authenticated user).
+ */
+function getAccessToken(req: Request): string | undefined {
+  const cookieToken = getAccessTokenFromCookie(req.cookies);
+  if (cookieToken) return cookieToken;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+
+  return undefined;
+}
 
 /**
  * Extend Express Request to include sharedAccess property
@@ -21,19 +38,15 @@ declare global {
 
 /**
  * Authenticate user from JWT token
- * Requires valid token in Authorization header
+ * Reads access token from HTTP-only cookie first, falls back to Authorization header
  */
 export const authenticate = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    // Get token from Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = getAccessToken(req);
+    if (!token) {
       throw new AppError(401, 'No token provided', true, 'NO_TOKEN');
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-    // Verify token and get user
     const user = await authService.verifyAccessToken(token);
     req.user = user;
 
@@ -43,15 +56,13 @@ export const authenticate = asyncHandler(
 
 /**
  * Optional authentication - allows guest access if enabled
- * If token is provided, verifies it. Otherwise, sets guest user (if guest access enabled)
+ * Reads token from cookie or header. If absent, sets guest user (if guest access enabled)
  */
 export const optionalAuth = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const authHeader = req.headers.authorization;
+    const token = getAccessToken(req);
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // Token provided - verify it
-      const token = authHeader.substring(7);
+    if (token) {
       const user = await authService.verifyAccessToken(token);
       req.user = user;
     } else {
@@ -78,30 +89,26 @@ export const optionalAuth = asyncHandler(
 /**
  * Soft authentication - populates req.user if token exists, otherwise leaves undefined
  * Does NOT throw errors - just silently sets req.user or leaves it undefined
- * Used for middleware that needs to check user identity but doesn't require auth
- * Perfect for maintenance mode checks that need to identify admins without blocking others
+ * Reads token from cookie or header. Perfect for maintenance mode checks.
  */
 export const softAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    const token = getAccessToken(req);
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // Token provided - try to verify it
-      const token = authHeader.substring(7);
+    if (token) {
       try {
         const user = await authService.verifyAccessToken(token);
         req.user = user;
-      } catch (error) {
+      } catch {
         // Invalid/expired token - just leave req.user undefined
         req.user = undefined;
       }
     } else {
-      // No token - leave req.user undefined
       req.user = undefined;
     }
 
     next(); // Always continue, never throw errors
-  } catch (error) {
+  } catch {
     // Unexpected error - continue anyway with undefined user
     req.user = undefined;
     next();
@@ -110,64 +117,60 @@ export const softAuth = async (req: Request, res: Response, next: NextFunction) 
 
 /**
  * Middleware that handles both regular authentication and shared access tokens
- * Order: 1) Regular JWT Bearer token -> req.user
- *        2) Shared access token (SharedAccess prefix) -> req.sharedAccess
+ * Order: 1) Regular JWT (cookie or Bearer header) -> req.user
+ *        2) Shared access token (SharedAccess header) -> req.sharedAccess
  *        3) Guest access (if enabled) -> req.user (guest)
  */
 export const sharedAccessAuth = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
+    // 1. Check regular auth (cookie or Bearer header)
+    const accessToken = getAccessToken(req);
+    if (accessToken) {
+      const user = await authService.verifyAccessToken(accessToken);
+      req.user = user;
+      return next();
+    }
+
+    // 2. Check for shared access token (Authorization header only)
     const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('SharedAccess ')) {
+      const token = authHeader.substring(13);
+      try {
+        const payload = verifySharedAccessToken(token);
 
-    if (authHeader) {
-      // Check for shared access token first
-      if (authHeader.startsWith('SharedAccess ')) {
-        const token = authHeader.substring(13);
-        try {
-          const payload = verifySharedAccessToken(token);
-
-          // Validate the shareToken is still valid
-          const playlist = playlistService.getPlaylistByShareToken(payload.shareToken);
-          if (!playlist) {
-            throw new AppError(
-              401,
-              'Shared access token invalid or expired',
-              true,
-              'SHARED_ACCESS_INVALID'
-            );
-          }
-
-          // Grant games.play permission for valid shared access tokens
-          req.sharedAccess = payload;
-          req.user = {
-            id: 0,
-            username: 'shared-guest',
-            email: '',
-            role: 'guest',
-            permissions: ['games.read', 'playlists.read', 'games.play'],
-          };
-          return next();
-        } catch (error) {
-          if (error instanceof AppError) throw error;
-          throw new AppError(401, 'Invalid shared access token', true, 'SHARED_ACCESS_INVALID');
+        // Validate the shareToken is still valid
+        const playlist = playlistService.getPlaylistByShareToken(payload.shareToken);
+        if (!playlist) {
+          throw new AppError(
+            401,
+            'Shared access token invalid or expired',
+            true,
+            'SHARED_ACCESS_INVALID'
+          );
         }
-      }
 
-      // Check for regular JWT token
-      if (authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7);
-        const user = await authService.verifyAccessToken(token);
-        req.user = user;
+        // Grant games.play permission for valid shared access tokens
+        req.sharedAccess = payload;
+        req.user = {
+          id: 0,
+          username: 'shared-guest',
+          email: '',
+          role: 'guest',
+          permissions: ['games.read', 'playlists.read', 'games.play'],
+        };
         return next();
+      } catch (error) {
+        if (error instanceof AppError) throw error;
+        throw new AppError(401, 'Invalid shared access token', true, 'SHARED_ACCESS_INVALID');
       }
     }
 
-    // No valid token - check guest access
+    // 3. No valid token - check guest access
     if (!authService.isGuestAccessEnabled()) {
       throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
     }
 
     // Guest users without a shared access token can only browse, not play
-    // (games.play is only granted when a valid shared access token is verified above)
     req.user = {
       id: 0,
       username: 'guest',

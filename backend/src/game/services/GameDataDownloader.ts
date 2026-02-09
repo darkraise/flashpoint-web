@@ -326,10 +326,14 @@ export class GameDataDownloader {
     if (resolvedAddress) {
       requestOptions.lookup = (
         _hostname: string,
-        _options: unknown,
-        callback: (err: Error | null, address: string, family: number) => void
+        options: { all?: boolean },
+        callback: (...args: unknown[]) => void
       ) => {
-        callback(null, resolvedAddress!, resolvedFamily!);
+        if (options && options.all) {
+          callback(null, [{ address: resolvedAddress, family: resolvedFamily }]);
+        } else {
+          callback(null, resolvedAddress, resolvedFamily);
+        }
       };
     }
 

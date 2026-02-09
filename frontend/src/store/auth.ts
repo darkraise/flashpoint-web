@@ -1,21 +1,19 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { User, AuthTokens } from '../types/auth';
+import { User } from '../types/auth';
 import { useThemeStore } from './theme';
 import { logger } from '@/lib/logger';
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
   isAuthenticated: boolean;
   isGuest: boolean;
   isMaintenanceMode: boolean;
 
   // Actions
-  setAuth: (user: User, tokens: AuthTokens) => void;
+  setAuth: (user: User) => void;
   setGuestMode: () => void;
   clearAuth: () => void;
-  updateAccessToken: (token: string) => void;
   updateUser: (user: User) => void;
   setMaintenanceMode: (isActive: boolean) => void;
 
@@ -30,15 +28,13 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
       isAuthenticated: false,
       isGuest: false,
       isMaintenanceMode: false,
 
-      setAuth: (user: User, tokens: AuthTokens) => {
+      setAuth: (user: User) => {
         set({
           user,
-          accessToken: tokens.accessToken,
           isAuthenticated: true,
           isGuest: false,
         });
@@ -63,7 +59,6 @@ export const useAuthStore = create<AuthState>()(
         };
         set({
           user: guestUser,
-          accessToken: null,
           isAuthenticated: false,
           isGuest: true,
         });
@@ -72,14 +67,9 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () => {
         set({
           user: null,
-          accessToken: null,
           isAuthenticated: false,
           isGuest: false,
         });
-      },
-
-      updateAccessToken: (token: string) => {
-        set({ accessToken: token });
       },
 
       updateUser: (user: User) => {

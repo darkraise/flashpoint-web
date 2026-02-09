@@ -9,7 +9,7 @@ import { useSharedAccessStore } from '@/store/sharedAccess';
  * All API modules should use this instance to ensure consistent:
  * - Base URL configuration
  * - Request/response interceptors
- * - Authentication handling
+ * - Authentication handling (via HTTP-only cookies)
  * - Error handling
  */
 export const apiClient = axios.create({
@@ -17,7 +17,7 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
+  withCredentials: true, // Send HTTP-only cookies with every request
 });
 
 // ===================================
@@ -25,23 +25,18 @@ export const apiClient = axios.create({
 // ===================================
 
 /**
- * Adds authentication token to all outgoing requests
- * Priority: 1) Regular JWT Bearer token, 2) Shared access token
+ * Adds SharedAccess token header for unauthenticated shared playlist access.
+ * Regular auth uses HTTP-only cookies (sent automatically via withCredentials).
  */
 apiClient.interceptors.request.use(
   (config) => {
-    // First, try regular JWT token
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      return config;
-    }
-
-    // Second, try shared access token
-    const sharedToken = useSharedAccessStore.getState().getToken();
-    if (sharedToken) {
-      config.headers.Authorization = `SharedAccess ${sharedToken}`;
-      return config;
+    // Only set SharedAccess header for unauthenticated users on shared playlists.
+    // Authenticated users rely on the HTTP-only access token cookie.
+    if (!useAuthStore.getState().isAuthenticated) {
+      const sharedToken = useSharedAccessStore.getState().getToken();
+      if (sharedToken) {
+        config.headers.Authorization = `SharedAccess ${sharedToken}`;
+      }
     }
 
     return config;
@@ -57,18 +52,19 @@ apiClient.interceptors.request.use(
 
 /**
  * Token refresh queue to prevent race conditions when multiple
- * requests receive 401 errors simultaneously
+ * requests receive 401 errors simultaneously.
+ * With HTTP-only cookies, subscribers just need to know refresh succeeded
+ * — the new cookie is set automatically by the refresh response.
  */
 let isRefreshing = false;
-let refreshSubscribers: { resolve: (token: string) => void; reject: (error: unknown) => void }[] =
-  [];
+let refreshSubscribers: { resolve: () => void; reject: (error: unknown) => void }[] = [];
 
-function subscribeTokenRefresh(resolve: (token: string) => void, reject: (error: unknown) => void) {
+function subscribeTokenRefresh(resolve: () => void, reject: (error: unknown) => void) {
   refreshSubscribers.push({ resolve, reject });
 }
 
-function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach((sub) => sub.resolve(token));
+function onTokenRefreshed() {
+  refreshSubscribers.forEach((sub) => sub.resolve());
   refreshSubscribers = [];
 }
 
@@ -85,7 +81,7 @@ function onTokenRefreshFailed(error: unknown) {
  * - 404 error notifications
  * - 500+ server error notifications
  * - Automatic token refresh on 401 errors with queue support
- * - Retry failed requests after token refresh
+ * - Retry failed requests after token refresh (cookie updated automatically)
  * - Logout on refresh failure
  * - Prevents duplicate refresh requests via isRefreshing flag
  */
@@ -123,10 +119,7 @@ apiClient.interceptors.response.use(
       const errorCode = error.response.data?.code;
 
       // Handle shared access token errors differently
-      if (
-        errorCode === 'SHARED_ACCESS_INVALID' ||
-        originalRequest.headers?.Authorization?.startsWith('SharedAccess ')
-      ) {
+      if (errorCode === 'SHARED_ACCESS_INVALID') {
         useSharedAccessStore.getState().clearToken();
         toast.error('Your shared access has expired. Return to the playlist to continue browsing.');
         // Don't redirect to login for shared access - let the UI handle it
@@ -144,8 +137,8 @@ apiClient.interceptors.response.use(
       // If a token refresh is already in progress, wait for it
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
-          subscribeTokenRefresh((newToken) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          subscribeTokenRefresh(() => {
+            // Cookie was updated by the refresh response — just retry
             resolve(apiClient(originalRequest));
           }, reject);
         });
@@ -162,19 +155,13 @@ apiClient.interceptors.response.use(
           return Promise.reject(error);
         }
 
-        // Try to refresh the token (cookie sent automatically)
-        const { data } = await apiClient.post<{ accessToken: string; expiresIn: number }>(
-          '/auth/refresh'
-        );
+        // Refresh the token — cookies sent/updated automatically
+        await apiClient.post('/auth/refresh');
 
-        // Update access token in the store
-        useAuthStore.getState().updateAccessToken(data.accessToken);
+        // Notify all waiting requests that refresh succeeded
+        onTokenRefreshed();
 
-        // Notify all waiting requests of the new token
-        onTokenRefreshed(data.accessToken);
-
-        // Update the authorization header and retry the original request
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        // Retry the original request — new cookie sent automatically
         return apiClient(originalRequest);
       } catch (refreshError) {
         // Notify all waiting requests of the error

@@ -24,14 +24,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const {
-    setAuth,
-    setGuestMode,
-    clearAuth,
-    isAuthenticated,
-    updateAccessToken,
-    setMaintenanceMode,
-  } = useAuthStore();
+  const { setAuth, setGuestMode, clearAuth, isAuthenticated, setMaintenanceMode } = useAuthStore();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -81,7 +74,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           },
         });
 
-        setAuth(result.user, result.tokens);
+        // Access token is set as HTTP-only cookie by the backend
+        setAuth(result.user);
 
         // Check maintenance mode after login
         const isMaintenanceActive = await checkMaintenanceMode();
@@ -119,7 +113,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     async (userData: RegisterData) => {
       try {
         const result = await authApi.register(userData);
-        setAuth(result.user, result.tokens);
+        // Access token is set as HTTP-only cookie by the backend
+        setAuth(result.user);
       } catch (error) {
         logger.error('Registration failed:', error);
         throw error;
@@ -153,47 +148,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   /**
    * Refresh access token function
+   * Calls /auth/refresh — both cookies (access + refresh) are updated automatically.
    */
   const refreshAccessToken = useCallback(async () => {
     try {
-      const tokens = await authApi.refreshToken();
-      updateAccessToken(tokens.accessToken);
+      await authApi.refreshToken();
     } catch (error) {
       logger.error('Token refresh failed:', error);
-      // The axios interceptor will handle logout and redirect
-      // Just clear auth here to ensure clean state
       clearAuth();
       throw error;
     }
-  }, [updateAccessToken, clearAuth]);
-
-  /**
-   * On page reload: if authenticated but no access token (memory-only), refresh via cookie
-   */
-  useEffect(() => {
-    const state = useAuthStore.getState();
-    if (state.isAuthenticated && !state.accessToken) {
-      refreshAccessToken()
-        .then(async () => {
-          // Refresh user data to ensure permissions are server-authoritative
-          try {
-            const user = await authApi.getMe();
-            useAuthStore.getState().updateUser(user);
-          } catch (error) {
-            logger.error('Failed to refresh user data:', error);
-          }
-        })
-        .catch(() => {
-          clearAuth();
-          navigate('/login');
-        });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clearAuth]);
 
   /**
    * Set up token refresh interval (refresh every 50 minutes)
-   * Access tokens expire in 1 hour, so we refresh 10 minutes before expiry
+   * Access tokens expire in 1 hour, so we refresh 10 minutes before expiry.
+   * The refresh response updates both cookies automatically.
    */
   useEffect(() => {
     if (!isAuthenticated) return;

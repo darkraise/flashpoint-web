@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { logger } from '@/lib/logger';
 import { gamesApi } from '@/lib/api';
-import { useAuthStore } from '@/store/auth';
 
 export interface DownloadProgress {
   percent: number;
@@ -37,15 +36,13 @@ export function useDownload(gameId: string) {
 
         // Connect to SSE endpoint for progress updates with authentication
         // NOTE: Raw fetch() is used here instead of apiClient because axios does not support
-        // SSE/ReadableStream. The token is manually attached from the auth store.
-        // If the token expires during a long download, the SSE connection will need to be
-        // re-established. See CLAUDE.md "Frontend API Guidelines" for the general policy.
+        // SSE/ReadableStream. Auth is handled via HTTP-only cookies (credentials: 'include').
+        // See CLAUDE.md "Frontend API Guidelines" for the general policy.
         const abortController = new AbortController();
         abortControllerRef.current = abortController;
 
-        const token = useAuthStore.getState().accessToken;
         const response = await fetch(`/api/games/${gameId}/download/progress`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'include',
           signal: abortController.signal,
         });
 

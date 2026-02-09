@@ -1,24 +1,16 @@
 import axios from 'axios';
 import { toast } from 'sonner';
-import { useAuthStore } from '@/store/auth';
 import { logger } from '@/lib/logger';
 
 // Create a separate axios instance for error reporting without interceptors
-// This prevents infinite loops when error reporting itself fails
+// This prevents infinite loops when error reporting itself fails.
+// Auth is handled via HTTP-only cookies (withCredentials: true).
 const errorReportingApi = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-// Add auth token to error reporting requests
-errorReportingApi.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true,
 });
 
 const ERROR_QUEUE_KEY = 'flashpoint-error-queue';

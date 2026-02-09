@@ -40,11 +40,10 @@ export const authApi = {
 
   /**
    * Refresh access token using refresh token
+   * Both tokens are updated via HTTP-only cookies automatically.
    */
-  refreshToken: async (): Promise<{ accessToken: string; expiresIn: number }> => {
-    const { data } = await apiClient.post<{ accessToken: string; expiresIn: number }>(
-      '/auth/refresh'
-    );
+  refreshToken: async (): Promise<{ expiresIn: number }> => {
+    const { data } = await apiClient.post<{ expiresIn: number }>('/auth/refresh');
     return data;
   },
 

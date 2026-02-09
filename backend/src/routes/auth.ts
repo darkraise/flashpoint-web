@@ -12,6 +12,9 @@ import {
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
   getRefreshTokenFromCookie,
+  setAccessTokenCookie,
+  clearAccessTokenCookie,
+  getAccessTokenFromCookie,
 } from '../utils/cookies';
 import { z } from 'zod';
 
@@ -145,13 +148,13 @@ router.post(
 
       logger.info(`[Auth] Login successful for user: ${credentials.username}`);
 
-      // Set refresh token as HTTP-only cookie
+      // Set tokens as HTTP-only cookies
       setRefreshTokenCookie(res, result.tokens.refreshToken);
+      setAccessTokenCookie(res, result.tokens.accessToken);
 
       res.json({
         user: result.user,
         tokens: {
-          accessToken: result.tokens.accessToken,
           expiresIn: result.tokens.expiresIn,
         },
       });
@@ -236,13 +239,13 @@ router.post(
 
       logger.info(`[Auth] Registration successful for user: ${data.username}`);
 
-      // Set refresh token as HTTP-only cookie
+      // Set tokens as HTTP-only cookies
       setRefreshTokenCookie(res, result.tokens.refreshToken);
+      setAccessTokenCookie(res, result.tokens.accessToken);
 
       res.status(201).json({
         user: result.user,
         tokens: {
-          accessToken: result.tokens.accessToken,
           expiresIn: result.tokens.expiresIn,
         },
       });
@@ -285,6 +288,7 @@ router.post(
     }
 
     clearRefreshTokenCookie(res);
+    clearAccessTokenCookie(res);
 
     res.json({ success: true, message: 'Logged out successfully' });
   })
@@ -306,11 +310,11 @@ router.post(
 
     const tokens = await authService.refreshToken(refreshToken);
 
-    // Set new refresh token cookie (token rotation)
+    // Set new token cookies (token rotation)
     setRefreshTokenCookie(res, tokens.refreshToken);
+    setAccessTokenCookie(res, tokens.accessToken);
 
     res.json({
-      accessToken: tokens.accessToken,
       expiresIn: tokens.expiresIn,
     });
   })
@@ -323,12 +327,17 @@ router.post(
 router.get(
   '/me',
   asyncHandler(async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Read access token from cookie first, fallback to Authorization header
+    const token =
+      getAccessTokenFromCookie(req.cookies) ||
+      (req.headers.authorization?.startsWith('Bearer ')
+        ? req.headers.authorization.substring(7)
+        : undefined);
+
+    if (!token) {
       throw new AppError(401, 'No token provided');
     }
 
-    const token = authHeader.substring(7);
     const user = await authService.verifyAccessToken(token);
 
     res.json(user);

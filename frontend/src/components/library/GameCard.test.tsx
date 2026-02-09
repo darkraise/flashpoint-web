@@ -7,7 +7,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { GameCard } from './GameCard';
 import { useAuthStore } from '@/store/auth';
 import type { Game } from '@/types/game';
-import type { User, AuthTokens } from '@/types/auth';
+import type { User } from '@/types/auth';
 import { toast } from 'sonner';
 
 // Mock dependencies
@@ -265,11 +265,7 @@ describe('GameCard', () => {
         role: 'user',
         permissions: ['playlists.create'],
       };
-      const mockTokens: AuthTokens = {
-        accessToken: 'token',
-        expiresIn: 3600,
-      };
-      useAuthStore.getState().setAuth(mockUser, mockTokens);
+      useAuthStore.getState().setAuth(mockUser);
 
       renderGameCard(mockFlashGame, {
         showAddToPlaylistButton: true,
