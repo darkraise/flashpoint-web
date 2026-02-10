@@ -1,19 +1,13 @@
 import { CircleCheck, Info, LoaderCircle, OctagonX, TriangleAlert } from 'lucide-react';
 import { Toaster as Sonner } from 'sonner';
-import { useThemeStore } from '@/store/theme';
+import { useThemeStore, resolveActualMode } from '@/store/theme';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const mode = useThemeStore((s) => s.mode);
 
-  // Compute actual theme (resolve 'system' to 'light' or 'dark')
-  const actualTheme =
-    mode === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      : mode;
+  const actualTheme = resolveActualMode(mode);
 
   return (
     <Sonner

@@ -65,7 +65,7 @@ interface ThemeState {
   syncThemeToServer: () => Promise<void>;
 }
 
-const resolveActualMode = (mode: ThemeMode): 'light' | 'dark' =>
+export const resolveActualMode = (mode: ThemeMode): 'light' | 'dark' =>
   mode === 'system'
     ? window.matchMedia('(prefers-color-scheme: dark)').matches
       ? 'dark'

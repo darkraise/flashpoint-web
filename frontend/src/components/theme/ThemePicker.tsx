@@ -1,5 +1,11 @@
 import { Sun, Moon, Monitor, Palette, Check } from 'lucide-react';
-import { useThemeStore, type ThemeMode, type PrimaryColor, colorPalette } from '@/store/theme';
+import {
+  useThemeStore,
+  resolveActualMode,
+  type ThemeMode,
+  type PrimaryColor,
+  colorPalette,
+} from '@/store/theme';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -80,7 +86,7 @@ export function ThemePicker() {
           <div className="grid grid-cols-7 gap-2">
             {(Object.keys(colorPalette) as PrimaryColor[]).map((color) => {
               const isSelected = primaryColor === color;
-              const colorValue = colorPalette[color][mode === 'light' ? 'light' : 'dark'];
+              const colorValue = colorPalette[color][resolveActualMode(mode)];
 
               return (
                 <button
