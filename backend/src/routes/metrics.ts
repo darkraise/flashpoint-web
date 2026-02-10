@@ -39,7 +39,7 @@ router.get(
   authenticate,
   requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 10, 50);
     const slowest = PerformanceMetrics.getSlowestEndpoints(limit);
 
     res.json({

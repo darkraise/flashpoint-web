@@ -1,5 +1,4 @@
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
-import { logger } from '@/lib/logger';
 
 interface FormattedDateProps {
   date: Date | string | number;
@@ -13,19 +12,14 @@ export function FormattedDate({ date, type = 'datetime', className }: FormattedD
   const getFormattedValue = () => {
     if (!date) return 'Unknown';
 
-    try {
-      switch (type) {
-        case 'date':
-          return formatDate(date);
-        case 'time':
-          return formatTime(date);
-        case 'datetime':
-        default:
-          return formatDateTime(date);
-      }
-    } catch (error) {
-      logger.error('Error formatting date:', error);
-      return String(date);
+    switch (type) {
+      case 'date':
+        return formatDate(date);
+      case 'time':
+        return formatTime(date);
+      case 'datetime':
+      default:
+        return formatDateTime(date);
     }
   };
 

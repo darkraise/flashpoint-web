@@ -14,14 +14,15 @@ export function createPaginatedResponse<T>(
   page: number,
   limit: number
 ): PaginatedResponse<T> {
-  const totalPages = Math.ceil(total / limit);
+  const safeLimit = Math.max(1, limit);
+  const totalPages = Math.ceil(total / safeLimit);
 
   return {
     data,
     pagination: {
       total,
       page,
-      limit,
+      limit: safeLimit,
       totalPages,
     },
   };
@@ -29,22 +30,4 @@ export function createPaginatedResponse<T>(
 
 export function calculateOffset(page: number, limit: number): number {
   return (page - 1) * limit;
-}
-
-export function normalizePagination(
-  page?: number | string,
-  limit?: number | string,
-  defaultLimit: number = 50,
-  maxLimit: number = 100
-): { page: number; limit: number } {
-  let normalizedPage = typeof page === 'string' ? parseInt(page) : page;
-  let normalizedLimit = typeof limit === 'string' ? parseInt(limit) : limit;
-
-  normalizedPage = Math.max(1, normalizedPage || 1);
-  normalizedLimit = Math.min(maxLimit, Math.max(1, normalizedLimit || defaultLimit));
-
-  return {
-    page: normalizedPage,
-    limit: normalizedLimit,
-  };
 }

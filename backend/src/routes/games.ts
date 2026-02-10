@@ -116,7 +116,7 @@ router.get(
 router.get(
   '/most-played',
   asyncHandler(async (req, res) => {
-    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string) || 20, 50));
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string, 10) || 20, 50));
     const games = await gameService.getMostPlayedGames(limit);
 
     res.json({
@@ -171,7 +171,7 @@ router.get(
   validateSharedGameAccess('id'),
   asyncHandler(async (req, res) => {
     const id = gameIdSchema.parse(req.params.id);
-    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string) || 10, 50));
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string, 10) || 10, 50));
     const relatedGames = await gameService.getRelatedGames(id, limit);
 
     res.json(relatedGames);

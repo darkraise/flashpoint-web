@@ -47,8 +47,8 @@ router.get(
   requirePermission('users.read'),
   logActivity('users.list', 'users'),
   asyncHandler(async (req, res) => {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 100);
 
     const result = await userService.getUsers(page, limit);
 
@@ -154,7 +154,7 @@ router.get(
   requirePermission('users.read'),
   logActivity('users.view', 'users'),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
     }
@@ -198,7 +198,7 @@ router.patch(
     fieldsUpdated: Object.keys(req.body),
   })),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
     }
@@ -217,7 +217,7 @@ router.delete(
   requirePermission('users.delete'),
   logActivity('users.delete', 'users'),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
     }
@@ -236,7 +236,7 @@ router.post(
   '/:id/change-password',
   authenticate,
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
     }
