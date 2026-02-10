@@ -76,9 +76,7 @@ WORKDIR /app/backend
 # Expose port
 EXPOSE 3100
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl --fail http://localhost:3100/health || exit 1
+# Health check is configured in docker-compose.yml for flexibility
 
 # Environment variables
 ENV NODE_ENV=production

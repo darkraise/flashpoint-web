@@ -20,10 +20,6 @@ RUN npm ci --workspace=frontend --include-workspace-root --prefer-offline --no-a
 # Copy frontend source code
 COPY frontend ./frontend/
 
-# Build argument for API URL (injected at build time)
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
-
 # Build application (run from frontend directory)
 WORKDIR /app/frontend
 RUN npm run build
