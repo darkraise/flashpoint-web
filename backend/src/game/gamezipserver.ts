@@ -280,10 +280,10 @@ export class GameZipServer {
     let fileData = result.data;
     if (ext === 'html' || ext === 'htm') {
       fileData = injectPolyfills(result.data);
-      logger.info(`[GameZipServer] Injected polyfills into HTML file: ${relPath}`);
+      logger.debug(`[GameZipServer] Injected polyfills into HTML file: ${relPath}`);
     }
 
-    logger.info(
+    logger.debug(
       `[GameZipServer] ✓ Serving from ZIP ${result.mountId}: ${relPath} (${fileData.length} bytes)`
     );
 

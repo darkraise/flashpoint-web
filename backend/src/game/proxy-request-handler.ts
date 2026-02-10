@@ -36,7 +36,7 @@ export class ProxyRequestHandler {
   /** Replicates the request processing flow from Go's goproxy */
   async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
     try {
-      logger.info(`[ProxyHandler] ${req.method} ${req.url}`);
+      logger.debug(`[ProxyHandler] ${req.method} ${req.url}`);
 
       if (!req.url) {
         this.sendError(res, 400, 'Bad Request: No URL');

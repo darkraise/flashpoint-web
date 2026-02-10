@@ -107,7 +107,7 @@ export const config = {
   // Auto-detected from version.txt; affects metadata sync and image path availability
   flashpointEdition: flashpointVersion.edition,
   flashpointVersionString: flashpointVersion.versionString,
-};
+} as const;
 
 /** Resolves external image CDN URLs from Flashpoint preferences, with hardcoded fallbacks. */
 export async function getExternalImageUrls(): Promise<string[]> {

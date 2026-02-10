@@ -162,8 +162,7 @@ export class LegacyServer {
     const host = hostname.split(':')[0];
     const relPath = path.posix.join(host, urlPath);
 
-    logger.debug(`[LegacyServer] Serving: ${host}${urlPath}`);
-    logger.debug(`[LegacyServer] Relative path: ${relPath}`);
+    logger.debug(`[LegacyServer] Serving: ${host}${urlPath} (relPath: ${relPath})`);
 
     const pathCandidates = this.buildPathCandidates(relPath, urlPath, settings);
 

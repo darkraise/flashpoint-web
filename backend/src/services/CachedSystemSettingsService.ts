@@ -50,8 +50,8 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     super();
     this.cacheTTL = cacheTTL;
 
-    // Start cache cleanup interval (every 5 minutes)
-    this.cleanupIntervalId = setInterval(() => this.cleanup(), 5 * 60 * 1000).unref();
+    // Start cache cleanup interval — aligned to cache TTL (90s vs 60s TTL)
+    this.cleanupIntervalId = setInterval(() => this.cleanup(), 90 * 1000).unref();
   }
 
   /**

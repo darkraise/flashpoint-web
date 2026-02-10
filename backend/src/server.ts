@@ -26,6 +26,7 @@ import { MetadataSyncJob } from './jobs/MetadataSyncJob';
 import { RuffleUpdateJob } from './jobs/RuffleUpdateJob';
 import { CachedSystemSettingsService } from './services/CachedSystemSettingsService';
 import { PermissionCache } from './services/PermissionCache';
+import { PerformanceMetrics } from './services/PerformanceMetrics';
 import { RuffleService } from './services/RuffleService';
 import { ConfigManager } from './game/config';
 import { PreferencesService } from './game/services/PreferencesService';
@@ -259,7 +260,7 @@ async function startServer() {
       } else {
         logger.warn('File logging verification failed - check permissions');
       }
-    }, 1000);
+    }, 1000).unref();
   } else if (loggingStatus.fileError) {
     logger.warn(`File logging unavailable: ${loggingStatus.fileError}`);
   }
@@ -321,6 +322,15 @@ async function startServer() {
     logger.error('Failed to cleanup old activity logs:', error);
   });
 
+  // Cleanup old performance metrics every hour
+  const metricsCleanupInterval = setInterval(
+    () => {
+      PerformanceMetrics.cleanupOldMetrics();
+    },
+    60 * 60 * 1000
+  );
+  metricsCleanupInterval.unref();
+
   const jobExecutionService = new JobExecutionService();
   const jobLogCleanupInterval = setInterval(
     () => {
@@ -343,6 +353,7 @@ async function startServer() {
     clearInterval(loginAttemptsCleanupInterval);
     clearInterval(activityLogsCleanupInterval);
     clearInterval(jobLogCleanupInterval);
+    clearInterval(metricsCleanupInterval);
 
     try {
       gameZipServer.dispose();

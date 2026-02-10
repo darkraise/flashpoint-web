@@ -44,7 +44,8 @@ function getOtelConfig() {
     serviceVersion: process.env.npm_package_version || '1.0.0',
     tracesEnabled: process.env.OTEL_TRACES_ENABLED !== 'false',
     metricsEnabled: process.env.OTEL_METRICS_ENABLED !== 'false',
-    metricsExportInterval: parseInt(process.env.OTEL_METRICS_EXPORT_INTERVAL || '60000', 10),
+    metricsExportInterval:
+      parseInt(process.env.OTEL_METRICS_EXPORT_INTERVAL || '60000', 10) || 60000,
     logLevel: process.env.OTEL_LOG_LEVEL || 'info',
   };
 }
