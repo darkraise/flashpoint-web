@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal } from 'lucide-react';
-import { useUsers, useDeleteUser } from '../../hooks/useUsers';
-import { UserDetails } from '../../types/auth';
+import { useUsers, useDeleteUser } from '@/hooks/useUsers';
+import { UserDetails } from '@/types/auth';
 import { RoleGuard } from '../common/RoleGuard';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { DataTable } from '../ui/data-table';

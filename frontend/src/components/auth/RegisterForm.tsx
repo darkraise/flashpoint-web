@@ -1,7 +1,7 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { useRegister } from '../../hooks/useAuth';
+import { useRegister } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
-import { authSettingsApi, systemSettingsApi } from '../../lib/api';
+import { authSettingsApi, systemSettingsApi } from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib';
+import { cn } from '@/lib/utils';
 
 interface PlatformIconProps {
   platformName: string;

@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { useTopGames } from '../../hooks/usePlayTracking';
+import { useTopGames } from '@/hooks/usePlayTracking';
 import type { CustomTooltipProps } from '@/types/chart';
 import { CHART_COLORS, truncateTitle, formatPlaytimeCompact, getCSSVar } from './chart-utils';
 

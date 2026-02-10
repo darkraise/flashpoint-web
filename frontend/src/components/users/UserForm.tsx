@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { useCreateUser, useUpdateUser } from '../../hooks/useUsers';
-import { useRoles } from '../../hooks/useRoles';
-import { UserDetails, CreateUserData, UpdateUserData } from '../../types/auth';
+import { useCreateUser, useUpdateUser } from '@/hooks/useUsers';
+import { useRoles } from '@/hooks/useRoles';
+import { UserDetails, CreateUserData, UpdateUserData } from '@/types/auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';

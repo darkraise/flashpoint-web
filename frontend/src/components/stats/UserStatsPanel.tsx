@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Clock, GamepadIcon, TrendingUp, BarChart3 } from 'lucide-react';
-import { useUserStats } from '../../hooks/usePlayTracking';
-import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
+import { useUserStats } from '@/hooks/usePlayTracking';
+import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import { ChartErrorBoundary } from './ChartErrorBoundary';
 import { formatDuration } from '@/lib/cron-utils';
 

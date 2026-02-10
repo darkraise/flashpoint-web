@@ -8,8 +8,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { usePlayActivityOverTime } from '../../hooks/usePlayTracking';
-import { useDateTimeFormat } from '../../hooks/useDateTimeFormat';
+import { usePlayActivityOverTime } from '@/hooks/usePlayTracking';
+import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import type { CustomTooltipProps } from '@/types/chart';
 import { formatPlaytimeCompact, getCSSVar } from './chart-utils';
 

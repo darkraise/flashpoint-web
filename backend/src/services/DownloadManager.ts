@@ -2,7 +2,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/logger';
-import { GameDataSource } from './PreferencesService';
+import type { GameDataSource } from './PreferencesService';
 import { HashValidator } from './HashValidator';
 import { FileImporter } from './FileImporter';
 import { GameDatabaseUpdater, GameData } from './GameDatabaseUpdater';

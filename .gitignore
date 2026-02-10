@@ -140,3 +140,5 @@ vite.config.ts.timestamp-*
 .claude/**/*.*
 
 user.db
+*.db-shm
+*.db-wal

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
-import { cn } from '@/lib';
+import { cn } from '@/lib/utils';
 
 interface SidebarItemProps {
   path: string;

@@ -57,7 +57,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = createPlaylistSchema.parse(req.body);
 
-    const playlist = await playlistService.createPlaylist(data as CreatePlaylistDto);
+    const playlist = await playlistService.createPlaylist(data);
     res.status(201).json(playlist);
   })
 );
@@ -70,10 +70,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = addGamesToPlaylistSchema.parse(req.body);
 
-    const playlist = await playlistService.addGamesToPlaylist(
-      req.params.id,
-      data as AddGamesToPlaylistDto
-    );
+    const playlist = await playlistService.addGamesToPlaylist(req.params.id, data);
 
     if (!playlist) {
       throw new AppError(404, 'Playlist not found');
@@ -91,10 +88,7 @@ router.delete(
   asyncHandler(async (req, res) => {
     const data = addGamesToPlaylistSchema.parse(req.body);
 
-    const playlist = await playlistService.removeGamesFromPlaylist(
-      req.params.id,
-      data as AddGamesToPlaylistDto
-    );
+    const playlist = await playlistService.removeGamesFromPlaylist(req.params.id, data);
 
     if (!playlist) {
       throw new AppError(404, 'Playlist not found');

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { usePermissions, useUpdateRolePermissions } from '../../hooks/useRoles';
-import { Role } from '../../types/auth';
+import { usePermissions, useUpdateRolePermissions } from '@/hooks/useRoles';
+import { Role } from '@/types/auth';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';

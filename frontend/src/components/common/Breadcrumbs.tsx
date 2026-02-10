@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Home, ArrowLeft } from 'lucide-react';
-import { cn } from '@/lib';
+import { cn } from '@/lib/utils';
 
 export interface BreadcrumbContext {
   label: string;

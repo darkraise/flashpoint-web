@@ -18,6 +18,9 @@ export interface UserDetails {
   lastLoginAt: string | null;
 }
 
+/**
+ * Client-side token metadata. Actual access/refresh tokens are stored in HTTP-only cookies.
+ */
 export interface AuthTokens {
   expiresIn: number;
 }

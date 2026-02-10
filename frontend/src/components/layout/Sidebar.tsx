@@ -20,7 +20,7 @@ import { RoleGuard } from '../common/RoleGuard';
 import { useEffect } from 'react';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib';
+import { cn } from '@/lib/utils';
 import { SidebarItem } from './SidebarItem';
 import { SidebarSection } from './SidebarSection';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
@@ -81,7 +81,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
       icon: ListIcon,
       label: 'Flashpoint Playlists',
     },
-  ].filter(Boolean) as NavItem[];
+  ].filter((item): item is Exclude<typeof item, false> => Boolean(item));
 
   const managementNavItems: NavItem[] = [
     { path: '/users', icon: Users, label: 'Users', permission: 'users.read' },
@@ -92,13 +92,13 @@ export function Sidebar({ isOpen }: SidebarProps) {
       label: 'Activity Logs',
       permission: 'activities.read',
     },
-  ].filter(Boolean) as NavItem[];
+  ].filter((item): item is Exclude<typeof item, false> => Boolean(item));
 
   const bottomNavItems: NavItem[] = [
     enableStatistics && { path: '/dashboard', icon: BarChart3, label: 'Dashboard' },
     { path: '/jobs', icon: Clock, label: 'Jobs', permission: 'settings.update' },
     { path: '/settings', icon: Settings, label: 'Settings' },
-  ].filter(Boolean) as NavItem[];
+  ].filter((item): item is Exclude<typeof item, false> => Boolean(item));
 
   useEffect(() => {
     if (isOpen && window.innerWidth < 1024) {

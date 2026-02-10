@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { useGamesDistribution } from '../../hooks/usePlayTracking';
+import { useGamesDistribution } from '@/hooks/usePlayTracking';
 import type { CustomTooltipProps, CustomLegendProps } from '@/types/chart';
 import { CHART_COLORS, truncateTitle, formatPlaytimeCompact } from './chart-utils';
 

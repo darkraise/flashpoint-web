@@ -1,10 +1,10 @@
 import { useState, memo, useMemo, useCallback, useTransition } from 'react';
 import { ColumnDef, SortingState } from '@tanstack/react-table';
 import { ChevronDown, AlertCircle } from 'lucide-react';
-import { useActivities } from '../../hooks/useActivities';
-import { useActivityFilters } from '../../hooks/useActivityFilters';
-import { useDebounce } from '../../hooks/useDebounce';
-import { ActivityFilters } from '../../types/auth';
+import { useActivities } from '@/hooks/useActivities';
+import { useActivityFilters } from '@/hooks/useActivityFilters';
+import { useDebounce } from '@/hooks/useDebounce';
+import { ActivityFilters } from '@/types/auth';
 import { getErrorMessage } from '@/types/api-error';
 import { getActionBadgeVariant } from '@/utils/activityUtils';
 import { DataTable } from '../ui/data-table';

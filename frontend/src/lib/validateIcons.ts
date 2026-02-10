@@ -1,4 +1,5 @@
 import { PLAYLIST_ICONS, type PlaylistIconName } from './playlistIcons';
+import { logger } from '@/lib/logger';
 
 export function validateIconsNoDuplicates(): {
   isValid: boolean;
@@ -55,28 +56,24 @@ export function logIconValidation(): void {
 
   const result = validateIconsNoDuplicates();
 
-  console.group('🔍 Icon Validation Results');
-  console.log(`Total Icons: ${result.totalIcons}`);
-  console.log(`Valid: ${result.isValid ? '✅' : '❌'}`);
+  logger.info('🔍 Icon Validation Results');
+  logger.info(`Total Icons: ${result.totalIcons}`);
+  logger.info(`Valid: ${result.isValid ? '✅' : '❌'}`);
 
   if (result.warnings.length > 0) {
-    console.group('⚠️  Warnings');
-    result.warnings.forEach((warning) => console.warn(warning));
-    console.groupEnd();
+    logger.warn('⚠️  Warnings:');
+    result.warnings.forEach((warning) => logger.warn(warning));
   }
 
   if (result.duplicates.length > 0) {
-    console.group('🔴 Duplicate Icons Found');
+    logger.warn('🔴 Duplicate Icons Found:');
     result.duplicates.forEach(({ componentName, iconKeys }) => {
-      console.log(`\n${componentName}:`);
-      iconKeys.forEach((key) => console.log(`  - ${key}`));
+      logger.warn(`\n${componentName}:`);
+      iconKeys.forEach((key) => logger.warn(`  - ${key}`));
     });
-    console.groupEnd();
   } else {
-    console.log('✅ No duplicates found');
+    logger.info('✅ No duplicates found');
   }
-
-  console.groupEnd();
 }
 
 export function isValidIconName(iconName: string): iconName is PlaylistIconName {
@@ -86,11 +83,11 @@ export function isValidIconName(iconName: string): iconName is PlaylistIconName 
 if (import.meta.env.DEV) {
   const result = validateIconsNoDuplicates();
   if (!result.isValid) {
-    console.warn(
+    logger.warn(
       `⚠️  Icon validation failed: ${result.duplicates.length} duplicates, ${result.warnings.length} warnings`
     );
-    console.warn('Run logIconValidation() for details');
+    logger.warn('Run logIconValidation() for details');
   } else {
-    console.log(`✅ Icon validation passed: ${result.totalIcons} unique icons`);
+    logger.info(`✅ Icon validation passed: ${result.totalIcons} unique icons`);
   }
 }

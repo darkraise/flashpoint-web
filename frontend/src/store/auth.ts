@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { User } from '../types/auth';
+import { User } from '@/types/auth';
 import { useThemeStore } from './theme';
 import { logger } from '@/lib/logger';
 
