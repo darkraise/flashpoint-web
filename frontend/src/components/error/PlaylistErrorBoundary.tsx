@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from '@/lib/logger';
+import { reportError } from '@/components/error/ErrorReporter';
 
 interface Props {
   children: ReactNode;
@@ -34,6 +35,13 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logger.error('PlaylistErrorBoundary caught an error:', error, errorInfo);
+    reportError({
+      type: 'client_error',
+      message: error.message,
+      stack: error.stack,
+      url: window.location.pathname,
+      context: { componentStack: errorInfo.componentStack },
+    }).catch(() => {});
   }
 
   handleRetry = (): void => {
@@ -64,7 +72,7 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto bg-background-elevated rounded-lg border border-destructive shadow-lg p-8">
+          <div className="max-w-2xl mx-auto bg-card rounded-lg border border-destructive shadow-lg p-8">
             <div className="flex items-start gap-4 mb-6">
               <div className="p-3 bg-destructive/10 rounded-full flex-shrink-0">
                 <AlertTriangle className="w-8 h-8 text-destructive" />
@@ -80,7 +88,7 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
             </div>
 
             {this.state.error ? (
-              <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
+              <div className="mb-6 p-4 bg-background rounded-lg border border-border">
                 <h3 className="text-sm font-semibold text-destructive mb-2">Error Details:</h3>
                 <p className="text-sm text-muted-foreground font-mono">
                   {this.state.error.message}
@@ -100,8 +108,8 @@ export class PlaylistErrorBoundary extends Component<Props, State> {
             ) : null}
 
             {this.state.retryCount > 0 ? (
-              <div className="mb-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                <p className="text-sm text-blue-400">
+              <div className="mb-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
+                <p className="text-sm text-primary">
                   Attempted {this.state.retryCount}{' '}
                   {this.state.retryCount === 1 ? 'retry' : 'retries'}
                 </p>

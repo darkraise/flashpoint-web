@@ -65,28 +65,22 @@ interface ThemeState {
   syncThemeToServer: () => Promise<void>;
 }
 
+const resolveActualMode = (mode: ThemeMode): 'light' | 'dark' =>
+  mode === 'system'
+    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light'
+    : mode;
+
 const applyTheme = (mode: ThemeMode) => {
   const root = document.documentElement;
   root.classList.remove('light', 'dark');
-
-  const actualTheme: 'light' | 'dark' =
-    mode === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      : mode;
-
-  root.classList.add(actualTheme);
+  root.classList.add(resolveActualMode(mode));
 };
 
 const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
   const root = document.documentElement;
-  const actualTheme: 'light' | 'dark' =
-    currentMode === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      : currentMode;
+  const actualTheme = resolveActualMode(currentMode);
 
   const colorValue = colorPalette[color][actualTheme];
 
@@ -107,6 +101,17 @@ const applyPrimaryColor = (color: PrimaryColor, currentMode: ThemeMode) => {
   root.style.setProperty('--scrollbar-thumb-hover', scrollbarThumbHover);
 };
 
+const maybeSyncToServer = (get: () => ThemeState) => {
+  const authState = useAuthStore.getState();
+  if (authState.isAuthenticated && !authState.isGuest) {
+    get()
+      .syncThemeToServer()
+      .catch((error) => {
+        logger.debug('Theme sync to server failed:', error);
+      });
+  }
+};
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
@@ -118,29 +123,13 @@ export const useThemeStore = create<ThemeState>()(
         set({ mode });
         applyTheme(mode);
         applyPrimaryColor(get().primaryColor, mode);
-
-        const authState = useAuthStore.getState();
-        if (authState.isAuthenticated && !authState.isGuest) {
-          get()
-            .syncThemeToServer()
-            .catch((error) => {
-              logger.debug('Theme sync to server failed:', error);
-            });
-        }
+        maybeSyncToServer(get);
       },
 
       setPrimaryColor: (color) => {
         set({ primaryColor: color });
         applyPrimaryColor(color, get().mode);
-
-        const authState = useAuthStore.getState();
-        if (authState.isAuthenticated && !authState.isGuest) {
-          get()
-            .syncThemeToServer()
-            .catch((error) => {
-              logger.debug('Theme sync to server failed:', error);
-            });
-        }
+        maybeSyncToServer(get);
       },
 
       loadThemeFromServer: async () => {

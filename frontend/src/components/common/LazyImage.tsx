@@ -225,7 +225,7 @@ export function LazyBackgroundImage({
     <div
       ref={divRef}
       className={cn('bg-cover bg-center', className)}
-      style={{ backgroundImage: bgImage ? `url(${bgImage})` : undefined }}
+      style={{ backgroundImage: bgImage ? `url("${bgImage}")` : undefined }}
     >
       {children}
     </div>

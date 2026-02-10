@@ -5,7 +5,7 @@ import { useThemeStore } from '@/store/theme';
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { mode } = useThemeStore();
+  const mode = useThemeStore((s) => s.mode);
 
   // Compute actual theme (resolve 'system' to 'light' or 'dark')
   const actualTheme =

@@ -65,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           isAuthenticated: false,
           isGuest: false,
+          isMaintenanceMode: false,
         });
       },
 
@@ -140,7 +141,6 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         isGuest: state.isGuest,
-        isMaintenanceMode: state.isMaintenanceMode,
       }),
     }
   )

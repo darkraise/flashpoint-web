@@ -3,6 +3,13 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth';
 import { useSharedAccessStore } from '@/store/sharedAccess';
 
+declare module 'axios' {
+  export interface InternalAxiosRequestConfig {
+    _retry?: boolean;
+    _skip404Toast?: boolean;
+  }
+}
+
 /** Shared axios instance — all API modules must use this for auth and error handling. */
 export const apiClient = axios.create({
   baseURL: '/api',
@@ -10,6 +17,7 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
+  timeout: 30000,
 });
 
 // Add SharedAccess token for unauthenticated shared playlist access.
@@ -54,6 +62,10 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
     if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
       return Promise.reject(error);
     }
@@ -84,7 +96,7 @@ apiClient.interceptors.response.use(
 
       // Don't retry the refresh endpoint itself (prevents infinite loop)
       if (originalRequest.url?.includes('/auth/refresh')) {
-        toast.error('Session expired. Please log in again.');
+        toast.error('Session expired. Please log in again.', { id: 'session-expired' });
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
         return Promise.reject(error);
@@ -103,7 +115,7 @@ apiClient.interceptors.response.use(
 
       try {
         if (!useAuthStore.getState().isAuthenticated) {
-          toast.error('Session expired. Please log in again.');
+          toast.error('Session expired. Please log in again.', { id: 'session-expired' });
           useAuthStore.getState().clearAuth();
           window.location.href = '/login';
           return Promise.reject(error);
@@ -114,7 +126,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError) {
         onTokenRefreshFailed(refreshError);
-        toast.error('Session expired. Please log in again.');
+        toast.error('Session expired. Please log in again.', { id: 'session-expired' });
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
         return Promise.reject(refreshError);

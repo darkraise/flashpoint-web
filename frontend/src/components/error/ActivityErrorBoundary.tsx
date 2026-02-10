@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { logger } from '@/lib/logger';
 import { AlertTriangle } from 'lucide-react';
+import { reportError } from '@/components/error/ErrorReporter';
 
 interface Props {
   children: ReactNode;
@@ -23,6 +24,13 @@ export class ActivityErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     logger.error('Activity log error:', error, errorInfo);
+    reportError({
+      type: 'client_error',
+      message: error.message,
+      stack: error.stack,
+      url: window.location.pathname,
+      context: { componentStack: errorInfo.componentStack },
+    }).catch(() => {});
   }
 
   handleReset = () => {

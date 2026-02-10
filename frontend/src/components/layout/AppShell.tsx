@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { gamesApi } from '@/lib/api/games';
 import { useUIStore } from '@/store/ui';
+import { logger } from '@/lib/logger';
+import { toast } from 'sonner';
 
 interface AppShellProps {
   children: ReactNode;
@@ -24,8 +26,9 @@ export function AppShell({ children }: AppShellProps) {
       navigate(`/games/${game.id}`, {
         state: { breadcrumbContext: { label: 'Home', href: '/' } },
       });
-    } catch {
-      // silently fail
+    } catch (error) {
+      logger.error('Failed to fetch random game:', error);
+      toast.error('Failed to load a random game. Please try again.');
     } finally {
       setIsNavigating(false);
     }

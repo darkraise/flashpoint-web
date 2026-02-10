@@ -101,6 +101,15 @@ export function Sidebar({ isOpen }: SidebarProps) {
   ].filter(Boolean) as NavItem[];
 
   useEffect(() => {
+    if (isOpen && window.innerWidth < 1024) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (window.innerWidth < 1024) {
       setSidebarOpen(false);
     }

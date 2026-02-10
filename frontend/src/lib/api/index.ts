@@ -1,3 +1,5 @@
+import { apiClient } from './client';
+
 export { apiClient } from './client';
 
 export { authApi } from './auth';
@@ -39,5 +41,4 @@ export { githubApi } from './github';
 export { updatesApi } from './updates';
 export type { MetadataUpdateInfo, MetadataSyncStatus } from './updates';
 
-import { apiClient } from './client';
 export default apiClient;

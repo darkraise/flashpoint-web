@@ -62,7 +62,16 @@ interface QueryHookResult<TData, TCreate, TUpdate, TId = number | string> {
  * } = useRolesHook();
  * ```
  */
-export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
+interface Identifiable {
+  id: string | number;
+}
+
+export function createQueryHook<
+  TData extends Identifiable,
+  TCreate,
+  TUpdate,
+  TId = number | string,
+>(
   options: CreateQueryHookOptions<TData, TCreate, TUpdate, TId>
 ): () => QueryHookResult<TData, TCreate, TUpdate, TId> {
   return () => {
@@ -87,7 +96,7 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
             return [newItem, ...old];
           });
-          showToast(options.messages?.createSuccess || 'Created successfully', 'success');
+          showToast(options.messages?.createSuccess ?? 'Created successfully', 'success');
         },
         onError: (error: unknown) => {
           showToast(getErrorMessage(error), 'error');
@@ -100,13 +109,9 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
         mutationFn: ({ id, data }: { id: TId; data: TUpdate }) => options.api.update(id, data),
         onSuccess: (updated) => {
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
-            return old.map((item) =>
-              (item as Record<string, unknown>).id === (updated as Record<string, unknown>).id
-                ? updated
-                : item
-            );
+            return old.map((item) => (item.id === updated.id ? updated : item));
           });
-          showToast(options.messages?.updateSuccess || 'Updated successfully', 'success');
+          showToast(options.messages?.updateSuccess ?? 'Updated successfully', 'success');
         },
         onError: (error: unknown) => {
           showToast(getErrorMessage(error), 'error');
@@ -119,9 +124,9 @@ export function createQueryHook<TData, TCreate, TUpdate, TId = number | string>(
         mutationFn: options.api.delete,
         onSuccess: (_, deletedId) => {
           queryClient.setQueryData<TData[]>(options.queryKey, (old = []) => {
-            return old.filter((item) => (item as Record<string, unknown>).id !== deletedId);
+            return old.filter((item) => item.id !== deletedId);
           });
-          showToast(options.messages?.deleteSuccess || 'Deleted successfully', 'success');
+          showToast(options.messages?.deleteSuccess ?? 'Deleted successfully', 'success');
         },
         onError: (error: unknown) => {
           showToast(getErrorMessage(error), 'error');

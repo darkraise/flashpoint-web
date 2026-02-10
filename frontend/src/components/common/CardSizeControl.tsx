@@ -1,10 +1,19 @@
 import { useUIStore, CardSize, ListColumns } from '@/store/ui';
 import { Grid3x3, Grid2x2, LayoutGrid, List, Columns2, Columns3, Columns4 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useShallow } from 'zustand/react/shallow';
 
 export function CardSizeControl() {
-  const { viewMode, setViewMode, cardSize, setCardSize, listColumns, setListColumns } =
-    useUIStore();
+  const { viewMode, setViewMode, cardSize, setCardSize, listColumns, setListColumns } = useUIStore(
+    useShallow((s) => ({
+      viewMode: s.viewMode,
+      setViewMode: s.setViewMode,
+      cardSize: s.cardSize,
+      setCardSize: s.setCardSize,
+      listColumns: s.listColumns,
+      setListColumns: s.setListColumns,
+    }))
+  );
 
   const cardSizes: { value: CardSize; label: string; icon: typeof LayoutGrid }[] = [
     { value: 'small', label: 'Small', icon: Grid3x3 },

@@ -85,7 +85,7 @@ export function Breadcrumbs({
           const isActive = item.active ?? isLast;
 
           return (
-            <li key={index} className="flex items-center gap-1">
+            <li key={item.href ?? item.label} className="flex items-center gap-1">
               {item.href && !isActive ? (
                 <Link
                   to={item.href}

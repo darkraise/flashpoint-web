@@ -32,7 +32,7 @@ const errorConfig = {
     defaultTitle: 'Page Not Found',
     defaultMessage: "The page you're looking for doesn't exist or has been moved.",
     icon: FileQuestion,
-    iconColor: 'text-blue-500',
+    iconColor: 'text-primary',
     badgeVariant: 'secondary' as const,
     helpText: [
       'Check the URL for typos',
@@ -44,7 +44,7 @@ const errorConfig = {
     defaultTitle: 'Internal Server Error',
     defaultMessage: 'Something went wrong on our end. Our team has been notified.',
     icon: AlertCircle,
-    iconColor: 'text-red-500',
+    iconColor: 'text-destructive',
     badgeVariant: 'destructive' as const,
     helpText: [
       'Try refreshing the page',
@@ -57,7 +57,7 @@ const errorConfig = {
     defaultTitle: 'Network Error',
     defaultMessage: 'Unable to connect to the server. Please check your internet connection.',
     icon: WifiOff,
-    iconColor: 'text-yellow-500',
+    iconColor: 'text-amber-500',
     badgeVariant: 'secondary' as const,
     helpText: [
       'Check your internet connection',
@@ -70,7 +70,7 @@ const errorConfig = {
     defaultTitle: 'Access Forbidden',
     defaultMessage: "You don't have permission to access this resource.",
     icon: ShieldAlert,
-    iconColor: 'text-orange-500',
+    iconColor: 'text-amber-600',
     badgeVariant: 'secondary' as const,
     helpText: [
       'Log in with an account that has the required permissions',
@@ -185,8 +185,8 @@ export function ErrorPage({
           <div className="space-y-2">
             <h3 className="font-semibold text-sm">What you can do:</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-              {config.helpText.map((text, index) => (
-                <li key={index}>{text}</li>
+              {config.helpText.map((text) => (
+                <li key={text}>{text}</li>
               ))}
             </ul>
           </div>

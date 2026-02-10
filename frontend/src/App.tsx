@@ -246,10 +246,6 @@ function App() {
 
           {/* ==================== ERROR LAYOUT ==================== */}
           <Route element={<ErrorLayout />}>
-            <Route path="/unauthorized" element={<UnauthorizedView />} />
-            <Route path="/error/500" element={<ServerErrorView />} />
-            <Route path="/error/network" element={<NetworkErrorView />} />
-            <Route path="*" element={<NotFoundView />} />
             {import.meta.env.DEV ? (
               <>
                 <Route path="/_dev/404" element={<NotFoundView />} />
@@ -258,6 +254,10 @@ function App() {
                 <Route path="/_dev/403" element={<UnauthorizedView />} />
               </>
             ) : null}
+            <Route path="/unauthorized" element={<UnauthorizedView />} />
+            <Route path="/error/500" element={<ServerErrorView />} />
+            <Route path="/error/network" element={<NetworkErrorView />} />
+            <Route path="*" element={<NotFoundView />} />
           </Route>
 
           {/* ==================== STANDALONE ==================== */}
