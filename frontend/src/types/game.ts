@@ -5,7 +5,7 @@ export interface Game {
   alternateTitles?: string;
   series?: string;
   developer: string;
-  publisher?: string;
+  publisher: string;
   platformName?: string;
   platformsStr?: string;
   platformId?: number;
@@ -31,6 +31,10 @@ export interface Game {
   playtime?: number;
   playCounter?: number;
   archiveState?: number;
+  activeDataId?: number; // ID of the active game_data entry (null/0 = no game data)
+  activeDataOnDisk?: number; // Whether the active data is downloaded (0 = no, 1 = yes)
+  logoPath?: string; // Infinity edition only
+  screenshotPath?: string; // Infinity edition only
 }
 
 export interface PaginatedResult<T> {

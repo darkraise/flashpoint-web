@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { systemSettingsApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useDialog } from '@/contexts/DialogContext';
-import { AxiosError } from 'axios';
+import { getErrorMessage } from '@/types/api-error';
 
 interface FeaturesSettingsTabProps {
   tabContentVariants: Variants;
@@ -30,12 +30,12 @@ export function FeaturesSettingsTab({ tabContentVariants }: FeaturesSettingsTabP
       systemSettingsApi.updateCategory(category, settings),
     onSuccess: (updatedSettings, variables) => {
       queryClient.setQueryData(['systemSettings', variables.category], updatedSettings);
+      queryClient.invalidateQueries({ queryKey: ['system-settings', 'public'] });
 
       showToast('Settings updated successfully', 'success');
     },
     onError: (error: unknown) => {
-      const axiosError = error instanceof AxiosError ? error : null;
-      const message = axiosError?.response?.data?.error?.message || 'Failed to update settings';
+      const message = getErrorMessage(error) || 'Failed to update settings';
       showToast(message, 'error');
     },
   });

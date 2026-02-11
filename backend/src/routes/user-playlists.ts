@@ -40,7 +40,7 @@ const reorderGamesSchema = z.object({
 });
 
 const copyFlashpointPlaylistSchema = z.object({
-  flashpointPlaylistId: z.string(),
+  flashpointPlaylistId: z.string().uuid('Invalid playlist ID format'),
   newTitle: z.string().optional(),
 });
 

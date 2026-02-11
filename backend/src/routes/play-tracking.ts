@@ -85,11 +85,13 @@ router.get(
 router.get(
   '/game-stats',
   asyncHandler(async (req: Request, res: Response) => {
+    const parsedLimit = parseInt(req.query.limit as string, 10);
     const limit = Math.min(
-      parseInt(req.query.limit as string) || LIMITS.GAME_STATS_DEFAULT,
+      isNaN(parsedLimit) ? LIMITS.GAME_STATS_DEFAULT : parsedLimit,
       LIMITS.GAME_STATS_MAX
     );
-    const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
+    const parsedOffset = parseInt(req.query.offset as string, 10);
+    const offset = isNaN(parsedOffset) ? 0 : Math.max(0, parsedOffset);
 
     const stats = await playTrackingService.getUserGameStats(req.user!.id, limit, offset);
 
@@ -104,11 +106,13 @@ router.get(
 router.get(
   '/history',
   asyncHandler(async (req: Request, res: Response) => {
+    const parsedLimit = parseInt(req.query.limit as string, 10);
     const limit = Math.min(
-      parseInt(req.query.limit as string) || LIMITS.HISTORY_DEFAULT,
+      isNaN(parsedLimit) ? LIMITS.HISTORY_DEFAULT : parsedLimit,
       LIMITS.HISTORY_MAX
     );
-    const offset = Math.max(0, parseInt(req.query.offset as string) || 0);
+    const parsedOffset = parseInt(req.query.offset as string, 10);
+    const offset = isNaN(parsedOffset) ? 0 : Math.max(0, parsedOffset);
 
     const history = await playTrackingService.getUserPlayHistory(req.user!.id, limit, offset);
 
@@ -123,8 +127,9 @@ router.get(
 router.get(
   '/top-games',
   asyncHandler(async (req: Request, res: Response) => {
+    const parsedLimit = parseInt(req.query.limit as string, 10);
     const limit = Math.min(
-      parseInt(req.query.limit as string) || LIMITS.TOP_GAMES_DEFAULT,
+      isNaN(parsedLimit) ? LIMITS.TOP_GAMES_DEFAULT : parsedLimit,
       LIMITS.TOP_GAMES_MAX
     );
 
@@ -137,8 +142,9 @@ router.get(
 router.get(
   '/activity-over-time',
   asyncHandler(async (req: Request, res: Response) => {
+    const parsedDays = parseInt(req.query.days as string, 10);
     const days = Math.min(
-      parseInt(req.query.days as string) || LIMITS.ACTIVITY_DAYS_DEFAULT,
+      isNaN(parsedDays) ? LIMITS.ACTIVITY_DAYS_DEFAULT : parsedDays,
       LIMITS.ACTIVITY_DAYS_MAX
     );
 
@@ -151,8 +157,9 @@ router.get(
 router.get(
   '/games-distribution',
   asyncHandler(async (req: Request, res: Response) => {
+    const parsedLimit = parseInt(req.query.limit as string, 10);
     const limit = Math.min(
-      parseInt(req.query.limit as string) || LIMITS.GAMES_DISTRIBUTION_DEFAULT,
+      isNaN(parsedLimit) ? LIMITS.GAMES_DISTRIBUTION_DEFAULT : parsedLimit,
       LIMITS.GAMES_DISTRIBUTION_MAX
     );
 

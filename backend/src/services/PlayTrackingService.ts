@@ -67,7 +67,12 @@ export class PlayTrackingService {
   async endPlaySession(sessionId: string, userId?: number): Promise<void> {
     try {
       // OPTIMIZATION: Get session and calculate duration in single query
-      const session = UserDatabaseService.get(
+      const session = UserDatabaseService.get<{
+        user_id: number;
+        game_id: string;
+        game_title: string;
+        duration_seconds: number;
+      }>(
         `SELECT
            user_id,
            game_id,
@@ -88,7 +93,7 @@ export class PlayTrackingService {
         throw new AppError(403, "Cannot end another user's play session");
       }
 
-      const durationSeconds = session.duration_seconds || 0;
+      const durationSeconds = session.duration_seconds ?? 0;
 
       // Use the duration value from the SELECT query to avoid race condition
       // (time passes between SELECT and UPDATE, causing inconsistent values)
@@ -150,28 +155,23 @@ export class PlayTrackingService {
    */
   private async updateUserStats(userId: number, durationSeconds: number): Promise<void> {
     try {
-      // Single query to get both aggregates (was 2 separate queries)
-      const counts = UserDatabaseService.get(
-        `SELECT
-          (SELECT COUNT(DISTINCT game_id) FROM user_game_stats WHERE user_id = ?) as games_played,
-          (SELECT COUNT(*) FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL) as total_sessions`,
-        [userId, userId]
-      ) as { games_played: number; total_sessions: number } | undefined;
-
-      const gamesPlayed = counts?.games_played ?? 0;
-      const totalSessions = counts?.total_sessions ?? 0;
-
-      // UPSERT user stats
       UserDatabaseService.run(
         `INSERT INTO user_stats (user_id, total_games_played, total_playtime_seconds, total_sessions, first_play_at, last_play_at)
-         VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+         VALUES (
+           ?,
+           (SELECT COUNT(DISTINCT game_id) FROM user_game_stats WHERE user_id = ?),
+           ?,
+           (SELECT COUNT(*) FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL),
+           strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+           strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         )
          ON CONFLICT(user_id) DO UPDATE SET
-           total_games_played = excluded.total_games_played,
+           total_games_played = (SELECT COUNT(DISTINCT game_id) FROM user_game_stats WHERE user_id = ?),
            total_playtime_seconds = total_playtime_seconds + ?,
-           total_sessions = excluded.total_sessions,
+           total_sessions = (SELECT COUNT(*) FROM user_game_plays WHERE user_id = ? AND ended_at IS NOT NULL),
            last_play_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
-        [userId, gamesPlayed, durationSeconds, totalSessions, durationSeconds]
+        [userId, userId, durationSeconds, userId, userId, durationSeconds, userId]
       );
     } catch (error) {
       logger.error('Failed to update user stats:', error);
@@ -196,7 +196,14 @@ export class PlayTrackingService {
 
   async getUserStats(userId: number): Promise<UserStats | null> {
     try {
-      const stats = UserDatabaseService.get(
+      const stats = UserDatabaseService.get<{
+        user_id: number;
+        total_games_played: number;
+        total_playtime_seconds: number;
+        total_sessions: number;
+        first_play_at: string | null;
+        last_play_at: string | null;
+      }>(
         `SELECT user_id, total_games_played, total_playtime_seconds, total_sessions, first_play_at, last_play_at
          FROM user_stats WHERE user_id = ?`,
         [userId]
@@ -229,7 +236,7 @@ export class PlayTrackingService {
 
   async getUserGameStats(userId: number, limit = 50, offset = 0): Promise<GameStats[]> {
     try {
-      const stats = UserDatabaseService.all(
+      const stats = UserDatabaseService.all<GameStatsRow>(
         `SELECT game_id, game_title, total_plays, total_playtime_seconds, first_played_at, last_played_at
          FROM user_game_stats
          WHERE user_id = ?
@@ -238,7 +245,7 @@ export class PlayTrackingService {
         [userId, limit, offset]
       );
 
-      return stats.map((stat: GameStatsRow) => ({
+      return stats.map((stat) => ({
         gameId: stat.game_id,
         gameTitle: stat.game_title,
         totalPlays: stat.total_plays,
@@ -254,7 +261,7 @@ export class PlayTrackingService {
 
   async getUserPlayHistory(userId: number, limit = 50, offset = 0): Promise<PlaySession[]> {
     try {
-      const sessions = UserDatabaseService.all(
+      const sessions = UserDatabaseService.all<PlaySessionRow>(
         `SELECT id, user_id, game_id, game_title, started_at, ended_at, duration_seconds, session_id
          FROM user_game_plays
          WHERE user_id = ?
@@ -263,7 +270,7 @@ export class PlayTrackingService {
         [userId, limit, offset]
       );
 
-      return sessions.map((session: PlaySessionRow) => ({
+      return sessions.map((session) => ({
         id: session.id,
         userId: session.user_id,
         gameId: session.game_id,
@@ -281,7 +288,7 @@ export class PlayTrackingService {
 
   async getTopGames(userId: number, limit = 10): Promise<GameStats[]> {
     try {
-      const stats = UserDatabaseService.all(
+      const stats = UserDatabaseService.all<GameStatsRow>(
         `SELECT game_id, game_title, total_plays, total_playtime_seconds, first_played_at, last_played_at
          FROM user_game_stats
          WHERE user_id = ?
@@ -290,7 +297,7 @@ export class PlayTrackingService {
         [userId, limit]
       );
 
-      return stats.map((stat: GameStatsRow) => ({
+      return stats.map((stat) => ({
         gameId: stat.game_id,
         gameTitle: stat.game_title,
         totalPlays: stat.total_plays,
@@ -313,7 +320,7 @@ export class PlayTrackingService {
       // Ensure it's a positive integer between 1 and 365
       const safeDays = Math.min(Math.max(parseInt(String(days), 10) || 30, 1), 365);
 
-      const data = UserDatabaseService.all(
+      const data = UserDatabaseService.all<PlaytimeActivityRow>(
         `SELECT
           DATE(started_at) as date,
           SUM(duration_seconds) as total_playtime,
@@ -327,7 +334,7 @@ export class PlayTrackingService {
         [userId, safeDays]
       );
 
-      return data.map((row: PlaytimeActivityRow) => ({
+      return data.map((row) => ({
         date: row.date,
         playtime: row.total_playtime || 0,
         sessions: row.session_count || 0,
@@ -343,7 +350,7 @@ export class PlayTrackingService {
     limit = 10
   ): Promise<Array<{ name: string; value: number }>> {
     try {
-      const stats = UserDatabaseService.all(
+      const stats = UserDatabaseService.all<DistributionRow>(
         `SELECT game_title, total_playtime_seconds
          FROM user_game_stats
          WHERE user_id = ?
@@ -352,7 +359,7 @@ export class PlayTrackingService {
         [userId, limit]
       );
 
-      return stats.map((stat: DistributionRow) => ({
+      return stats.map((stat) => ({
         name: stat.game_title,
         value: stat.total_playtime_seconds,
       }));
@@ -367,7 +374,13 @@ export class PlayTrackingService {
    */
   async cleanupAbandonedSessions(): Promise<void> {
     try {
-      const abandoned = UserDatabaseService.all(
+      const abandoned = UserDatabaseService.all<{
+        session_id: string;
+        user_id: number;
+        game_id: string;
+        game_title: string;
+        started_at: string;
+      }>(
         `SELECT session_id, user_id, game_id, game_title, started_at
          FROM user_game_plays
          WHERE ended_at IS NULL

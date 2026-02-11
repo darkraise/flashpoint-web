@@ -30,21 +30,21 @@ export class StatisticsService {
     }
     try {
       // Get total games count
-      const totalGamesResult = DatabaseService.get(
+      const totalGamesResult = DatabaseService.get<{ count: number }>(
         'SELECT COUNT(*) as count FROM game WHERE library = ?',
         ['arcade']
       );
       const totalGames = totalGamesResult?.count || 0;
 
       // Get total animations count
-      const totalAnimationsResult = DatabaseService.get(
+      const totalAnimationsResult = DatabaseService.get<{ count: number }>(
         'SELECT COUNT(*) as count FROM game WHERE library = ?',
         ['theatre']
       );
       const totalAnimations = totalAnimationsResult?.count || 0;
 
       // Get total platforms count
-      const totalPlatformsResult = DatabaseService.get(
+      const totalPlatformsResult = DatabaseService.get<{ count: number }>(
         'SELECT COUNT(DISTINCT platformName) as count FROM game'
       );
       const totalPlatforms = totalPlatformsResult?.count || 0;
@@ -52,7 +52,7 @@ export class StatisticsService {
       // Get web playable games count (Flash and HTML5 games only, excluding animations)
       const webPlatforms = ['Flash', 'HTML5'];
       const placeholders = webPlatforms.map(() => '?').join(',');
-      const webPlayableResult = DatabaseService.get(
+      const webPlayableResult = DatabaseService.get<{ count: number }>(
         `SELECT COUNT(*) as count FROM game WHERE platformName IN (${placeholders}) AND library = ?`,
         [...webPlatforms, 'arcade']
       );

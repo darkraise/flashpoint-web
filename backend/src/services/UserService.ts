@@ -8,6 +8,7 @@ import { PaginatedResponse, createPaginatedResponse, calculateOffset } from '../
 import { logger } from '../utils/logger';
 
 export class UserService {
+  private authService = new AuthService();
   async getUsers(page: number = 1, limit: number = 50): Promise<PaginatedResponse<User>> {
     const offset = calculateOffset(page, limit);
 
@@ -26,16 +27,27 @@ export class UserService {
 
     const total = users.length > 0 ? users[0].total_count : 0;
 
-    // Remove total_count from result objects
-    users.forEach((user) => {
-      delete (user as unknown as Record<string, unknown>).total_count;
-    });
+    // Remove total_count from result objects and coerce isActive to boolean
+    const cleaned = users.map(({ total_count, ...rest }) => ({
+      ...rest,
+      isActive: Boolean(rest.isActive),
+    })) as User[];
 
-    return createPaginatedResponse(users as User[], total, page, limit);
+    return createPaginatedResponse(cleaned, total, page, limit);
   }
 
   async getUserById(id: number): Promise<User | null> {
-    const user = UserDatabaseService.get(
+    const user = UserDatabaseService.get<{
+      id: number;
+      username: string;
+      email: string;
+      roleId: number;
+      roleName: string;
+      isActive: number;
+      createdAt: string;
+      updatedAt: string;
+      lastLoginAt: string | null;
+    }>(
       `SELECT u.id, u.username, u.email, u.role_id as roleId, r.name as roleName,
               u.is_active as isActive, u.created_at as createdAt,
               u.updated_at as updatedAt, u.last_login_at as lastLoginAt
@@ -45,7 +57,13 @@ export class UserService {
       [id]
     );
 
-    return user || null;
+    return user
+      ? {
+          ...user,
+          isActive: Boolean(user.isActive),
+          lastLoginAt: user.lastLoginAt ?? undefined,
+        }
+      : null;
   }
 
   async createUser(data: CreateUserData): Promise<User> {
@@ -106,8 +124,7 @@ export class UserService {
 
       // Revoke all refresh tokens when deactivating a user
       if (!data.isActive) {
-        const authService = new AuthService();
-        await authService.revokeAllUserTokens(id);
+        await this.authService.revokeAllUserTokens(id);
         logger.info(`[UserService] All refresh tokens revoked after deactivating user ${id}`);
       }
     }
@@ -152,8 +169,8 @@ export class UserService {
     // Prevent deleting the last admin
     if (user.roleName === 'admin') {
       const adminCount =
-        UserDatabaseService.get(
-          'SELECT COUNT(*) as count FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = "admin"',
+        UserDatabaseService.get<{ count: number }>(
+          "SELECT COUNT(*) as count FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'admin'",
           []
         )?.count || 0;
 
@@ -169,6 +186,7 @@ export class UserService {
       db.prepare('DELETE FROM user_favorites WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM user_game_plays WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM user_game_stats WHERE user_id = ?').run(id);
+      db.prepare('DELETE FROM user_stats WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM user_settings WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM user_playlists WHERE user_id = ?').run(id);
       db.prepare('DELETE FROM users WHERE id = ?').run(id);
@@ -184,7 +202,10 @@ export class UserService {
     newPassword: string,
     isAdminReset: boolean = false
   ): Promise<void> {
-    const user = UserDatabaseService.get('SELECT password_hash FROM users WHERE id = ?', [id]);
+    const user = UserDatabaseService.get<{ password_hash: string }>(
+      'SELECT password_hash FROM users WHERE id = ?',
+      [id]
+    );
 
     if (!user) {
       throw new AppError(404, 'User not found');
@@ -209,13 +230,12 @@ export class UserService {
     ]);
 
     // Revoke all refresh tokens to invalidate existing sessions
-    const authService = new AuthService();
-    await authService.revokeAllUserTokens(id);
+    await this.authService.revokeAllUserTokens(id);
     logger.info(`[UserService] All refresh tokens revoked after password change for user ${id}`);
   }
 
   async getUserSetting(userId: number, key: string): Promise<string | null> {
-    const result = UserDatabaseService.get(
+    const result = UserDatabaseService.get<{ setting_value: string }>(
       `SELECT setting_value FROM user_settings
        WHERE user_id = ? AND setting_key = ?`,
       [userId, key]
@@ -224,13 +244,13 @@ export class UserService {
   }
 
   async getUserSettings(userId: number): Promise<Record<string, string>> {
-    const results = UserDatabaseService.all(
+    const results = UserDatabaseService.all<{ setting_key: string; setting_value: string }>(
       `SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?`,
       [userId]
     );
 
     return results.reduce(
-      (acc: Record<string, string>, row: { setting_key: string; setting_value: string }) => {
+      (acc: Record<string, string>, row) => {
         acc[row.setting_key] = row.setting_value;
         return acc;
       },

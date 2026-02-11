@@ -13,7 +13,7 @@ const userService = new UserService();
 const createUserSchema = z.object({
   username: z.string().min(3).max(50),
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(6).max(128),
   roleId: z.number().int().positive(),
   isActive: z.boolean().optional(),
 });
@@ -25,8 +25,8 @@ const updateUserSchema = z.object({
 });
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(6).optional(),
-  newPassword: z.string().min(6),
+  currentPassword: z.string().min(1).optional(),
+  newPassword: z.string().min(6).max(128),
 });
 
 const updateThemeSchema = z.object({
@@ -47,8 +47,8 @@ router.get(
   requirePermission('users.read'),
   logActivity('users.list', 'users'),
   asyncHandler(async (req, res) => {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 100);
 
     const result = await userService.getUsers(page, limit);
 
@@ -89,7 +89,7 @@ router.patch(
     res.json({
       success: true,
       themeColor: data.themeColor,
-      surfaceColor: data.surfaceColor || 'slate-700',
+      surfaceColor: data.surfaceColor ?? 'slate-700',
     });
   })
 );
@@ -154,7 +154,7 @@ router.get(
   requirePermission('users.read'),
   logActivity('users.view', 'users'),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
     }
@@ -198,7 +198,7 @@ router.patch(
     fieldsUpdated: Object.keys(req.body),
   })),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
     }
@@ -217,9 +217,13 @@ router.delete(
   requirePermission('users.delete'),
   logActivity('users.delete', 'users'),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
+    }
+
+    if (req.user?.id === id) {
+      throw new AppError(400, 'Cannot delete your own account');
     }
 
     await userService.deleteUser(id);
@@ -231,24 +235,30 @@ router.delete(
 router.post(
   '/:id/change-password',
   authenticate,
+  logActivity('users.changePassword', 'users', (req) => ({
+    userId: req.params.id,
+    isSelfChange: req.user?.id === parseInt(req.params.id, 10),
+  })),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid user ID');
     }
 
     const data = changePasswordSchema.parse(req.body);
 
-    const isOwnPassword = req.user?.id === id;
-    const isAdmin = req.user?.permissions.includes('users.update');
+    const isOwnPassword = req.user!.id === id;
+    const userPermissions = req.user!.permissions || [];
+    const hasAdminPermission = userPermissions.includes('users.update');
 
-    if (!isOwnPassword && !isAdmin) {
+    // Authorization: Either changing own password OR has users.update permission
+    if (!isOwnPassword && !hasAdminPermission) {
       throw new AppError(403, 'Insufficient permissions');
     }
 
-    const isAdminReset = isAdmin && !isOwnPassword;
+    const isAdminReset = hasAdminPermission && !isOwnPassword;
 
-    // Require current password for non-admin password changes
+    // Require current password for self-change (non-admin reset)
     if (!isAdminReset && !data.currentPassword) {
       throw new AppError(400, 'Current password is required');
     }

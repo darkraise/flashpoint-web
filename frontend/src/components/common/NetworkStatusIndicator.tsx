@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { WifiOff, Wifi, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/index';
+import { cn } from '@/lib/utils';
 
 type NetworkStatus = 'online' | 'offline' | 'slow';
 
@@ -84,8 +84,8 @@ export function NetworkStatusIndicator() {
     <div
       className={cn(
         'fixed top-0 left-0 right-0 z-50 px-4 py-3 text-sm font-medium text-white transition-all duration-300',
-        status === 'offline' && 'bg-red-600',
-        status === 'slow' && 'bg-yellow-600'
+        status === 'offline' && 'bg-destructive',
+        status === 'slow' && 'bg-amber-600'
       )}
       role="alert"
       aria-live="assertive"
@@ -96,7 +96,7 @@ export function NetworkStatusIndicator() {
             variant={status === 'offline' ? 'destructive' : 'default'}
             className={cn(
               'flex items-center gap-2',
-              status === 'slow' && 'bg-yellow-600 hover:bg-yellow-600'
+              status === 'slow' && 'bg-amber-600 hover:bg-amber-700'
             )}
           >
             {status === 'offline' ? (

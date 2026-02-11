@@ -9,7 +9,7 @@ const router = Router();
 router.get(
   '/summary',
   authenticate,
-  requirePermission('settings.view'),
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
     const summary = PerformanceMetrics.getSummary();
 
@@ -23,7 +23,7 @@ router.get(
 router.get(
   '/endpoints',
   authenticate,
-  requirePermission('settings.view'),
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
     const stats = PerformanceMetrics.getAllEndpointStats();
 
@@ -37,9 +37,9 @@ router.get(
 router.get(
   '/endpoints/slowest',
   authenticate,
-  requirePermission('settings.view'),
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
-    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 10, 50);
     const slowest = PerformanceMetrics.getSlowestEndpoints(limit);
 
     res.json({
@@ -52,7 +52,7 @@ router.get(
 router.get(
   '/caches',
   authenticate,
-  requirePermission('settings.view'),
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
     const cacheStats = PerformanceMetrics.getCacheStats();
 
@@ -66,7 +66,7 @@ router.get(
 router.get(
   '/queries',
   authenticate,
-  requirePermission('settings.view'),
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
     const queryStats = PerformanceMetrics.getQueryStats();
 

@@ -36,7 +36,7 @@ export function formatReleaseDate(dateString?: string | null): string {
   if (/^\d{4}-\d{2}$/.test(dateString)) {
     try {
       const [year, month] = dateString.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
+      const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1);
       return date.toLocaleDateString('en-US', {
         month: 'short',
         year: 'numeric',

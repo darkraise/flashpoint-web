@@ -86,7 +86,7 @@ type AuthenticatedRequest = Request & { user?: { id: number } };
 
 async function logError(report: ErrorReport): Promise<void> {
   try {
-    clientErrorLogger.info(report.message, {
+    const meta = {
       errorType: report.type,
       clientUrl: report.url,
       clientTimestamp: report.timestamp,
@@ -94,7 +94,12 @@ async function logError(report: ErrorReport): Promise<void> {
       userId: report.userId,
       stack: report.stack,
       context: report.context,
-    });
+    };
+    if (report.type === 'network_error' || report.type === 'route_error') {
+      clientErrorLogger.warn(report.message, meta);
+    } else {
+      clientErrorLogger.error(report.message, meta);
+    }
   } catch (error) {
     logger.error('Failed to log client error:', error);
   }
@@ -165,50 +170,40 @@ router.post(
   '/report',
   rateLimitStrict,
   asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const parseResult = errorReportSchema.safeParse(req.body);
-      if (!parseResult.success) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: `Invalid error report: ${parseResult.error.issues[0].message}`,
-          },
-        });
-      }
-
-      const validatedData = parseResult.data;
-
-      const report: ErrorReport = {
-        type: validatedData.type,
-        message: validatedData.message,
-        stack: validatedData.stack,
-        url: validatedData.url,
-        timestamp: validatedData.timestamp || new Date().toISOString(),
-        userAgent: validatedData.userAgent || req.headers['user-agent'] || 'Unknown',
-        context: validatedData.context,
-      };
-
-      const authReq = req as AuthenticatedRequest;
-      if (authReq.user) {
-        report.userId = authReq.user.id;
-      }
-
-      await logError(report);
-
-      logger.info(`[Client Error] ${report.type} - ${report.message} (${report.url})`);
-
-      res.json({ success: true });
-    } catch (error) {
-      logger.error('Error in /errors/report:', error);
-      res.status(500).json({
+    const parseResult = errorReportSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({
         success: false,
         error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to log error report',
+          code: 'VALIDATION_ERROR',
+          message: `Invalid error report: ${parseResult.error.issues[0].message}`,
         },
       });
+      return;
     }
+
+    const validatedData = parseResult.data;
+
+    const report: ErrorReport = {
+      type: validatedData.type,
+      message: validatedData.message,
+      stack: validatedData.stack,
+      url: validatedData.url,
+      timestamp: validatedData.timestamp ?? new Date().toISOString(),
+      userAgent: validatedData.userAgent ?? req.headers['user-agent'] ?? 'Unknown',
+      context: validatedData.context,
+    };
+
+    const authReq = req as AuthenticatedRequest;
+    if (authReq.user) {
+      report.userId = authReq.user.id;
+    }
+
+    await logError(report);
+
+    logger.debug(`[Client Error] ${report.type} - ${report.message} (${report.url})`);
+
+    res.json({ success: true });
   })
 );
 
@@ -217,28 +212,18 @@ router.get(
   authenticate,
   requirePermission('settings.update'),
   asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 100, 1000);
-      const errors = await getRecentErrors(limit);
+    const parsedLimit = parseInt(req.query.limit as string, 10);
+    const limit = Math.min(isNaN(parsedLimit) ? 100 : parsedLimit, 1000);
+    const errors = await getRecentErrors(limit);
 
-      res.json({
-        success: true,
-        data: {
-          errors,
-          count: errors.length,
-          limit,
-        },
-      });
-    } catch (error) {
-      logger.error('Error in /errors/recent:', error);
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to retrieve error reports',
-        },
-      });
-    }
+    res.json({
+      success: true,
+      data: {
+        errors,
+        count: errors.length,
+        limit,
+      },
+    });
   })
 );
 
@@ -247,54 +232,43 @@ router.get(
   authenticate,
   requirePermission('settings.update'),
   asyncHandler(async (req: Request, res: Response) => {
-    try {
-      const errors = await getRecentErrors(1000);
+    const errors = await getRecentErrors(1000);
 
-      const now = new Date();
-      const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      const stats = {
-        total: errors.length,
-        last24h: errors.filter((e) => new Date(e.timestamp) >= last24h).length,
-        last7d: errors.filter((e) => new Date(e.timestamp) >= last7d).length,
-        byType: {} as Record<string, number>,
-        topUrls: {} as Record<string, number>,
-        topMessages: {} as Record<string, number>,
-      };
+    const stats = {
+      total: errors.length,
+      last24h: errors.filter((e) => new Date(e.timestamp) >= last24h).length,
+      last7d: errors.filter((e) => new Date(e.timestamp) >= last7d).length,
+      byType: {} as Record<string, number>,
+      topUrls: {} as Record<string, number>,
+      topMessages: {} as Record<string, number>,
+    };
 
-      for (const error of errors) {
-        stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
-        stats.topUrls[error.url] = (stats.topUrls[error.url] || 0) + 1;
+    for (const error of errors) {
+      stats.byType[error.type] = (stats.byType[error.type] ?? 0) + 1;
+      stats.topUrls[error.url] = (stats.topUrls[error.url] ?? 0) + 1;
 
-        const shortMessage = error.message.substring(0, 100);
-        stats.topMessages[shortMessage] = (stats.topMessages[shortMessage] || 0) + 1;
-      }
-
-      const sortAndLimit = (obj: Record<string, number>, limit: number) => {
-        return Object.entries(obj)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, limit)
-          .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-      };
-
-      stats.topUrls = sortAndLimit(stats.topUrls, 10);
-      stats.topMessages = sortAndLimit(stats.topMessages, 10);
-
-      res.json({
-        success: true,
-        data: stats,
-      });
-    } catch (error) {
-      logger.error('Error in /errors/stats:', error);
-      res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to retrieve error statistics',
-        },
-      });
+      const shortMessage = error.message.substring(0, 100);
+      stats.topMessages[shortMessage] = (stats.topMessages[shortMessage] ?? 0) + 1;
     }
+
+    const sortAndLimit = (obj: Record<string, number>, limit: number) => {
+      return Object.entries(obj)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+    };
+
+    stats.topUrls = sortAndLimit(stats.topUrls, 10);
+    stats.topMessages = sortAndLimit(stats.topMessages, 10);
+
+    res.json({
+      success: true,
+      data: stats,
+    });
   })
 );
 

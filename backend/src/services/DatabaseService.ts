@@ -12,6 +12,7 @@ interface GameSearchCacheType {
 }
 interface GameServiceType {
   clearFlashSwfCache: () => void;
+  clearFilterOptionsCache: () => void;
 }
 let GameSearchCache: GameSearchCacheType | null = null;
 let GameServiceStatic: GameServiceType | null = null;
@@ -33,6 +34,7 @@ export class DatabaseService {
   private static sourceDbPath: string = ''; // Original path (may be network)
   private static activeDbPath: string = ''; // Path actually used (local or network)
   private static isUsingLocalCopy: boolean = false;
+  private static isReloading: boolean = false;
 
   static async initialize(): Promise<void> {
     try {
@@ -299,6 +301,11 @@ export class DatabaseService {
    * Called when source database file changes
    */
   private static async syncAndReload(): Promise<void> {
+    if (this.isReloading) {
+      logger.debug('syncAndReload already in progress, skipping');
+      return;
+    }
+    this.isReloading = true;
     try {
       // Check if file was actually modified
       const stats = fs.statSync(this.sourceDbPath);
@@ -321,13 +328,18 @@ export class DatabaseService {
       const oldDb = this.db;
       this.db = newDb;
 
-      // Close old connection after swap
+      // Close old connection after grace period (30s)
+      // Allows in-flight queries that captured the old reference to complete.
+      // 30s accommodates slow queries; the server request timeout is 120s.
       if (oldDb) {
-        try {
-          oldDb.close();
-        } catch (closeError) {
-          logger.warn('Failed to close old database connection:', closeError);
-        }
+        setTimeout(() => {
+          try {
+            oldDb.close();
+            logger.debug('Old database handle closed after grace period');
+          } catch (closeError) {
+            logger.warn('Failed to close old database handle:', closeError);
+          }
+        }, 30000).unref(); // .unref() so it doesn't prevent shutdown
       }
 
       // Update modification time
@@ -339,18 +351,22 @@ export class DatabaseService {
       }
       if (GameServiceStatic) {
         GameServiceStatic.clearFlashSwfCache();
+        GameServiceStatic.clearFilterOptionsCache();
       }
       logger.info('Database reloaded, caches invalidated');
     } catch (error) {
       logger.error('Failed to sync and reload database:', error);
       // Log but don't retry — calling initialize() here risks rapid retry loops
       // since it re-registers the file watcher which could trigger another syncAndReload
+    } finally {
+      this.isReloading = false;
     }
   }
 
   /**
    * Legacy method for backward compatibility
    * @deprecated Use syncAndReload instead
+   * @see syncAndReload
    */
   private static async reloadFromDisk(): Promise<void> {
     return this.syncAndReload();
@@ -382,13 +398,18 @@ export class DatabaseService {
       const oldDb = this.db;
       this.db = newDb;
 
-      // Close old connection after swap
+      // Close old connection after grace period (30s)
+      // Allows in-flight queries that captured the old reference to complete.
+      // 30s accommodates slow queries; the server request timeout is 120s.
       if (oldDb) {
-        try {
-          oldDb.close();
-        } catch (closeError) {
-          logger.warn('Failed to close old database connection:', closeError);
-        }
+        setTimeout(() => {
+          try {
+            oldDb.close();
+            logger.debug('Old database handle closed after grace period');
+          } catch (closeError) {
+            logger.warn('Failed to close old database handle:', closeError);
+          }
+        }, 30000).unref(); // .unref() so it doesn't prevent shutdown
       }
 
       // Update modification time
@@ -401,6 +422,7 @@ export class DatabaseService {
       }
       if (GameServiceStatic) {
         GameServiceStatic.clearFlashSwfCache();
+        GameServiceStatic.clearFilterOptionsCache();
       }
 
       logger.info('Force sync completed');
@@ -453,8 +475,7 @@ export class DatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example DatabaseService.exec<{ id: number; name: string }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static exec<T = any>(sql: string, params: unknown[] = []): T[] {
+  static exec<T = unknown>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -477,8 +498,7 @@ export class DatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example DatabaseService.get<{ id: number }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static get<T = any>(sql: string, params: unknown[] = []): T | undefined {
+  static get<T = unknown>(sql: string, params: unknown[] = []): T | undefined {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -502,8 +522,7 @@ export class DatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example DatabaseService.all<{ id: number }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static all<T = any>(sql: string, params: unknown[] = []): T[] {
+  static all<T = unknown>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -542,9 +561,9 @@ export class DatabaseService {
     );
   }
 
-  // Save database changes to disk
-  // Note: With better-sqlite3 in DELETE journal mode, changes are automatically written to disk
-  // This method exists for compatibility but is essentially a no-op
+  /**
+   * @deprecated No-op — changes are automatically flushed in DELETE journal mode.
+   */
   static save(): void {
     // No action needed in DELETE journal mode
     // Changes are automatically flushed to disk

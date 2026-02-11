@@ -1,3 +1,5 @@
+import { apiClient } from './client';
+
 export { apiClient } from './client';
 
 export { authApi } from './auth';
@@ -22,6 +24,7 @@ export { favoritesApi } from './favorites';
 export { activitiesApi } from './activities';
 
 export { statisticsApi } from './statistics';
+export type { Statistics } from './statistics';
 
 export { playTrackingApi } from './playTracking';
 
@@ -38,5 +41,4 @@ export { githubApi } from './github';
 export { updatesApi } from './updates';
 export type { MetadataUpdateInfo, MetadataSyncStatus } from './updates';
 
-import { apiClient } from './client';
 export default apiClient;

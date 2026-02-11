@@ -6,9 +6,9 @@ import { visualizer } from 'rollup-plugin-visualizer';
 export default defineConfig({
   plugins: [
     react(),
-    // Bundle analyzer - run with: npm run build && open stats.html
+    // Bundle analyzer - run with: npm run build:analyze && open stats.html
     visualizer({
-      open: false,
+      open: !!process.env.VITE_ANALYZE,
       filename: 'stats.html',
       gzipSize: true,
       brotliSize: true,

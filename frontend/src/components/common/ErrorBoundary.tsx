@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from '@/lib/logger';
+import { reportError } from '@/components/error/ErrorReporter';
 
 interface Props {
   children: ReactNode;
@@ -31,6 +32,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     logger.error('ErrorBoundary caught an error:', error, errorInfo);
+    reportError({
+      type: 'client_error',
+      message: error.message,
+      stack: error.stack,
+      url: window.location.pathname,
+      context: { componentStack: errorInfo.componentStack },
+    }).catch(() => {});
 
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -61,11 +69,11 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-background-primary px-4">
-          <div className="max-w-2xl w-full bg-background-elevated rounded-lg shadow-xl p-8">
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+          <div className="max-w-2xl w-full bg-card rounded-lg shadow-xl p-8">
             <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-red-500/10 rounded-full">
-                <AlertTriangle className="w-8 h-8 text-red-500" />
+              <div className="p-3 bg-destructive/10 rounded-full">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
@@ -76,8 +84,8 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {import.meta.env.DEV && this.state.error ? (
-              <div className="mb-6 p-4 bg-background-primary rounded-lg border border-border">
-                <h2 className="text-sm font-semibold text-red-400 mb-2">Error Details:</h2>
+              <div className="mb-6 p-4 bg-background rounded-lg border border-border">
+                <h2 className="text-sm font-semibold text-destructive mb-2">Error Details:</h2>
                 <pre className="text-xs text-muted-foreground overflow-auto max-h-64">
                   {this.state.error.toString()}
                   {this.state.errorInfo ? (

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal } from 'lucide-react';
-import { toast } from 'sonner';
-import { useUsers, useDeleteUser } from '../../hooks/useUsers';
-import { UserDetails } from '../../types/auth';
+import { useUsers, useDeleteUser } from '@/hooks/useUsers';
+import { UserDetails } from '@/types/auth';
 import { RoleGuard } from '../common/RoleGuard';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { DataTable } from '../ui/data-table';
@@ -41,14 +40,11 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
 
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return;
-
     try {
       await deleteUserMutation.mutateAsync(userToDelete.id);
-      toast.success(`User "${userToDelete.username}" deleted successfully`);
-      setIsDeleteDialogOpen(false);
-      setUserToDelete(null);
-    } catch (error) {
-      toast.error('Failed to delete user');
+    } catch {
+      // Hook handles error toast
+    } finally {
       setIsDeleteDialogOpen(false);
       setUserToDelete(null);
     }

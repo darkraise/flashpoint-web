@@ -2087,7 +2087,3 @@ export function getPlaylistIcon(iconName: PlaylistIconName | null | undefined): 
   }
   return PLAYLIST_ICONS[iconName];
 }
-
-export function getAllIconNames(): PlaylistIconName[] {
-  return Object.keys(PLAYLIST_ICONS) as PlaylistIconName[];
-}

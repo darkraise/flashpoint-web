@@ -31,17 +31,21 @@ export interface FlashpointPreferences {
 export class PreferencesService {
   private static preferences: FlashpointPreferences | null = null;
   private static lastLoadTime: number = 0;
+  private static lastLoadFailed: boolean = false;
   private static readonly CACHE_TTL = 60000; // 1 minute cache
+  private static readonly ERROR_CACHE_TTL = 5000; // 5 second cache for errors
 
   /**
    * Get Flashpoint preferences, loading from disk if necessary.
    * Results are cached for performance.
+   * Returns defaults on load failure (graceful degradation).
    */
   static async getPreferences(): Promise<FlashpointPreferences> {
     const now = Date.now();
+    const cacheTTL = this.lastLoadFailed ? this.ERROR_CACHE_TTL : this.CACHE_TTL;
 
     // Return cached preferences if still valid
-    if (this.preferences && now - this.lastLoadTime < this.CACHE_TTL) {
+    if (this.preferences && now - this.lastLoadTime < cacheTTL) {
       return this.preferences;
     }
 
@@ -52,7 +56,7 @@ export class PreferencesService {
 
   /**
    * Load preferences from the Flashpoint installation directory.
-   * Throws an error if file cannot be read or parsed.
+   * Falls back to defaults on failure (graceful degradation).
    */
   private static async loadPreferences(): Promise<void> {
     try {
@@ -71,6 +75,7 @@ export class PreferencesService {
       // Cache preferences
       this.preferences = parsed;
       this.lastLoadTime = Date.now();
+      this.lastLoadFailed = false;
 
       logger.info('Preferences loaded successfully', {
         sourceCount: parsed.gameDataSources?.length || 0,
@@ -79,10 +84,15 @@ export class PreferencesService {
         onDemandBaseUrl: parsed.onDemandBaseUrl,
       });
     } catch (error) {
-      logger.error('Failed to load preferences:', error);
-      throw new Error(
-        `Failed to load Flashpoint preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      logger.error('Failed to load preferences, using defaults:', error);
+
+      // Graceful degradation: provide defaults
+      this.preferences = {
+        gameDataSources: [],
+        dataPacksFolderPath: 'Data/Games',
+      };
+      this.lastLoadTime = Date.now();
+      this.lastLoadFailed = true;
     }
   }
 
@@ -126,9 +136,17 @@ export class PreferencesService {
     return path.resolve(config.flashpointPath, dataPacksPath);
   }
 
+  /**
+   * Alias for getDataPacksPath() for compatibility.
+   */
+  static async getDataPacksFolderPath(): Promise<string> {
+    return this.getDataPacksPath();
+  }
+
   static async reload(): Promise<void> {
     this.preferences = null;
     this.lastLoadTime = 0;
+    this.lastLoadFailed = false;
     await this.loadPreferences();
   }
 
@@ -138,5 +156,13 @@ export class PreferencesService {
   static clearCache(): void {
     this.preferences = null;
     this.lastLoadTime = 0;
+    this.lastLoadFailed = false;
+  }
+
+  /**
+   * Alias for clearCache() for compatibility.
+   */
+  static invalidateCache(): void {
+    this.clearCache();
   }
 }

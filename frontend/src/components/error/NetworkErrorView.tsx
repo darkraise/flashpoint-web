@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ErrorPage } from './ErrorPage';
 import { reportError } from './ErrorReporter';
@@ -16,6 +16,7 @@ export function NetworkErrorView() {
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showRestored, setShowRestored] = useState(false);
+  const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const state = (location.state as NetworkErrorState) || {};
   const { message, url, fromPath } = state;
@@ -25,7 +26,7 @@ export function NetworkErrorView() {
       setIsOnline(true);
       setShowRestored(true);
 
-      setTimeout(() => {
+      redirectTimeout.current = setTimeout(() => {
         if (fromPath) {
           navigate(fromPath, { replace: true });
         } else {
@@ -45,6 +46,7 @@ export function NetworkErrorView() {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      if (redirectTimeout.current) clearTimeout(redirectTimeout.current);
     };
   }, [navigate, fromPath]);
 
@@ -72,9 +74,9 @@ export function NetworkErrorView() {
     <div className="relative">
       {showRestored ? (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <Alert className="bg-green-50 border-green-200">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+          <Alert className="bg-emerald-500/10 border-emerald-500/20">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <AlertDescription className="text-emerald-700 dark:text-emerald-300">
               Connection restored! Redirecting...
             </AlertDescription>
           </Alert>

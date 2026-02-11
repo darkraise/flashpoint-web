@@ -22,8 +22,11 @@ export class UserDatabaseService {
       this.db = new BetterSqlite3(config.userDbPath);
       logger.info(`[UserDB] Opened database at: ${config.userDbPath}`);
 
-      // Enable foreign keys
+      // Apply PRAGMA optimizations (WAL mode for better concurrent read/write)
+      this.db.pragma('journal_mode = WAL');
       this.db.pragma('foreign_keys = ON');
+      this.db.pragma('cache_size = -8000'); // 8MB cache
+      this.db.pragma('mmap_size = 67108864'); // 64MB mmap
 
       // Bootstrap migration registry
       await this.bootstrapMigrationRegistry();
@@ -153,21 +156,21 @@ export class UserDatabaseService {
           // Read migration SQL
           const sql = fs.readFileSync(migrationPath, 'utf-8');
           const checksum = this.computeChecksum(sql);
-          const start = Date.now();
 
           // Wrap migration execution and registry insert in a single transaction
           const runMigration = this.db!.transaction(() => {
+            const start = Date.now();
             this.db!.exec(sql);
-
             const executionTime = Date.now() - start;
+
             this.db!.prepare(
               'INSERT INTO migrations (name, applied_at, checksum, execution_time_ms) VALUES (?, ?, ?, ?)'
             ).run(name, new Date().toISOString(), checksum, executionTime);
+
+            return executionTime;
           });
 
-          runMigration();
-
-          const executionTime = Date.now() - start;
+          const executionTime = runMigration();
           logger.info(`[UserDB] Migration completed: ${name} (${executionTime}ms)`);
         } else {
           logger.debug(`[UserDB] Migration already applied: ${name}`);
@@ -186,8 +189,9 @@ export class UserDatabaseService {
    */
   static needsInitialSetup(): boolean {
     try {
-      const userCount = this.get('SELECT COUNT(*) as count FROM users', []);
-      const needsSetup = userCount?.count === 0;
+      const userCount = this.get<{ count: number }>('SELECT COUNT(*) as count FROM users', []);
+      const count = userCount?.count ?? 0;
+      const needsSetup = count === 0;
 
       if (needsSetup) {
         logger.info('╔═══════════════════════════════════════════════════════════════╗');
@@ -196,7 +200,7 @@ export class UserDatabaseService {
         logger.info('║  The first registered user will become an administrator.      ║');
         logger.info('╚═══════════════════════════════════════════════════════════════╝');
       } else {
-        logger.debug(`[UserDB] Found ${userCount.count} existing user(s)`);
+        logger.debug(`[UserDB] Found ${count} existing user(s)`);
       }
 
       return needsSetup;
@@ -218,8 +222,7 @@ export class UserDatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example UserDatabaseService.exec<{ id: number }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static exec<T = any>(sql: string, params: unknown[] = []): T[] {
+  static exec<T = unknown>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -242,8 +245,7 @@ export class UserDatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example UserDatabaseService.get<{ id: number }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static get<T = any>(sql: string, params: unknown[] = []): T | undefined {
+  static get<T = unknown>(sql: string, params: unknown[] = []): T | undefined {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -266,8 +268,7 @@ export class UserDatabaseService {
    * Execute a query and return all rows (alias for exec).
    * @template T - Explicit type parameter recommended for type safety
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static all<T = any>(sql: string, params: unknown[] = []): T[] {
+  static all<T = unknown>(sql: string, params: unknown[] = []): T[] {
     return this.exec<T>(sql, params);
   }
 

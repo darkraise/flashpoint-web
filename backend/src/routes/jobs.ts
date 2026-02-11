@@ -33,8 +33,10 @@ router.get(
   requirePermission('settings.update'),
   asyncHandler(async (req: Request, res: Response) => {
     try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
-      const offset = Math.max(0, parseInt(req.query.offset as string, 10) || 0);
+      const rawLimit = parseInt(req.query.limit as string, 10);
+      const limit = Math.min(Math.max(1, isNaN(rawLimit) ? 100 : rawLimit), 200);
+      const rawOffset = parseInt(req.query.offset as string, 10);
+      const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
 
       const result = executionService.getAllLogs(limit, offset);
       res.json({ ...result, limit, offset });
@@ -52,6 +54,10 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
+      if (!/^[a-z0-9-]+$/.test(jobId)) {
+        return res.status(400).json({ error: { message: 'Invalid job ID format' } });
+      }
+
       const job = JobScheduler.getJobStatusEnriched(jobId);
 
       if (!job) {
@@ -74,6 +80,10 @@ router.patch(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
+      if (!/^[a-z0-9-]+$/.test(jobId)) {
+        return res.status(400).json({ error: { message: 'Invalid job ID format' } });
+      }
+
       const { enabled } = req.body;
 
       if (typeof enabled !== 'boolean') {
@@ -118,6 +128,10 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
+      if (!/^[a-z0-9-]+$/.test(jobId)) {
+        return res.status(400).json({ error: { message: 'Invalid job ID format' } });
+      }
+
       JobScheduler.startJob(jobId);
       res.json({ success: true, message: 'Job started successfully' });
     } catch (error) {
@@ -138,6 +152,10 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
+      if (!/^[a-z0-9-]+$/.test(jobId)) {
+        return res.status(400).json({ error: { message: 'Invalid job ID format' } });
+      }
+
       JobScheduler.stopJob(jobId);
       res.json({ success: true, message: 'Job stopped successfully' });
     } catch (error) {
@@ -158,6 +176,10 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
+      if (!/^[a-z0-9-]+$/.test(jobId)) {
+        return res.status(400).json({ error: { message: 'Invalid job ID format' } });
+      }
+
       const userId = req.user!.id.toString();
 
       await JobScheduler.triggerJob(jobId, userId);
@@ -185,8 +207,14 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const { jobId } = req.params;
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-      const offset = Math.max(0, parseInt(req.query.offset as string, 10) || 0);
+      if (!/^[a-z0-9-]+$/.test(jobId)) {
+        return res.status(400).json({ error: { message: 'Invalid job ID format' } });
+      }
+
+      const rawLimit = parseInt(req.query.limit as string, 10);
+      const limit = Math.min(Math.max(1, isNaN(rawLimit) ? 50 : rawLimit), 100);
+      const rawOffset = parseInt(req.query.offset as string, 10);
+      const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
 
       const result = executionService.getJobLogs(jobId, limit, offset);
       res.json({ ...result, limit, offset });

@@ -66,6 +66,18 @@ export class SyncStatusService {
     logger.info('[SyncStatus] Sync started');
   }
 
+  tryStartSync(): boolean {
+    if (this.status.isRunning) return false;
+    this.status = {
+      isRunning: true,
+      stage: 'initializing',
+      progress: 0,
+      message: 'Starting metadata sync...',
+      startTime: new Date().toISOString(),
+    };
+    return true;
+  }
+
   updateProgress(stage: string, progress: number, message: string): void {
     this.status.stage = stage;
     this.status.progress = Math.min(100, Math.max(0, progress));

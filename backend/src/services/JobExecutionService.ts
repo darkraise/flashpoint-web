@@ -142,10 +142,10 @@ export class JobExecutionService {
       jobName: row.job_name,
       status: row.status as 'running' | 'success' | 'failed',
       startedAt: row.started_at,
-      completedAt: row.completed_at || undefined,
-      durationSeconds: row.duration_seconds || undefined,
-      message: row.message || undefined,
-      errorDetails: row.error_details || undefined,
+      completedAt: row.completed_at ?? undefined,
+      durationSeconds: row.duration_seconds ?? undefined,
+      message: row.message ?? undefined,
+      errorDetails: row.error_details ?? undefined,
       triggeredBy: row.triggered_by,
     };
   }

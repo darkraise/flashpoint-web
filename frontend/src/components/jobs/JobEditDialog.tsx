@@ -15,7 +15,7 @@ import { Info, Settings, AlertCircle } from 'lucide-react';
 import { systemSettingsApi } from '@/lib/api';
 import { useDialog } from '@/contexts/DialogContext';
 import { cronToReadable, isValidCron } from '@/lib/cron-utils';
-import { AxiosError } from 'axios';
+import { getErrorMessage } from '@/types/api-error';
 
 interface JobEditDialogProps {
   job: JobStatusEnriched | null;
@@ -46,11 +46,11 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
   };
 
   useEffect(() => {
-    if (job) {
+    if (open && job) {
       setCronSchedule(job.cronSchedule);
       setValidationError(null);
     }
-  }, [job]);
+  }, [open, job?.id]);
 
   const handleCronChange = (value: string) => {
     setCronSchedule(value);
@@ -67,8 +67,7 @@ export function JobEditDialog({ job, open, onOpenChange }: JobEditDialogProps) {
       onOpenChange(false);
     },
     onError: (error: unknown) => {
-      const axiosError = error instanceof AxiosError ? error : null;
-      const message = axiosError?.response?.data?.error?.message || 'Failed to update job settings';
+      const message = getErrorMessage(error) || 'Failed to update job settings';
       showToast(message, 'error');
     },
   });

@@ -102,6 +102,30 @@ export class RoleService {
     );
   }
 
+  /**
+   * Validates that the user has all permissions they're trying to assign
+   * Prevents permission escalation attacks
+   */
+  async validatePermissionEscalation(
+    permissionIds: number[],
+    userPermissions: string[]
+  ): Promise<void> {
+    if (permissionIds.length === 0) return;
+
+    const allPermissions = await this.getPermissions();
+    const permissionMap = new Map(allPermissions.map((p) => [p.id, p.name]));
+
+    const unauthorized = permissionIds.filter((id) => {
+      const name = permissionMap.get(id);
+      return !name || !userPermissions.includes(name);
+    });
+
+    if (unauthorized.length > 0) {
+      const names = unauthorized.map((id) => permissionMap.get(id) || `unknown(${id})`).join(', ');
+      throw new AppError(403, `Cannot assign permissions you do not possess: ${names}`);
+    }
+  }
+
   private getRolePermissions(roleId: number): Permission[] {
     return UserDatabaseService.all(
       `SELECT p.id, p.name, p.description, p.resource, p.action
@@ -249,13 +273,24 @@ export class RoleService {
 
     // Check if role is assigned to users
     const userCount =
-      UserDatabaseService.get('SELECT COUNT(*) as count FROM users WHERE role_id = ?', [id])
-        ?.count || 0;
+      UserDatabaseService.get<{ count: number }>(
+        'SELECT COUNT(*) as count FROM users WHERE role_id = ?',
+        [id]
+      )?.count || 0;
 
     if (userCount > 0) {
       throw new AppError(409, `Cannot delete role: ${userCount} users are assigned to this role`);
     }
 
-    UserDatabaseService.run('DELETE FROM roles WHERE id = ?', [id]);
+    // Delete role_permissions and role in a transaction for atomicity
+    const db = UserDatabaseService.getDatabase();
+    db.transaction(() => {
+      db.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(id);
+      db.prepare('DELETE FROM roles WHERE id = ?').run(id);
+    })();
+
+    // Invalidate permission cache for this role
+    PermissionCache.invalidateRole(id);
+    logger.info(`[RoleService] Deleted role ${id}, cache invalidated`);
   }
 }

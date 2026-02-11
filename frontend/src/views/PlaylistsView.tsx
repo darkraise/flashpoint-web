@@ -64,7 +64,7 @@ export function PlaylistsView() {
   }
 
   if (error) {
-    return <div className="text-center py-12 text-red-400">Error loading playlists</div>;
+    return <div className="text-center py-12 text-destructive">Error loading playlists</div>;
   }
 
   return (

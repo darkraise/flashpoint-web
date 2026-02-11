@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 
-import { cn } from '@/lib';
+import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
   'inline-flex items-center rounded px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1',
@@ -28,19 +28,19 @@ function getPlatformColor(platformName: string): string {
   const platform = platformName.toLowerCase();
 
   if (platform.includes('flash')) {
-    return 'bg-green-900/50 text-green-300 border border-green-700';
+    return 'bg-green-500/15 text-green-700 dark:text-green-300 border border-green-500/25';
   } else if (platform.includes('html5') || platform.includes('html')) {
-    return 'bg-blue-900/50 text-blue-300 border border-blue-700';
+    return 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/25';
   } else if (platform.includes('shockwave')) {
-    return 'bg-purple-900/50 text-purple-300 border border-purple-700';
+    return 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25';
   } else if (platform.includes('java')) {
-    return 'bg-orange-900/50 text-orange-300 border border-orange-700';
+    return 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/25';
   } else if (platform.includes('unity')) {
-    return 'bg-slate-900/50 text-slate-300 border border-slate-700';
+    return 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/25';
   } else if (platform.includes('silverlight')) {
-    return 'bg-indigo-900/50 text-indigo-300 border border-indigo-700';
+    return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25';
   } else if (platform.includes('activex')) {
-    return 'bg-red-900/50 text-red-300 border border-red-700';
+    return 'bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/25';
   } else {
     return 'bg-muted/50 text-muted-foreground border border-border';
   }

@@ -43,11 +43,11 @@ export function ConfirmDialog({
   const variantNormalized = variant === 'danger' ? 'destructive' : variant;
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (onOpenChange) {
-      onOpenChange(newOpen);
-    }
     if (!newOpen && onCancel) {
       onCancel();
+    }
+    if (onOpenChange) {
+      onOpenChange(newOpen);
     }
   };
 
@@ -72,10 +72,10 @@ export function ConfirmDialog({
       return 'bg-destructive text-destructive-foreground hover:bg-destructive/90';
     }
     if (variantNormalized === 'warning') {
-      return 'bg-yellow-600 text-white hover:bg-yellow-700';
+      return 'bg-amber-600 text-white hover:bg-amber-700';
     }
     if (variantNormalized === 'info') {
-      return 'bg-blue-600 text-white hover:bg-blue-700';
+      return 'bg-primary text-primary-foreground hover:bg-primary/90';
     }
     return undefined;
   };

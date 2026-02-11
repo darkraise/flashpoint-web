@@ -18,6 +18,9 @@ export interface UserDetails {
   lastLoginAt: string | null;
 }
 
+/**
+ * Client-side token metadata. Actual access/refresh tokens are stored in HTTP-only cookies.
+ */
 export interface AuthTokens {
   expiresIn: number;
 }
@@ -46,7 +49,7 @@ export interface RegisterResponse {
 export interface Permission {
   id: number;
   name: string;
-  description: string;
+  description: string | null;
   resource: string;
   action: string;
   createdAt: string;
@@ -90,7 +93,7 @@ export interface UpdateUserData {
 }
 
 export interface ChangePasswordData {
-  currentPassword: string;
+  currentPassword?: string;
   newPassword: string;
 }
 

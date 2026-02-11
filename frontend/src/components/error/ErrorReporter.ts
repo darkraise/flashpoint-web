@@ -169,12 +169,12 @@ export function initErrorReporter(): void {
     if (isDev) {
       logger.debug('[ErrorReporter] Connection restored, sending queued errors...');
     }
-    sendQueuedErrors();
+    sendQueuedErrors().catch(() => {});
   });
 
   if (navigator.onLine) {
     setTimeout(() => {
-      sendQueuedErrors();
+      sendQueuedErrors().catch(() => {});
     }, 1000);
   }
 }

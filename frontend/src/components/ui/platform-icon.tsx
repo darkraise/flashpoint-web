@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface PlatformIconProps {
   platformName: string;
@@ -23,7 +24,7 @@ export function PlatformIcon({ platformName, size = 20, className = '' }: Platfo
   }
 
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
+    <div className={cn('inline-flex items-center gap-2', className)}>
       <div
         className="relative inline-flex items-center justify-center flex-shrink-0"
         style={{ width: size, height: size }}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { usePermissions, useUpdateRolePermissions } from '../../hooks/useRoles';
-import { Role } from '../../types/auth';
+import { usePermissions, useUpdateRolePermissions } from '@/hooks/useRoles';
+import { Role } from '@/types/auth';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -143,9 +143,11 @@ export function PermissionSelector({ role, onClose, onSuccess }: PermissionSelec
                           />
                           <div className="flex-1">
                             <div className="text-sm font-medium">{permission.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {permission.description}
-                            </div>
+                            {permission.description ? (
+                              <div className="text-xs text-muted-foreground">
+                                {permission.description}
+                              </div>
+                            ) : null}
                           </div>
                         </label>
                       ))}

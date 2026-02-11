@@ -23,6 +23,8 @@ const booleanSchema = z.preprocess((val) => {
   return val;
 }, z.boolean());
 
+const gameIdSchema = z.string().uuid('Invalid game ID format');
+
 const searchQuerySchema = z.object({
   search: z.string().optional(),
   platform: z.string().optional(),
@@ -114,7 +116,7 @@ router.get(
 router.get(
   '/most-played',
   asyncHandler(async (req, res) => {
-    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string) || 20, 50));
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string, 10) || 20, 50));
     const games = await gameService.getMostPlayedGames(limit);
 
     res.json({
@@ -151,7 +153,8 @@ router.get(
     extreme: res.locals.game?.extreme,
   })),
   asyncHandler(async (req, res) => {
-    const game = await gameService.getGameById(req.params.id);
+    const id = gameIdSchema.parse(req.params.id);
+    const game = await gameService.getGameById(id);
 
     if (!game) {
       throw new AppError(404, 'Game not found');
@@ -167,8 +170,9 @@ router.get(
   '/:id/related',
   validateSharedGameAccess('id'),
   asyncHandler(async (req, res) => {
-    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string) || 10, 50));
-    const relatedGames = await gameService.getRelatedGames(req.params.id, limit);
+    const id = gameIdSchema.parse(req.params.id);
+    const limit = Math.max(1, Math.min(parseInt(req.query.limit as string, 10) || 10, 50));
+    const relatedGames = await gameService.getRelatedGames(id, limit);
 
     res.json(relatedGames);
   })
@@ -183,7 +187,8 @@ router.get(
     launchCommand: res.locals.launchCommand,
   })),
   asyncHandler(async (req, res) => {
-    const game = await gameService.getGameById(req.params.id);
+    const id = gameIdSchema.parse(req.params.id);
+    const game = await gameService.getGameById(id);
 
     if (!game) {
       throw new AppError(404, 'Game not found');
@@ -225,7 +230,7 @@ router.get(
           }
         }
 
-        contentUrl = `${proxyUrl}/${fullUrl}`;
+        contentUrl = `${proxyUrl}/${encodeURIComponent(fullUrl)}`;
       }
     }
 

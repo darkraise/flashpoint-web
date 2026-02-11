@@ -85,7 +85,10 @@ export function useDownload(gameId: string) {
         };
 
         // Fire-and-forget: updates state as SSE events arrive
-        processStream();
+        processStream().catch((err) => {
+          logger.error('Unhandled stream error:', err);
+          setIsDownloading(false);
+        });
 
         return result;
       } catch (error) {

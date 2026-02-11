@@ -1,6 +1,7 @@
-import { PLAYLIST_ICONS, type PlaylistIconName } from './playlistIcons';
+import { PLAYLIST_ICONS } from './playlistIcons';
+import { logger } from '@/lib/logger';
 
-export function validateIconsNoDuplicates(): {
+function validateIconsNoDuplicates(): {
   isValid: boolean;
   totalIcons: number;
   duplicates: Array<{ iconKeys: string[]; componentName: string }>;
@@ -48,49 +49,13 @@ export function validateIconsNoDuplicates(): {
   };
 }
 
-export function logIconValidation(): void {
-  if (!import.meta.env.DEV) {
-    return;
-  }
-
-  const result = validateIconsNoDuplicates();
-
-  console.group('🔍 Icon Validation Results');
-  console.log(`Total Icons: ${result.totalIcons}`);
-  console.log(`Valid: ${result.isValid ? '✅' : '❌'}`);
-
-  if (result.warnings.length > 0) {
-    console.group('⚠️  Warnings');
-    result.warnings.forEach((warning) => console.warn(warning));
-    console.groupEnd();
-  }
-
-  if (result.duplicates.length > 0) {
-    console.group('🔴 Duplicate Icons Found');
-    result.duplicates.forEach(({ componentName, iconKeys }) => {
-      console.log(`\n${componentName}:`);
-      iconKeys.forEach((key) => console.log(`  - ${key}`));
-    });
-    console.groupEnd();
-  } else {
-    console.log('✅ No duplicates found');
-  }
-
-  console.groupEnd();
-}
-
-export function isValidIconName(iconName: string): iconName is PlaylistIconName {
-  return iconName in PLAYLIST_ICONS;
-}
-
 if (import.meta.env.DEV) {
   const result = validateIconsNoDuplicates();
   if (!result.isValid) {
-    console.warn(
+    logger.warn(
       `⚠️  Icon validation failed: ${result.duplicates.length} duplicates, ${result.warnings.length} warnings`
     );
-    console.warn('Run logIconValidation() for details');
   } else {
-    console.log(`✅ Icon validation passed: ${result.totalIcons} unique icons`);
+    logger.info(`✅ Icon validation passed: ${result.totalIcons} unique icons`);
   }
 }

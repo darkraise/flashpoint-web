@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { useCreateUser, useUpdateUser } from '../../hooks/useUsers';
-import { useRoles } from '../../hooks/useRoles';
-import { UserDetails, CreateUserData, UpdateUserData } from '../../types/auth';
+import { useCreateUser, useUpdateUser } from '@/hooks/useUsers';
+import { useRoles } from '@/hooks/useRoles';
+import { UserDetails, CreateUserData, UpdateUserData } from '@/types/auth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -41,14 +41,17 @@ const createUserSchema = z.object({
     .min(3, 'Username must be at least 3 characters')
     .max(50, 'Username must be at most 50 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  roleId: z.number(),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(128, 'Password must be at most 128 characters'),
+  roleId: z.number().int().min(1),
   isActive: z.boolean(),
 });
 
 const updateUserSchema = z.object({
   email: z.string().email('Invalid email address'),
-  roleId: z.number(),
+  roleId: z.number().int().min(1),
   isActive: z.boolean(),
 });
 

@@ -125,40 +125,38 @@ export class DomainService {
   }
 
   deleteDomain(id: number): void {
-    const existing = this.db.prepare('SELECT hostname FROM domains WHERE id = ?').get(id) as
-      | { hostname: string }
-      | undefined;
+    const db = this.db;
+    const transaction = db.transaction(() => {
+      const current = db
+        .prepare('SELECT hostname, is_default FROM domains WHERE id = ?')
+        .get(id) as { hostname: string; is_default: number } | undefined;
 
-    if (!existing) {
-      throw new AppError(404, 'Domain not found');
-    }
+      if (!current) {
+        throw new AppError(404, 'Domain not found');
+      }
 
-    const transaction = this.db.transaction(() => {
-      // Read is_default inside the transaction to avoid race conditions
-      const current = this.db.prepare('SELECT is_default FROM domains WHERE id = ?').get(id) as
-        | { is_default: number }
-        | undefined;
-
-      this.db.prepare('DELETE FROM domains WHERE id = ?').run(id);
+      db.prepare('DELETE FROM domains WHERE id = ?').run(id);
 
       // If the deleted domain was the default, promote the next one
-      if (current?.is_default === 1) {
-        const next = this.db
-          .prepare('SELECT id FROM domains ORDER BY created_at ASC LIMIT 1')
-          .get() as { id: number } | undefined;
+      if (current.is_default === 1) {
+        const next = db.prepare('SELECT id FROM domains ORDER BY created_at ASC LIMIT 1').get() as
+          | { id: number }
+          | undefined;
 
         if (next) {
-          this.db.prepare('UPDATE domains SET is_default = 1 WHERE id = ?').run(next.id);
+          db.prepare('UPDATE domains SET is_default = 1 WHERE id = ?').run(next.id);
           logger.info(
             `[Domains] Auto-promoted domain (id: ${next.id}) as new default after deleting previous default`
           );
         }
       }
+
+      return current.hostname;
     });
 
-    transaction();
+    const hostname = transaction();
     this.invalidateCache();
-    logger.info(`[Domains] Deleted domain "${existing.hostname}" (id: ${id})`);
+    logger.info(`[Domains] Deleted domain "${hostname}" (id: ${id})`);
   }
 
   setDefault(id: number): Domain {

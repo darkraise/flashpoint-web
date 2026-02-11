@@ -17,18 +17,21 @@ export function MetadataUpdateCard() {
   const [syncMessage, setSyncMessage] = useState('');
   const [metadataInfo, setMetadataInfo] = useState<MetadataUpdateInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Use ref for the fetch guard to avoid stale closure issues in interval callbacks
+  const isFetchingRef = useRef(false);
+  const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
 
   // Use ref to track poll interval (avoids stale closure issues)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isFetchingMetadata = useRef(false);
 
   const fetchMetadataInfo = async () => {
-    if (isFetchingMetadata.current) {
+    if (isFetchingRef.current) {
       return;
     }
 
-    isFetchingMetadata.current = true;
+    isFetchingRef.current = true;
+    setIsFetchingMetadata(true);
 
     try {
       const data = await updatesApi.getMetadataInfo();
@@ -42,7 +45,8 @@ export function MetadataUpdateCard() {
       });
       setError('Failed to check metadata updates. Please try again later.');
     } finally {
-      isFetchingMetadata.current = false;
+      isFetchingRef.current = false;
+      setIsFetchingMetadata(false);
     }
   };
 
@@ -51,7 +55,7 @@ export function MetadataUpdateCard() {
   });
 
   const checkMetadataUpdates = async () => {
-    isFetchingMetadata.current = false;
+    isFetchingRef.current = false;
     await fetchMetadataInfo();
   };
 
@@ -192,15 +196,15 @@ export function MetadataUpdateCard() {
             <TooltipTrigger asChild>
               <Button
                 onClick={checkMetadataUpdates}
-                disabled={isFetchingMetadata.current}
+                disabled={isFetchingMetadata}
                 size="icon"
                 variant="outline"
               >
-                <RefreshCw size={18} className={isFetchingMetadata.current ? 'animate-spin' : ''} />
+                <RefreshCw size={18} className={isFetchingMetadata ? 'animate-spin' : ''} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{isFetchingMetadata.current ? 'Checking...' : 'Check for Updates'}</p>
+              <p>{isFetchingMetadata ? 'Checking...' : 'Check for Updates'}</p>
             </TooltipContent>
           </Tooltip>
         ) : null}

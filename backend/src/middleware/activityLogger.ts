@@ -20,7 +20,7 @@ export const logActivity = (
           const details = detailsExtractor ? detailsExtractor(req, res) : undefined;
 
           await activityService.log({
-            userId: req.user?.id,
+            userId: req.user && req.user.id !== 0 ? req.user.id : undefined,
             username: req.user?.username,
             action,
             resource,

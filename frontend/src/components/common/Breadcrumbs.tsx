@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Home, ArrowLeft } from 'lucide-react';
-import { cn } from '@/lib';
+import { cn } from '@/lib/utils';
 
 export interface BreadcrumbContext {
   label: string;
@@ -85,7 +85,7 @@ export function Breadcrumbs({
           const isActive = item.active ?? isLast;
 
           return (
-            <li key={index} className="flex items-center gap-1">
+            <li key={item.href ?? item.label} className="flex items-center gap-1">
               {item.href && !isActive ? (
                 <Link
                   to={item.href}

@@ -33,7 +33,7 @@ export function Header({ hideSidebarToggle = false, hideSearch = false }: Header
   const { logout } = useAuth();
   const { data: publicSettings } = usePublicSettings();
 
-  const siteName = publicSettings?.app?.siteName || 'Flashpoint Archive';
+  const siteName = publicSettings?.app?.siteName ?? 'Flashpoint Archive';
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
   const effectiveCollapsed = isMobile ? false : sidebarCollapsed;

@@ -175,11 +175,7 @@ export class ZipManager {
         return null;
       }
 
-      logger.debug(`[ZipManager] Reading from ZIP ${id}: ${normalizedPath}`);
-
       const data = await mounted.zip.entryData(normalizedPath);
-
-      logger.debug(`[ZipManager] ✓ Read ${data.length} bytes from ${id}:${normalizedPath}`);
 
       return data;
     } catch (error) {

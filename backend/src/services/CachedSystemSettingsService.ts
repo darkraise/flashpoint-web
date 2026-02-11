@@ -16,6 +16,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
 
   private cache: Map<string, CacheEntry> = new Map();
   private categoryCache: Map<string, CacheEntry> = new Map();
+  private publicSettingsCache: CacheEntry | null = null;
   private cacheTTL: number;
   private cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -49,8 +50,8 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     super();
     this.cacheTTL = cacheTTL;
 
-    // Start cache cleanup interval (every 5 minutes)
-    this.cleanupIntervalId = setInterval(() => this.cleanup(), 5 * 60 * 1000).unref();
+    // Start cache cleanup interval — aligned to cache TTL (90s vs 60s TTL)
+    this.cleanupIntervalId = setInterval(() => this.cleanup(), 90 * 1000).unref();
   }
 
   /**
@@ -100,6 +101,21 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     return value;
   }
 
+  getPublicSettings(): Record<string, CategorySettings> {
+    if (this.publicSettingsCache && this.isValid(this.publicSettingsCache.timestamp)) {
+      return this.publicSettingsCache.value as Record<string, CategorySettings>;
+    }
+
+    const value = super.getPublicSettings();
+
+    this.publicSettingsCache = {
+      value,
+      timestamp: Date.now(),
+    };
+
+    return value;
+  }
+
   set(key: string, value: SettingValue, updatedBy?: number): void {
     super.set(key, value, updatedBy);
 
@@ -108,6 +124,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     // Key format is "category.setting_name"
     const category = key.split('.')[0];
     this.categoryCache.delete(category);
+    this.publicSettingsCache = null;
   }
 
   updateCategory(category: string, settings: CategorySettings, updatedBy?: number): void {
@@ -120,11 +137,13 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     }
 
     this.categoryCache.delete(category);
+    this.publicSettingsCache = null;
   }
 
   clearCache(): void {
     this.cache.clear();
     this.categoryCache.clear();
+    this.publicSettingsCache = null;
   }
 
   clearCategoryCache(category: string): void {
@@ -135,6 +154,7 @@ export class CachedSystemSettingsService extends SystemSettingsService {
     }
 
     this.categoryCache.delete(category);
+    this.publicSettingsCache = null;
   }
 
   getCacheStats(): {

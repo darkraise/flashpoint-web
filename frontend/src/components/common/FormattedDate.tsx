@@ -1,5 +1,4 @@
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
-import { logger } from '@/lib/logger';
 
 interface FormattedDateProps {
   date: Date | string | number;
@@ -23,8 +22,7 @@ export function FormattedDate({ date, type = 'datetime', className }: FormattedD
         default:
           return formatDateTime(date);
       }
-    } catch (error) {
-      logger.error('Error formatting date:', error);
+    } catch {
       return String(date);
     }
   };

@@ -1,23 +1,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { useGamesDistribution } from '../../hooks/usePlayTracking';
+import { useGamesDistribution } from '@/hooks/usePlayTracking';
 import type { CustomTooltipProps, CustomLegendProps } from '@/types/chart';
-
-function formatPlaytime(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds}s`;
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m`;
-  } else {
-    const hours = (seconds / 3600).toFixed(1);
-    return `${hours}h`;
-  }
-}
-
-function truncateTitle(title: string, maxLength = 25): string {
-  if (title.length <= maxLength) return title;
-  return title.substring(0, maxLength) + '...';
-}
+import { CHART_COLORS, truncateTitle, formatPlaytimeCompact } from './chart-utils';
 
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (active && payload && payload.length) {
@@ -34,7 +18,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Playtime:</span>
-            <span className="font-semibold text-sm">{formatPlaytime(value)}</span>
+            <span className="font-semibold text-sm">{formatPlaytimeCompact(value)}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-sm">Percentage:</span>
@@ -46,19 +30,6 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   }
   return null;
 }
-
-const COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#84cc16', // lime
-  '#6366f1', // indigo
-];
 
 export function GamesDistributionChart() {
   const { data, isLoading } = useGamesDistribution(8);
@@ -92,8 +63,8 @@ export function GamesDistributionChart() {
     name: truncateTitle(game.name),
     fullName: game.name,
     value: game.value,
-    percentage: (game.value / totalPlaytime) * 100,
-    color: COLORS[index % COLORS.length],
+    percentage: totalPlaytime > 0 ? (game.value / totalPlaytime) * 100 : 0,
+    color: CHART_COLORS[index % CHART_COLORS.length],
   }));
 
   const renderLegend = (props: CustomLegendProps) => {
@@ -144,7 +115,8 @@ export function GamesDistributionChart() {
         </ResponsiveContainer>
         <div className="text-center mt-4">
           <p className="text-muted-foreground text-sm">
-            Total Playtime: <span className="font-semibold">{formatPlaytime(totalPlaytime)}</span>
+            Total Playtime:{' '}
+            <span className="font-semibold">{formatPlaytimeCompact(totalPlaytime)}</span>
           </p>
         </div>
       </div>

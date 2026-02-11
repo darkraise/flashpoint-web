@@ -54,7 +54,7 @@ router.get(
   requirePermission('roles.read'),
   logActivity('roles.view', 'roles'),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid role ID');
     }
@@ -77,6 +77,13 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = createRoleSchema.parse(req.body);
 
+    if (data.permissionIds && data.permissionIds.length > 0) {
+      await roleService.validatePermissionEscalation(
+        data.permissionIds,
+        req.user!.permissions ?? []
+      );
+    }
+
     const role = await roleService.createRole(
       data.name,
       data.description,
@@ -94,7 +101,7 @@ router.patch(
   requirePermission('roles.update'),
   logActivity('roles.update', 'roles'),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid role ID');
     }
@@ -113,12 +120,14 @@ router.put(
   requirePermission('roles.update'),
   logActivity('roles.update_permissions', 'roles'),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid role ID');
     }
 
     const data = updatePermissionsSchema.parse(req.body);
+
+    await roleService.validatePermissionEscalation(data.permissionIds, req.user!.permissions ?? []);
 
     await roleService.updateRolePermissions(id, data.permissionIds);
     const role = await roleService.getRoleById(id);
@@ -133,7 +142,7 @@ router.delete(
   requirePermission('roles.delete'),
   logActivity('roles.delete', 'roles'),
   asyncHandler(async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       throw new AppError(400, 'Invalid role ID');
     }

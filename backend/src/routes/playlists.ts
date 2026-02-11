@@ -6,7 +6,7 @@ import {
 } from '../services/PlaylistService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { authenticate } from '../middleware/auth';
+import { authenticate, optionalAuth } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { requireFeature } from '../middleware/featureFlags';
 import { logActivity } from '../middleware/activityLogger';
@@ -28,6 +28,7 @@ const addGamesToPlaylistSchema = z.object({
 
 router.get(
   '/',
+  optionalAuth,
   asyncHandler(async (req, res) => {
     const playlists = await playlistService.getAllPlaylists();
     res.json(playlists);
@@ -36,6 +37,7 @@ router.get(
 
 router.get(
   '/:id',
+  optionalAuth,
   asyncHandler(async (req, res) => {
     const playlist = await playlistService.getPlaylistById(req.params.id);
 
@@ -55,7 +57,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = createPlaylistSchema.parse(req.body);
 
-    const playlist = await playlistService.createPlaylist(data as CreatePlaylistDto);
+    const playlist = await playlistService.createPlaylist(data);
     res.status(201).json(playlist);
   })
 );
@@ -68,10 +70,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = addGamesToPlaylistSchema.parse(req.body);
 
-    const playlist = await playlistService.addGamesToPlaylist(
-      req.params.id,
-      data as AddGamesToPlaylistDto
-    );
+    const playlist = await playlistService.addGamesToPlaylist(req.params.id, data);
 
     if (!playlist) {
       throw new AppError(404, 'Playlist not found');
@@ -89,10 +88,7 @@ router.delete(
   asyncHandler(async (req, res) => {
     const data = addGamesToPlaylistSchema.parse(req.body);
 
-    const playlist = await playlistService.removeGamesFromPlaylist(
-      req.params.id,
-      data as AddGamesToPlaylistDto
-    );
+    const playlist = await playlistService.removeGamesFromPlaylist(req.params.id, data);
 
     if (!playlist) {
       throw new AppError(404, 'Playlist not found');

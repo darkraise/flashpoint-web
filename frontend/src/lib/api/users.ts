@@ -61,8 +61,8 @@ export const usersApi = {
   getThemeSettings: async (): Promise<{ mode: string; primaryColor: string }> => {
     const settings = await usersApi.getAllSettings();
     return {
-      mode: settings.theme_mode || 'dark',
-      primaryColor: settings.primary_color || 'blue',
+      mode: settings.theme_mode ?? 'dark',
+      primaryColor: settings.primary_color ?? 'blue',
     };
   },
 

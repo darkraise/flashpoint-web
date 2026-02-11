@@ -17,13 +17,15 @@ import { config } from '../config';
  * since Flashpoint database is read-only and changes are rare)
  */
 export class GameSearchCache {
+  private static readonly CACHE_TTL = 1000 * 60 * 5; // 5 minutes
+
   // In-flight request tracking for cache stampede prevention
   private static inFlightRequests = new Map<string, Promise<PaginatedResult<Game>>>();
 
   private static cache = new LRUCache<string, PaginatedResult<Game>>({
     max: 1000, // Maximum 1000 cached search queries
     maxSize: 10000, // Maximum total items across all cached results (10k games)
-    ttl: 1000 * 60 * 5, // 5 minutes TTL
+    ttl: GameSearchCache.CACHE_TTL,
     updateAgeOnGet: true, // Reset TTL on cache hit
     allowStale: false, // Never return stale data
 
@@ -56,8 +58,8 @@ export class GameSearchCache {
       languages: query.languages ? [...query.languages].sort().join(',') : '',
       library: query.library || '',
       tags: query.tags ? [...query.tags].sort().join(',') : '',
-      yearFrom: query.yearFrom || '',
-      yearTo: query.yearTo || '',
+      yearFrom: query.yearFrom ?? '',
+      yearTo: query.yearTo ?? '',
       dateAddedSince: query.dateAddedSince || '',
       dateModifiedSince: query.dateModifiedSince || '',
       sortBy: query.sortBy,
@@ -197,7 +199,7 @@ export class GameSearchCache {
       primary: {
         size: this.cache.size,
         max: this.cache.max,
-        ttl: 1000 * 60 * 5, // 5 minutes
+        ttl: GameSearchCache.CACHE_TTL,
       },
       fallback: this.fallbackCache.getStats(),
     };

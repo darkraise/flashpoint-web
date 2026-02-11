@@ -1,7 +1,7 @@
 import { Navigate, useLocation, useParams } from 'react-router-dom';
-import { useAuthStore } from '../../store/auth';
-import { useFeatureFlags } from '../../hooks/useFeatureFlags';
-import { useSharedPlaylistAccess } from '../../hooks/useSharedPlaylistAccess';
+import { useAuthStore } from '@/store/auth';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useSharedPlaylistAccess } from '@/hooks/useSharedPlaylistAccess';
 import { ReactNode } from 'react';
 
 interface ProtectedRouteProps {

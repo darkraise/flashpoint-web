@@ -16,19 +16,6 @@ export interface GameData {
   parameters: string | null;
 }
 
-interface GameDataRow {
-  id: number;
-  gameId: string;
-  title: string;
-  dateAdded: string;
-  sha256: string;
-  crc32: number;
-  presentOnDisk: number;
-  path: string | null;
-  size: number;
-  parameters: string | null;
-}
-
 /**
  * NOTE: This service intentionally writes to flashpoint.sqlite to update
  * presentOnDisk and path fields in game_data/game tables. This matches
@@ -44,7 +31,7 @@ export class GameDatabaseUpdater {
         filePath,
       });
 
-      const gameData = await this.getGameData(gameDataId);
+      const gameData = this.getGameData(gameDataId);
       if (!gameData) {
         throw new Error(`Game data not found with id: ${gameDataId}`);
       }
@@ -110,7 +97,7 @@ export class GameDatabaseUpdater {
       });
 
       updateTransaction();
-      await this.saveDatabase();
+      this.saveDatabase();
 
       logger.info('Database updated successfully', {
         gameDataId,
@@ -118,7 +105,7 @@ export class GameDatabaseUpdater {
         filePath,
       });
 
-      const updated = await this.getGameData(gameDataId);
+      const updated = this.getGameData(gameDataId);
       if (!updated) {
         throw new Error('Failed to fetch updated game data');
       }
@@ -137,7 +124,7 @@ export class GameDatabaseUpdater {
     }
   }
 
-  static async getGameData(gameDataId: number): Promise<GameData | null> {
+  static getGameData(gameDataId: number): GameData | null {
     try {
       const sql = `
         SELECT
@@ -155,7 +142,7 @@ export class GameDatabaseUpdater {
         WHERE id = ?
       `;
 
-      const row = DatabaseService.get(sql, [gameDataId]);
+      const row = DatabaseService.get<GameData>(sql, [gameDataId]);
       return row ? this.mapRowToGameData(row) : null;
     } catch (error) {
       logger.error('Failed to fetch game data', { gameDataId, error });
@@ -163,7 +150,7 @@ export class GameDatabaseUpdater {
     }
   }
 
-  private static async saveDatabase(): Promise<void> {
+  private static saveDatabase(): void {
     try {
       // better-sqlite3 writes automatically; just ensure changes are flushed
       DatabaseService.save();
@@ -179,22 +166,11 @@ export class GameDatabaseUpdater {
     }
   }
 
-  private static mapRowToGameData(row: GameDataRow): GameData {
-    return {
-      id: row.id,
-      gameId: row.gameId,
-      title: row.title,
-      dateAdded: row.dateAdded,
-      sha256: row.sha256,
-      crc32: row.crc32,
-      presentOnDisk: row.presentOnDisk,
-      path: row.path,
-      size: row.size,
-      parameters: row.parameters,
-    };
+  private static mapRowToGameData(row: GameData): GameData {
+    return row;
   }
 
-  static async isDownloaded(gameDataId: number): Promise<boolean> {
+  static isDownloaded(gameDataId: number): boolean {
     try {
       const sql = `
         SELECT presentOnDisk
@@ -202,7 +178,7 @@ export class GameDatabaseUpdater {
         WHERE id = ?
       `;
 
-      const row = DatabaseService.get(sql, [gameDataId]);
+      const row = DatabaseService.get<{ presentOnDisk: number }>(sql, [gameDataId]);
       return row ? row.presentOnDisk === 1 : false;
     } catch (error) {
       logger.error('Failed to check if game data is downloaded', { gameDataId, error });
@@ -210,7 +186,7 @@ export class GameDatabaseUpdater {
     }
   }
 
-  static async markAsNotDownloaded(gameDataId: number): Promise<void> {
+  static markAsNotDownloaded(gameDataId: number): void {
     try {
       const db = DatabaseService.getDatabase();
 
@@ -226,7 +202,7 @@ export class GameDatabaseUpdater {
 
       updateTransaction();
 
-      await this.saveDatabase();
+      this.saveDatabase();
 
       logger.info('Marked game data as not downloaded', { gameDataId });
     } catch (error) {
@@ -236,11 +212,12 @@ export class GameDatabaseUpdater {
   }
 
   private static makeRelativePath(absolutePath: string): string {
-    const relativePath = path.relative(config.flashpointPath, absolutePath);
-
-    // Flashpoint uses forward slashes for cross-platform compatibility
-    const normalizedPath = relativePath.replace(/\\/g, '/');
-
-    return normalizedPath;
+    const resolved = path.resolve(absolutePath);
+    const base = path.resolve(config.flashpointPath);
+    if (!resolved.startsWith(base + path.sep) && resolved !== base) {
+      throw new Error(`Path escapes Flashpoint directory: ${absolutePath}`);
+    }
+    const relativePath = path.relative(base, resolved);
+    return relativePath.replace(/\\/g, '/');
   }
 }

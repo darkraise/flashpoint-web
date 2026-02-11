@@ -15,12 +15,13 @@ export function useDateTimeFormat() {
     enabled: isAuthenticated,
   });
 
-  const dateFormat = userSettings?.date_format || 'MM/dd/yyyy';
-  const timeFormat = userSettings?.time_format || 'hh:mm a';
+  const dateFormat = userSettings?.date_format ?? 'MM/dd/yyyy';
+  const timeFormat = userSettings?.time_format ?? 'hh:mm a';
 
   const formatDate = useCallback(
     (date: Date | string | number): string => {
       const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return 'Invalid date';
       try {
         return dateFnsFormat(dateObj, dateFormat);
       } catch (error) {
@@ -34,6 +35,7 @@ export function useDateTimeFormat() {
   const formatTime = useCallback(
     (date: Date | string | number): string => {
       const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return 'Invalid date';
       try {
         return dateFnsFormat(dateObj, timeFormat);
       } catch (error) {
@@ -47,6 +49,7 @@ export function useDateTimeFormat() {
   const formatDateTime = useCallback(
     (date: Date | string | number): string => {
       const dateObj = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return 'Invalid date';
       try {
         return dateFnsFormat(dateObj, `${dateFormat} ${timeFormat}`);
       } catch (error) {

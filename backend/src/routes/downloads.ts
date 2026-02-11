@@ -10,6 +10,7 @@ import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
+import { DownloadRegistry } from '../services/DownloadRegistry';
 
 const downloadBodySchema = z.object({
   gameDataId: z.number().int().positive().optional(),
@@ -196,7 +197,10 @@ router.get(
       if (closed) return;
 
       try {
-        const isActive = DownloadManager.isDownloadActive(gameDataId);
+        // Check both DownloadManager and shared registry (for GameZipServer downloads)
+        const isActive =
+          DownloadManager.isDownloadActive(gameDataId) ||
+          DownloadRegistry.isActiveByDataId(gameDataId);
 
         if (closed) return; // Re-check after await
 

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { useAuthStore } from '../../store/auth';
+import { useAuthStore } from '@/store/auth';
 
 interface RoleGuardProps {
   children: ReactNode;

@@ -4,18 +4,18 @@ import { http, HttpResponse } from 'msw';
 
 // Mock data
 export const mockUser = {
-  id: 'user-1',
+  id: 1,
   username: 'testuser',
   email: 'test@example.com',
-  roleName: 'user',
+  role: 'user',
   permissions: ['games.play', 'playlists.create', 'playlists.update'],
 };
 
 export const mockAdminUser = {
-  id: 'admin-1',
+  id: 2,
   username: 'adminuser',
   email: 'admin@example.com',
-  roleName: 'admin',
+  role: 'admin',
   permissions: ['games.play', 'users.manage', 'settings.update', 'playlists.create'],
 };
 
@@ -45,13 +45,12 @@ export const mockPlaylist = {
 export const handlers = [
   // Auth endpoints
   http.post(`/api/auth/login`, async ({ request }) => {
-    const body = (await request.json()) as any;
+    const body = (await request.json()) as { username: string; password: string };
 
     if (body.username === 'testuser' && body.password === 'password123') {
       return HttpResponse.json({
         user: mockUser,
         tokens: {
-          accessToken: 'mock-access-token',
           expiresIn: 3600,
         },
       });
@@ -66,7 +65,6 @@ export const handlers = [
 
   http.post(`/api/auth/refresh`, () => {
     return HttpResponse.json({
-      accessToken: 'new-mock-access-token',
       expiresIn: 3600,
     });
   }),
@@ -78,10 +76,11 @@ export const handlers = [
   // Games endpoints
   http.get(`/api/games`, () => {
     return HttpResponse.json({
-      games: [mockGame],
+      data: [mockGame],
       total: 1,
       page: 1,
       limit: 20,
+      totalPages: 1,
     });
   }),
 
@@ -104,6 +103,8 @@ export const handlers = [
       platform: 'Flash',
       launchCommand: 'test.swf',
       contentUrl: `/game-proxy/http://example.com/test.swf`,
+      applicationPath: '',
+      playMode: 'Single Player',
       canPlayInBrowser: true,
       downloading: false,
     });
@@ -115,9 +116,13 @@ export const handlers = [
   }),
 
   http.post(`/api/user-playlists`, async ({ request }) => {
-    const body = (await request.json()) as any;
+    const body = (await request.json()) as {
+      title: string;
+      description?: string;
+      icon?: string;
+    };
     return HttpResponse.json({
-      id: 'new-playlist-id',
+      id: 1,
       title: body.title,
       description: body.description,
       icon: body.icon,
@@ -137,6 +142,14 @@ export const handlers = [
       app: {
         maintenance_mode: false,
         allow_registration: true,
+        homeRecentHours: 24,
+      },
+      metadata: {
+        flashpointEdition: 'infinity',
+        flashpointVersion: '',
+      },
+      domains: {
+        defaultDomain: 'http://localhost:5173',
       },
     });
   }),
@@ -144,8 +157,8 @@ export const handlers = [
   // User settings endpoints
   http.get(`/api/users/me/settings`, () => {
     return HttpResponse.json({
-      theme: 'dark',
-      preferences: {},
+      theme_mode: 'dark',
+      primary_color: 'blue',
     });
   }),
 ];

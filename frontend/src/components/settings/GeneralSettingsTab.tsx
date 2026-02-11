@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/auth';
 import { useDialog } from '@/contexts/DialogContext';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import { UpdateAuthSettingsData } from '@/types/auth';
-import { AxiosError } from 'axios';
+import { getErrorMessage } from '@/types/api-error';
 import {
   Select,
   SelectContent,
@@ -56,8 +56,7 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
       showToast('Settings updated successfully', 'success');
     },
     onError: (error: unknown) => {
-      const axiosError = error instanceof AxiosError ? error : null;
-      const message = axiosError?.response?.data?.error?.message || 'Failed to update settings';
+      const message = getErrorMessage(error) || 'Failed to update settings';
       showToast(message, 'error');
     },
   });
@@ -70,8 +69,7 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
       showToast('Settings updated successfully', 'success');
     },
     onError: (error: unknown) => {
-      const axiosError = error instanceof AxiosError ? error : null;
-      const message = axiosError?.response?.data?.error?.message || 'Failed to update settings';
+      const message = getErrorMessage(error) || 'Failed to update settings';
       showToast(message, 'error');
     },
   });
@@ -107,7 +105,7 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Web App Version:</span>
-            <span className="font-medium">1.0.0</span>
+            <span className="font-medium">{import.meta.env.VITE_APP_VERSION ?? '1.0.0'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Ruffle Emulator:</span>
@@ -136,7 +134,7 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
                 Choose how dates are displayed throughout the application
               </p>
               <Select
-                value={userSettings.date_format || 'MM/dd/yyyy'}
+                value={userSettings.date_format ?? 'MM/dd/yyyy'}
                 onValueChange={(value: string) => {
                   updateUserSettings.mutate({ date_format: value });
                 }}
@@ -165,7 +163,7 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
                 Choose how times are displayed throughout the application
               </p>
               <Select
-                value={userSettings.time_format || 'hh:mm a'}
+                value={userSettings.time_format ?? 'hh:mm a'}
                 onValueChange={(value: string) => {
                   updateUserSettings.mutate({ time_format: value });
                 }}

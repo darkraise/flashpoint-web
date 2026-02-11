@@ -9,7 +9,7 @@ export function useFeatureFlags() {
   const { data: publicSettings, isLoading } = usePublicSettings();
   const { user } = useAuthStore();
 
-  const features = publicSettings?.features || {};
+  const features = publicSettings?.features ?? {};
 
   const isAdmin = user?.permissions?.includes('settings.update') ?? false;
 

@@ -2,10 +2,11 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/logger';
-import { GameDataSource } from './PreferencesService';
+import type { GameDataSource } from './PreferencesService';
 import { HashValidator } from './HashValidator';
 import { FileImporter } from './FileImporter';
 import { GameDatabaseUpdater, GameData } from './GameDatabaseUpdater';
+import { DownloadRegistry } from './DownloadRegistry';
 
 export interface DownloadProgress {
   percent: number;
@@ -35,6 +36,7 @@ export class DownloadManager {
   private static readonly TEMP_DIR = path.join(process.cwd(), 'backend', 'temp-downloads');
   private static readonly DOWNLOAD_TIMEOUT_MS = 300000; // 5 minutes per source
   private static readonly MAX_RETRIES = 3;
+  private static readonly MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
   // Track active downloads to prevent duplicates
   private static activeDownloads: Map<number, AbortController> = new Map();
@@ -67,6 +69,8 @@ export class DownloadManager {
     const controller = new AbortController();
     this.activeDownloads.set(gameDataId, controller);
 
+    // Get game data to register with DownloadRegistry
+    let gameData: GameData | null = null;
     try {
       // Check if already downloaded
       const isDownloaded = await GameDatabaseUpdater.isDownloaded(gameDataId);
@@ -74,6 +78,28 @@ export class DownloadManager {
         logger.info('Game data already downloaded', { gameDataId });
         this.activeDownloads.delete(gameDataId);
         throw new Error(`Game data ${gameDataId} is already downloaded`);
+      }
+
+      // Get game data for registry
+      gameData = await GameDatabaseUpdater.getGameData(gameDataId);
+      if (!gameData) {
+        throw new Error(`Game data not found: ${gameDataId}`);
+      }
+
+      // Register with shared download registry (prevents duplicate downloads from GameZipServer)
+      const registered = DownloadRegistry.register(gameData.gameId, {
+        gameId: gameData.gameId,
+        gameDataId,
+        source: 'download-manager',
+      });
+
+      if (!registered) {
+        logger.info('Download already in progress (via GameZipServer)', {
+          gameId: gameData.gameId,
+          gameDataId,
+        });
+        this.activeDownloads.delete(gameDataId);
+        throw new Error(`Game ${gameData.gameId} is already being downloaded by another service`);
       }
     } catch (error) {
       // Clean up reserved slot if pre-checks fail
@@ -93,12 +119,7 @@ export class DownloadManager {
       // Ensure temp directory exists
       await this.ensureTempDir();
 
-      // Get game data info from database
-      const gameData = await GameDatabaseUpdater.getGameData(gameDataId);
-      if (!gameData) {
-        throw new Error(`Game data not found: ${gameDataId}`);
-      }
-
+      // gameData already retrieved above for registry
       // Generate filename
       const filename = this.getGameDataFilename(gameData);
       const tempFilePath = path.join(this.TEMP_DIR, `${gameData.gameId}.zip.temp`);
@@ -187,6 +208,9 @@ export class DownloadManager {
             source: source.name,
           });
 
+          // Mark as completed in registry
+          DownloadRegistry.complete(gameData.gameId);
+
           // Success! Return final path
           return finalPath;
         } catch (error) {
@@ -218,6 +242,11 @@ export class DownloadManager {
       // All sources failed
       const errorSummary = errors.map((e) => `${e.source}: ${e.error}`).join('\n');
 
+      // Mark as failed in registry
+      if (gameData) {
+        DownloadRegistry.fail(gameData.gameId);
+      }
+
       throw new Error(
         `Failed to download game data from all ${sources.length} sources:\n${errorSummary}`
       );
@@ -227,6 +256,7 @@ export class DownloadManager {
         abortSignal.removeEventListener('abort', onExternalAbort);
       }
       this.activeDownloads.delete(gameDataId);
+      // Note: DownloadRegistry cleanup happens in complete()/fail() or after timeout
     }
   }
 
@@ -248,6 +278,8 @@ export class DownloadManager {
       responseType: 'stream',
       timeout: this.DOWNLOAD_TIMEOUT_MS,
       signal: abortSignal,
+      maxContentLength: this.MAX_FILE_SIZE,
+      maxBodyLength: this.MAX_FILE_SIZE,
       headers: {
         'User-Agent': 'Flashpoint-WebApp/1.0',
       },
@@ -259,7 +291,11 @@ export class DownloadManager {
     const writer = fs.createWriteStream(destPath);
 
     return new Promise((resolve, reject) => {
+      let settled = false;
+
       const onAbort = () => {
+        if (settled) return;
+        settled = true;
         response.data.destroy();
         writer.destroy();
         reject(new Error('Download cancelled'));
@@ -273,6 +309,18 @@ export class DownloadManager {
 
       response.data.on('data', (chunk: Buffer) => {
         downloadedBytes += chunk.length;
+        if (downloadedBytes > DownloadManager.MAX_FILE_SIZE) {
+          if (settled) return;
+          settled = true;
+          response.data.destroy();
+          writer.destroy();
+          reject(
+            new Error(
+              `Download exceeds maximum file size of ${DownloadManager.MAX_FILE_SIZE} bytes`
+            )
+          );
+          return;
+        }
         onProgress?.(downloadedBytes, totalBytes);
       });
 
@@ -281,16 +329,22 @@ export class DownloadManager {
       });
 
       writer.on('finish', () => {
+        if (settled) return;
+        settled = true;
         cleanup();
         resolve();
       });
 
       writer.on('error', (error) => {
+        if (settled) return;
+        settled = true;
         cleanup();
         reject(new Error(`Failed to write file: ${error.message}`));
       });
 
       response.data.on('error', (error: Error) => {
+        if (settled) return;
+        settled = true;
         cleanup();
         writer.destroy();
         reject(new Error(`Download stream error: ${error.message}`));

@@ -1,5 +1,6 @@
-export { PreferencesService } from './PreferencesService';
-export type { GameDataSource, FlashpointPreferences } from './PreferencesService';
+// Re-export PreferencesService from consolidated location
+export { PreferencesService } from '../../services/PreferencesService';
+export type { GameDataSource, FlashpointPreferences } from '../../services/PreferencesService';
 
 export { GameDataDownloader, gameDataDownloader } from './GameDataDownloader';
 export type {

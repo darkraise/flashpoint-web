@@ -49,6 +49,21 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    networks:
+      - flashpoint-network
 
   frontend:
     image: darkraise/flashpoint-frontend:${IMAGE_TAG:-latest}
@@ -71,3 +86,22 @@ services:
       timeout: 3s
       retries: 3
       start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    networks:
+      - flashpoint-network
+
+networks:
+  flashpoint-network:
+    driver: bridge

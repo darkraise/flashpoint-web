@@ -10,7 +10,7 @@ const router = Router();
 router.get(
   '/stats',
   authenticate,
-  requirePermission('settings.view'),
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
     const gameSearchStats = GameSearchCache.getStats();
 

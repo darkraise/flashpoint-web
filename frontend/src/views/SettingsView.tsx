@@ -49,8 +49,8 @@ export function SettingsView() {
 
   const { data: publicSettings } = usePublicSettings();
 
-  const flashpointVersion = publicSettings?.metadata?.flashpointVersion || 'Unknown';
-  const webAppVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+  const flashpointVersion = publicSettings?.metadata?.flashpointVersion ?? 'Unknown';
+  const webAppVersion = import.meta.env.VITE_APP_VERSION ?? '1.0.0';
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

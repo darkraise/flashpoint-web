@@ -7,7 +7,7 @@ import { logger } from '../utils/logger';
  * Stores successful responses with extended TTL (1 hour) to serve
  * when the primary data source (Flashpoint database) is unavailable
  */
-export class FallbackCache<T = any> {
+export class FallbackCache<T = unknown> {
   private cache: LRUCache<string, { data: T; cachedAt: number }>;
   private readonly FALLBACK_TTL = 60 * 60 * 1000; // 1 hour
 

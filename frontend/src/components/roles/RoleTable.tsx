@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRoles, useDeleteRole } from '../../hooks/useRoles';
-import { Role } from '../../types/auth';
+import { useRoles, useDeleteRole } from '@/hooks/useRoles';
+import { Role } from '@/types/auth';
 import { RoleGuard } from '../common/RoleGuard';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { DataTable } from '../ui/data-table';
@@ -18,6 +18,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
+
+/** System role IDs from the initial migration — admin=1, user=2, guest=3 */
+const SYSTEM_ROLE_IDS = new Set([1, 2, 3]);
 
 interface RoleTableProps {
   onEdit: (role: Role) => void;
@@ -99,7 +102,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
       header: 'Actions',
       cell: ({ row }) => {
         const role = row.original;
-        const isSystemRole = role.id <= 3;
+        const isSystemRole = SYSTEM_ROLE_IDS.has(role.id);
 
         return (
           <div className="flex items-center gap-2">
@@ -119,7 +122,10 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
                   </DropdownMenuItem>
                 </RoleGuard>
                 <RoleGuard permission="roles.update">
-                  <DropdownMenuItem onClick={() => onManagePermissions(role)}>
+                  <DropdownMenuItem
+                    onClick={() => onManagePermissions(role)}
+                    disabled={isSystemRole}
+                  >
                     Manage Permissions
                   </DropdownMenuItem>
                 </RoleGuard>

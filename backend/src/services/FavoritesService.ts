@@ -169,7 +169,8 @@ export class FavoritesService {
     `;
 
     if (effectiveSortBy === 'dateAdded') {
-      query += ` ORDER BY added_at ${effectiveSortOrder.toUpperCase()}`;
+      const direction = effectiveSortOrder === 'asc' ? 'ASC' : 'DESC';
+      query += ` ORDER BY added_at ${direction}`;
     }
 
     const params: (number | string)[] = [userId];

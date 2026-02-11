@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { User } from '../types/auth';
+import { User } from '@/types/auth';
 import { useThemeStore } from './theme';
 import { logger } from '@/lib/logger';
 
@@ -65,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
           user: null,
           isAuthenticated: false,
           isGuest: false,
+          isMaintenanceMode: false,
         });
       },
 
@@ -140,7 +141,6 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         isGuest: state.isGuest,
-        isMaintenanceMode: state.isMaintenanceMode,
       }),
     }
   )

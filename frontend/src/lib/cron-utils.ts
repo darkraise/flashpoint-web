@@ -63,24 +63,24 @@ export function isValidCron(cronExpression: string): boolean {
 
     // Handle step values (*/N)
     if (part.startsWith('*/')) {
-      const step = parseInt(part.substring(2));
+      const step = parseInt(part.substring(2), 10);
       return !isNaN(step) && step > 0 && step <= max;
     }
 
     // Handle ranges (N-M)
     if (part.includes('-')) {
-      const [start, end] = part.split('-').map((v) => parseInt(v));
+      const [start, end] = part.split('-').map((v) => parseInt(v, 10));
       return !isNaN(start) && !isNaN(end) && start >= min && end <= max && start <= end;
     }
 
     // Handle lists (N,M,O)
     if (part.includes(',')) {
-      const values = part.split(',').map((v) => parseInt(v));
+      const values = part.split(',').map((v) => parseInt(v, 10));
       return values.every((v) => !isNaN(v) && v >= min && v <= max);
     }
 
     // Handle single value
-    const value = parseInt(part);
+    const value = parseInt(part, 10);
     return !isNaN(value) && value >= min && value <= max;
   };
 
@@ -93,7 +93,7 @@ export function isValidCron(cronExpression: string): boolean {
   );
 }
 
-export function formatDuration(seconds: number | undefined): string {
+export function formatDuration(seconds: number | undefined | null): string {
   if (seconds === undefined || seconds === null) return 'N/A';
 
   // Handle zero or very short durations

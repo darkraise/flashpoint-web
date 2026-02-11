@@ -72,6 +72,17 @@ export interface PaginatedResult<T> {
   totalPages: number;
 }
 
+interface FilterOptionsResult {
+  series: Array<{ name: string; count: number }>;
+  developers: Array<{ name: string; count: number }>;
+  publishers: Array<{ name: string; count: number }>;
+  playModes: Array<{ name: string; count: number }>;
+  languages: Array<{ name: string; count: number }>;
+  tags: Array<{ name: string; count: number }>;
+  platforms: Array<{ name: string; count: number }>;
+  yearRange: { min: number; max: number };
+}
+
 export class GameService {
   /**
    * Cached set of Flash game IDs that have .swf launch commands in game_data.
@@ -84,6 +95,12 @@ export class GameService {
   private static flashSwfGameIds: Set<string> | null = null;
   private static flashSwfCacheExpiry = 0;
   private static readonly FLASH_SWF_CACHE_TTL = 3600000; // 1 hour
+
+  /**
+   * Cached filter options result. The 8 GROUP BY queries (~1.8s total) only change
+   * when flashpoint.sqlite reloads, so we cache indefinitely and clear on DB reload.
+   */
+  private static filterOptionsCache: FilterOptionsResult | null = null;
 
   /**
    * Get the set of Flash game IDs whose game_data.launchCommand points to a .swf file.
@@ -123,6 +140,29 @@ export class GameService {
     GameService.flashSwfGameIds = null;
     GameService.flashSwfCacheExpiry = 0;
     logger.debug('[GameService] Flash SWF game IDs cache cleared');
+  }
+
+  /**
+   * Clear the filter options cache.
+   * Called when flashpoint.sqlite is reloaded (data may have changed).
+   */
+  static clearFilterOptionsCache(): void {
+    GameService.filterOptionsCache = null;
+    logger.debug('[GameService] Filter options cache cleared');
+  }
+
+  /**
+   * Pre-warm the filter options cache at startup.
+   * Runs the ~1.8s GROUP BY queries once so the first request is instant.
+   */
+  static async prewarmFilterOptions(): Promise<void> {
+    const startTime = performance.now();
+    const service = new GameService();
+    // Force computation by calling with empty cache
+    GameService.filterOptionsCache = null;
+    await service.getFilterOptions();
+    const duration = Math.round(performance.now() - startTime);
+    logger.info(`[GameService] Filter options pre-warmed in ${duration}ms`);
   }
 
   /**
@@ -368,7 +408,7 @@ export class GameService {
 
         // Merge presentOnDisk into game objects and remove total_count
         games.forEach((game: Game & { total_count?: number }) => {
-          game.presentOnDisk = presentOnDiskMap.get(game.id) || 0;
+          game.presentOnDisk = presentOnDiskMap.get(game.id) ?? 0;
           delete game.total_count;
         });
       }
@@ -617,37 +657,26 @@ export class GameService {
    * Returns: series, developers, publishers, playModes, languages, tags, platforms, yearRange
    * Note: Methods are synchronous but wrapped in async for consistent API contract
    */
-  async getFilterOptions(): Promise<{
-    series: Array<{ name: string; count: number }>;
-    developers: Array<{ name: string; count: number }>;
-    publishers: Array<{ name: string; count: number }>;
-    playModes: Array<{ name: string; count: number }>;
-    languages: Array<{ name: string; count: number }>;
-    tags: Array<{ name: string; count: number }>;
-    platforms: Array<{ name: string; count: number }>;
-    yearRange: { min: number; max: number };
-  }> {
-    try {
-      // Call synchronous methods directly (no Promise.all needed)
-      const series = this.getSeriesOptions();
-      const developers = this.getDeveloperOptions();
-      const publishers = this.getPublisherOptions();
-      const playModes = this.getPlayModeOptions();
-      const languages = this.getLanguageOptions();
-      const tags = this.getTagOptions();
-      const platforms = this.getPlatformOptions();
-      const yearRange = this.getYearRange();
+  async getFilterOptions(): Promise<FilterOptionsResult> {
+    // Return cached result if available (cache cleared only on DB reload)
+    if (GameService.filterOptionsCache) {
+      return GameService.filterOptionsCache;
+    }
 
-      return {
-        series,
-        developers,
-        publishers,
-        playModes,
-        languages,
-        tags,
-        platforms,
-        yearRange,
+    try {
+      const result: FilterOptionsResult = {
+        series: this.getSeriesOptions(),
+        developers: this.getDeveloperOptions(),
+        publishers: this.getPublisherOptions(),
+        playModes: this.getPlayModeOptions(),
+        languages: this.getLanguageOptions(),
+        tags: this.getTagOptions(),
+        platforms: this.getPlatformOptions(),
+        yearRange: this.getYearRange(),
       };
+
+      GameService.filterOptionsCache = result;
+      return result;
     } catch (error) {
       logger.error('Error getting filter options:', error);
       throw error;

@@ -137,6 +137,7 @@ export function CreateUserPlaylistDialog({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
+                maxLength={2000}
               />
             </div>
 

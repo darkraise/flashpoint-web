@@ -17,11 +17,3 @@ export const rateLimitStrict = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-export const rateLimitAuth = rateLimit({
-  windowMs: 60 * 1000,
-  max: 30,
-  message: 'Too many requests, please slow down',
-  standardHeaders: true,
-  legacyHeaders: false,
-});

@@ -46,17 +46,15 @@ export function MobileWarningDialog() {
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-xl">
-            <Smartphone className="h-6 w-6 text-yellow-500" />
+            <Smartphone className="h-6 w-6 text-amber-500" />
             Mobile Device Detected
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-4 text-base">
-            <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <Monitor className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <Monitor className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
-                  Best Experience on PC
-                </p>
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <p className="font-medium text-foreground mb-1">Best Experience on PC</p>
+                <p className="text-sm text-muted-foreground">
                   This web application is optimized for desktop computers. Flash and HTML5 games may
                   not work properly on mobile devices.
                 </p>

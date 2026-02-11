@@ -35,9 +35,11 @@ export function MaintenanceGuard({ children }: MaintenanceGuardProps) {
       }
     };
 
-    checkMaintenance();
+    checkMaintenance().catch(() => {});
 
-    const interval = setInterval(checkMaintenance, 30000);
+    const interval = setInterval(() => {
+      checkMaintenance().catch(() => {});
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [isMaintenanceMode, isAdmin, navigate, location.pathname]);

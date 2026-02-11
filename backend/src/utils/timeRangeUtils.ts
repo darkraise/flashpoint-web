@@ -10,14 +10,3 @@ export function getHoursFromTimeRange(timeRange: TimeRange): number {
       return 720;
   }
 }
-
-export function getStartDateFromTimeRange(timeRange: TimeRange): Date {
-  const hours = getHoursFromTimeRange(timeRange);
-  const date = new Date();
-  date.setHours(date.getHours() - hours);
-  return date;
-}
-
-export function getEndDateFromTimeRange(): Date {
-  return new Date();
-}

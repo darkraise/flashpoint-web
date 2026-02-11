@@ -17,8 +17,10 @@ const metadataSyncService = new MetadataSyncService();
 
 router.get(
   '/check',
+  authenticate,
+  requirePermission('settings.update'),
   asyncHandler(async (req, res) => {
-    logger.info('[Updates API] Checking for updates...');
+    logger.debug('[Updates API] Checking for updates...');
     const updateInfo = await updateService.checkForUpdates();
     res.json(updateInfo);
   })
@@ -50,9 +52,11 @@ router.get(
 // Includes edition info so frontend knows whether sync is available
 router.get(
   '/metadata',
+  authenticate,
+  requirePermission('settings.update'),
   asyncHandler(async (req, res) => {
     const edition = metadataUpdateService.getEdition();
-    logger.info(`[Updates API] Checking for metadata updates... (edition: ${edition})`);
+    logger.debug(`[Updates API] Checking for metadata updates... (edition: ${edition})`);
     const metadataInfo = await metadataUpdateService.getMetadataUpdateInfo();
     res.json({ ...metadataInfo, edition });
   })
@@ -67,7 +71,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const syncStatus = SyncStatusService.getInstance();
 
-    if (syncStatus.isRunning()) {
+    if (!syncStatus.tryStartSync()) {
       return res.status(409).json({
         success: false,
         error: 'Sync already in progress',
@@ -79,7 +83,7 @@ router.post(
       `[Updates API] Starting metadata sync in background (requested by ${req.user?.username})...`
     );
 
-    metadataSyncService.syncMetadata().catch((error) => {
+    metadataSyncService.syncMetadata(true).catch((error) => {
       logger.error('[Updates API] Background sync error:', error);
     });
 
@@ -93,24 +97,12 @@ router.post(
 
 router.get(
   '/metadata/sync/status',
+  authenticate,
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
-    try {
-      const syncStatus = SyncStatusService.getInstance();
-      const status = syncStatus.getStatus();
-      // Sanitize error messages - don't leak internal details to unauthenticated users
-      if (status.error) {
-        status.error = 'Sync failed. Check server logs for details.';
-      }
-      res.json(status);
-    } catch (error) {
-      logger.error('[Updates API] Error getting sync status:', error);
-      res.status(500).json({
-        isRunning: false,
-        stage: 'error',
-        progress: 0,
-        message: 'Error getting sync status',
-      });
-    }
+    const syncStatus = SyncStatusService.getInstance();
+    const status = syncStatus.getStatus();
+    res.json(status);
   })
 );
 

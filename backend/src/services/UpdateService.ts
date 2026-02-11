@@ -33,8 +33,8 @@ export class UpdateService {
   }
 
   async checkForUpdates(): Promise<UpdateInfo> {
-    logger.info('[UpdateService] Checking for updates...');
-    logger.info(`[UpdateService] Flashpoint root: ${this.flashpointRoot}`);
+    logger.debug('[UpdateService] Checking for updates...');
+    logger.debug(`[UpdateService] Flashpoint root: ${this.flashpointRoot}`);
 
     const componentsStatus: ComponentStatus[] = [];
 
@@ -50,7 +50,7 @@ export class UpdateService {
 
       // Read components directory to check installed versions
       const componentsDir = path.join(this.flashpointRoot, 'Components');
-      logger.info(`[UpdateService] Components directory: ${componentsDir}`);
+      logger.debug(`[UpdateService] Components directory: ${componentsDir}`);
 
       for (const component of coreComponents) {
         try {
@@ -73,7 +73,7 @@ export class UpdateService {
             const hash = parts[0] || 'unknown';
             const currentVersion = hash.substring(0, 8); // Use first 8 chars of hash as version
 
-            logger.info(`[UpdateService] Component ${component.id}: ${currentVersion}`);
+            logger.debug(`[UpdateService] Component ${component.id}: ${currentVersion}`);
 
             componentsStatus.push({
               id: component.id,
@@ -103,7 +103,7 @@ export class UpdateService {
       try {
         await axios.get(this.componentsUrl, { timeout: 5000 });
         // Parse XML and compare versions (simplified for now)
-        logger.info('[UpdateService] Successfully fetched remote component list');
+        logger.debug('[UpdateService] Successfully fetched remote component list');
       } catch (error) {
         logger.warn('[UpdateService] Could not fetch remote component list:', error);
       }
@@ -197,9 +197,10 @@ export class UpdateService {
             });
           } else {
             logger.error('[UpdateService] Update failed with code:', code);
+            logger.error('[UpdateService] FPM stderr:', errorOutput);
             resolve({
               success: false,
-              message: `Update failed: ${errorOutput || 'Unknown error'}`,
+              message: 'Update failed. Check server logs for details.',
             });
           }
         });
@@ -220,8 +221,6 @@ export class UpdateService {
   }
 
   async getSystemInfo(): Promise<{
-    flashpointRoot: string;
-    managerPath: string;
     managerExists: boolean;
   }> {
     const managerExists = await fs
@@ -230,8 +229,6 @@ export class UpdateService {
       .catch(() => false);
 
     return {
-      flashpointRoot: this.flashpointRoot,
-      managerPath: this.managerPath,
       managerExists,
     };
   }

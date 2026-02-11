@@ -20,14 +20,16 @@ import { DomainService } from './services/DomainService';
 import { PlayTrackingService } from './services/PlayTrackingService';
 import { AuthService } from './services/AuthService';
 import { GameSearchCache } from './services/GameSearchCache';
+import { GameService } from './services/GameService';
 import { JobScheduler } from './services/JobScheduler';
+import { JobExecutionService } from './services/JobExecutionService';
 import { MetadataSyncJob } from './jobs/MetadataSyncJob';
 import { RuffleUpdateJob } from './jobs/RuffleUpdateJob';
 import { CachedSystemSettingsService } from './services/CachedSystemSettingsService';
 import { PermissionCache } from './services/PermissionCache';
+import { PerformanceMetrics } from './services/PerformanceMetrics';
 import { RuffleService } from './services/RuffleService';
 import { ConfigManager } from './game/config';
-import { PreferencesService } from './game/services/PreferencesService';
 import { zipManager } from './game/zip-manager';
 import { gameZipServer } from './game/gamezipserver';
 import gameProxyRouter from './routes/game-proxy';
@@ -79,7 +81,12 @@ async function startServer() {
 
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+        },
+      },
       crossOriginEmbedderPolicy: false,
       frameguard: { action: 'deny' },
     })
@@ -157,6 +164,10 @@ async function startServer() {
     logger.warn('Failed to pre-warm game search cache:', error);
   });
 
+  GameService.prewarmFilterOptions().catch((error) => {
+    logger.warn('Failed to pre-warm filter options cache:', error);
+  });
+
   try {
     const ruffleService = new RuffleService();
     if (!ruffleService.verifyInstallation()) {
@@ -214,7 +225,6 @@ async function startServer() {
 
   try {
     await ConfigManager.loadConfig(config.flashpointPath);
-    PreferencesService.initialize(config.flashpointPath);
     logger.info('🎮 Game service configuration loaded (integrated)');
   } catch (error) {
     logger.warn('⚠️  Failed to load game service config (non-fatal):', error);
@@ -253,7 +263,7 @@ async function startServer() {
       } else {
         logger.warn('File logging verification failed - check permissions');
       }
-    }, 1000);
+    }, 1000).unref();
   } else if (loggingStatus.fileError) {
     logger.warn(`File logging unavailable: ${loggingStatus.fileError}`);
   }
@@ -269,7 +279,7 @@ async function startServer() {
   server.keepAliveTimeout = 65000; // 65s - slightly above common load balancer timeout
   server.headersTimeout = 66000; // Must be > keepAliveTimeout
   server.timeout = 120000; // 2 min max for any request (including game file streaming)
-  // Note: Connection limiting is handled by the reverse proxy (nginx)
+  server.maxConnections = 500; // Defense-in-depth; nginx handles primary limiting
 
   const playTrackingService = new PlayTrackingService();
   const playSessionCleanupInterval = setInterval(
@@ -315,6 +325,28 @@ async function startServer() {
     logger.error('Failed to cleanup old activity logs:', error);
   });
 
+  // Cleanup old performance metrics every hour
+  const metricsCleanupInterval = setInterval(
+    () => {
+      PerformanceMetrics.cleanupOldMetrics();
+    },
+    60 * 60 * 1000
+  );
+  metricsCleanupInterval.unref();
+
+  const jobExecutionService = new JobExecutionService();
+  const jobLogCleanupInterval = setInterval(
+    () => {
+      try {
+        jobExecutionService.cleanupOldLogs(30);
+      } catch (error) {
+        logger.error('Failed to cleanup old job execution logs:', error);
+      }
+    },
+    24 * 60 * 60 * 1000
+  );
+  jobLogCleanupInterval.unref();
+
   const shutdown = async () => {
     logger.info('Shutting down gracefully...');
 
@@ -323,6 +355,8 @@ async function startServer() {
     clearInterval(playSessionCleanupInterval);
     clearInterval(loginAttemptsCleanupInterval);
     clearInterval(activityLogsCleanupInterval);
+    clearInterval(jobLogCleanupInterval);
+    clearInterval(metricsCleanupInterval);
 
     try {
       gameZipServer.dispose();
