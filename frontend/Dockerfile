@@ -62,9 +62,8 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
 # Expose port (8080 for non-root user)
 EXPOSE 8080
 
-# Health check (using wget which is built into Alpine)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --quiet --spider http://localhost:8080/ || exit 1
+# Health check is configured in docker-compose.yml for flexibility.
+# When running standalone (docker run), add --health-cmd manually.
 
 # Run as non-root user (nginx user from base image)
 USER nginx

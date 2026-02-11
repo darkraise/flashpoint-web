@@ -98,6 +98,7 @@ router.post(
 router.get(
   '/metadata/sync/status',
   authenticate,
+  requirePermission('settings.read'),
   asyncHandler(async (req, res) => {
     const syncStatus = SyncStatusService.getInstance();
     const status = syncStatus.getStatus();

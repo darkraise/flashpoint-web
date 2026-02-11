@@ -34,7 +34,7 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     try {
       const rawLimit = parseInt(req.query.limit as string, 10);
-      const limit = Math.min(isNaN(rawLimit) ? 100 : rawLimit, 200);
+      const limit = Math.min(Math.max(1, isNaN(rawLimit) ? 100 : rawLimit), 200);
       const rawOffset = parseInt(req.query.offset as string, 10);
       const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
 
@@ -212,7 +212,7 @@ router.get(
       }
 
       const rawLimit = parseInt(req.query.limit as string, 10);
-      const limit = Math.min(isNaN(rawLimit) ? 50 : rawLimit, 100);
+      const limit = Math.min(Math.max(1, isNaN(rawLimit) ? 50 : rawLimit), 100);
       const rawOffset = parseInt(req.query.offset as string, 10);
       const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
 

@@ -647,21 +647,22 @@ export class MetadataSyncService {
     if (!Array.isArray(gameIds) || gameIds.length === 0) return;
     const db = DatabaseService.getDatabase();
 
-    // Process in batches to avoid SQL variable limits
+    // Wrap all batches in a single transaction to maintain consistency.
+    // If the process crashes mid-way, all changes are rolled back.
     const BATCH_SIZE = 500;
-    for (let i = 0; i < gameIds.length; i += BATCH_SIZE) {
-      const batch = gameIds.slice(i, i + BATCH_SIZE);
-      const placeholders = batch.map(() => '?').join(', ');
+    db.transaction(() => {
+      for (let i = 0; i < gameIds.length; i += BATCH_SIZE) {
+        const batch = gameIds.slice(i, i + BATCH_SIZE);
+        const placeholders = batch.map(() => '?').join(', ');
 
-      db.transaction(() => {
         // Orphan children first (prevents FK violation)
         db.prepare(
           `UPDATE game SET parentGameId = NULL WHERE parentGameId IN (${placeholders})`
         ).run(batch);
         // Then delete
         db.prepare(`DELETE FROM game WHERE id IN (${placeholders})`).run(batch);
-      })();
-    }
+      }
+    })();
   }
 
   private async updatePreferencesTimestamps(

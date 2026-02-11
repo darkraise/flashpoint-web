@@ -29,14 +29,13 @@ function updateJobScheduler(category: string, settings: CategorySettings): void 
         '0 * * * *') as string;
 
       if (cronSchedule && !cron.validate(cronSchedule)) {
-        logger.warn(`[Settings] Invalid cron expression: ${cronSchedule}`);
-        return;
+        logger.warn(`[Settings] Invalid metadata-sync cron expression: ${cronSchedule}`);
+      } else {
+        JobScheduler.updateJob('metadata-sync', {
+          enabled,
+          cronSchedule,
+        });
       }
-
-      JobScheduler.updateJob('metadata-sync', {
-        enabled,
-        cronSchedule,
-      });
     }
 
     if ('ruffleUpdateEnabled' in settings || 'ruffleUpdateSchedule' in settings) {
@@ -49,14 +48,13 @@ function updateJobScheduler(category: string, settings: CategorySettings): void 
         '0 0 * * *') as string;
 
       if (cronSchedule && !cron.validate(cronSchedule)) {
-        logger.warn(`[Settings] Invalid cron expression: ${cronSchedule}`);
-        return;
+        logger.warn(`[Settings] Invalid ruffle-update cron expression: ${cronSchedule}`);
+      } else {
+        JobScheduler.updateJob('ruffle-update', {
+          enabled,
+          cronSchedule,
+        });
       }
-
-      JobScheduler.updateJob('ruffle-update', {
-        enabled,
-        cronSchedule,
-      });
     }
   }
 }

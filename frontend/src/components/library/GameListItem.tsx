@@ -194,6 +194,8 @@ export const GameListItem = memo(
       prevProps.showAddToPlaylistButton === nextProps.showAddToPlaylistButton &&
       prevProps.isFavoritePage === nextProps.isFavoritePage &&
       prevProps.shareToken === nextProps.shareToken &&
+      prevProps.breadcrumbContext?.label === nextProps.breadcrumbContext?.label &&
+      prevProps.breadcrumbContext?.href === nextProps.breadcrumbContext?.href &&
       (prevProps.favoriteGameIds?.has(prevProps.game.id) ?? false) ===
         (nextProps.favoriteGameIds?.has(nextProps.game.id) ?? false)
     );

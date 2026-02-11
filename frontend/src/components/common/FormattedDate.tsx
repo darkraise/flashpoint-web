@@ -12,14 +12,18 @@ export function FormattedDate({ date, type = 'datetime', className }: FormattedD
   const getFormattedValue = () => {
     if (!date) return 'Unknown';
 
-    switch (type) {
-      case 'date':
-        return formatDate(date);
-      case 'time':
-        return formatTime(date);
-      case 'datetime':
-      default:
-        return formatDateTime(date);
+    try {
+      switch (type) {
+        case 'date':
+          return formatDate(date);
+        case 'time':
+          return formatTime(date);
+        case 'datetime':
+        default:
+          return formatDateTime(date);
+      }
+    } catch {
+      return String(date);
     }
   };
 

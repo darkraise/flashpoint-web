@@ -80,7 +80,7 @@ router.post(
     if (data.permissionIds && data.permissionIds.length > 0) {
       await roleService.validatePermissionEscalation(
         data.permissionIds,
-        req.user?.permissions || []
+        req.user!.permissions ?? []
       );
     }
 
@@ -127,7 +127,7 @@ router.put(
 
     const data = updatePermissionsSchema.parse(req.body);
 
-    await roleService.validatePermissionEscalation(data.permissionIds, req.user?.permissions || []);
+    await roleService.validatePermissionEscalation(data.permissionIds, req.user!.permissions ?? []);
 
     await roleService.updateRolePermissions(id, data.permissionIds);
     const role = await roleService.getRoleById(id);

@@ -17,6 +17,8 @@ export function MetadataUpdateCard() {
   const [syncMessage, setSyncMessage] = useState('');
   const [metadataInfo, setMetadataInfo] = useState<MetadataUpdateInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Use ref for the fetch guard to avoid stale closure issues in interval callbacks
+  const isFetchingRef = useRef(false);
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
 
   // Use ref to track poll interval (avoids stale closure issues)
@@ -24,10 +26,11 @@ export function MetadataUpdateCard() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchMetadataInfo = async () => {
-    if (isFetchingMetadata) {
+    if (isFetchingRef.current) {
       return;
     }
 
+    isFetchingRef.current = true;
     setIsFetchingMetadata(true);
 
     try {
@@ -42,6 +45,7 @@ export function MetadataUpdateCard() {
       });
       setError('Failed to check metadata updates. Please try again later.');
     } finally {
+      isFetchingRef.current = false;
       setIsFetchingMetadata(false);
     }
   };
@@ -51,7 +55,7 @@ export function MetadataUpdateCard() {
   });
 
   const checkMetadataUpdates = async () => {
-    setIsFetchingMetadata(false);
+    isFetchingRef.current = false;
     await fetchMetadataInfo();
   };
 

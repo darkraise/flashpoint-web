@@ -125,7 +125,9 @@ export class RuffleService {
     const normalizedCurrent = currentVersion ? this.normalizeVersion(currentVersion) : null;
     const normalizedLatest = this.normalizeVersion(latest.version);
 
-    const updateAvailable = normalizedCurrent === null || normalizedCurrent !== normalizedLatest;
+    // Only flag as "update available" when Ruffle is already installed but outdated.
+    // When not installed (null), the server auto-installs at startup — no need to show update UI.
+    const updateAvailable = normalizedCurrent !== null && normalizedCurrent !== normalizedLatest;
 
     return {
       currentVersion,
@@ -210,14 +212,13 @@ export class RuffleService {
 
       logger.info('[RuffleService] SHA-256 checksum verification passed');
     } catch (error) {
-      if (error instanceof Error && error.message.includes('checksum mismatch')) {
-        // Re-throw checksum failures
-        throw error;
-      }
-
-      // Log but don't fail on other errors (e.g., network issues downloading checksum)
-      logger.error('[RuffleService] Error during checksum verification:', error);
-      logger.warn('[RuffleService] Continuing without checksum verification');
+      // Always re-throw when a checksum URL was explicitly provided —
+      // skipping verification only when no checksum file exists in the release.
+      // This prevents an attacker who can block the checksum URL from
+      // forcing verification bypass while the tampered ZIP goes through.
+      logger.error('[RuffleService] Checksum verification failed:', error);
+      const message = error instanceof Error ? error.message : 'Unknown checksum error';
+      throw new Error(`Checksum verification failed: ${message}`);
     }
   }
 

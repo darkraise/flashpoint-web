@@ -43,6 +43,9 @@ export function ConfirmDialog({
   const variantNormalized = variant === 'danger' ? 'destructive' : variant;
 
   const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && onCancel) {
+      onCancel();
+    }
     if (onOpenChange) {
       onOpenChange(newOpen);
     }

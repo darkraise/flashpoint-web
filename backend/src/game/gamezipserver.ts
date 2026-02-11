@@ -118,9 +118,10 @@ export class GameZipServer {
         return { success: true, downloading: true, statusCode: 202 };
       }
 
-      if (downloadsInProgress.size >= MAX_CONCURRENT_DOWNLOADS) {
+      const totalActive = downloadsInProgress.size + DownloadRegistry.getActiveCount();
+      if (totalActive >= MAX_CONCURRENT_DOWNLOADS) {
         logger.warn(
-          `[GameZipServer] Too many concurrent downloads (${downloadsInProgress.size}), rejecting ${gameId}`
+          `[GameZipServer] Too many concurrent downloads (${totalActive}), rejecting ${gameId}`
         );
         return { success: false, statusCode: 503 };
       }
@@ -406,6 +407,7 @@ export class GameZipServer {
     for (const [gameId, progress] of downloadsInProgress.entries()) {
       if (now - progress.startTime > DOWNLOAD_STALE_MS) {
         logger.warn(`[GameZipServer] Removing stale download for ${gameId}`);
+        DownloadRegistry.fail(gameId);
         downloadsInProgress.delete(gameId);
       }
     }

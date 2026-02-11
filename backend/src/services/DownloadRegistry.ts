@@ -18,6 +18,7 @@ export interface DownloadEntry {
  */
 export class DownloadRegistry {
   private static activeDownloads = new Map<string, DownloadEntry>();
+  private static pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   /**
    * Register a download. Returns false if already downloading (duplicate prevention).
@@ -31,6 +32,8 @@ export class DownloadRegistry {
       logger.debug(`[DownloadRegistry] Download already in progress for ${gameId}`);
       return false;
     }
+    // Cancel any pending cleanup timer from a previous download of the same game
+    this.cancelTimer(gameId);
     this.activeDownloads.set(gameId, {
       ...entry,
       startedAt: Date.now(),
@@ -53,9 +56,7 @@ export class DownloadRegistry {
       entry.status = 'completed';
       logger.debug(`[DownloadRegistry] Download completed: ${gameId}`);
       // Remove after short delay to allow SSE clients to see completion status
-      setTimeout(() => {
-        this.activeDownloads.delete(gameId);
-      }, 5000);
+      this.scheduleRemoval(gameId, entry.startedAt);
     }
   }
 
@@ -70,9 +71,36 @@ export class DownloadRegistry {
       entry.status = 'failed';
       logger.debug(`[DownloadRegistry] Download failed: ${gameId}`);
       // Remove after short delay to allow SSE clients to see failure status
-      setTimeout(() => {
+      this.scheduleRemoval(gameId, entry.startedAt);
+    }
+  }
+
+  /**
+   * Schedule removal of an entry after a delay, verifying entry identity
+   * to prevent deleting a newer entry for the same gameId.
+   */
+  private static scheduleRemoval(gameId: string, startedAt: number): void {
+    this.cancelTimer(gameId);
+    const timer = setTimeout(() => {
+      this.pendingTimers.delete(gameId);
+      const current = this.activeDownloads.get(gameId);
+      // Only delete if the entry is the same one we marked (not a newer download)
+      if (current && current.startedAt === startedAt) {
         this.activeDownloads.delete(gameId);
-      }, 5000);
+      }
+    }, 5000);
+    timer.unref();
+    this.pendingTimers.set(gameId, timer);
+  }
+
+  /**
+   * Cancel a pending cleanup timer for a gameId.
+   */
+  private static cancelTimer(gameId: string): void {
+    const existing = this.pendingTimers.get(gameId);
+    if (existing) {
+      clearTimeout(existing);
+      this.pendingTimers.delete(gameId);
     }
   }
 
@@ -138,9 +166,13 @@ export class DownloadRegistry {
   }
 
   /**
-   * Clear all entries (for testing/cleanup).
+   * Clear all entries and cancel pending timers (for testing/cleanup).
    */
   static clear(): void {
+    for (const timer of this.pendingTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.pendingTimers.clear();
     this.activeDownloads.clear();
     logger.debug('[DownloadRegistry] Cleared all entries');
   }

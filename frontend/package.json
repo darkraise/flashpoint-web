@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:analyze": "tsc && vite build",
+    "build:analyze": "VITE_ANALYZE=true tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,json}\"",
-    "check-bundle": "vite build --mode analyze"
+    "check-bundle": "VITE_ANALYZE=true vite build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -328,8 +328,9 @@ export class DatabaseService {
       const oldDb = this.db;
       this.db = newDb;
 
-      // Close old connection after grace period (5s)
-      // Allows in-flight queries that captured the old reference to complete
+      // Close old connection after grace period (30s)
+      // Allows in-flight queries that captured the old reference to complete.
+      // 30s accommodates slow queries; the server request timeout is 120s.
       if (oldDb) {
         setTimeout(() => {
           try {
@@ -338,7 +339,7 @@ export class DatabaseService {
           } catch (closeError) {
             logger.warn('Failed to close old database handle:', closeError);
           }
-        }, 5000).unref(); // .unref() so it doesn't prevent shutdown
+        }, 30000).unref(); // .unref() so it doesn't prevent shutdown
       }
 
       // Update modification time
@@ -397,8 +398,9 @@ export class DatabaseService {
       const oldDb = this.db;
       this.db = newDb;
 
-      // Close old connection after grace period (5s)
-      // Allows in-flight queries that captured the old reference to complete
+      // Close old connection after grace period (30s)
+      // Allows in-flight queries that captured the old reference to complete.
+      // 30s accommodates slow queries; the server request timeout is 120s.
       if (oldDb) {
         setTimeout(() => {
           try {
@@ -407,7 +409,7 @@ export class DatabaseService {
           } catch (closeError) {
             logger.warn('Failed to close old database handle:', closeError);
           }
-        }, 5000).unref(); // .unref() so it doesn't prevent shutdown
+        }, 30000).unref(); // .unref() so it doesn't prevent shutdown
       }
 
       // Update modification time

@@ -230,7 +230,7 @@ router.get(
           }
         }
 
-        contentUrl = `${proxyUrl}/${encodeURI(fullUrl)}`;
+        contentUrl = `${proxyUrl}/${encodeURIComponent(fullUrl)}`;
       }
     }
 
