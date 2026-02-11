@@ -12,6 +12,7 @@ interface GameSearchCacheType {
 }
 interface GameServiceType {
   clearFlashSwfCache: () => void;
+  clearFilterOptionsCache: () => void;
 }
 let GameSearchCache: GameSearchCacheType | null = null;
 let GameServiceStatic: GameServiceType | null = null;
@@ -349,6 +350,7 @@ export class DatabaseService {
       }
       if (GameServiceStatic) {
         GameServiceStatic.clearFlashSwfCache();
+        GameServiceStatic.clearFilterOptionsCache();
       }
       logger.info('Database reloaded, caches invalidated');
     } catch (error) {
@@ -418,6 +420,7 @@ export class DatabaseService {
       }
       if (GameServiceStatic) {
         GameServiceStatic.clearFlashSwfCache();
+        GameServiceStatic.clearFilterOptionsCache();
       }
 
       logger.info('Force sync completed');

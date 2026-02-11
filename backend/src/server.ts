@@ -20,6 +20,7 @@ import { DomainService } from './services/DomainService';
 import { PlayTrackingService } from './services/PlayTrackingService';
 import { AuthService } from './services/AuthService';
 import { GameSearchCache } from './services/GameSearchCache';
+import { GameService } from './services/GameService';
 import { JobScheduler } from './services/JobScheduler';
 import { JobExecutionService } from './services/JobExecutionService';
 import { MetadataSyncJob } from './jobs/MetadataSyncJob';
@@ -161,6 +162,10 @@ async function startServer() {
 
   GameSearchCache.prewarmCache().catch((error) => {
     logger.warn('Failed to pre-warm game search cache:', error);
+  });
+
+  GameService.prewarmFilterOptions().catch((error) => {
+    logger.warn('Failed to pre-warm filter options cache:', error);
   });
 
   try {
