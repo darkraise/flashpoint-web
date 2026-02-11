@@ -19,6 +19,7 @@ import { useAuthStore } from '@/store/auth';
 import { RoleGuard } from '../common/RoleGuard';
 import { useEffect } from 'react';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { SidebarItem } from './SidebarItem';
@@ -46,6 +47,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { enablePlaylists, enableFavorites, enableStatistics } = useFeatureFlags();
   const { data: publicSettings } = usePublicSettings();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
 
   // Check if viewing a shared playlist as an anonymous user with guest access OFF
   const isViewingSharedPlaylistWithoutGuestAccess =
@@ -53,12 +55,12 @@ export function Sidebar({ isOpen }: SidebarProps) {
     location.pathname.startsWith('/playlists/shared/') &&
     publicSettings?.auth?.guestAccessEnabled === false;
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  const isMobile = !isDesktop;
   const effectiveCollapsed = isMobile ? false : sidebarCollapsed;
 
   const sidebarRef = useSwipeGesture<HTMLElement>({
     onSwipeLeft: () => {
-      if (window.innerWidth < 1024) {
+      if (!isDesktop) {
         setSidebarOpen(false);
       }
     },
@@ -100,29 +102,29 @@ export function Sidebar({ isOpen }: SidebarProps) {
     { path: '/settings', icon: Settings, label: 'Settings' },
   ].filter((item): item is Exclude<typeof item, false> => Boolean(item));
 
+  // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
-    if (isOpen && window.innerWidth < 1024) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [isOpen]);
+    document.body.style.overflow = isOpen && isMobile ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, isMobile]);
 
+  // Close sidebar on navigation (mobile only)
   useEffect(() => {
-    if (window.innerWidth < 1024) {
+    if (isMobile) {
       setSidebarOpen(false);
     }
-  }, [location.pathname, setSidebarOpen]);
+  }, [location.pathname, setSidebarOpen, isMobile]);
 
   const handleBackdropClick = () => {
-    if (window.innerWidth < 1024) {
+    if (isMobile) {
       setSidebarOpen(false);
     }
   };
 
   const handleNavItemClick = () => {
-    if (window.innerWidth < 1024) {
+    if (isMobile) {
       setSidebarOpen(false);
     }
   };

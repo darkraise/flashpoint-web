@@ -1,5 +1,6 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { SettingValue, SettingRow, CategorySettings, SettingDataType } from '../types/settings';
+import { AppError } from '../middleware/errorHandler';
 
 export class SystemSettingsService {
   get(key: string): SettingValue | null {
@@ -69,7 +70,7 @@ export class SystemSettingsService {
       [key]
     );
     if (!existing) {
-      throw new Error(`Setting '${key}' does not exist`);
+      throw new AppError(404, `Setting '${key}' does not exist`);
     }
 
     // Validate before setting
@@ -179,7 +180,13 @@ export class SystemSettingsService {
       const schema = JSON.parse(row.validation_schema);
       this.validateAgainstSchema(value, schema, key);
     } catch (error) {
-      throw new Error(
+      // Re-throw AppErrors as-is (validation failures from validateAgainstSchema)
+      if (error instanceof AppError) {
+        throw error;
+      }
+      // JSON parse errors or other issues with the schema itself
+      throw new AppError(
+        500,
         `Invalid validation schema for ${key}: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
@@ -199,14 +206,17 @@ export class SystemSettingsService {
         actualType === schema.type || (schema.type === 'number' && actualType === 'integer');
 
       if (!isValidType) {
-        throw new Error(`Setting '${key}' must be of type ${schema.type}, got ${actualType}`);
+        throw new AppError(
+          400,
+          `Setting '${key}' must be of type ${schema.type}, got ${actualType}`
+        );
       }
     }
 
     // Enum validation
     if (Array.isArray(schema.enum)) {
       if (!schema.enum.includes(value)) {
-        throw new Error(`Setting '${key}' must be one of: ${schema.enum.join(', ')}`);
+        throw new AppError(400, `Setting '${key}' must be one of: ${schema.enum.join(', ')}`);
       }
     }
 
@@ -214,10 +224,10 @@ export class SystemSettingsService {
     if (schema.type === 'integer' || schema.type === 'number') {
       if (typeof value === 'number') {
         if (typeof schema.minimum === 'number' && value < schema.minimum) {
-          throw new Error(`Setting '${key}' must be >= ${schema.minimum}`);
+          throw new AppError(400, `Setting '${key}' must be >= ${schema.minimum}`);
         }
         if (typeof schema.maximum === 'number' && value > schema.maximum) {
-          throw new Error(`Setting '${key}' must be <= ${schema.maximum}`);
+          throw new AppError(400, `Setting '${key}' must be <= ${schema.maximum}`);
         }
       }
     }
@@ -225,10 +235,10 @@ export class SystemSettingsService {
     // String validation
     if (schema.type === 'string' && typeof value === 'string') {
       if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
-        throw new Error(`Setting '${key}' must be at least ${schema.minLength} characters`);
+        throw new AppError(400, `Setting '${key}' must be at least ${schema.minLength} characters`);
       }
       if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
-        throw new Error(`Setting '${key}' must be at most ${schema.maxLength} characters`);
+        throw new AppError(400, `Setting '${key}' must be at most ${schema.maxLength} characters`);
       }
     }
   }

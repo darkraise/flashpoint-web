@@ -26,7 +26,7 @@ import {
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string(),
+    currentPassword: z.string().optional(),
     newPassword: z
       .string()
       .min(6, 'Password must be at least 6 characters')
@@ -78,7 +78,7 @@ export function ChangePasswordDialog({
       await changePasswordMutation.mutateAsync({
         id: user.id,
         passwordData: {
-          currentPassword: values.currentPassword,
+          currentPassword: isAdminReset ? undefined : values.currentPassword,
           newPassword: values.newPassword,
         },
       });
