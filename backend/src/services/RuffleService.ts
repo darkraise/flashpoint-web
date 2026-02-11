@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import AdmZip from 'adm-zip';
@@ -62,6 +63,7 @@ export class RuffleService {
   async getLatestVersion(): Promise<{
     version: string;
     downloadUrl: string;
+    checksumUrl: string | null;
     publishedAt: string;
     changelog: string;
   }> {
@@ -87,9 +89,19 @@ export class RuffleService {
         throw new Error('web-selfhosted.zip not found in release');
       }
 
+      // Look for corresponding checksum file
+      // Ruffle releases may include files like:
+      // - ruffle-nightly-2024_01_01-web-selfhosted.zip.sha256
+      // - SHA256SUMS (contains all checksums)
+      const checksumAsset = release.assets.find(
+        (a: GitHubAsset) =>
+          a.name === `${asset.name}.sha256` || a.name === 'SHA256SUMS' || a.name === 'checksums.txt'
+      );
+
       return {
         version: release.tag_name.replace('nightly-', ''),
         downloadUrl: asset.browser_download_url,
+        checksumUrl: checksumAsset?.browser_download_url ?? null,
         publishedAt: release.published_at,
         changelog: release.body || 'No changelog available.',
       };
@@ -124,6 +136,91 @@ export class RuffleService {
     };
   }
 
+  /**
+   * Verify SHA-256 checksum of downloaded ZIP file
+   * @param zipBuffer The downloaded ZIP file buffer
+   * @param checksumUrl URL to download the checksum file from
+   * @param zipFileName Original ZIP filename (for matching in multi-file checksum lists)
+   * @returns true if verification succeeds or is skipped (no checksum file)
+   * @throws Error if checksum validation fails
+   */
+  private async verifyChecksum(
+    zipBuffer: Buffer,
+    checksumUrl: string | null,
+    zipFileName: string
+  ): Promise<void> {
+    if (!checksumUrl) {
+      logger.warn(
+        '[RuffleService] No checksum file available for verification - skipping integrity check'
+      );
+      return;
+    }
+
+    try {
+      logger.info(`[RuffleService] Downloading checksum file from ${checksumUrl}`);
+
+      // Download checksum file
+      const checksumResponse = await axios.get(checksumUrl, {
+        responseType: 'text',
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'Flashpoint-Web',
+        },
+      });
+
+      const checksumContent = checksumResponse.data as string;
+
+      // Compute SHA-256 of downloaded ZIP
+      const computedHash = crypto.createHash('sha256').update(zipBuffer).digest('hex');
+
+      logger.debug(`[RuffleService] Computed SHA-256: ${computedHash}`);
+
+      // Parse checksum file - handle two formats:
+      // 1. Single hash file (*.sha256): just the hash string
+      // 2. Multi-file checksum list (SHA256SUMS): "hash  filename" per line
+      let expectedHash: string | null = null;
+
+      if (checksumContent.includes(zipFileName)) {
+        // Format: "hash  filename" - find line matching our ZIP filename
+        const lines = checksumContent.split('\n');
+        const matchingLine = lines.find((line) => line.includes(zipFileName));
+        if (matchingLine) {
+          expectedHash = matchingLine.split(/\s+/)[0];
+        }
+      } else {
+        // Format: single hash file - trim whitespace
+        expectedHash = checksumContent.trim().split(/\s+/)[0];
+      }
+
+      if (!expectedHash) {
+        logger.warn(
+          `[RuffleService] Could not extract expected hash from checksum file - skipping verification`
+        );
+        return;
+      }
+
+      logger.debug(`[RuffleService] Expected SHA-256: ${expectedHash}`);
+
+      // Compare hashes (case-insensitive)
+      if (computedHash.toLowerCase() !== expectedHash.toLowerCase()) {
+        throw new Error(
+          `SHA-256 checksum mismatch! Expected: ${expectedHash}, Got: ${computedHash}`
+        );
+      }
+
+      logger.info('[RuffleService] SHA-256 checksum verification passed');
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('checksum mismatch')) {
+        // Re-throw checksum failures
+        throw error;
+      }
+
+      // Log but don't fail on other errors (e.g., network issues downloading checksum)
+      logger.error('[RuffleService] Error during checksum verification:', error);
+      logger.warn('[RuffleService] Continuing without checksum verification');
+    }
+  }
+
   async updateRuffle(): Promise<{
     success: boolean;
     version: string;
@@ -142,10 +239,19 @@ export class RuffleService {
         },
       });
 
-      logger.info('[RuffleService] Download complete, extracting...');
+      const zipBuffer = Buffer.from(response.data);
+      logger.info('[RuffleService] Download complete, verifying integrity...');
+
+      // Extract filename from URL for checksum verification
+      const zipFileName = latest.downloadUrl.split('/').pop() || 'ruffle.zip';
+
+      // Verify SHA-256 checksum before extraction
+      await this.verifyChecksum(zipBuffer, latest.checksumUrl, zipFileName);
+
+      logger.info('[RuffleService] Integrity verification complete, extracting...');
 
       // Extract zip to temporary directory
-      const zip = new AdmZip(Buffer.from(response.data));
+      const zip = new AdmZip(zipBuffer);
       const tempDir = path.join(this.frontendPublicPath, '../ruffle-temp');
 
       // Clean temp directory if exists

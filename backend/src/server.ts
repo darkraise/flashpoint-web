@@ -29,7 +29,6 @@ import { PermissionCache } from './services/PermissionCache';
 import { PerformanceMetrics } from './services/PerformanceMetrics';
 import { RuffleService } from './services/RuffleService';
 import { ConfigManager } from './game/config';
-import { PreferencesService } from './game/services/PreferencesService';
 import { zipManager } from './game/zip-manager';
 import { gameZipServer } from './game/gamezipserver';
 import gameProxyRouter from './routes/game-proxy';
@@ -221,7 +220,6 @@ async function startServer() {
 
   try {
     await ConfigManager.loadConfig(config.flashpointPath);
-    PreferencesService.initialize(config.flashpointPath);
     logger.info('🎮 Game service configuration loaded (integrated)');
   } catch (error) {
     logger.warn('⚠️  Failed to load game service config (non-fatal):', error);

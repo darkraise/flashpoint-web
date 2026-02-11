@@ -143,9 +143,11 @@ export function PermissionSelector({ role, onClose, onSuccess }: PermissionSelec
                           />
                           <div className="flex-1">
                             <div className="text-sm font-medium">{permission.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {permission.description}
-                            </div>
+                            {permission.description ? (
+                              <div className="text-xs text-muted-foreground">
+                                {permission.description}
+                              </div>
+                            ) : null}
                           </div>
                         </label>
                       ))}

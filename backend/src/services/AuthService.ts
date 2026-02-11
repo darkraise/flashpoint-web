@@ -40,7 +40,14 @@ export class AuthService {
       await this.checkLoginAttempts(username, ipAddress);
 
       // Select only needed columns — avoid passing password_hash beyond verification
-      const user = UserDatabaseService.get(
+      const user = UserDatabaseService.get<{
+        id: number;
+        username: string;
+        email: string;
+        password_hash: string;
+        role_name: string;
+        priority: number;
+      }>(
         `SELECT u.id, u.username, u.email, u.password_hash,
                 r.name as role_name, r.priority
          FROM users u
@@ -163,13 +170,17 @@ export class AuthService {
       `[AuthService] Created user ${data.username} with default theme: ${defaultTheme}, primary color: ${defaultPrimaryColor}`
     );
 
-    const user = UserDatabaseService.get(
+    const user = UserDatabaseService.get<UserTokenData & { email: string }>(
       `SELECT u.id, u.username, u.email, r.name as role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = ?`,
       [userId]
     );
+
+    if (!user) {
+      throw new AppError(500, 'Failed to retrieve created user');
+    }
 
     const permissions = this.getUserPermissions(userId);
     const tokens = await this.generateTokens(user);
@@ -206,7 +217,7 @@ export class AuthService {
   }
 
   async refreshToken(refreshToken: string): Promise<AuthTokens> {
-    const tokenRecord = UserDatabaseService.get(
+    const tokenRecord = UserDatabaseService.get<{ user_id: number }>(
       `SELECT * FROM refresh_tokens
        WHERE token = ? AND revoked_at IS NULL AND expires_at > ?`,
       [refreshToken, new Date().toISOString()]
@@ -216,7 +227,7 @@ export class AuthService {
       throw new AppError(401, 'Invalid or expired refresh token');
     }
 
-    const user = UserDatabaseService.get(
+    const user = UserDatabaseService.get<UserTokenData>(
       `SELECT u.id, u.username, u.email, r.name as role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
@@ -243,7 +254,7 @@ export class AuthService {
     try {
       const payload = verifyToken(token);
 
-      const user = UserDatabaseService.get(
+      const user = UserDatabaseService.get<UserTokenData & { email: string }>(
         `SELECT u.id, u.username, u.email, r.name as role_name
          FROM users u
          JOIN roles r ON u.role_id = r.id
@@ -275,7 +286,7 @@ export class AuthService {
       return cached;
     }
 
-    const permissions = UserDatabaseService.all(
+    const permissions = UserDatabaseService.all<{ name: string }>(
       `SELECT DISTINCT p.name
        FROM permissions p
        JOIN role_permissions rp ON p.id = rp.permission_id
@@ -327,14 +338,14 @@ export class AuthService {
 
     // Count failed attempts in lockout window - check username AND IP separately
     // Using OR would allow an attacker to lock out any user by failing with their username
-    const failedAttemptsByUsername = UserDatabaseService.get(
+    const failedAttemptsByUsername = UserDatabaseService.get<{ count: number }>(
       `SELECT COUNT(*) as count FROM login_attempts
        WHERE username = ?
        AND success = 0
        AND attempted_at > datetime('now', '-' || ? || ' minutes')`,
       [username, safeLockoutDuration]
     );
-    const failedAttemptsByIp = UserDatabaseService.get(
+    const failedAttemptsByIp = UserDatabaseService.get<{ count: number }>(
       `SELECT COUNT(*) as count FROM login_attempts
        WHERE ip_address = ?
        AND success = 0

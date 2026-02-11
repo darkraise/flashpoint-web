@@ -327,13 +327,17 @@ export class DatabaseService {
       const oldDb = this.db;
       this.db = newDb;
 
-      // Close old connection after swap
+      // Close old connection after grace period (5s)
+      // Allows in-flight queries that captured the old reference to complete
       if (oldDb) {
-        try {
-          oldDb.close();
-        } catch (closeError) {
-          logger.warn('Failed to close old database connection:', closeError);
-        }
+        setTimeout(() => {
+          try {
+            oldDb.close();
+            logger.debug('Old database handle closed after grace period');
+          } catch (closeError) {
+            logger.warn('Failed to close old database handle:', closeError);
+          }
+        }, 5000).unref(); // .unref() so it doesn't prevent shutdown
       }
 
       // Update modification time
@@ -391,13 +395,17 @@ export class DatabaseService {
       const oldDb = this.db;
       this.db = newDb;
 
-      // Close old connection after swap
+      // Close old connection after grace period (5s)
+      // Allows in-flight queries that captured the old reference to complete
       if (oldDb) {
-        try {
-          oldDb.close();
-        } catch (closeError) {
-          logger.warn('Failed to close old database connection:', closeError);
-        }
+        setTimeout(() => {
+          try {
+            oldDb.close();
+            logger.debug('Old database handle closed after grace period');
+          } catch (closeError) {
+            logger.warn('Failed to close old database handle:', closeError);
+          }
+        }, 5000).unref(); // .unref() so it doesn't prevent shutdown
       }
 
       // Update modification time
@@ -462,8 +470,7 @@ export class DatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example DatabaseService.exec<{ id: number; name: string }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static exec<T = any>(sql: string, params: unknown[] = []): T[] {
+  static exec<T = unknown>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -486,8 +493,7 @@ export class DatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example DatabaseService.get<{ id: number }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static get<T = any>(sql: string, params: unknown[] = []): T | undefined {
+  static get<T = unknown>(sql: string, params: unknown[] = []): T | undefined {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -511,8 +517,7 @@ export class DatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example DatabaseService.all<{ id: number }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static all<T = any>(sql: string, params: unknown[] = []): T[] {
+  static all<T = unknown>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(

@@ -235,6 +235,10 @@ router.delete(
 router.post(
   '/:id/change-password',
   authenticate,
+  logActivity('users.changePassword', 'users', (req) => ({
+    userId: req.params.id,
+    isSelfChange: req.user?.id === parseInt(req.params.id, 10),
+  })),
   asyncHandler(async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
@@ -243,16 +247,18 @@ router.post(
 
     const data = changePasswordSchema.parse(req.body);
 
-    const isOwnPassword = req.user?.id === id;
-    const isAdmin = req.user?.permissions.includes('users.update');
+    const isOwnPassword = req.user!.id === id;
+    const userPermissions = req.user!.permissions || [];
+    const hasAdminPermission = userPermissions.includes('users.update');
 
-    if (!isOwnPassword && !isAdmin) {
+    // Authorization: Either changing own password OR has users.update permission
+    if (!isOwnPassword && !hasAdminPermission) {
       throw new AppError(403, 'Insufficient permissions');
     }
 
-    const isAdminReset = isAdmin && !isOwnPassword;
+    const isAdminReset = hasAdminPermission && !isOwnPassword;
 
-    // Require current password for non-admin password changes
+    // Require current password for self-change (non-admin reset)
     if (!isAdminReset && !data.currentPassword) {
       throw new AppError(400, 'Current password is required');
     }

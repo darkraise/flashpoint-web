@@ -35,7 +35,7 @@ services:
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
-      - NODE_ENV=${NODE_ENV:-production}
+      - NODE_ENV=${NODE_ENV:-development}
       - TZ=${TZ:-UTC}
       - DOMAIN=${DOMAIN:-http://localhost:${WEB_PORT:-80}}
       - LOG_LEVEL=${LOG_LEVEL:-info}

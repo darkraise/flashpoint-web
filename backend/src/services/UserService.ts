@@ -37,7 +37,17 @@ export class UserService {
   }
 
   async getUserById(id: number): Promise<User | null> {
-    const user = UserDatabaseService.get(
+    const user = UserDatabaseService.get<{
+      id: number;
+      username: string;
+      email: string;
+      roleId: number;
+      roleName: string;
+      isActive: number;
+      createdAt: string;
+      updatedAt: string;
+      lastLoginAt: string | null;
+    }>(
       `SELECT u.id, u.username, u.email, u.role_id as roleId, r.name as roleName,
               u.is_active as isActive, u.created_at as createdAt,
               u.updated_at as updatedAt, u.last_login_at as lastLoginAt
@@ -47,7 +57,13 @@ export class UserService {
       [id]
     );
 
-    return user ? { ...user, isActive: Boolean(user.isActive) } : null;
+    return user
+      ? {
+          ...user,
+          isActive: Boolean(user.isActive),
+          lastLoginAt: user.lastLoginAt ?? undefined,
+        }
+      : null;
   }
 
   async createUser(data: CreateUserData): Promise<User> {
@@ -153,7 +169,7 @@ export class UserService {
     // Prevent deleting the last admin
     if (user.roleName === 'admin') {
       const adminCount =
-        UserDatabaseService.get(
+        UserDatabaseService.get<{ count: number }>(
           "SELECT COUNT(*) as count FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'admin'",
           []
         )?.count || 0;
@@ -186,7 +202,10 @@ export class UserService {
     newPassword: string,
     isAdminReset: boolean = false
   ): Promise<void> {
-    const user = UserDatabaseService.get('SELECT password_hash FROM users WHERE id = ?', [id]);
+    const user = UserDatabaseService.get<{ password_hash: string }>(
+      'SELECT password_hash FROM users WHERE id = ?',
+      [id]
+    );
 
     if (!user) {
       throw new AppError(404, 'User not found');
@@ -216,7 +235,7 @@ export class UserService {
   }
 
   async getUserSetting(userId: number, key: string): Promise<string | null> {
-    const result = UserDatabaseService.get(
+    const result = UserDatabaseService.get<{ setting_value: string }>(
       `SELECT setting_value FROM user_settings
        WHERE user_id = ? AND setting_key = ?`,
       [userId, key]
@@ -225,13 +244,13 @@ export class UserService {
   }
 
   async getUserSettings(userId: number): Promise<Record<string, string>> {
-    const results = UserDatabaseService.all(
+    const results = UserDatabaseService.all<{ setting_key: string; setting_value: string }>(
       `SELECT setting_key, setting_value FROM user_settings WHERE user_id = ?`,
       [userId]
     );
 
     return results.reduce(
-      (acc: Record<string, string>, row: { setting_key: string; setting_value: string }) => {
+      (acc: Record<string, string>, row) => {
         acc[row.setting_key] = row.setting_value;
         return acc;
       },

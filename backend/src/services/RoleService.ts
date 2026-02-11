@@ -273,8 +273,10 @@ export class RoleService {
 
     // Check if role is assigned to users
     const userCount =
-      UserDatabaseService.get('SELECT COUNT(*) as count FROM users WHERE role_id = ?', [id])
-        ?.count || 0;
+      UserDatabaseService.get<{ count: number }>(
+        'SELECT COUNT(*) as count FROM users WHERE role_id = ?',
+        [id]
+      )?.count || 0;
 
     if (userCount > 0) {
       throw new AppError(409, `Cannot delete role: ${userCount} users are assigned to this role`);

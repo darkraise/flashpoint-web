@@ -222,8 +222,7 @@ export class UserDatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example UserDatabaseService.exec<{ id: number }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static exec<T = any>(sql: string, params: unknown[] = []): T[] {
+  static exec<T = unknown>(sql: string, params: unknown[] = []): T[] {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -246,8 +245,7 @@ export class UserDatabaseService {
    * @template T - Explicit type parameter recommended for type safety
    * @example UserDatabaseService.get<{ id: number }>('SELECT ...', [])
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static get<T = any>(sql: string, params: unknown[] = []): T | undefined {
+  static get<T = unknown>(sql: string, params: unknown[] = []): T | undefined {
     const db = this.getDatabase();
 
     return measureQueryPerformance(
@@ -270,8 +268,7 @@ export class UserDatabaseService {
    * Execute a query and return all rows (alias for exec).
    * @template T - Explicit type parameter recommended for type safety
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static all<T = any>(sql: string, params: unknown[] = []): T[] {
+  static all<T = unknown>(sql: string, params: unknown[] = []): T[] {
     return this.exec<T>(sql, params);
   }
 

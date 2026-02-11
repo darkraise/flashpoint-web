@@ -8,7 +8,7 @@ import net from 'net';
 import dns from 'dns';
 import { promisify } from 'util';
 import { logger } from '../../utils/logger';
-import { PreferencesService, GameDataSource } from './PreferencesService';
+import { PreferencesService, GameDataSource } from '../../services/PreferencesService';
 
 const dnsLookup = promisify(dns.lookup);
 
@@ -103,8 +103,7 @@ export class GameDataDownloader {
 
     logger.info(`[GameDataDownloader] Starting download for ${filename}`);
 
-    const prefsService = PreferencesService.getInstance();
-    const sources = await prefsService.getGameDataSources();
+    const sources = await PreferencesService.getGameDataSources();
 
     if (sources.length === 0) {
       logger.error('[GameDataDownloader] No game data sources configured in preferences.json');
@@ -114,7 +113,7 @@ export class GameDataDownloader {
       };
     }
 
-    const targetDir = params.targetPath || (await prefsService.getDataPacksFolderPath());
+    const targetDir = params.targetPath || (await PreferencesService.getDataPacksFolderPath());
     const targetPath = path.join(targetDir, filename);
     const tempPath = `${targetPath}.temp`;
 
@@ -544,8 +543,7 @@ export class GameDataDownloader {
   async exists(gameId: string, dateAdded: string, targetDir?: string): Promise<boolean> {
     try {
       const filename = GameDataDownloader.getFilename(gameId, dateAdded);
-      const prefsService = PreferencesService.getInstance();
-      const dir = targetDir || (await prefsService.getDataPacksFolderPath());
+      const dir = targetDir || (await PreferencesService.getDataPacksFolderPath());
       const filePath = path.join(dir, filename);
 
       try {
@@ -563,8 +561,7 @@ export class GameDataDownloader {
   async getFilePath(gameId: string, dateAdded: string, targetDir?: string): Promise<string> {
     try {
       const filename = GameDataDownloader.getFilename(gameId, dateAdded);
-      const prefsService = PreferencesService.getInstance();
-      const dir = targetDir || (await prefsService.getDataPacksFolderPath());
+      const dir = targetDir || (await PreferencesService.getDataPacksFolderPath());
       return path.join(dir, filename);
     } catch (error) {
       // getFilename() can throw on invalid dateAdded

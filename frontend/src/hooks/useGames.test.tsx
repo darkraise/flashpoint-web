@@ -30,8 +30,7 @@ describe('useGames', () => {
   });
 
   describe('useGames', () => {
-    it.skip('should fetch games with filters', async () => {
-      // TODO: Fix flaky MSW mock - test times out waiting for data
+    it('should fetch games with filters', async () => {
       const filters = {
         search: '',
         page: 1,

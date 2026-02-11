@@ -16,7 +16,7 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "strictPropertyInitialization": false,
+    "strictPropertyInitialization": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

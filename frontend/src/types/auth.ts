@@ -49,7 +49,7 @@ export interface RegisterResponse {
 export interface Permission {
   id: number;
   name: string;
-  description: string;
+  description: string | null;
   resource: string;
   action: string;
   createdAt: string;

@@ -10,6 +10,7 @@ import { setCorsHeaders } from './utils/cors';
 import { sanitizeUrlPath, sanitizeErrorMessage } from './utils/pathSecurity';
 import { validateGameId, validateHostname } from './validation/schemas';
 import { gameDataDownloader } from './services';
+import { DownloadRegistry } from '../services/DownloadRegistry';
 
 /** Escape HTML special characters to prevent XSS */
 function escapeHtml(str: string): string {
@@ -104,6 +105,14 @@ export class GameZipServer {
     }
 
     if (!zipExists && gameId && dateAdded) {
+      // Check shared registry first (prevents duplicate if DownloadManager already downloading)
+      if (DownloadRegistry.isActive(gameId)) {
+        logger.info(
+          `[GameZipServer] Download already in progress for game ${gameId} (via DownloadManager)`
+        );
+        return { success: true, downloading: true, statusCode: 202 };
+      }
+
       if (downloadsInProgress.has(gameId)) {
         logger.info(`[GameZipServer] Download already in progress for game ${gameId}`);
         return { success: true, downloading: true, statusCode: 202 };
@@ -114,6 +123,19 @@ export class GameZipServer {
           `[GameZipServer] Too many concurrent downloads (${downloadsInProgress.size}), rejecting ${gameId}`
         );
         return { success: false, statusCode: 503 };
+      }
+
+      // Register with shared download registry
+      const registered = DownloadRegistry.register(gameId, {
+        gameId,
+        source: 'game-zip-server',
+      });
+
+      if (!registered) {
+        logger.info(
+          `[GameZipServer] Download already in progress for game ${gameId} (detected by registry)`
+        );
+        return { success: true, downloading: true, statusCode: 202 };
       }
 
       logger.info(
@@ -353,22 +375,27 @@ export class GameZipServer {
           logger.error(
             `[GameZipServer] Downloaded file path outside allowed directory: ${result.filePath}`
           );
+          DownloadRegistry.fail(gameId);
           return;
         }
 
         try {
           await zipManager.mount(mountId, result.filePath);
           logger.info(`[GameZipServer] ✓ ZIP downloaded and mounted for game ${gameId}`);
+          DownloadRegistry.complete(gameId);
         } catch (mountError) {
           const errorMessage = mountError instanceof Error ? mountError.message : 'Mount failed';
           logger.error(`[GameZipServer] Failed to mount downloaded ZIP: ${errorMessage}`);
+          DownloadRegistry.fail(gameId);
         }
       } else {
         logger.error(`[GameZipServer] Download failed for ${gameId}: ${result.error}`);
+        DownloadRegistry.fail(gameId);
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       logger.error(`[GameZipServer] Background download error for ${gameId}: ${errorMsg}`);
+      DownloadRegistry.fail(gameId);
     } finally {
       downloadsInProgress.delete(gameId);
     }

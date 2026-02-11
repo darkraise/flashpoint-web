@@ -6,6 +6,7 @@ import type { GameDataSource } from './PreferencesService';
 import { HashValidator } from './HashValidator';
 import { FileImporter } from './FileImporter';
 import { GameDatabaseUpdater, GameData } from './GameDatabaseUpdater';
+import { DownloadRegistry } from './DownloadRegistry';
 
 export interface DownloadProgress {
   percent: number;
@@ -68,6 +69,8 @@ export class DownloadManager {
     const controller = new AbortController();
     this.activeDownloads.set(gameDataId, controller);
 
+    // Get game data to register with DownloadRegistry
+    let gameData: GameData | null = null;
     try {
       // Check if already downloaded
       const isDownloaded = await GameDatabaseUpdater.isDownloaded(gameDataId);
@@ -75,6 +78,28 @@ export class DownloadManager {
         logger.info('Game data already downloaded', { gameDataId });
         this.activeDownloads.delete(gameDataId);
         throw new Error(`Game data ${gameDataId} is already downloaded`);
+      }
+
+      // Get game data for registry
+      gameData = await GameDatabaseUpdater.getGameData(gameDataId);
+      if (!gameData) {
+        throw new Error(`Game data not found: ${gameDataId}`);
+      }
+
+      // Register with shared download registry (prevents duplicate downloads from GameZipServer)
+      const registered = DownloadRegistry.register(gameData.gameId, {
+        gameId: gameData.gameId,
+        gameDataId,
+        source: 'download-manager',
+      });
+
+      if (!registered) {
+        logger.info('Download already in progress (via GameZipServer)', {
+          gameId: gameData.gameId,
+          gameDataId,
+        });
+        this.activeDownloads.delete(gameDataId);
+        throw new Error(`Game ${gameData.gameId} is already being downloaded by another service`);
       }
     } catch (error) {
       // Clean up reserved slot if pre-checks fail
@@ -94,12 +119,7 @@ export class DownloadManager {
       // Ensure temp directory exists
       await this.ensureTempDir();
 
-      // Get game data info from database
-      const gameData = await GameDatabaseUpdater.getGameData(gameDataId);
-      if (!gameData) {
-        throw new Error(`Game data not found: ${gameDataId}`);
-      }
-
+      // gameData already retrieved above for registry
       // Generate filename
       const filename = this.getGameDataFilename(gameData);
       const tempFilePath = path.join(this.TEMP_DIR, `${gameData.gameId}.zip.temp`);
@@ -188,6 +208,9 @@ export class DownloadManager {
             source: source.name,
           });
 
+          // Mark as completed in registry
+          DownloadRegistry.complete(gameData.gameId);
+
           // Success! Return final path
           return finalPath;
         } catch (error) {
@@ -219,6 +242,11 @@ export class DownloadManager {
       // All sources failed
       const errorSummary = errors.map((e) => `${e.source}: ${e.error}`).join('\n');
 
+      // Mark as failed in registry
+      if (gameData) {
+        DownloadRegistry.fail(gameData.gameId);
+      }
+
       throw new Error(
         `Failed to download game data from all ${sources.length} sources:\n${errorSummary}`
       );
@@ -228,6 +256,7 @@ export class DownloadManager {
         abortSignal.removeEventListener('abort', onExternalAbort);
       }
       this.activeDownloads.delete(gameDataId);
+      // Note: DownloadRegistry cleanup happens in complete()/fail() or after timeout
     }
   }
 
