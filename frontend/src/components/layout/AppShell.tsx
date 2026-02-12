@@ -24,10 +24,8 @@ export function AppShell({ children }: AppShellProps) {
     try {
       // Only show Flash and HTML5 games (web-playable platforms)
       const game = await gamesApi.getRandom(undefined, ['Flash', 'HTML5']);
-      // Navigate to browse section with home as the originating context
-      navigate(`/browse/${game.id}`, {
-        state: { breadcrumbContext: { label: 'Home', href: '/' } },
-      });
+      // Navigate to browse section - context derived from URL path
+      navigate(`/browse/${game.id}`);
     } catch (error) {
       logger.error('Failed to fetch random game:', error);
       toast.error('Failed to load a random game. Please try again.');

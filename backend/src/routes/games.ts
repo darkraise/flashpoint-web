@@ -140,7 +140,10 @@ router.get(
       if (typeof raw === 'string') {
         platforms = raw.split(',').map((p) => p.trim()).filter(Boolean);
       } else if (Array.isArray(raw)) {
-        platforms = (raw as string[]).filter((p) => typeof p === 'string' && p.trim());
+        platforms = (raw as string[])
+          .filter((p) => typeof p === 'string')
+          .map((p) => p.trim())
+          .filter(Boolean);
       }
     }
 

@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode } from 'react';
-import { useGames, useGame, useRelatedGames } from './useGames';
+import { useGames, useGame, useRelatedGames, useRandomGame } from './useGames';
 import { mockGame } from '@/test/mocks/handlers';
+import { gamesApi } from '@/lib/api';
 
 // Create a wrapper with QueryClient for hooks that use useQuery
 function createWrapper() {
@@ -197,6 +198,161 @@ describe('useGames', () => {
 
       expect(result.current.isPending).toBe(true);
       expect(result.current.fetchStatus).toBe('idle');
+    });
+  });
+
+  describe('useRandomGame', () => {
+    it('should fetch a random game without parameters', async () => {
+      const { result } = renderHook(() => useRandomGame(), { wrapper });
+
+      expect(result.current.isLoading).toBe(true);
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(result.current.data).toBeDefined();
+      expect(result.current.data?.id).toBe(mockGame.id);
+    });
+
+    it('should call gamesApi.getRandom with library parameter', async () => {
+      const getRandomSpy = vi.spyOn(gamesApi, 'getRandom');
+
+      const { result } = renderHook(() => useRandomGame('arcade'), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(getRandomSpy).toHaveBeenCalledWith('arcade', undefined);
+
+      getRandomSpy.mockRestore();
+    });
+
+    it('should call gamesApi.getRandom with platforms parameter', async () => {
+      const getRandomSpy = vi.spyOn(gamesApi, 'getRandom');
+      const platforms = ['Flash', 'HTML5'];
+
+      const { result } = renderHook(() => useRandomGame(undefined, platforms), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(getRandomSpy).toHaveBeenCalledWith(undefined, platforms);
+
+      getRandomSpy.mockRestore();
+    });
+
+    it('should call gamesApi.getRandom with both library and platforms', async () => {
+      const getRandomSpy = vi.spyOn(gamesApi, 'getRandom');
+      const library = 'arcade';
+      const platforms = ['Flash', 'HTML5'];
+
+      const { result } = renderHook(() => useRandomGame(library, platforms), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(getRandomSpy).toHaveBeenCalledWith(library, platforms);
+
+      getRandomSpy.mockRestore();
+    });
+
+    it('should preserve platforms array order in API call', async () => {
+      const getRandomSpy = vi.spyOn(gamesApi, 'getRandom');
+      const platforms = ['HTML5', 'Flash']; // Intentionally reversed order
+
+      const { result } = renderHook(() => useRandomGame(undefined, platforms), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Verify the exact array is passed (order preserved)
+      expect(getRandomSpy).toHaveBeenCalledWith(undefined, ['HTML5', 'Flash']);
+
+      getRandomSpy.mockRestore();
+    });
+
+    it('should use correct queryKey with library and platforms', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            gcTime: 0,
+            staleTime: 0,
+          },
+        },
+      });
+
+      const customWrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const library = 'theatre';
+      const platforms = ['Flash', 'HTML5'];
+
+      const { result } = renderHook(() => useRandomGame(library, platforms), {
+        wrapper: customWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Check that the query is cached with the expected key
+      const cachedData = queryClient.getQueryData(['games', 'random', library, platforms]);
+      expect(cachedData).toBeDefined();
+
+      // Verify different parameters create different cache entries
+      const otherCachedData = queryClient.getQueryData(['games', 'random', 'arcade', platforms]);
+      expect(otherCachedData).toBeUndefined();
+    });
+
+    it('should create separate cache entries for different platforms arrays', async () => {
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: false,
+            gcTime: 0,
+            staleTime: 0,
+          },
+        },
+      });
+
+      const customWrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      );
+
+      const platforms1 = ['Flash'];
+      const platforms2 = ['Flash', 'HTML5'];
+
+      // First query with single platform
+      const { result: result1 } = renderHook(() => useRandomGame(undefined, platforms1), {
+        wrapper: customWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result1.current.isSuccess).toBe(true);
+      });
+
+      // Second query with multiple platforms
+      const { result: result2 } = renderHook(() => useRandomGame(undefined, platforms2), {
+        wrapper: customWrapper,
+      });
+
+      await waitFor(() => {
+        expect(result2.current.isSuccess).toBe(true);
+      });
+
+      // Both should be cached separately
+      const cached1 = queryClient.getQueryData(['games', 'random', undefined, platforms1]);
+      const cached2 = queryClient.getQueryData(['games', 'random', undefined, platforms2]);
+
+      expect(cached1).toBeDefined();
+      expect(cached2).toBeDefined();
     });
   });
 });

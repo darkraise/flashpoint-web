@@ -12,9 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-import { Breadcrumbs } from '@/components/common/Breadcrumbs';
+import { Breadcrumbs, BreadcrumbContext, BreadcrumbItem } from '@/components/common/Breadcrumbs';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
-import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 import { getGameLogoUrl, getGameScreenshotUrl } from '@/utils/gameUtils';
 import { logger } from '@/lib/logger';
 import { formatDuration } from '@/lib/cron-utils';
@@ -217,7 +216,7 @@ export function GameDetailView() {
     }
 
     // Build items from context, including parent if present
-    const items = [];
+    const items: BreadcrumbItem[] = [];
     if (breadcrumbContext.parent) {
       items.push({
         label: breadcrumbContext.parent.label,
