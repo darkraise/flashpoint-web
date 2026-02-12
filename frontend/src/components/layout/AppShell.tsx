@@ -61,20 +61,23 @@ export function AppShell({ children }: AppShellProps) {
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="default"
-            size="icon"
-            onClick={handleFeelingLucky}
-            disabled={isNavigating}
-            className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-shadow"
-            aria-label="I'm Feeling Lucky — open a random game"
-          >
-            {isNavigating ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Shuffle className="h-5 w-5" />
-            )}
-          </Button>
+          <div className="fixed bottom-6 right-6 z-50 animate-bounce">
+            <span className="absolute inset-0 h-12 w-12 rounded-full bg-primary animate-ping opacity-25" />
+            <Button
+              variant="default"
+              size="icon"
+              onClick={handleFeelingLucky}
+              disabled={isNavigating}
+              className="relative group h-12 w-12 rounded-full shadow-lg hover:shadow-xl hover:scale-110 active:scale-95 transition-all duration-200"
+              aria-label="I'm Feeling Lucky — open a random game"
+            >
+              {isNavigating ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Shuffle className="h-5 w-5 group-hover:rotate-180 transition-transform duration-300" />
+              )}
+            </Button>
+          </div>
         </TooltipTrigger>
         <TooltipContent side="left">I'm Feeling Lucky</TooltipContent>
       </Tooltip>
