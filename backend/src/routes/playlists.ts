@@ -1,9 +1,5 @@
 import { Router } from 'express';
-import {
-  PlaylistService,
-  CreatePlaylistDto,
-  AddGamesToPlaylistDto,
-} from '../services/PlaylistService';
+import { PlaylistService } from '../services/PlaylistService';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authenticate, optionalAuth } from '../middleware/auth';

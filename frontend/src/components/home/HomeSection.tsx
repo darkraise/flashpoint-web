@@ -86,6 +86,7 @@ export function HomeSection({
                 showAddToPlaylistButton={true}
                 favoriteGameIds={favoriteGameIds}
                 breadcrumbContext={{ label: 'Home', href: '/' }}
+                sectionKey="browse"
               />
             </div>
           ))}

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { logger } from '../utils/logger';
 import { zipManager } from './zip-manager';
-import { ConfigManager, MAX_BUFFERED_FILE_SIZE } from './config';
+import { ConfigManager } from './config';
 import { getMimeType } from './mimeTypes';
 import { injectPolyfills } from './utils/htmlInjector';
 import { setCorsHeaders } from './utils/cors';

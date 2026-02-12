@@ -474,7 +474,6 @@ export class MetadataSyncService {
    * Chunks batches to stay under SQLite's SQLITE_MAX_VARIABLE_NUMBER (default 999).
    * With 29 columns per game, max ~30 games per chunk (30 * 29 = 870 < 999).
    */
-  private static readonly COLUMNS_PER_GAME = 29;
   private static readonly MAX_GAMES_PER_CHUNK = 30; // 30 * 29 = 870 params, under 999 limit
 
   private async applyGames(games: ApiGame[]): Promise<void> {

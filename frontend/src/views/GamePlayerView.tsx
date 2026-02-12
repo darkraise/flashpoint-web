@@ -1,5 +1,5 @@
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { AlertCircle, Loader2, Download } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import {
   Breadcrumbs,
@@ -14,6 +14,11 @@ import { usePlaySession } from '@/hooks/usePlayTracking';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 import { getGameLogoUrl } from '@/utils/gameUtils';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import {
+  getBreadcrumbContextFromPath,
+  getSectionFromPath,
+  DEFAULT_BREADCRUMB_CONTEXT,
+} from '@/lib/sectionRoutes';
 
 export function GamePlayerView() {
   const { id } = useParams<{ id: string }>();
@@ -67,6 +72,10 @@ export function GamePlayerView() {
     ]
   );
 
+  // Derive breadcrumb context from URL when no state is available
+  const urlBreadcrumbContext = getBreadcrumbContextFromPath(location.pathname);
+  const currentSection = getSectionFromPath(location.pathname);
+
   const breadcrumbItems = useMemo((): BreadcrumbItem[] => {
     const items: BreadcrumbItem[] = [];
 
@@ -79,13 +88,29 @@ export function GamePlayerView() {
       items.push({
         label: playerContext.breadcrumbContext.label,
         href: playerContext.breadcrumbContext.href,
+        icon: playerContext.breadcrumbContext.icon,
+      });
+    } else if (urlBreadcrumbContext) {
+      // Derive from URL when no state (direct URL access)
+      items.push({
+        label: urlBreadcrumbContext.label,
+        href: urlBreadcrumbContext.href,
+        icon: urlBreadcrumbContext.icon,
       });
     } else {
-      items.push({ label: 'Browse', href: '/browse' });
+      items.push({
+        label: DEFAULT_BREADCRUMB_CONTEXT.label,
+        href: DEFAULT_BREADCRUMB_CONTEXT.href,
+        icon: DEFAULT_BREADCRUMB_CONTEXT.icon,
+      });
     }
 
+    // Build game detail URL: use section route if available, otherwise state/legacy
     const gameDetailHref =
-      playerContext?.gameDetailHref ?? buildSharedGameUrl(`/games/${id}`, shareToken);
+      playerContext?.gameDetailHref ??
+      (currentSection
+        ? `${currentSection.prefix}/${id}`
+        : buildSharedGameUrl(`/games/${id}`, shareToken));
     items.push({
       label: playerContext?.gameTitle ?? game?.title ?? 'Game',
       href: gameDetailHref,
@@ -94,7 +119,7 @@ export function GamePlayerView() {
     items.push({ label: 'Play', active: true });
 
     return items;
-  }, [id, game?.title, shareToken, playerContext]);
+  }, [id, game?.title, shareToken, playerContext, urlBreadcrumbContext, currentSection]);
 
   if (gameLoading || launchLoading) {
     return (
@@ -131,14 +156,8 @@ export function GamePlayerView() {
   // This prevents the game from unmounting/remounting when toggling fullscreen
   return (
     <ErrorBoundary>
-      <div className={isFullscreen ? 'fixed inset-0 z-50 bg-black' : 'max-w-6xl mx-auto space-y-6'}>
-        {!isFullscreen ? (
-          <Breadcrumbs
-            items={breadcrumbItems}
-            homeLabel={shareToken ? 'Shared' : 'Home'}
-            homeHref={shareToken ? '#' : '/'}
-          />
-        ) : null}
+      <div className={isFullscreen ? 'fixed inset-0 z-50 bg-black' : 'max-w-7xl mx-auto space-y-6'}>
+        {!isFullscreen ? <Breadcrumbs items={breadcrumbItems} /> : null}
 
         <div
           className={
@@ -183,16 +202,9 @@ export function GamePlayerView() {
           {/* Game Player Container - ALWAYS VISIBLE, persists in both modes */}
           <div className={isFullscreen ? 'w-full h-screen' : 'aspect-video bg-black'}>
             {launchData?.downloading ? (
-              <div className="flex items-center justify-center h-full bg-black">
-                <div className="text-center max-w-sm">
-                  <Download size={48} className="text-blue-500 mx-auto mb-4 animate-bounce" />
-                  <h3 className="text-xl font-bold mb-2 text-white">Downloading Game Data...</h3>
-                  <p className="text-muted-foreground text-sm mb-4">
-                    The game files are being downloaded. This page will update automatically when
-                    ready.
-                  </p>
-                  <Loader2 size={20} className="text-blue-400 mx-auto animate-spin" />
-                </div>
+              <div className="flex items-center justify-center h-full bg-black gap-3">
+                <Loader2 size={24} className="text-primary animate-spin" />
+                <span className="text-white text-lg">Downloading...</span>
               </div>
             ) : (
               <GamePlayer

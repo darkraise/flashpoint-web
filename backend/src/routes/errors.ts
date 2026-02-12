@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { promises as fs } from 'fs';
 import fsSync from 'fs';
 import path from 'path';
 import winston from 'winston';

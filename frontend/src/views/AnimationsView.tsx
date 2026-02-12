@@ -6,6 +6,7 @@ export function AnimationsView() {
       title="Browse Animations"
       library="theatre"
       breadcrumbContext={{ label: 'Animations', href: '/animations' }}
+      sectionKey="animations"
     />
   );
 }

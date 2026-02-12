@@ -11,6 +11,8 @@ interface GameListProps {
   isFavoritePage?: boolean;
   shareToken?: string | null;
   breadcrumbContext?: BreadcrumbContext;
+  /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
+  sectionKey?: string | null;
 }
 
 export function GameList({
@@ -21,6 +23,7 @@ export function GameList({
   isFavoritePage = false,
   shareToken = null,
   breadcrumbContext,
+  sectionKey = null,
 }: GameListProps) {
   const listColumns = useUIStore((state) => state.listColumns);
 
@@ -49,6 +52,7 @@ export function GameList({
           isFavoritePage={isFavoritePage}
           shareToken={shareToken}
           breadcrumbContext={breadcrumbContext}
+          sectionKey={sectionKey}
         />
       ))}
     </div>

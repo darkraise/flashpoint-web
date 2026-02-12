@@ -1,5 +1,4 @@
 import StreamZip from 'node-stream-zip';
-import path from 'path';
 import fs from 'fs/promises';
 import { LRUCache } from 'lru-cache';
 import { logger } from '../utils/logger';

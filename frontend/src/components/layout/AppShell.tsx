@@ -23,7 +23,8 @@ export function AppShell({ children }: AppShellProps) {
     setIsNavigating(true);
     try {
       const game = await gamesApi.getRandom();
-      navigate(`/games/${game.id}`, {
+      // Navigate to browse section with home as the originating context
+      navigate(`/browse/${game.id}`, {
         state: { breadcrumbContext: { label: 'Home', href: '/' } },
       });
     } catch (error) {

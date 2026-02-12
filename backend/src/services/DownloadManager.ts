@@ -35,7 +35,6 @@ type DetailsCallback = (details: DownloadDetails) => void;
 export class DownloadManager {
   private static readonly TEMP_DIR = path.join(process.cwd(), 'backend', 'temp-downloads');
   private static readonly DOWNLOAD_TIMEOUT_MS = 300000; // 5 minutes per source
-  private static readonly MAX_RETRIES = 3;
   private static readonly MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
   // Track active downloads to prevent duplicates

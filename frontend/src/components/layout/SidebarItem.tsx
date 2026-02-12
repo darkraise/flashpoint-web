@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SIDEBAR_PREFIX_MAP } from '@/lib/sectionRoutes';
 
 interface SidebarItemProps {
   path: string;
@@ -27,11 +28,35 @@ export function SidebarItem({
     const itemPath = path.split('?')[0];
     const itemQuery = path.split('?')[1];
 
+    // Exact match for the path
     if (itemQuery) {
-      return location.pathname === itemPath && location.search === `?${itemQuery}`;
+      if (location.pathname === itemPath && location.search === `?${itemQuery}`) {
+        return true;
+      }
+    } else if (location.pathname === itemPath) {
+      return true;
     }
 
-    return location.pathname === itemPath;
+    // Check if current path is a section-based game route that maps to this sidebar item
+    const prefixes = SIDEBAR_PREFIX_MAP[itemPath];
+    if (prefixes?.some((prefix) => location.pathname.startsWith(prefix))) {
+      return true;
+    }
+
+    // Check breadcrumb context from location state (fallback for non-section routes)
+    const state = location.state as {
+      breadcrumbContext?: { href?: string };
+      playerBreadcrumbContext?: { breadcrumbContext?: { href?: string } };
+    } | null;
+
+    const breadcrumbHref =
+      state?.breadcrumbContext?.href ?? state?.playerBreadcrumbContext?.breadcrumbContext?.href;
+
+    if (breadcrumbHref && breadcrumbHref === itemPath) {
+      return true;
+    }
+
+    return false;
   })();
 
   return (

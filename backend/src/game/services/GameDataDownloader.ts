@@ -8,7 +8,7 @@ import net from 'net';
 import dns from 'dns';
 import { promisify } from 'util';
 import { logger } from '../../utils/logger';
-import { PreferencesService, GameDataSource } from '../../services/PreferencesService';
+import { PreferencesService } from '../../services/PreferencesService';
 
 const dnsLookup = promisify(dns.lookup);
 

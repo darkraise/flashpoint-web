@@ -7,7 +7,6 @@ import { asyncHandler } from '../middleware/asyncHandler';
 import { sharedAccessAuth, validateSharedGameAccess } from '../middleware/auth';
 import { logActivity } from '../middleware/activityLogger';
 import { rateLimitStandard } from '../middleware/rateLimiter';
-import { logger } from '../utils/logger';
 import { z } from 'zod';
 
 const router = Router();

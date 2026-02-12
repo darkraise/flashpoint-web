@@ -6,6 +6,7 @@ export function BrowseView() {
       title="Browse Games"
       library="arcade"
       breadcrumbContext={{ label: 'Browse', href: '/browse' }}
+      sectionKey="browse"
     />
   );
 }
