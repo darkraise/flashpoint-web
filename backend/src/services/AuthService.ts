@@ -46,10 +46,9 @@ export class AuthService {
         email: string;
         password_hash: string;
         role_name: string;
-        priority: number;
       }>(
         `SELECT u.id, u.username, u.email, u.password_hash,
-                r.name as role_name, r.priority
+                r.name as role_name
          FROM users u
          JOIN roles r ON u.role_id = r.id
          WHERE u.username = ? AND u.is_active = 1`,

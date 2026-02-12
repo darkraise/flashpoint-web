@@ -29,10 +29,10 @@ export function useRelatedGames(id: string, limit = 10) {
   });
 }
 
-export function useRandomGame(library?: string) {
+export function useRandomGame(library?: string, platforms?: string[]) {
   return useQuery({
-    queryKey: ['games', 'random', library],
-    queryFn: () => gamesApi.getRandom(library),
+    queryKey: ['games', 'random', library, platforms],
+    queryFn: () => gamesApi.getRandom(library, platforms),
   });
 }
 

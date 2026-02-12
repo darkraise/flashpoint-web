@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
@@ -32,6 +32,25 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const { data: roles, isLoading, isError, error } = useRoles();
   const deleteRoleMutation = useDeleteRole();
+
+  // Sort roles: system roles (admin=1, user=2, guest=3) pinned at top, then others by name
+  const sortedRoles = useMemo(() => {
+    if (!roles) return [];
+    return [...roles].sort((a, b) => {
+      const aIsSystem = SYSTEM_ROLE_IDS.has(a.id);
+      const bIsSystem = SYSTEM_ROLE_IDS.has(b.id);
+
+      // System roles come first
+      if (aIsSystem && !bIsSystem) return -1;
+      if (!aIsSystem && bIsSystem) return 1;
+
+      // Among system roles, sort by ID (admin=1, user=2, guest=3)
+      if (aIsSystem && bIsSystem) return a.id - b.id;
+
+      // Among custom roles, sort by name
+      return a.name.localeCompare(b.name);
+    });
+  }, [roles]);
 
   const handleDeleteClick = (role: Role) => {
     setRoleToDelete(role);
@@ -85,11 +104,6 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
       cell: ({ row }) => <div className="text-muted-foreground">{row.getValue('description')}</div>,
     },
     {
-      accessorKey: 'priority',
-      header: 'Priority',
-      cell: ({ row }) => <div className="text-muted-foreground">{row.getValue('priority')}</div>,
-    },
-    {
       accessorKey: 'permissions',
       header: 'Permissions',
       cell: ({ row }) => {
@@ -104,44 +118,45 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
         const role = row.original;
         const isSystemRole = SYSTEM_ROLE_IDS.has(role.id);
 
+        // System roles cannot be modified - show label instead of menu
+        if (isSystemRole) {
+          return (
+            <Badge variant="outline" className="text-muted-foreground">
+              System Role
+            </Badge>
+          );
+        }
+
         return (
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <RoleGuard permission="roles.update">
-                  <DropdownMenuItem onClick={() => onEdit(role)} disabled={isSystemRole}>
-                    Edit Role
-                  </DropdownMenuItem>
-                </RoleGuard>
-                <RoleGuard permission="roles.update">
-                  <DropdownMenuItem
-                    onClick={() => onManagePermissions(role)}
-                    disabled={isSystemRole}
-                  >
-                    Manage Permissions
-                  </DropdownMenuItem>
-                </RoleGuard>
-                <RoleGuard permission="roles.delete">
-                  <DropdownMenuItem
-                    onClick={() => handleDeleteClick(role)}
-                    disabled={deleteRoleMutation.isPending || isSystemRole}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    Delete Role
-                  </DropdownMenuItem>
-                </RoleGuard>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {isSystemRole ? <span className="text-xs text-muted-foreground">(System)</span> : null}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <RoleGuard permission="roles.update">
+                <DropdownMenuItem onClick={() => onEdit(role)}>Edit Role</DropdownMenuItem>
+              </RoleGuard>
+              <RoleGuard permission="roles.update">
+                <DropdownMenuItem onClick={() => onManagePermissions(role)}>
+                  Manage Permissions
+                </DropdownMenuItem>
+              </RoleGuard>
+              <RoleGuard permission="roles.delete">
+                <DropdownMenuItem
+                  onClick={() => handleDeleteClick(role)}
+                  disabled={deleteRoleMutation.isPending}
+                  className="text-destructive focus:text-destructive"
+                >
+                  Delete Role
+                </DropdownMenuItem>
+              </RoleGuard>
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
       },
     },
@@ -159,7 +174,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
     <>
       <DataTable
         columns={columns}
-        data={roles || []}
+        data={sortedRoles}
         isLoading={isLoading}
         emptyMessage="No roles found"
       />

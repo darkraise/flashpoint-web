@@ -612,7 +612,7 @@ export class GameService {
     }
   }
 
-  async getRandomGame(library?: string): Promise<Game | null> {
+  async getRandomGame(library?: string, platforms?: string[]): Promise<Game | null> {
     try {
       let sql = `
         SELECT
@@ -629,6 +629,12 @@ export class GameService {
       if (library) {
         sql += ` AND g.library = ?`;
         params.push(library);
+      }
+
+      if (platforms && platforms.length > 0) {
+        const placeholders = platforms.map(() => '?').join(', ');
+        sql += ` AND g.platformName IN (${placeholders})`;
+        params.push(...platforms);
       }
 
       sql += ` ORDER BY RANDOM() LIMIT 1`;

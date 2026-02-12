@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, ArrowLeft, Film, Gamepad2 } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Film, Gamepad2, List, ListVideo, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SectionIcon } from '@/lib/sectionRoutes';
 
@@ -7,6 +7,8 @@ export interface BreadcrumbContext {
   label: string;
   href: string;
   icon?: SectionIcon;
+  /** Optional parent breadcrumb for nested navigation (e.g., Flashpoint Playlists > Playlist Name) */
+  parent?: BreadcrumbContext;
 }
 
 export interface PlayerBreadcrumbContext {
@@ -54,6 +56,12 @@ function BreadcrumbIcon({ icon }: { icon: SectionIcon }) {
       return <Film size={14} aria-hidden="true" />;
     case 'Gamepad2':
       return <Gamepad2 size={14} aria-hidden="true" />;
+    case 'List':
+      return <List size={14} aria-hidden="true" />;
+    case 'ListVideo':
+      return <ListVideo size={14} aria-hidden="true" />;
+    case 'Heart':
+      return <Heart size={14} aria-hidden="true" />;
     default:
       return null;
   }

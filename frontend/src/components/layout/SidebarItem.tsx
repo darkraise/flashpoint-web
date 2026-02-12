@@ -37,22 +37,34 @@ export function SidebarItem({
       return true;
     }
 
-    // Check if current path is a section-based game route that maps to this sidebar item
-    const prefixes = SIDEBAR_PREFIX_MAP[itemPath];
-    if (prefixes?.some((prefix) => location.pathname.startsWith(prefix))) {
-      return true;
-    }
-
-    // Check breadcrumb context from location state (fallback for non-section routes)
+    // Check breadcrumb context from location state
+    // This takes priority over prefix matching to handle cases like
+    // opening a game from Flashpoint Playlists (should highlight Playlists, not Browse)
     const state = location.state as {
-      breadcrumbContext?: { href?: string };
-      playerBreadcrumbContext?: { breadcrumbContext?: { href?: string } };
+      breadcrumbContext?: { href?: string; parent?: { href?: string } };
+      playerBreadcrumbContext?: { breadcrumbContext?: { href?: string; parent?: { href?: string } } };
     } | null;
 
-    const breadcrumbHref =
-      state?.breadcrumbContext?.href ?? state?.playerBreadcrumbContext?.breadcrumbContext?.href;
+    const breadcrumbContext =
+      state?.breadcrumbContext ?? state?.playerBreadcrumbContext?.breadcrumbContext;
 
-    if (breadcrumbHref && breadcrumbHref === itemPath) {
+    // If breadcrumb context exists, use it exclusively for matching
+    if (breadcrumbContext) {
+      // Check direct breadcrumb href
+      if (breadcrumbContext.href === itemPath) {
+        return true;
+      }
+      // Check parent breadcrumb href (e.g., Flashpoint Playlists when viewing a game from a playlist)
+      if (breadcrumbContext.parent?.href === itemPath) {
+        return true;
+      }
+      // Breadcrumb context exists but doesn't match this item
+      return false;
+    }
+
+    // No breadcrumb context - fall back to prefix matching for direct URL access
+    const prefixes = SIDEBAR_PREFIX_MAP[itemPath];
+    if (prefixes?.some((prefix) => location.pathname.startsWith(prefix))) {
       return true;
     }
 

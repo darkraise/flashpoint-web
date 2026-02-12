@@ -85,6 +85,14 @@ export function GamePlayerView() {
         href: playerContext.sharedPlaylistHref ?? '#',
       });
     } else if (playerContext?.breadcrumbContext) {
+      // Add parent context if present (e.g., Flashpoint Playlists > Playlist Name)
+      if (playerContext.breadcrumbContext.parent) {
+        items.push({
+          label: playerContext.breadcrumbContext.parent.label,
+          href: playerContext.breadcrumbContext.parent.href,
+          icon: playerContext.breadcrumbContext.parent.icon,
+        });
+      }
       items.push({
         label: playerContext.breadcrumbContext.label,
         href: playerContext.breadcrumbContext.href,

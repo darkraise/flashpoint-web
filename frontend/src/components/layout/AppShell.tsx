@@ -22,7 +22,8 @@ export function AppShell({ children }: AppShellProps) {
   const handleFeelingLucky = async () => {
     setIsNavigating(true);
     try {
-      const game = await gamesApi.getRandom();
+      // Only show Flash and HTML5 games (web-playable platforms)
+      const game = await gamesApi.getRandom(undefined, ['Flash', 'HTML5']);
       // Navigate to browse section with home as the originating context
       navigate(`/browse/${game.id}`, {
         state: { breadcrumbContext: { label: 'Home', href: '/' } },

@@ -6,7 +6,8 @@ import {
   useDeleteUserPlaylist,
 } from '@/hooks/useUserPlaylists';
 import { useFavoriteGameIds } from '@/hooks/useFavorites';
-import { ArrowLeft, Edit, Trash2, MoreVertical, Share2 } from 'lucide-react';
+import { Edit, Trash2, MoreVertical, Share2 } from 'lucide-react';
+import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { GameGrid } from '@/components/library/GameGrid';
 import { GameList } from '@/components/library/GameList';
 import { Button } from '@/components/ui/button';
@@ -101,13 +102,17 @@ export function UserPlaylistDetailView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <Link
-        to="/playlists"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft size={20} />
-        Back to playlists
-      </Link>
+      <Breadcrumbs
+        items={[
+          {
+            label: 'My Playlists',
+            href: '/playlists',
+            icon: { type: 'lucide', value: 'ListVideo' },
+          },
+          { label: playlist.title, active: true },
+        ]}
+        fallbackHref="/playlists"
+      />
 
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex gap-4">
@@ -181,13 +186,29 @@ export function UserPlaylistDetailView() {
             <GameGrid
               games={playlistGames}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
-              breadcrumbContext={{ label: playlist.title, href: `/playlists/${playlist.id}` }}
+              breadcrumbContext={{
+                label: playlist.title,
+                href: `/playlists/${playlist.id}`,
+                parent: {
+                  label: 'My Playlists',
+                  href: '/playlists',
+                  icon: { type: 'lucide', value: 'ListVideo' },
+                },
+              }}
             />
           ) : (
             <GameList
               games={playlistGames}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
-              breadcrumbContext={{ label: playlist.title, href: `/playlists/${playlist.id}` }}
+              breadcrumbContext={{
+                label: playlist.title,
+                href: `/playlists/${playlist.id}`,
+                parent: {
+                  label: 'My Playlists',
+                  href: '/playlists',
+                  icon: { type: 'lucide', value: 'ListVideo' },
+                },
+              }}
             />
           )}
         </>

@@ -74,8 +74,8 @@ export function createTestRole(
   permissions: string[] = []
 ) {
   const result = db
-    .prepare(`INSERT INTO roles (name, description, priority) VALUES (?, ?, ?)`)
-    .run(name, `Test role: ${name}`, 50);
+    .prepare(`INSERT INTO roles (name, description) VALUES (?, ?)`)
+    .run(name, `Test role: ${name}`);
 
   const roleId = result.lastInsertRowid as number;
 

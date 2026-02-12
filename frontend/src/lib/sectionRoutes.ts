@@ -59,15 +59,19 @@ export const SECTION_CONFIGS: Record<string, SectionConfig> = {
 };
 
 /**
- * Map of sidebar paths to URL prefixes for active state detection
- * Used by SidebarItem to determine if a section-based game route
- * should highlight the corresponding sidebar item
+ * Map of sidebar paths to URL prefixes for active state detection.
+ * Used by SidebarItem ONLY when no breadcrumb context is available
+ * (e.g., direct URL access without navigation state).
+ * When breadcrumb context exists, it takes priority over prefix matching.
  */
 export const SIDEBAR_PREFIX_MAP: Record<string, readonly string[]> = {
   '/flash': ['/flash/'],
   '/html5': ['/html5/'],
   '/animations': ['/animations/'],
-  '/browse': ['/browse/', '/games/'], // /games/ falls back to browse section
+  '/browse': ['/browse/', '/games/'], // /games/ only highlights Browse on direct URL access
+  '/playlists': ['/playlists/'],
+  '/flashpoint-playlists': ['/flashpoint-playlists/'],
+  '/favorites': ['/favorites/'],
 };
 
 /**

@@ -33,9 +33,12 @@ export const gamesApi = {
     return data;
   },
 
-  getRandom: async (library?: string): Promise<Game> => {
+  getRandom: async (library?: string, platforms?: string[]): Promise<Game> => {
     const { data } = await apiClient.get<Game>('/games/random', {
-      params: { library },
+      params: {
+        library,
+        platforms: platforms?.join(','),
+      },
     });
     return data;
   },

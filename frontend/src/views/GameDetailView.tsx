@@ -204,18 +204,37 @@ export function GameDetailView() {
   // presentOnDisk: null = no data needed, 0 = needs download, 1 = downloaded
   const needsDataDownload = game.presentOnDisk === 0;
 
-  const breadcrumbItems =
-    shareToken && sharedPlaylist
-      ? [
-          { label: sharedPlaylist.title, href: `/playlists/shared/${shareToken}` },
-          { label: game.title, active: true },
-        ]
-      : shareToken
-        ? [{ label: game.title, active: true }]
-        : [
-            { label: breadcrumbContext.label, href: breadcrumbContext.href, icon: breadcrumbContext.icon },
-            { label: game.title, active: true },
-          ];
+  // Build breadcrumb items, handling optional parent context
+  const buildBreadcrumbItems = () => {
+    if (shareToken && sharedPlaylist) {
+      return [
+        { label: sharedPlaylist.title, href: `/playlists/shared/${shareToken}` },
+        { label: game.title, active: true },
+      ];
+    }
+    if (shareToken) {
+      return [{ label: game.title, active: true }];
+    }
+
+    // Build items from context, including parent if present
+    const items = [];
+    if (breadcrumbContext.parent) {
+      items.push({
+        label: breadcrumbContext.parent.label,
+        href: breadcrumbContext.parent.href,
+        icon: breadcrumbContext.parent.icon,
+      });
+    }
+    items.push({
+      label: breadcrumbContext.label,
+      href: breadcrumbContext.href,
+      icon: breadcrumbContext.icon,
+    });
+    items.push({ label: game.title, active: true });
+    return items;
+  };
+
+  const breadcrumbItems = buildBreadcrumbItems();
 
   return (
     <ErrorBoundary>

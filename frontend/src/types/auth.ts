@@ -59,7 +59,6 @@ export interface Role {
   id: number;
   name: string;
   description: string;
-  priority: number;
   createdAt: string;
   updatedAt: string;
   permissions: Permission[];
@@ -68,14 +67,12 @@ export interface Role {
 export interface CreateRoleData {
   name: string;
   description?: string;
-  priority?: number;
   permissionIds?: number[];
 }
 
 export interface UpdateRoleData {
   name?: string;
   description?: string;
-  priority?: number;
 }
 
 export interface CreateUserData {
