@@ -132,7 +132,6 @@ export interface RoleRow {
   id: number;
   name: string;
   description: string | null;
-  priority: number;
   created_at: string;
   updated_at: string;
 }

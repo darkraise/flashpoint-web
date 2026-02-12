@@ -34,10 +34,6 @@ const roleSchema = z.object({
     .min(3, 'Name must be at least 3 characters')
     .max(50, 'Name must be at most 50 characters'),
   description: z.string().optional(),
-  priority: z
-    .number()
-    .min(0, 'Priority must be at least 0')
-    .max(100, 'Priority must be at most 100'),
   permissionIds: z.array(z.number()).optional(),
 });
 
@@ -61,7 +57,6 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
     defaultValues: {
       name: role?.name ?? '',
       description: role?.description ?? '',
-      priority: role?.priority ?? 0,
       permissionIds: role?.permissions?.map((p) => p.id) ?? [],
     },
   });
@@ -71,7 +66,6 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
       form.reset({
         name: role.name,
         description: role.description,
-        priority: role.priority,
         permissionIds: role.permissions?.map((p) => p.id) || [],
       });
     }
@@ -83,14 +77,12 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
         const updateData: UpdateRoleData = {
           name: values.name,
           description: values.description,
-          priority: values.priority,
         };
         await updateMutation.mutateAsync({ id: role.id, data: updateData });
       } else {
         const createData: CreateRoleData = {
           name: values.name,
           description: values.description,
-          priority: values.priority,
           permissionIds: values.permissionIds || [],
         };
         await createMutation.mutateAsync(createData);
@@ -149,30 +141,6 @@ export function RoleForm({ role, onClose, onSuccess }: RoleFormProps) {
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Priority</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        placeholder="0-100 (higher = more important)"
-                        {...field}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Higher priority roles have precedence (admin=100, user=50, guest=0)
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

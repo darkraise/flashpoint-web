@@ -129,14 +129,22 @@ export function FavoritesView() {
               games={games}
               favoriteGameIds={favoriteGameIds}
               isFavoritePage={true}
-              breadcrumbContext={{ label: 'Favorites', href: '/favorites' }}
+              breadcrumbContext={{
+                label: 'Favorites',
+                href: '/favorites',
+                icon: { type: 'lucide', value: 'Heart' },
+              }}
             />
           ) : (
             <GameList
               games={games}
               favoriteGameIds={favoriteGameIds}
               isFavoritePage={true}
-              breadcrumbContext={{ label: 'Favorites', href: '/favorites' }}
+              breadcrumbContext={{
+                label: 'Favorites',
+                href: '/favorites',
+                icon: { type: 'lucide', value: 'Heart' },
+              }}
             />
           )}
         </>

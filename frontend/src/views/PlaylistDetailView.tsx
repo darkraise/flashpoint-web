@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { usePlaylist } from '@/hooks/usePlaylists';
 import { useFavoriteGameIds } from '@/hooks/useFavorites';
-import { ArrowLeft } from 'lucide-react';
 import { GameGrid } from '@/components/library/GameGrid';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/store/auth';
+import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 
 export function PlaylistDetailView() {
   const { id } = useParams<{ id: string }>();
@@ -40,13 +40,17 @@ export function PlaylistDetailView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <Link
-        to="/flashpoint-playlists"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft size={20} />
-        Back to playlists
-      </Link>
+      <Breadcrumbs
+        items={[
+          {
+            label: 'Flashpoint Playlists',
+            href: '/flashpoint-playlists',
+            icon: { type: 'lucide', value: 'List' },
+          },
+          { label: playlist.title, active: true },
+        ]}
+        fallbackHref="/flashpoint-playlists"
+      />
 
       <div>
         <div className="flex items-center gap-3 mb-2">
@@ -69,7 +73,15 @@ export function PlaylistDetailView() {
           <GameGrid
             games={playlist.games}
             favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
-            breadcrumbContext={{ label: playlist.title, href: `/flashpoint-playlists/${id ?? ''}` }}
+            breadcrumbContext={{
+              label: playlist.title,
+              href: `/flashpoint-playlists/${id ?? ''}`,
+              parent: {
+                label: 'Flashpoint Playlists',
+                href: '/flashpoint-playlists',
+                icon: { type: 'lucide', value: 'List' },
+              },
+            }}
           />
         </>
       ) : (

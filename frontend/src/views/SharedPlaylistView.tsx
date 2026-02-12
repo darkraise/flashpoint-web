@@ -110,11 +110,7 @@ export function SharedPlaylistView() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <Breadcrumbs
-        items={[{ label: playlist.title, active: true }]}
-        homeLabel="Shared"
-        homeHref="#"
-      />
+      <Breadcrumbs items={[{ label: playlist.title, active: true }]} />
 
       <Alert>
         <Info className="h-4 w-4" />

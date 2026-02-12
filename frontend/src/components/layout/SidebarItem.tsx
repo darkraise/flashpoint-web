@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SIDEBAR_PREFIX_MAP } from '@/lib/sectionRoutes';
 
 interface SidebarItemProps {
   path: string;
@@ -27,11 +28,47 @@ export function SidebarItem({
     const itemPath = path.split('?')[0];
     const itemQuery = path.split('?')[1];
 
+    // Exact match for the path
     if (itemQuery) {
-      return location.pathname === itemPath && location.search === `?${itemQuery}`;
+      if (location.pathname === itemPath && location.search === `?${itemQuery}`) {
+        return true;
+      }
+    } else if (location.pathname === itemPath) {
+      return true;
     }
 
-    return location.pathname === itemPath;
+    // Check breadcrumb context from location state
+    // This takes priority over prefix matching to handle cases like
+    // opening a game from Flashpoint Playlists (should highlight Playlists, not Browse)
+    const state = location.state as {
+      breadcrumbContext?: { href?: string; parent?: { href?: string } };
+      playerBreadcrumbContext?: { breadcrumbContext?: { href?: string; parent?: { href?: string } } };
+    } | null;
+
+    const breadcrumbContext =
+      state?.breadcrumbContext ?? state?.playerBreadcrumbContext?.breadcrumbContext;
+
+    // If breadcrumb context exists, use it exclusively for matching
+    if (breadcrumbContext) {
+      // Check direct breadcrumb href
+      if (breadcrumbContext.href === itemPath) {
+        return true;
+      }
+      // Check parent breadcrumb href (e.g., Flashpoint Playlists when viewing a game from a playlist)
+      if (breadcrumbContext.parent?.href === itemPath) {
+        return true;
+      }
+      // Breadcrumb context exists but doesn't match this item
+      return false;
+    }
+
+    // No breadcrumb context - fall back to prefix matching for direct URL access
+    const prefixes = SIDEBAR_PREFIX_MAP[itemPath];
+    if (prefixes?.some((prefix) => location.pathname.startsWith(prefix))) {
+      return true;
+    }
+
+    return false;
   })();
 
   return (

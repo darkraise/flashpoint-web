@@ -12,12 +12,16 @@ import { Badge } from '@/components/ui/badge';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-import { Breadcrumbs } from '@/components/common/Breadcrumbs';
+import { Breadcrumbs, BreadcrumbContext, BreadcrumbItem } from '@/components/common/Breadcrumbs';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
-import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 import { getGameLogoUrl, getGameScreenshotUrl } from '@/utils/gameUtils';
 import { logger } from '@/lib/logger';
 import { formatDuration } from '@/lib/cron-utils';
+import {
+  getBreadcrumbContextFromPath,
+  getSectionFromPath,
+  DEFAULT_BREADCRUMB_CONTEXT,
+} from '@/lib/sectionRoutes';
 
 export function GameDetailView() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +32,13 @@ export function GameDetailView() {
   const { isAuthenticated } = useAuthStore();
   const { generateToken, hasValidToken, isGenerating } = useSharedAccessToken();
 
-  const breadcrumbContext = location.state?.breadcrumbContext as BreadcrumbContext | undefined;
+  // Derive breadcrumb context: URL path takes precedence, then state, then default
+  const urlBreadcrumbContext = getBreadcrumbContextFromPath(location.pathname);
+  const stateBreadcrumbContext = location.state?.breadcrumbContext as BreadcrumbContext | undefined;
+  const breadcrumbContext = urlBreadcrumbContext ?? stateBreadcrumbContext ?? DEFAULT_BREADCRUMB_CONTEXT;
+
+  // Get current section for building play URLs
+  const currentSection = getSectionFromPath(location.pathname);
 
   useEffect(() => {
     if (shareToken && !isAuthenticated && !hasValidToken) {
@@ -119,12 +129,21 @@ export function GameDetailView() {
       !isRefetchingAfterDownload.current
     ) {
       setShouldAutoPlay(false);
-      navigate(buildSharedGameUrl(`/games/${game.id}/play`, shareToken), {
+      // Build play URL: use section-based route if on section page, otherwise shared/legacy
+      const playUrl = shareToken
+        ? buildSharedGameUrl(`/games/${game.id}/play`, shareToken)
+        : currentSection
+          ? `${currentSection.prefix}/${game.id}/play`
+          : `/games/${game.id}/play`;
+      const detailUrl = shareToken
+        ? buildSharedGameUrl(`/games/${game.id}`, shareToken)
+        : location.pathname;
+      navigate(playUrl, {
         state: {
           playerBreadcrumbContext: {
             breadcrumbContext,
             gameTitle: game.title,
-            gameDetailHref: buildSharedGameUrl(`/games/${game.id}`, shareToken),
+            gameDetailHref: detailUrl,
             shareToken: shareToken ?? null,
             sharedPlaylistTitle: sharedPlaylist?.title ?? null,
             sharedPlaylistHref: shareToken ? `/playlists/shared/${shareToken}` : null,
@@ -140,6 +159,8 @@ export function GameDetailView() {
     shareToken,
     breadcrumbContext,
     sharedPlaylist,
+    currentSection,
+    location.pathname,
   ]);
 
   const handleStartDownload = async () => {
@@ -182,32 +203,42 @@ export function GameDetailView() {
   // presentOnDisk: null = no data needed, 0 = needs download, 1 = downloaded
   const needsDataDownload = game.presentOnDisk === 0;
 
-  const breadcrumbItems =
-    shareToken && sharedPlaylist
-      ? [
-          { label: sharedPlaylist.title, href: `/playlists/shared/${shareToken}` },
-          { label: game.title, active: true },
-        ]
-      : shareToken
-        ? [{ label: game.title, active: true }]
-        : breadcrumbContext
-          ? [
-              { label: breadcrumbContext.label, href: breadcrumbContext.href },
-              { label: game.title, active: true },
-            ]
-          : [
-              { label: 'Browse', href: '/browse' },
-              { label: game.title, active: true },
-            ];
+  // Build breadcrumb items, handling optional parent context
+  const buildBreadcrumbItems = () => {
+    if (shareToken && sharedPlaylist) {
+      return [
+        { label: sharedPlaylist.title, href: `/playlists/shared/${shareToken}` },
+        { label: game.title, active: true },
+      ];
+    }
+    if (shareToken) {
+      return [{ label: game.title, active: true }];
+    }
+
+    // Build items from context, including parent if present
+    const items: BreadcrumbItem[] = [];
+    if (breadcrumbContext.parent) {
+      items.push({
+        label: breadcrumbContext.parent.label,
+        href: breadcrumbContext.parent.href,
+        icon: breadcrumbContext.parent.icon,
+      });
+    }
+    items.push({
+      label: breadcrumbContext.label,
+      href: breadcrumbContext.href,
+      icon: breadcrumbContext.icon,
+    });
+    items.push({ label: game.title, active: true });
+    return items;
+  };
+
+  const breadcrumbItems = buildBreadcrumbItems();
 
   return (
     <ErrorBoundary>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <Breadcrumbs
-          items={breadcrumbItems}
-          homeLabel={shareToken ? 'Shared' : 'Home'}
-          homeHref={shareToken ? '#' : '/'}
-        />
+      <div className="max-w-7xl mx-auto space-y-6">
+        <Breadcrumbs items={breadcrumbItems} />
 
         <div className="bg-card rounded-lg p-6 space-y-6 border border-border shadow-md">
           <div className="flex items-start justify-between gap-4">
@@ -288,12 +319,20 @@ export function GameDetailView() {
                     </button>
                   ) : (
                     <Link
-                      to={buildSharedGameUrl(`/games/${game.id}/play`, shareToken)}
+                      to={
+                        shareToken
+                          ? buildSharedGameUrl(`/games/${game.id}/play`, shareToken)
+                          : currentSection
+                            ? `${currentSection.prefix}/${game.id}/play`
+                            : `/games/${game.id}/play`
+                      }
                       state={{
                         playerBreadcrumbContext: {
                           breadcrumbContext,
                           gameTitle: game.title,
-                          gameDetailHref: buildSharedGameUrl(`/games/${game.id}`, shareToken),
+                          gameDetailHref: shareToken
+                            ? buildSharedGameUrl(`/games/${game.id}`, shareToken)
+                            : location.pathname,
                           shareToken: shareToken ?? null,
                           sharedPlaylistTitle: sharedPlaylist?.title ?? null,
                           sharedPlaylistHref: shareToken ? `/playlists/shared/${shareToken}` : null,

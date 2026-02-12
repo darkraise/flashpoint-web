@@ -22,6 +22,8 @@ interface GameBrowseLayoutProps {
   platform?: string;
   headerContent?: ReactNode;
   breadcrumbContext?: BreadcrumbContext;
+  /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
+  sectionKey?: string | null;
 }
 
 export function GameBrowseLayout({
@@ -30,6 +32,7 @@ export function GameBrowseLayout({
   platform,
   headerContent,
   breadcrumbContext,
+  sectionKey = null,
 }: GameBrowseLayoutProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const viewMode = useUIStore((state) => state.viewMode);
@@ -319,12 +322,14 @@ export function GameBrowseLayout({
               games={data.data}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
               breadcrumbContext={breadcrumbContext}
+              sectionKey={sectionKey}
             />
           ) : (
             <GameList
               games={data.data}
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
               breadcrumbContext={breadcrumbContext}
+              sectionKey={sectionKey}
             />
           )}
 

@@ -3,7 +3,6 @@ import { PlayTrackingService } from '../services/PlayTrackingService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { requireFeature } from '../middleware/featureFlags';
-import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logActivity } from '../middleware/activityLogger';
 import { z } from 'zod';

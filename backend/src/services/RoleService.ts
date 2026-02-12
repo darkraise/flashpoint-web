@@ -16,13 +16,12 @@ export class RoleService {
       id: number;
       name: string;
       description: string | null;
-      priority: number;
       createdAt: string;
       updatedAt: string;
     }>(
-      `SELECT id, name, description, priority, created_at as createdAt, updated_at as updatedAt
+      `SELECT id, name, description, created_at as createdAt, updated_at as updatedAt
        FROM roles
-       ORDER BY priority DESC, name ASC`,
+       ORDER BY name ASC`,
       []
     );
 
@@ -61,7 +60,6 @@ export class RoleService {
       id: role.id,
       name: role.name,
       description: role.description ?? undefined,
-      priority: role.priority,
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
       permissions: permissionsByRole.get(role.id) || [],
@@ -73,11 +71,10 @@ export class RoleService {
       id: number;
       name: string;
       description: string | null;
-      priority: number;
       createdAt: string;
       updatedAt: string;
     }>(
-      `SELECT id, name, description, priority, created_at as createdAt, updated_at as updatedAt
+      `SELECT id, name, description, created_at as createdAt, updated_at as updatedAt
        FROM roles WHERE id = ?`,
       [id]
     );
@@ -88,7 +85,6 @@ export class RoleService {
       id: role.id,
       name: role.name,
       description: role.description ?? undefined,
-      priority: role.priority,
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
       permissions: this.getRolePermissions(id),
@@ -140,7 +136,6 @@ export class RoleService {
   async createRole(
     name: string,
     description?: string,
-    priority: number = 0,
     permissionIds: number[] = []
   ): Promise<Role> {
     // Wrap in transaction to prevent TOCTOU race on name uniqueness
@@ -152,8 +147,8 @@ export class RoleService {
       }
 
       const result = db
-        .prepare('INSERT INTO roles (name, description, priority) VALUES (?, ?, ?)')
-        .run(name, description, priority);
+        .prepare('INSERT INTO roles (name, description) VALUES (?, ?)')
+        .run(name, description);
 
       return result.lastInsertRowid as number;
     })();
@@ -166,12 +161,7 @@ export class RoleService {
     return (await this.getRoleById(roleId))!;
   }
 
-  async updateRole(
-    id: number,
-    name?: string,
-    description?: string,
-    priority?: number
-  ): Promise<Role> {
+  async updateRole(id: number, name?: string, description?: string): Promise<Role> {
     const role = await this.getRoleById(id);
     if (!role) {
       throw new AppError(404, 'Role not found');
@@ -193,11 +183,6 @@ export class RoleService {
     if (description !== undefined) {
       updates.push('description = ?');
       params.push(description);
-    }
-
-    if (priority !== undefined) {
-      updates.push('priority = ?');
-      params.push(priority);
     }
 
     if (updates.length === 0) {

@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/auth';
 import { toast } from 'sonner';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
+import { buildSectionGameUrl } from '@/lib/sectionRoutes';
 
 interface GameCardProps {
   game: Game;
@@ -25,6 +26,8 @@ interface GameCardProps {
   isFavoritePage?: boolean;
   shareToken?: string | null;
   breadcrumbContext?: BreadcrumbContext;
+  /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
+  sectionKey?: string | null;
 }
 
 const GameCardComponent = function GameCard({
@@ -37,6 +40,7 @@ const GameCardComponent = function GameCard({
   isFavoritePage = false,
   shareToken = null,
   breadcrumbContext,
+  sectionKey = null,
 }: GameCardProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -50,8 +54,12 @@ const GameCardComponent = function GameCard({
   const isFavorited = favoriteGameIds?.has(game.id) ?? false;
   const isPlayable = game.platformName === 'Flash' || game.platformName === 'HTML5';
 
-  const gameDetailUrl = buildSharedGameUrl(`/games/${game.id}`, shareToken);
-  const gamePlayUrl = buildSharedGameUrl(`/games/${game.id}/play`, shareToken);
+  const gameDetailUrl = shareToken
+    ? buildSharedGameUrl(`/games/${game.id}`, shareToken)
+    : buildSectionGameUrl(game.id, sectionKey);
+  const gamePlayUrl = shareToken
+    ? buildSharedGameUrl(`/games/${game.id}/play`, shareToken)
+    : buildSectionGameUrl(game.id, sectionKey, true);
 
   const handleCardClick = (e?: React.MouseEvent | React.KeyboardEvent) => {
     if (e && 'key' in e && e.key !== 'Enter' && e.key !== ' ') {
@@ -275,7 +283,8 @@ export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
     prevProps.isFavoritePage !== nextProps.isFavoritePage ||
     prevProps.shareToken !== nextProps.shareToken ||
     prevProps.breadcrumbContext?.label !== nextProps.breadcrumbContext?.label ||
-    prevProps.breadcrumbContext?.href !== nextProps.breadcrumbContext?.href
+    prevProps.breadcrumbContext?.href !== nextProps.breadcrumbContext?.href ||
+    prevProps.sectionKey !== nextProps.sectionKey
   ) {
     return false;
   }

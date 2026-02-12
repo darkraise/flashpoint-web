@@ -84,16 +84,17 @@ export const handlers = [
     });
   }),
 
+  // Static routes MUST come before parameterized routes
+  http.get(`/api/games/random`, () => {
+    return HttpResponse.json(mockGame);
+  }),
+
   http.get(`/api/games/:id`, ({ params }) => {
     return HttpResponse.json({ ...mockGame, id: params.id });
   }),
 
   http.get(`/api/games/:id/related`, () => {
     return HttpResponse.json([mockGame]);
-  }),
-
-  http.get(`/api/games/random`, () => {
-    return HttpResponse.json(mockGame);
   }),
 
   http.get(`/api/games/:id/launch`, ({ params }) => {

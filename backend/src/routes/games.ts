@@ -7,7 +7,6 @@ import { asyncHandler } from '../middleware/asyncHandler';
 import { sharedAccessAuth, validateSharedGameAccess } from '../middleware/auth';
 import { logActivity } from '../middleware/activityLogger';
 import { rateLimitStandard } from '../middleware/rateLimiter';
-import { logger } from '../utils/logger';
 import { z } from 'zod';
 
 const router = Router();
@@ -132,8 +131,23 @@ router.get(
   '/random',
   asyncHandler(async (req, res) => {
     const librarySchema = z.enum(['arcade', 'theatre']).optional();
+
     const library = librarySchema.parse(req.query.library);
-    const game = await gameService.getRandomGame(library);
+    // Parse platforms - can be comma-separated string or array
+    let platforms: string[] | undefined;
+    if (req.query.platforms) {
+      const raw = req.query.platforms;
+      if (typeof raw === 'string') {
+        platforms = raw.split(',').map((p) => p.trim()).filter(Boolean);
+      } else if (Array.isArray(raw)) {
+        platforms = (raw as string[])
+          .filter((p) => typeof p === 'string')
+          .map((p) => p.trim())
+          .filter(Boolean);
+      }
+    }
+
+    const game = await gameService.getRandomGame(library, platforms);
 
     if (!game) {
       throw new AppError(404, 'No games found');

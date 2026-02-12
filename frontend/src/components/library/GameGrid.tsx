@@ -11,6 +11,8 @@ interface GameGridProps {
   isFavoritePage?: boolean;
   shareToken?: string | null;
   breadcrumbContext?: BreadcrumbContext;
+  /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
+  sectionKey?: string | null;
 }
 
 export function GameGrid({
@@ -21,6 +23,7 @@ export function GameGrid({
   isFavoritePage = false,
   shareToken = null,
   breadcrumbContext,
+  sectionKey = null,
 }: GameGridProps) {
   const cardSize = useUIStore((state) => state.cardSize);
 
@@ -51,6 +54,7 @@ export function GameGrid({
           isFavoritePage={isFavoritePage}
           shareToken={shareToken}
           breadcrumbContext={breadcrumbContext}
+          sectionKey={sectionKey}
         />
       ))}
     </div>

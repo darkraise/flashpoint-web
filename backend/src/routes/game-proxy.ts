@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { IncomingMessage, ServerResponse } from 'http';
 import { ProxyRequestHandler } from '../game/proxy-request-handler';
-import { logger } from '../utils/logger';
 import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();

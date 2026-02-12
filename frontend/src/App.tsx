@@ -278,7 +278,7 @@ function App() {
 
             {/* Public/guest accessible routes */}
             <Route
-              path="/flash-games"
+              path="/flash"
               element={
                 <ProtectedRoute requireAuth={false}>
                   <Suspense fallback={<RouteLoadingFallback />}>
@@ -288,7 +288,7 @@ function App() {
               }
             />
             <Route
-              path="/html5-games"
+              path="/html5"
               element={
                 <ProtectedRoute requireAuth={false}>
                   <Suspense fallback={<RouteLoadingFallback />}>
@@ -317,6 +317,90 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Section-based game routes - must come before /games/:id */}
+            <Route
+              path="/flash/:id"
+              element={
+                <ProtectedRoute requireAuth={false} allowSharedAccess={true}>
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <GameDetailView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/flash/:id/play"
+              element={
+                <ProtectedRoute requirePermission="games.play">
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <GamePlayerView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/html5/:id"
+              element={
+                <ProtectedRoute requireAuth={false} allowSharedAccess={true}>
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <GameDetailView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/html5/:id/play"
+              element={
+                <ProtectedRoute requirePermission="games.play">
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <GamePlayerView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/animations/:id"
+              element={
+                <ProtectedRoute requireAuth={false} allowSharedAccess={true}>
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <GameDetailView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/animations/:id/play"
+              element={
+                <ProtectedRoute requirePermission="games.play">
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <GamePlayerView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/browse/:id"
+              element={
+                <ProtectedRoute requireAuth={false} allowSharedAccess={true}>
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <GameDetailView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/browse/:id/play"
+              element={
+                <ProtectedRoute requirePermission="games.play">
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <GamePlayerView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Legacy game routes - fallback for shared playlists and backward compatibility */}
             <Route
               path="/games/:id"
               element={

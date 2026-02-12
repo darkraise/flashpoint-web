@@ -1,5 +1,4 @@
 import { UserDatabaseService } from './UserDatabaseService';
-import { DatabaseService } from './DatabaseService';
 import { logger } from '../utils/logger';
 import { randomUUID } from 'crypto';
 import { AppError } from '../middleware/errorHandler';

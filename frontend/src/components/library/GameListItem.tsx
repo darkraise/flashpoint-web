@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 import { getGameLogoUrl } from '@/utils/gameUtils';
+import { buildSectionGameUrl } from '@/lib/sectionRoutes';
 
 interface GameListItemProps {
   game: Game;
@@ -24,6 +25,8 @@ interface GameListItemProps {
   isFavoritePage?: boolean;
   shareToken?: string | null;
   breadcrumbContext?: BreadcrumbContext;
+  /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
+  sectionKey?: string | null;
 }
 
 export const GameListItem = memo(
@@ -37,6 +40,7 @@ export const GameListItem = memo(
     isFavoritePage = false,
     shareToken = null,
     breadcrumbContext,
+    sectionKey = null,
   }: GameListItemProps) {
     const [imageError, setImageError] = useState(false);
     const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
@@ -57,8 +61,12 @@ export const GameListItem = memo(
     const isFavorited = favoriteGameIds?.has(game.id) ?? false;
     const isPlayable = game.platformName === 'Flash' || game.platformName === 'HTML5';
 
-    const gameDetailUrl = buildSharedGameUrl(`/games/${game.id}`, shareToken);
-    const gamePlayUrl = buildSharedGameUrl(`/games/${game.id}/play`, shareToken);
+    const gameDetailUrl = shareToken
+      ? buildSharedGameUrl(`/games/${game.id}`, shareToken)
+      : buildSectionGameUrl(game.id, sectionKey);
+    const gamePlayUrl = shareToken
+      ? buildSharedGameUrl(`/games/${game.id}/play`, shareToken)
+      : buildSectionGameUrl(game.id, sectionKey, true);
 
     const handleNavigateToDetails = () => {
       navigate(gameDetailUrl, {
@@ -196,6 +204,7 @@ export const GameListItem = memo(
       prevProps.shareToken === nextProps.shareToken &&
       prevProps.breadcrumbContext?.label === nextProps.breadcrumbContext?.label &&
       prevProps.breadcrumbContext?.href === nextProps.breadcrumbContext?.href &&
+      prevProps.sectionKey === nextProps.sectionKey &&
       (prevProps.favoriteGameIds?.has(prevProps.game.id) ?? false) ===
         (nextProps.favoriteGameIds?.has(nextProps.game.id) ?? false)
     );

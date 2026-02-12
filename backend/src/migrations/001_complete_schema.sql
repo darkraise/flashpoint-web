@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS roles (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE COLLATE NOCASE,
   description TEXT,
-  priority INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
@@ -355,10 +354,10 @@ END;
 -- PART 3: SEED DATA - ROLES
 -- ============================================================================
 
-INSERT OR IGNORE INTO roles (id, name, description, priority) VALUES
-  (1, 'admin', 'Administrator with full access to all features', 100),
-  (2, 'user', 'Regular user with standard access', 50),
-  (3, 'guest', 'Guest user with read-only access', 0);
+INSERT OR IGNORE INTO roles (id, name, description) VALUES
+  (1, 'admin', 'Administrator with full access to all features'),
+  (2, 'user', 'Regular user with standard access'),
+  (3, 'guest', 'Guest user with read-only access');
 
 -- ============================================================================
 -- PART 4: SEED DATA - PERMISSIONS
