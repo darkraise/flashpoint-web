@@ -60,7 +60,11 @@ export class RuffleService {
     }
   }
 
-  async getLatestVersion(): Promise<{
+  /**
+   * Get latest Ruffle version info from GitHub releases
+   * @param currentVersion Optional current version to build combined changelog from
+   */
+  async getLatestVersion(currentVersion?: string | null): Promise<{
     version: string;
     downloadUrl: string;
     checksumUrl: string | null;
@@ -68,8 +72,8 @@ export class RuffleService {
     changelog: string;
   }> {
     try {
-      // Get latest nightly release (prereleases only)
-      const response = await axios.get(`${this.githubApiUrl}?per_page=1`, {
+      // Fetch more releases to build combined changelog (covers ~1 month of nightly releases)
+      const response = await axios.get(`${this.githubApiUrl}?per_page=30`, {
         timeout: 10000,
         headers: {
           Accept: 'application/vnd.github.v3+json',
@@ -77,38 +81,112 @@ export class RuffleService {
         },
       });
 
-      const release = response.data[0];
-      if (!release) {
+      const releases = response.data;
+      if (!releases || releases.length === 0) {
         throw new Error('No releases found');
       }
 
-      // Find web-selfhosted asset
-      const asset = release.assets.find((a: GitHubAsset) => a.name.includes('web-selfhosted.zip'));
+      // Find the latest release with web-selfhosted.zip asset
+      let latestRelease = null;
+      let latestAsset = null;
 
-      if (!asset) {
-        throw new Error('web-selfhosted.zip not found in release');
+      for (const release of releases) {
+        const asset = release.assets.find((a: GitHubAsset) =>
+          a.name.includes('web-selfhosted.zip')
+        );
+        if (asset) {
+          latestRelease = release;
+          latestAsset = asset;
+          break;
+        }
+      }
+
+      if (!latestRelease || !latestAsset) {
+        throw new Error('web-selfhosted.zip not found in any release');
       }
 
       // Look for corresponding checksum file
-      // Ruffle releases may include files like:
-      // - ruffle-nightly-2024_01_01-web-selfhosted.zip.sha256
-      // - SHA256SUMS (contains all checksums)
-      const checksumAsset = release.assets.find(
+      const checksumAsset = latestRelease.assets.find(
         (a: GitHubAsset) =>
-          a.name === `${asset.name}.sha256` || a.name === 'SHA256SUMS' || a.name === 'checksums.txt'
+          a.name === `${latestAsset.name}.sha256` ||
+          a.name === 'SHA256SUMS' ||
+          a.name === 'checksums.txt'
       );
 
+      // Build combined changelog from all releases since currentVersion
+      const changelog = this.buildCombinedChangelog(releases, currentVersion);
+
       return {
-        version: release.tag_name.replace('nightly-', ''),
-        downloadUrl: asset.browser_download_url,
+        version: latestRelease.tag_name.replace('nightly-', ''),
+        downloadUrl: latestAsset.browser_download_url,
         checksumUrl: checksumAsset?.browser_download_url ?? null,
-        publishedAt: release.published_at,
-        changelog: release.body || 'No changelog available.',
+        publishedAt: latestRelease.published_at,
+        changelog,
       };
     } catch (error) {
       logger.error('Error fetching latest Ruffle version:', error);
       throw new AppError(500, 'Failed to check for Ruffle updates');
     }
+  }
+
+  /**
+   * Build a combined changelog from all releases since the current version
+   * @param releases Array of GitHub releases (newest first)
+   * @param currentVersion Optional current version string
+   * @returns Combined changelog markdown with version headers
+   */
+  private buildCombinedChangelog(
+    releases: Array<{ tag_name: string; body: string | null; assets: GitHubAsset[] }>,
+    currentVersion?: string | null
+  ): string {
+    // If no current version, just return the latest changelog
+    if (!currentVersion) {
+      logger.debug('[RuffleService] No current version, returning latest changelog only');
+      return releases[0]?.body || 'No changelog available.';
+    }
+
+    const normalizedCurrent = this.normalizeVersion(currentVersion);
+    logger.debug(`[RuffleService] Current version: ${currentVersion} -> normalized: ${normalizedCurrent}`);
+
+    // Filter releases that have web-selfhosted.zip and are newer than current version
+    const newerReleases = releases.filter((release) => {
+      // Must have web-selfhosted asset
+      const hasAsset = release.assets.some((a: GitHubAsset) =>
+        a.name.includes('web-selfhosted.zip')
+      );
+      if (!hasAsset) {
+        logger.debug(`[RuffleService] Release ${release.tag_name} skipped - no web-selfhosted.zip`);
+        return false;
+      }
+
+      // Must be newer than current version
+      const releaseVersion = this.normalizeVersion(release.tag_name);
+      const isNewer = releaseVersion > normalizedCurrent;
+      logger.debug(`[RuffleService] Release ${release.tag_name} -> ${releaseVersion}, isNewer: ${isNewer}`);
+      return isNewer;
+    });
+
+    logger.info(`[RuffleService] Found ${newerReleases.length} releases newer than ${normalizedCurrent}`);
+
+    if (newerReleases.length === 0) {
+      return releases[0]?.body || 'No changelog available.';
+    }
+
+    // Sort by version descending (newest first)
+    const sortedReleases = [...newerReleases].sort((a, b) => {
+      const versionA = this.normalizeVersion(a.tag_name);
+      const versionB = this.normalizeVersion(b.tag_name);
+      return versionB.localeCompare(versionA);
+    });
+
+    // Build combined changelog with version headers
+    const changelogParts = sortedReleases.map((release) => {
+      const version = release.tag_name;
+      const body = release.body?.trim() || 'No changelog available.';
+      return `## ${version}\n\n${body}`;
+    });
+
+    return changelogParts.join('\n\n---\n\n');
   }
 
   async checkForUpdate(): Promise<{
@@ -119,7 +197,8 @@ export class RuffleService {
     publishedAt?: string;
   }> {
     const currentVersion = this.getCurrentVersion();
-    const latest = await this.getLatestVersion();
+    // Pass current version to get combined changelog of all updates since that version
+    const latest = await this.getLatestVersion(currentVersion);
 
     // Normalize versions to same format (YYYY-MM-DD) for comparison
     const normalizedCurrent = currentVersion ? this.normalizeVersion(currentVersion) : null;

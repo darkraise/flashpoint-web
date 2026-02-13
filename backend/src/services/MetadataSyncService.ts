@@ -4,7 +4,11 @@ import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { DatabaseService } from './DatabaseService';
-import { GameMetadataSource } from './MetadataUpdateService';
+import {
+  PreferencesService,
+  GameMetadataSource,
+  FlashpointPreferences,
+} from './PreferencesService';
 import { SyncStatusService } from './SyncStatusService';
 
 interface SyncResult {
@@ -71,21 +75,11 @@ interface ApiPlatform {
   Deleted?: boolean;
 }
 
-interface MetadataSourceTimestamp {
-  actualUpdateTime?: string;
-  latestUpdateTime?: string;
-}
-
-interface MetadataSource {
-  name: string;
-  games: MetadataSourceTimestamp;
-  tags: MetadataSourceTimestamp;
-  platforms?: MetadataSourceTimestamp;
-}
-
-interface FlashpointPreferences {
-  gameMetadataSources: MetadataSource[];
-  [key: string]: unknown; // Allow other properties from preferences.json
+/** Column mapping for game table - maps DB column to value extractor from API game */
+interface GameColumnMapping {
+  dbCol: string;
+  getValue: (game: ApiGame) => string | number | null;
+  excludeFromUpdate?: boolean; // If true, don't include in ON CONFLICT UPDATE clause
 }
 
 /**
@@ -95,16 +89,61 @@ interface FlashpointPreferences {
  */
 export class MetadataSyncService {
   private static readonly ALLOWED_HOSTS = ['fpfss.unstable.life', 'fpfss.flashpointarchive.org'];
+
+  /** All possible game columns with their value extractors */
+  private static readonly GAME_COLUMN_MAPPINGS: GameColumnMapping[] = [
+    { dbCol: 'id', getValue: (g) => g.id, excludeFromUpdate: true },
+    { dbCol: 'parentGameId', getValue: (g) => g.parent_game_id ?? null },
+    { dbCol: 'title', getValue: (g) => g.title ?? '' },
+    { dbCol: 'alternateTitles', getValue: (g) => g.alternate_titles ?? '' },
+    { dbCol: 'series', getValue: (g) => g.series ?? '' },
+    { dbCol: 'developer', getValue: (g) => g.developer ?? '' },
+    { dbCol: 'publisher', getValue: (g) => g.publisher ?? '' },
+    { dbCol: 'platformName', getValue: (g) => g.platform ?? g.platform_name ?? '' },
+    { dbCol: 'playMode', getValue: (g) => g.play_mode ?? '' },
+    { dbCol: 'status', getValue: (g) => g.status ?? '' },
+    { dbCol: 'broken', getValue: (g) => (g.broken ? 1 : 0) },
+    { dbCol: 'extreme', getValue: (g) => (g.extreme ? 1 : 0) },
+    { dbCol: 'notes', getValue: (g) => g.notes ?? '' },
+    { dbCol: 'source', getValue: (g) => g.source ?? '' },
+    { dbCol: 'applicationPath', getValue: (g) => g.application_path ?? '' },
+    { dbCol: 'launchCommand', getValue: (g) => g.launch_command ?? '' },
+    { dbCol: 'releaseDate', getValue: (g) => g.release_date ?? '' },
+    { dbCol: 'version', getValue: (g) => g.version ?? '' },
+    { dbCol: 'originalDescription', getValue: (g) => g.original_description ?? '' },
+    { dbCol: 'language', getValue: (g) => g.language ?? '' },
+    { dbCol: 'orderTitle', getValue: (g) => g.order_title ?? g.title ?? '' },
+    { dbCol: 'library', getValue: (g) => g.library ?? 'arcade' },
+    { dbCol: 'tagsStr', getValue: (g) => g.tags_str ?? '' },
+    { dbCol: 'dateAdded', getValue: (g) => g.date_added ?? new Date().toISOString(), excludeFromUpdate: true },
+    { dbCol: 'dateModified', getValue: (g) => g.date_modified ?? new Date().toISOString() },
+    { dbCol: 'activeDataId', getValue: (g) => g.active_data_id ?? null },
+    { dbCol: 'activeDataOnDisk', getValue: (g) => (g.active_data_on_disk ? 1 : 0) },
+    { dbCol: 'archiveState', getValue: (g) => g.archive_state ?? 0 },
+    { dbCol: 'ruffleSupport', getValue: (g) => g.ruffle_support ?? '' },
+  ];
+
   private preferencesPath: string;
   private syncStatusService: SyncStatusService;
+  private availableGameColumns: Set<string> | null = null;
 
   constructor() {
     this.preferencesPath = path.join(config.flashpointPath, 'preferences.json');
     this.syncStatusService = SyncStatusService.getInstance();
   }
 
-  private getEdition(): string {
-    return config.flashpointEdition;
+  /** Get available columns in the game table (cached per sync) */
+  private getAvailableGameColumns(): Set<string> {
+    if (!this.availableGameColumns) {
+      this.availableGameColumns = DatabaseService.getTableColumns('game');
+    }
+    return this.availableGameColumns;
+  }
+
+  /** Get active column mappings (only columns that exist in the database) */
+  private getActiveColumnMappings(): GameColumnMapping[] {
+    const availableCols = this.getAvailableGameColumns();
+    return MetadataSyncService.GAME_COLUMN_MAPPINGS.filter((m) => availableCols.has(m.dbCol));
   }
 
   private validateBaseUrl(baseUrl: string): void {
@@ -122,19 +161,6 @@ export class MetadataSyncService {
   }
 
   async syncMetadata(alreadyStarted = false): Promise<SyncResult> {
-    // Ultimate edition does not support metadata sync
-    if (this.getEdition() === 'ultimate') {
-      logger.warn('[MetadataSync] Metadata sync is not available for Ultimate edition');
-      return {
-        success: false,
-        gamesUpdated: 0,
-        gamesDeleted: 0,
-        tagsUpdated: 0,
-        platformsUpdated: 0,
-        error: 'Metadata sync is not available for Flashpoint Ultimate edition',
-        timestamp: new Date().toISOString(),
-      };
-    }
     const startTime = new Date();
     let gamesUpdated = 0;
     let gamesDeleted = 0;
@@ -144,11 +170,26 @@ export class MetadataSyncService {
     let latestTagDate: string | null = null;
     let latestPlatformDate: string | null = null;
 
+    // Reset column cache at start of sync (schema may have changed)
+    this.availableGameColumns = null;
+
     try {
       // Mark sync as started (skip if already started atomically)
       if (!alreadyStarted) {
         this.syncStatusService.startSync();
       }
+
+      // Check available columns and log any that will be skipped
+      const activeColumns = this.getActiveColumnMappings();
+      const allColumns = MetadataSyncService.GAME_COLUMN_MAPPINGS.map((m) => m.dbCol);
+      const activeColumnNames = new Set(activeColumns.map((m) => m.dbCol));
+      const skippedColumns = allColumns.filter((c) => !activeColumnNames.has(c));
+      if (skippedColumns.length > 0) {
+        logger.info(
+          `[MetadataSync] Skipping columns not in database schema: ${skippedColumns.join(', ')}`
+        );
+      }
+      logger.debug(`[MetadataSync] Using ${activeColumns.length} of ${allColumns.length} columns`);
 
       // Read preferences file
       this.syncStatusService.updateProgress('reading-config', 5, 'Reading preferences...');
@@ -472,22 +513,63 @@ export class MetadataSyncService {
   /**
    * Apply game updates to database (upsert)
    * Chunks batches to stay under SQLite's SQLITE_MAX_VARIABLE_NUMBER (default 999).
-   * With 29 columns per game, max ~30 games per chunk (30 * 29 = 870 < 999).
    */
-  private static readonly MAX_GAMES_PER_CHUNK = 30; // 30 * 29 = 870 params, under 999 limit
-
   private async applyGames(games: ApiGame[]): Promise<void> {
     if (games.length === 0) return;
 
-    // Sort games to ensure parents are inserted before children
-    // This prevents FOREIGN KEY constraint errors on parentGameId
-    const sortedGames = this.sortGamesByParentDependency(games);
-
     const db = DatabaseService.getDatabase();
 
+    // Get existing game IDs to check parent references
+    const gameIdsInBatch = new Set(games.map((g) => g.id));
+    const parentIdsToCheck = new Set<string>();
+
+    // Collect parent IDs that need to be verified in database
+    games.forEach((game) => {
+      if (game.parent_game_id && !gameIdsInBatch.has(game.parent_game_id)) {
+        parentIdsToCheck.add(game.parent_game_id);
+      }
+    });
+
+    // Check which parents exist in database
+    const existingParentIds = new Set<string>();
+    if (parentIdsToCheck.size > 0) {
+      const parentIdArray = Array.from(parentIdsToCheck);
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < parentIdArray.length; i += BATCH_SIZE) {
+        const batch = parentIdArray.slice(i, i + BATCH_SIZE);
+        const placeholders = batch.map(() => '?').join(', ');
+        const rows = db.prepare(`SELECT id FROM game WHERE id IN (${placeholders})`).all(batch) as Array<{ id: string }>;
+        rows.forEach((row) => existingParentIds.add(row.id));
+      }
+    }
+
+    // Nullify parentGameId for games referencing non-existent parents
+    const processedGames = games.map((game) => {
+      if (game.parent_game_id) {
+        const parentInBatch = gameIdsInBatch.has(game.parent_game_id);
+        const parentInDb = existingParentIds.has(game.parent_game_id);
+        if (!parentInBatch && !parentInDb) {
+          logger.debug(
+            `[MetadataSync] Nullifying parentGameId for game ${game.id} - parent ${game.parent_game_id} does not exist`
+          );
+          return { ...game, parent_game_id: undefined };
+        }
+      }
+      return game;
+    });
+
+    // Sort games to ensure parents are inserted before children (within this batch)
+    // This prevents FOREIGN KEY constraint errors on parentGameId
+    const sortedGames = this.sortGamesByParentDependency(processedGames);
+
+    // Calculate max games per chunk based on active columns
+    // SQLite default SQLITE_MAX_VARIABLE_NUMBER is 999
+    const activeColumnCount = this.getActiveColumnMappings().length;
+    const maxGamesPerChunk = Math.floor(999 / activeColumnCount);
+
     // Process in chunks to stay under SQLite variable limit
-    for (let i = 0; i < sortedGames.length; i += MetadataSyncService.MAX_GAMES_PER_CHUNK) {
-      const chunk = sortedGames.slice(i, i + MetadataSyncService.MAX_GAMES_PER_CHUNK);
+    for (let i = 0; i < sortedGames.length; i += maxGamesPerChunk) {
+      const chunk = sortedGames.slice(i, i + maxGamesPerChunk);
       this.applyGamesChunk(db, chunk);
     }
 
@@ -496,97 +578,58 @@ export class MetadataSyncService {
 
   /**
    * Apply a single chunk of games to the database
+   * Uses dynamic column selection based on available schema
+   *
+   * Note: Foreign key checks are temporarily disabled during insert to handle
+   * circular parent dependencies (e.g., game A -> B -> A). This is a common
+   * pattern for bulk metadata sync operations.
    */
   private applyGamesChunk(
     db: ReturnType<typeof DatabaseService.getDatabase>,
     chunk: ApiGame[]
   ): void {
-    const placeholders = chunk
-      .map(
-        () =>
-          '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      )
-      .join(', ');
+    const activeColumns = this.getActiveColumnMappings();
 
+    // Build column names list
+    const columnNames = activeColumns.map((m) => m.dbCol).join(', ');
+
+    // Build placeholders for each game row
+    const rowPlaceholder = `(${activeColumns.map(() => '?').join(', ')})`;
+    const placeholders = chunk.map(() => rowPlaceholder).join(', ');
+
+    // Build values array using only active columns
     const values: (string | number | null)[] = [];
     chunk.forEach((game) => {
-      values.push(
-        game.id,
-        game.parent_game_id ?? null,
-        game.title ?? '',
-        game.alternate_titles ?? '',
-        game.series ?? '',
-        game.developer ?? '',
-        game.publisher ?? '',
-        game.platform ?? game.platform_name ?? '',
-        game.play_mode ?? '',
-        game.status ?? '',
-        game.broken ? 1 : 0,
-        game.extreme ? 1 : 0,
-        game.notes ?? '',
-        game.source ?? '',
-        game.application_path ?? '',
-        game.launch_command ?? '',
-        game.release_date ?? '',
-        game.version ?? '',
-        game.original_description ?? '',
-        game.language ?? '',
-        game.order_title ?? game.title ?? '',
-        game.library ?? 'arcade',
-        game.tags_str ?? '',
-        game.date_added ?? new Date().toISOString(),
-        game.date_modified ?? new Date().toISOString(),
-        game.active_data_id ?? null,
-        game.active_data_on_disk ? 1 : 0,
-        game.archive_state ?? 0,
-        game.ruffle_support ?? ''
-      );
+      activeColumns.forEach((col) => {
+        values.push(col.getValue(game));
+      });
     });
 
+    // Build UPDATE SET clause (exclude columns marked with excludeFromUpdate)
+    const updateCols = activeColumns
+      .filter((m) => !m.excludeFromUpdate)
+      .map((m) => `${m.dbCol} = excluded.${m.dbCol}`)
+      .join(',\n        ');
+
     const sql = `
-      INSERT INTO game (
-        id, parentGameId, title, alternateTitles, series, developer, publisher,
-        platformName, playMode, status, broken, extreme, notes, source,
-        applicationPath, launchCommand, releaseDate, version,
-        originalDescription, language, orderTitle, library, tagsStr,
-        dateAdded, dateModified, activeDataId, activeDataOnDisk,
-        archiveState, ruffleSupport
-      ) VALUES ${placeholders}
+      INSERT INTO game (${columnNames})
+      VALUES ${placeholders}
       ON CONFLICT(id) DO UPDATE SET
-        parentGameId = excluded.parentGameId,
-        title = excluded.title,
-        alternateTitles = excluded.alternateTitles,
-        series = excluded.series,
-        developer = excluded.developer,
-        publisher = excluded.publisher,
-        platformName = excluded.platformName,
-        playMode = excluded.playMode,
-        status = excluded.status,
-        broken = excluded.broken,
-        extreme = excluded.extreme,
-        notes = excluded.notes,
-        source = excluded.source,
-        applicationPath = excluded.applicationPath,
-        launchCommand = excluded.launchCommand,
-        releaseDate = excluded.releaseDate,
-        version = excluded.version,
-        originalDescription = excluded.originalDescription,
-        language = excluded.language,
-        orderTitle = excluded.orderTitle,
-        library = excluded.library,
-        tagsStr = excluded.tagsStr,
-        dateModified = excluded.dateModified,
-        activeDataId = excluded.activeDataId,
-        activeDataOnDisk = excluded.activeDataOnDisk,
-        archiveState = excluded.archiveState,
-        ruffleSupport = excluded.ruffleSupport
+        ${updateCols}
     `;
 
-    // Wrap in a transaction for atomicity
-    db.transaction(() => {
-      const stmt = db.prepare(sql);
-      stmt.run(values);
-    })();
+    // Disable FK checks before transaction (handles circular parent refs like A -> B -> A)
+    // Note: PRAGMA foreign_keys must be set outside of a transaction
+    db.pragma('foreign_keys = OFF');
+    try {
+      db.transaction(() => {
+        const stmt = db.prepare(sql);
+        stmt.run(values);
+      })();
+    } finally {
+      // Re-enable FK checks
+      db.pragma('foreign_keys = ON');
+    }
   }
 
   /**
@@ -598,6 +641,7 @@ export class MetadataSyncService {
     const sorted: ApiGame[] = [];
     const visited = new Set<string>();
     const visiting = new Set<string>(); // Track games currently being visited to detect cycles
+    let cycleCount = 0;
 
     // Build game map
     games.forEach((game) => gameMap.set(game.id, game));
@@ -609,9 +653,7 @@ export class MetadataSyncService {
 
       // Circular dependency detected - break the cycle by skipping parent
       if (visiting.has(game.id)) {
-        logger.warn(
-          `[MetadataSync] Circular parent dependency detected for game: ${game.id} (${game.title})`
-        );
+        cycleCount++;
         visited.add(game.id);
         sorted.push(game);
         return;
@@ -635,33 +677,36 @@ export class MetadataSyncService {
     // Process all games
     games.forEach((game) => addGame(game));
 
+    // Log cycle summary once (not per-game)
+    if (cycleCount > 0) {
+      logger.debug(`[MetadataSync] Found ${cycleCount} circular parent references in batch (handled)`);
+    }
+
     return sorted;
   }
 
   /**
    * Delete games from database
-   * Handles parent-child relationships to avoid FOREIGN KEY constraint errors
+   * Disables FK checks to handle references from other tables (game_data, additional_app, etc.)
    */
   private deleteGames(gameIds: string[]): void {
     if (!Array.isArray(gameIds) || gameIds.length === 0) return;
     const db = DatabaseService.getDatabase();
 
-    // Wrap all batches in a single transaction to maintain consistency.
-    // If the process crashes mid-way, all changes are rolled back.
-    const BATCH_SIZE = 500;
-    db.transaction(() => {
-      for (let i = 0; i < gameIds.length; i += BATCH_SIZE) {
-        const batch = gameIds.slice(i, i + BATCH_SIZE);
-        const placeholders = batch.map(() => '?').join(', ');
-
-        // Orphan children first (prevents FK violation)
-        db.prepare(
-          `UPDATE game SET parentGameId = NULL WHERE parentGameId IN (${placeholders})`
-        ).run(batch);
-        // Then delete
-        db.prepare(`DELETE FROM game WHERE id IN (${placeholders})`).run(batch);
-      }
-    })();
+    // Disable FK checks before transaction (matches Flashpoint Launcher approach)
+    db.pragma('foreign_keys = OFF');
+    try {
+      const BATCH_SIZE = 500;
+      db.transaction(() => {
+        for (let i = 0; i < gameIds.length; i += BATCH_SIZE) {
+          const batch = gameIds.slice(i, i + BATCH_SIZE);
+          const placeholders = batch.map(() => '?').join(', ');
+          db.prepare(`DELETE FROM game WHERE id IN (${placeholders})`).run(batch);
+        }
+      })();
+    } finally {
+      db.pragma('foreign_keys = ON');
+    }
   }
 
   private async updatePreferencesTimestamps(
@@ -675,39 +720,40 @@ export class MetadataSyncService {
   ): Promise<void> {
     try {
       const now = new Date().toISOString();
+      const sources = preferences.gameMetadataSources;
+
+      // Guard: should never happen since caller already verified sources exist
+      if (!sources || sources.length === 0) {
+        logger.warn('[MetadataSync] No gameMetadataSources to update');
+        return;
+      }
 
       // Update the source timestamps
-      const sourceIndex = preferences.gameMetadataSources.findIndex((s) => s.name === source.name);
+      const sourceIndex = sources.findIndex((s) => s.name === source.name);
       if (sourceIndex >= 0) {
         // Update actualUpdateTime to NOW (when we actually synced)
-        preferences.gameMetadataSources[sourceIndex].games.actualUpdateTime = now;
-        preferences.gameMetadataSources[sourceIndex].tags.actualUpdateTime = now;
-        if (preferences.gameMetadataSources[sourceIndex].platforms) {
-          preferences.gameMetadataSources[sourceIndex].platforms.actualUpdateTime = now;
+        sources[sourceIndex].games.actualUpdateTime = now;
+        sources[sourceIndex].tags.actualUpdateTime = now;
+        if (sources[sourceIndex].platforms) {
+          sources[sourceIndex].platforms.actualUpdateTime = now;
         }
 
         // Update latestUpdateTime to the latest game/tag/platform dateModified
         // This is what the update check uses to determine what's new
         if (latestDates.gamesLatestDate) {
-          preferences.gameMetadataSources[sourceIndex].games.latestUpdateTime =
-            latestDates.gamesLatestDate;
+          sources[sourceIndex].games.latestUpdateTime = latestDates.gamesLatestDate;
           logger.info(
             `[MetadataSync] Updated games latestUpdateTime to: ${latestDates.gamesLatestDate}`
           );
         }
         if (latestDates.tagsLatestDate) {
-          preferences.gameMetadataSources[sourceIndex].tags.latestUpdateTime =
-            latestDates.tagsLatestDate;
+          sources[sourceIndex].tags.latestUpdateTime = latestDates.tagsLatestDate;
           logger.info(
             `[MetadataSync] Updated tags latestUpdateTime to: ${latestDates.tagsLatestDate}`
           );
         }
-        if (
-          latestDates.platformsLatestDate &&
-          preferences.gameMetadataSources[sourceIndex].platforms
-        ) {
-          preferences.gameMetadataSources[sourceIndex].platforms.latestUpdateTime =
-            latestDates.platformsLatestDate;
+        if (latestDates.platformsLatestDate && sources[sourceIndex].platforms) {
+          sources[sourceIndex].platforms.latestUpdateTime = latestDates.platformsLatestDate;
           logger.info(
             `[MetadataSync] Updated platforms latestUpdateTime to: ${latestDates.platformsLatestDate}`
           );
@@ -716,6 +762,9 @@ export class MetadataSyncService {
 
       // Write back to preferences.json
       await fs.writeFile(this.preferencesPath, JSON.stringify(preferences, null, 2), 'utf-8');
+
+      // Invalidate preferences cache so next read gets updated values
+      PreferencesService.invalidateCache();
 
       logger.info(`[MetadataSync] Updated preferences.json timestamps. actualUpdateTime: ${now}`);
     } catch (error) {
