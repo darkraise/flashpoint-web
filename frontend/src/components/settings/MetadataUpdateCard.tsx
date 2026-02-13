@@ -191,7 +191,7 @@ export function MetadataUpdateCard() {
           <Database size={24} className="text-primary" />
           <h2 className="text-xl font-semibold">Game Metadata</h2>
         </div>
-        {metadataInfo?.edition !== 'ultimate' ? (
+        {metadataInfo?.hasMetadataSource ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -210,22 +210,39 @@ export function MetadataUpdateCard() {
         ) : null}
       </div>
 
-      {/* Ultimate Edition: No metadata sync available */}
-      {metadataInfo?.edition === 'ultimate' ? (
+      {/* Skeleton Loading State */}
+      {!metadataInfo ? (
+        <div className="bg-muted border border-border rounded-lg p-4 animate-pulse">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3 flex-1">
+              <div className="w-5 h-5 bg-accent rounded-full flex-shrink-0 mt-0.5"></div>
+              <div className="flex-1 space-y-3">
+                <div className="h-5 bg-accent rounded w-48"></div>
+                <div className="h-4 bg-accent rounded w-64"></div>
+                <div className="h-3 bg-accent rounded w-40"></div>
+              </div>
+            </div>
+            <div className="w-10 h-10 bg-accent rounded-lg flex-shrink-0"></div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* No metadata source configured: Sync not available */}
+      {metadataInfo && !metadataInfo.hasMetadataSource ? (
         <div className="bg-muted border border-border rounded-lg p-4 flex items-center gap-3">
           <Info size={20} className="text-muted-foreground flex-shrink-0" />
           <div>
             <p className="text-foreground font-medium">Metadata sync not available</p>
             <p className="text-muted-foreground text-sm mt-1">
-              Flashpoint Ultimate edition does not include a metadata source server. Metadata sync
-              is only available with Flashpoint Infinity.
+              No metadata source is configured. Metadata sync requires a configured metadata source
+              in the Flashpoint preferences.
             </p>
           </div>
         </div>
       ) : null}
 
-      {/* Infinity Edition: Metadata sync UI */}
-      {metadataInfo?.edition !== 'ultimate' ? (
+      {/* Metadata source configured: Sync UI */}
+      {metadataInfo?.hasMetadataSource ? (
         <>
           {/* Error Message */}
           {error ? (
@@ -234,27 +251,8 @@ export function MetadataUpdateCard() {
             </div>
           ) : null}
 
-          {/* Skeleton Loading State */}
-          {!metadataInfo ? (
-            <div className="bg-muted border border-border rounded-lg p-4 animate-pulse">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className="w-5 h-5 bg-accent rounded-full flex-shrink-0 mt-0.5"></div>
-                  <div className="flex-1 space-y-3">
-                    <div className="h-5 bg-accent rounded w-48"></div>
-                    <div className="h-4 bg-accent rounded w-64"></div>
-                    <div className="h-3 bg-accent rounded w-40"></div>
-                  </div>
-                </div>
-                <div className="w-24 h-10 bg-accent rounded-lg flex-shrink-0"></div>
-              </div>
-            </div>
-          ) : null}
-
           {/* Metadata Update Info */}
-          {metadataInfo ? (
-            <div>
-              {metadataInfo.gamesUpdateAvailable ? (
+          {metadataInfo.gamesUpdateAvailable ? (
                 <div className="bg-primary/10 border border-primary rounded-lg p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3 flex-1">
@@ -338,9 +336,7 @@ export function MetadataUpdateCard() {
                     ) : null}
                   </div>
                 </div>
-              )}
-            </div>
-          ) : null}
+          )}
         </>
       ) : null}
     </div>

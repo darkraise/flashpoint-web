@@ -22,7 +22,7 @@ export interface MetadataUpdateInfo {
   tagsUpdateCount?: number;
   lastCheckedTime?: string;
   lastUpdateTime?: string;
-  edition?: string;
+  hasMetadataSource?: boolean;
 }
 
 export const updatesApi = {

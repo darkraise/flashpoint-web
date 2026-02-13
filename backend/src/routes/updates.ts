@@ -49,16 +49,18 @@ router.get(
   })
 );
 
-// Includes edition info so frontend knows whether sync is available
+// Includes hasMetadataSource so frontend knows whether sync is available
 router.get(
   '/metadata',
   authenticate,
   requirePermission('settings.update'),
   asyncHandler(async (req, res) => {
-    const edition = metadataUpdateService.getEdition();
-    logger.debug(`[Updates API] Checking for metadata updates... (edition: ${edition})`);
+    const hasMetadataSource = await metadataUpdateService.hasMetadataSource();
+    logger.debug(
+      `[Updates API] Checking for metadata updates... (hasMetadataSource: ${hasMetadataSource})`
+    );
     const metadataInfo = await metadataUpdateService.getMetadataUpdateInfo();
-    res.json({ ...metadataInfo, edition });
+    res.json({ ...metadataInfo, hasMetadataSource });
   })
 );
 

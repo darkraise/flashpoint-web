@@ -443,6 +443,18 @@ export class DatabaseService {
     return this.db !== null;
   }
 
+  /**
+   * Get column names for a table using PRAGMA table_info
+   * Used for runtime schema introspection (e.g., edition-safe metadata sync)
+   */
+  static getTableColumns(tableName: string): Set<string> {
+    const db = this.getDatabase();
+    const columns = db
+      .prepare(`PRAGMA table_info(${tableName})`)
+      .all() as Array<{ name: string }>;
+    return new Set(columns.map((col) => col.name));
+  }
+
   static getStatus(): {
     connected: boolean;
     sourcePath: string;

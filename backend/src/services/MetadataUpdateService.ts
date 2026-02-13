@@ -1,28 +1,8 @@
-import fs from 'fs/promises';
-import path from 'path';
 import axios from 'axios';
-import { config } from '../config';
 import { logger } from '../utils/logger';
+import { PreferencesService, GameMetadataSource } from './PreferencesService';
 
-export interface GameMetadataSource {
-  name: string;
-  baseUrl: string;
-  games: {
-    actualUpdateTime: string;
-    latestDeleteTime: string;
-    latestUpdateTime: string;
-  };
-  tags: {
-    actualUpdateTime: string;
-    latestDeleteTime: string;
-    latestUpdateTime: string;
-  };
-  platforms?: {
-    actualUpdateTime: string;
-    latestDeleteTime: string;
-    latestUpdateTime: string;
-  };
-}
+export { GameMetadataSource } from './PreferencesService';
 
 export interface MetadataUpdateInfo {
   hasUpdates: boolean;
@@ -36,15 +16,12 @@ export interface MetadataUpdateInfo {
 }
 
 export class MetadataUpdateService {
-  private preferencesPath: string;
-
-  constructor() {
-    // Preferences file is in the Flashpoint root directory
-    this.preferencesPath = path.join(config.flashpointPath, 'preferences.json');
-  }
-
-  getEdition(): string {
-    return config.flashpointEdition;
+  /**
+   * Check if a metadata source is configured in preferences.json
+   * This determines whether metadata sync feature is available
+   */
+  async hasMetadataSource(): Promise<boolean> {
+    return PreferencesService.hasMetadataSource();
   }
 
   /**
@@ -54,20 +31,7 @@ export class MetadataUpdateService {
    */
   async getMetadataUpdateInfo(): Promise<MetadataUpdateInfo> {
     try {
-      // Ultimate edition does not support metadata sync
-      if (this.getEdition() === 'ultimate') {
-        return {
-          hasUpdates: false,
-          gamesUpdateAvailable: false,
-          tagsUpdateAvailable: false,
-        };
-      }
-      // Read preferences file
-      const preferencesContent = await fs.readFile(this.preferencesPath, 'utf-8');
-      const preferences = JSON.parse(preferencesContent);
-
-      // Get game metadata sources (usually Flashpoint Archive FPFSS)
-      const sources: GameMetadataSource[] = preferences.gameMetadataSources || [];
+      const sources = await PreferencesService.getGameMetadataSources();
 
       if (sources.length === 0) {
         logger.warn('[MetadataUpdate] No game metadata sources found in preferences');
@@ -163,10 +127,7 @@ export class MetadataUpdateService {
    */
   async checkRemoteUpdates(): Promise<{ latestUpdateTime: string } | null> {
     try {
-      // Read current metadata source from preferences
-      const preferencesContent = await fs.readFile(this.preferencesPath, 'utf-8');
-      const preferences = JSON.parse(preferencesContent);
-      const sources: GameMetadataSource[] = preferences.gameMetadataSources || [];
+      const sources = await PreferencesService.getGameMetadataSources();
 
       if (sources.length === 0) {
         return null;

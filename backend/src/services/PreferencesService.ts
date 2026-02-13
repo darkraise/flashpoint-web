@@ -9,6 +9,26 @@ export interface GameDataSource {
   arguments: string[];
 }
 
+export interface GameMetadataSource {
+  name: string;
+  baseUrl: string;
+  games: {
+    actualUpdateTime: string;
+    latestDeleteTime: string;
+    latestUpdateTime: string;
+  };
+  tags: {
+    actualUpdateTime: string;
+    latestDeleteTime: string;
+    latestUpdateTime: string;
+  };
+  platforms?: {
+    actualUpdateTime: string;
+    latestDeleteTime: string;
+    latestUpdateTime: string;
+  };
+}
+
 export interface FlashpointPreferences {
   gameDataSources: GameDataSource[];
   dataPacksFolderPath: string;
@@ -20,6 +40,9 @@ export interface FlashpointPreferences {
   onDemandImages?: boolean;
   onDemandBaseUrl?: string;
   onDemandImagesCompressed?: boolean;
+
+  // Metadata sync preferences
+  gameMetadataSources?: GameMetadataSource[];
 
   [key: string]: unknown;
 }
@@ -126,6 +149,20 @@ export class PreferencesService {
   static async getGameDataSources(): Promise<GameDataSource[]> {
     const prefs = await this.getPreferences();
     return prefs.gameDataSources || [];
+  }
+
+  static async getGameMetadataSources(): Promise<GameMetadataSource[]> {
+    const prefs = await this.getPreferences();
+    return prefs.gameMetadataSources || [];
+  }
+
+  /**
+   * Check if a valid metadata source is configured.
+   * Returns true if gameMetadataSources has at least one entry with a baseUrl.
+   */
+  static async hasMetadataSource(): Promise<boolean> {
+    const sources = await this.getGameMetadataSources();
+    return sources.length > 0 && !!sources[0]?.baseUrl;
   }
 
   static async getDataPacksPath(): Promise<string> {
