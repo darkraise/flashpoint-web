@@ -36,6 +36,13 @@ interface LocationState {
   setupComplete?: boolean;
 }
 
+/** Validate return URL to prevent open redirects */
+function isValidReturnUrl(url: string | null): url is string {
+  if (!url) return false;
+  // Must start with / and not be protocol-relative (//)
+  return url.startsWith('/') && !url.startsWith('//');
+}
+
 export function LoginForm() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -43,7 +50,10 @@ export function LoginForm() {
 
   // Check query param first (survives cross-browser), then fall back to state
   const returnUrl = searchParams.get('returnUrl');
-  const from = returnUrl || (location.state as LocationState)?.from?.pathname || '/';
+  const from =
+    (isValidReturnUrl(returnUrl) ? returnUrl : null) ||
+    (location.state as LocationState)?.from?.pathname ||
+    '/';
   const setupComplete = (location.state as LocationState)?.setupComplete ?? false;
 
   const { data: publicSettings, isSuccess: isPublicSettingsLoaded } = useQuery({
