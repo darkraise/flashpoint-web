@@ -260,10 +260,11 @@ export class PlayTrackingService {
 
   async getUserPlayHistory(userId: number, limit = 50, offset = 0): Promise<PlaySession[]> {
     try {
+      // Only return completed sessions (with ended_at) to ensure accurate data
       const sessions = UserDatabaseService.all<PlaySessionRow>(
         `SELECT id, user_id, game_id, game_title, started_at, ended_at, duration_seconds, session_id
          FROM user_game_plays
-         WHERE user_id = ?
+         WHERE user_id = ? AND ended_at IS NOT NULL
          ORDER BY started_at DESC
          LIMIT ? OFFSET ?`,
         [userId, limit, offset]

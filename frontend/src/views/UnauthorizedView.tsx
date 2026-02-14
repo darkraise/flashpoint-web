@@ -25,8 +25,9 @@ export function UnauthorizedView() {
   };
 
   const handleLogin = () => {
-    navigate('/login', {
-      state: { from: fromPath || location.pathname },
+    const returnPath = fromPath || location.pathname;
+    navigate(`/login?returnUrl=${encodeURIComponent(returnPath)}`, {
+      state: { from: returnPath },
     });
   };
 

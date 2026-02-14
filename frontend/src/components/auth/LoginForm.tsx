@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,11 +36,24 @@ interface LocationState {
   setupComplete?: boolean;
 }
 
+/** Validate return URL to prevent open redirects */
+function isValidReturnUrl(url: string | null): url is string {
+  if (!url) return false;
+  // Must start with / and not be protocol-relative (//)
+  return url.startsWith('/') && !url.startsWith('//');
+}
+
 export function LoginForm() {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login, loginAsGuest } = useAuth();
 
-  const from = (location.state as LocationState)?.from?.pathname || '/';
+  // Check query param first (survives cross-browser), then fall back to state
+  const returnUrl = searchParams.get('returnUrl');
+  const from =
+    (isValidReturnUrl(returnUrl) ? returnUrl : null) ||
+    (location.state as LocationState)?.from?.pathname ||
+    '/';
   const setupComplete = (location.state as LocationState)?.setupComplete ?? false;
 
   const { data: publicSettings, isSuccess: isPublicSettingsLoaded } = useQuery({
@@ -241,7 +254,7 @@ export function LoginForm() {
                     type="button"
                     variant="outline"
                     className="w-full h-10 text-base font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                    onClick={loginAsGuest}
+                    onClick={() => loginAsGuest(from)}
                   >
                     Browse as Guest
                   </Button>

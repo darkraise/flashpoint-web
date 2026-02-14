@@ -70,6 +70,9 @@ async function startServer() {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD');
     res.setHeader('Access-Control-Allow-Headers', '*');
+    // Required for iframe embedding when parent has COEP enabled
+    res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     if (_req.method === 'OPTIONS') {
       res.status(204).end();
       return;

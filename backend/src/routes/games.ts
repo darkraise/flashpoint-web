@@ -244,7 +244,8 @@ router.get(
           }
         }
 
-        contentUrl = `${proxyUrl}/${encodeURIComponent(fullUrl)}`;
+        // Don't encode - proxy handler expects /http://domain/path format
+        contentUrl = `${proxyUrl}/${fullUrl}`;
       }
     }
 

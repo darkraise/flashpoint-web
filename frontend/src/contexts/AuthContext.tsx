@@ -8,9 +8,18 @@ import { LoginCredentials, RegisterData } from '../types/auth';
 import { PublicSettings } from '../types/settings';
 import { logger } from '../lib/logger';
 
+/** Validate redirect path to prevent open redirects */
+function sanitizeRedirectPath(path: string | undefined): string {
+  // Must start with / and not be protocol-relative (//)
+  if (path && path.startsWith('/') && !path.startsWith('//')) {
+    return path;
+  }
+  return '/';
+}
+
 interface AuthContextType {
   login: (credentials: LoginCredentials, redirectPath?: string) => Promise<void>;
-  loginAsGuest: () => void;
+  loginAsGuest: (redirectPath?: string) => void;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
@@ -74,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        navigate(redirectPath || '/', { replace: true });
+        navigate(sanitizeRedirectPath(redirectPath), { replace: true });
       } catch (error) {
         logger.error('Login failed:', error);
         throw error;
@@ -83,10 +92,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [setAuth, queryClient, checkMaintenanceMode, navigate]
   );
 
-  const loginAsGuest = useCallback(() => {
-    setGuestMode();
-    navigate('/');
-  }, [setGuestMode, navigate]);
+  const loginAsGuest = useCallback(
+    (redirectPath?: string) => {
+      setGuestMode();
+      navigate(sanitizeRedirectPath(redirectPath), { replace: true });
+    },
+    [setGuestMode, navigate]
+  );
 
   const register = useCallback(
     async (userData: RegisterData) => {
