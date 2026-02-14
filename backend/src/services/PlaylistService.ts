@@ -108,6 +108,23 @@ export class PlaylistService {
     }
   }
 
+  async getPlaylistsPaginated(
+    page: number = 1,
+    limit: number = 12
+  ): Promise<{ data: Playlist[]; total: number }> {
+    const allPlaylists = await this.getAllPlaylists();
+    const total = allPlaylists.length;
+
+    if (total === 0) {
+      return { data: [], total: 0 };
+    }
+
+    const offset = (page - 1) * limit;
+    const data = allPlaylists.slice(offset, offset + limit);
+
+    return { data, total };
+  }
+
   async getPlaylistById(id: string): Promise<Playlist | null> {
     try {
       const playlistsPath = config.flashpointPlaylistsPath;

@@ -1,9 +1,11 @@
 import { apiClient } from './client';
-import type { Role, CreateRoleData, UpdateRoleData, Permission } from '@/types/auth';
+import type { Role, CreateRoleData, UpdateRoleData, Permission, PaginatedResponse } from '@/types/auth';
 
 export const rolesApi = {
-  getAll: async (): Promise<Role[]> => {
-    const { data } = await apiClient.get<Role[]>('/roles');
+  getAll: async (page: number = 1, limit: number = 20): Promise<PaginatedResponse<Role>> => {
+    const { data } = await apiClient.get<PaginatedResponse<Role>>('/roles', {
+      params: { page, limit },
+    });
     return data;
   },
 

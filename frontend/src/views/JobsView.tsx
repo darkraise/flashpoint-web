@@ -14,12 +14,16 @@ import {
 } from '@/components/ui/dialog';
 import { useDialog } from '@/contexts/DialogContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationWithInfo } from '@/components/ui/pagination';
 import { getErrorMessage } from '@/types/api-error';
+
+const LOGS_PAGE_SIZE = 50;
 
 export function JobsView() {
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [showLogsDialog, setShowLogsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [logsPage, setLogsPage] = useState(1);
   const { showToast } = useDialog();
   const queryClient = useQueryClient();
 
@@ -35,10 +39,12 @@ export function JobsView() {
   });
 
   const { data: logsData, isLoading: logsLoading } = useQuery({
-    queryKey: ['jobLogs', selectedJobId],
-    queryFn: () => jobsApi.getLogs(selectedJobId!, 50, 0),
+    queryKey: ['jobLogs', selectedJobId, logsPage],
+    queryFn: () => jobsApi.getLogs(selectedJobId!, logsPage, LOGS_PAGE_SIZE),
     enabled: !!selectedJobId && showLogsDialog,
   });
+
+  const logsTotalPages = logsData ? Math.ceil(logsData.total / LOGS_PAGE_SIZE) : 0;
 
   const stopMutation = useMutation({
     mutationFn: (jobId: string) => jobsApi.stop(jobId),
@@ -84,9 +90,14 @@ export function JobsView() {
   };
 
   const handleViewLogs = (jobId: string) => {
+    setLogsPage(1);
     queryClient.invalidateQueries({ queryKey: ['jobLogs', jobId] });
     setSelectedJobId(jobId);
     setShowLogsDialog(true);
+  };
+
+  const handleLogsPageChange = (page: number) => {
+    setLogsPage(page);
   };
 
   const handleEdit = (jobId: string) => {
@@ -155,8 +166,17 @@ export function JobsView() {
               Execution Logs - {jobs.find((j) => j.id === selectedJobId)?.name}
             </DialogTitle>
           </DialogHeader>
-          <DialogBody>
+          <DialogBody className="space-y-4">
             <JobExecutionLogTable logs={logsData?.data || []} loading={logsLoading} />
+            {logsTotalPages > 1 ? (
+              <PaginationWithInfo
+                currentPage={logsPage}
+                totalPages={logsTotalPages}
+                pageSize={LOGS_PAGE_SIZE}
+                totalItems={logsData?.total ?? 0}
+                onPageChange={handleLogsPageChange}
+              />
+            ) : null}
           </DialogBody>
         </DialogContent>
       </Dialog>

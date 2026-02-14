@@ -92,6 +92,40 @@ export class UserPlaylistService {
     return stmt.all(userId) as UserPlaylist[];
   }
 
+  getUserPlaylistsPaginated(
+    userId: number,
+    page: number = 1,
+    limit: number = 12
+  ): { data: UserPlaylist[]; total: number } {
+    const db = this.userDb.getDatabase();
+
+    // Get total count
+    const countStmt = db.prepare(`
+      SELECT COUNT(*) as count
+      FROM user_playlists
+      WHERE user_id = ?
+    `);
+    const { count: total } = countStmt.get(userId) as { count: number };
+
+    if (total === 0) {
+      return { data: [], total: 0 };
+    }
+
+    const offset = (page - 1) * limit;
+
+    const stmt = db.prepare(`
+      SELECT ${UserPlaylistService.PLAYLIST_COLUMNS}
+      FROM user_playlists
+      WHERE user_id = ?
+      ORDER BY updated_at DESC
+      LIMIT ? OFFSET ?
+    `);
+
+    const data = stmt.all(userId, limit, offset) as UserPlaylist[];
+
+    return { data, total };
+  }
+
   getPlaylistById(playlistId: number, userId: number): UserPlaylist | null {
     const db = this.userDb.getDatabase();
 

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { PlaylistCard } from '@/components/playlist/PlaylistCard';
 import { CreateUserPlaylistDialog } from '@/components/playlist/CreateUserPlaylistDialog';
 import { SharePlaylistDialog } from '@/components/playlist/SharePlaylistDialog';
+import { PaginationWithInfo } from '@/components/ui/pagination';
 import {
   useUserPlaylists,
   useUserPlaylistStats,
@@ -23,15 +24,25 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const PAGE_SIZE = 50;
+
 export function UserPlaylistsView() {
+  const [page, setPage] = useState(1);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState<UserPlaylist | null>(null);
   const [deletingPlaylist, setDeletingPlaylist] = useState<UserPlaylist | null>(null);
   const [sharingPlaylist, setSharingPlaylist] = useState<UserPlaylist | null>(null);
 
-  const { data: playlists = [], isLoading, error } = useUserPlaylists();
+  const { data, isLoading, error } = useUserPlaylists(page, PAGE_SIZE);
+  const playlists = data?.data ?? [];
+  const pagination = data?.pagination;
   const { data: stats } = useUserPlaylistStats();
   const deletePlaylist = useDeleteUserPlaylist();
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleEdit = (playlist: UserPlaylist) => {
     setEditingPlaylist(playlist);
@@ -111,7 +122,7 @@ export function UserPlaylistsView() {
         </Button>
       </div>
 
-      {playlists.length === 0 ? (
+      {playlists.length === 0 && !isLoading ? (
         <div className="text-center py-16">
           <div className="inline-flex items-center justify-center w-24 h-24 bg-muted rounded-full mb-4">
             <ListVideo size={48} className="text-muted-foreground" />
@@ -126,17 +137,31 @@ export function UserPlaylistsView() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 py-2">
-          {playlists.map((playlist) => (
-            <PlaylistCard
-              key={playlist.id}
-              playlist={playlist}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onShare={handleShare}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 py-2">
+            {playlists.map((playlist) => (
+              <PlaylistCard
+                key={playlist.id}
+                playlist={playlist}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onShare={handleShare}
+              />
+            ))}
+          </div>
+
+          {pagination && pagination.totalPages > 1 ? (
+            <div className="mt-8">
+              <PaginationWithInfo
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                pageSize={pagination.limit}
+                totalItems={pagination.total}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          ) : null}
+        </>
       )}
 
       <CreateUserPlaylistDialog

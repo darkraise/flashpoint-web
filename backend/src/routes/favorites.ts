@@ -69,12 +69,13 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const limit = req.query.limit
-      ? Math.min(parseInt(req.query.limit as string, 10) || 50, 100)
-      : undefined;
-    const offset = req.query.offset
-      ? Math.max(0, parseInt(req.query.offset as string, 10) || 0)
-      : undefined;
+    const rawPage = parseInt(req.query.page as string, 10);
+    const page = isNaN(rawPage) ? 1 : Math.max(1, rawPage);
+
+    const rawLimit = parseInt(req.query.limit as string, 10);
+    const limit = isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 100));
+
+    const offset = (page - 1) * limit;
 
     const allowedSortBy = ['title', 'dateAdded'];
     const sortBy =
@@ -84,14 +85,25 @@ router.get(
 
     const sortOrder = req.query.sortOrder === 'asc' ? 'asc' : 'desc';
 
-    const games = await favoritesService.getUserFavoriteGames(
+    const result = await favoritesService.getUserFavoriteGames(
       req.user.id,
       limit,
       offset,
       sortBy,
       sortOrder
     );
-    res.json(games);
+
+    const totalPages = Math.ceil(result.total / limit);
+
+    res.json({
+      data: result.data,
+      pagination: {
+        page,
+        limit,
+        total: result.total,
+        totalPages,
+      },
+    });
   })
 );
 

@@ -28,7 +28,7 @@ export function UserTable({ onEdit, onChangePassword }: UserTableProps) {
   const [page, setPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserDetails | null>(null);
-  const limit = 20;
+  const limit = 50;
 
   const { data, isLoading, isError, error } = useUsers(page, limit);
   const deleteUserMutation = useDeleteUser();

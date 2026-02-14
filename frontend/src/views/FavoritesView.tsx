@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { GameGrid } from '@/components/library/GameGrid';
 import { GameList } from '@/components/library/GameList';
 import { CardSizeControl } from '@/components/common/CardSizeControl';
+import { PaginationWithInfo } from '@/components/ui/pagination';
 import { useUIStore } from '@/store/ui';
 import { useFavoriteGames } from '@/hooks/useFavorites';
 import { Heart, ArrowDownAZ, Calendar } from 'lucide-react';
@@ -14,21 +15,29 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
+const PAGE_SIZE = 50;
+
 export function FavoritesView() {
   const viewMode = useUIStore((state) => state.viewMode);
+  const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<'title' | 'dateAdded'>('dateAdded');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const {
-    data: games = [],
-    isLoading,
-    error,
-  } = useFavoriteGames(undefined, undefined, sortBy, sortOrder);
+  const { data, isLoading, error } = useFavoriteGames(page, PAGE_SIZE, sortBy, sortOrder);
+
+  const games = data?.data ?? [];
+  const pagination = data?.pagination;
 
   const handleSortChange = (value: string) => {
     const [newSortBy, newSortOrder] = value.split('-') as ['title' | 'dateAdded', 'asc' | 'desc'];
     setSortBy(newSortBy);
     setSortOrder(newSortOrder);
+    setPage(1); // Reset to first page on sort change
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const currentSortValue = `${sortBy}-${sortOrder}`;
@@ -63,7 +72,8 @@ export function FavoritesView() {
           <div>
             <h1 className="text-3xl font-bold">Favorites</h1>
             <p className="text-muted-foreground mt-1">
-              {games.length} {games.length === 1 ? 'game' : 'games'} in your favorites
+              {pagination?.total ?? 0} {(pagination?.total ?? 0) === 1 ? 'game' : 'games'} in your
+              favorites
             </p>
           </div>
         </div>
@@ -112,7 +122,7 @@ export function FavoritesView() {
         </div>
       </div>
 
-      {games.length === 0 ? (
+      {games.length === 0 && !isLoading ? (
         <div className="text-center py-16">
           <div className="inline-flex items-center justify-center w-24 h-24 bg-muted rounded-full mb-4">
             <Heart size={48} className="text-muted-foreground" />
@@ -147,6 +157,18 @@ export function FavoritesView() {
               }}
             />
           )}
+
+          {pagination && pagination.totalPages > 1 ? (
+            <div className="mt-8">
+              <PaginationWithInfo
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                pageSize={pagination.limit}
+                totalItems={pagination.total}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          ) : null}
         </>
       )}
     </div>

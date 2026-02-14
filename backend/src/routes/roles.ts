@@ -31,8 +31,24 @@ router.get(
   requirePermission('roles.read'),
   logActivity('roles.list', 'roles'),
   asyncHandler(async (req, res) => {
-    const roles = await roleService.getRoles();
-    res.json(roles);
+    const rawPage = parseInt(req.query.page as string, 10);
+    const page = isNaN(rawPage) ? 1 : Math.max(1, rawPage);
+
+    const rawLimit = parseInt(req.query.limit as string, 10);
+    const limit = isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 100));
+
+    const result = await roleService.getRolesPaginated(page, limit);
+    const totalPages = Math.ceil(result.total / limit);
+
+    res.json({
+      data: result.data,
+      pagination: {
+        page,
+        limit,
+        total: result.total,
+        totalPages,
+      },
+    });
   })
 );
 

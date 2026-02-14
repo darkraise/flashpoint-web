@@ -156,11 +156,18 @@ export class FavoritesService {
     offset?: number,
     sortBy?: 'title' | 'dateAdded',
     sortOrder?: 'asc' | 'desc'
-  ): Promise<FavoriteGame[]> {
+  ): Promise<{ data: FavoriteGame[]; total: number }> {
     const db = this.userDb.getDatabase();
 
     const effectiveSortBy = sortBy || 'dateAdded';
     const effectiveSortOrder = sortOrder || 'desc';
+
+    // Get total count for pagination
+    const total = this.getFavoritesCount(userId);
+
+    if (total === 0) {
+      return { data: [], total: 0 };
+    }
 
     let query = `
       SELECT game_id, added_at
@@ -188,7 +195,7 @@ export class FavoritesService {
     const favorites = stmt.all(...params) as Array<{ game_id: string; added_at: string }>;
 
     if (favorites.length === 0) {
-      return [];
+      return { data: [], total };
     }
 
     const gameIds = favorites.map((f) => f.game_id);
@@ -217,7 +224,7 @@ export class FavoritesService {
       });
     }
 
-    return favoriteGames;
+    return { data: favoriteGames, total };
   }
 
   addFavoritesBatch(userId: number, gameIds: string[]): { added: number } {

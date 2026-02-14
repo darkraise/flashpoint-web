@@ -35,7 +35,9 @@ export function AddToPlaylistModal({
   const [selectedPlaylists, setSelectedPlaylists] = useState<Set<number>>(new Set());
 
   const { isAuthenticated } = useAuthStore();
-  const { data: playlists = [], isLoading } = useUserPlaylists(isOpen);
+  // Fetch all playlists (limit 100 for modal selection)
+  const { data, isLoading } = useUserPlaylists(1, 100, isOpen);
+  const playlists = data?.data ?? [];
   const addGamesMutation = useAddGamesToUserPlaylist();
 
   const handleOpenChange = (open: boolean) => {

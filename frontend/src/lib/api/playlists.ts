@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import type { Playlist } from '@/types/game';
+import type { PaginatedResponse } from '@/types/auth';
 
 export interface CommunityPlaylistsResponse {
   categories: Array<{
@@ -17,8 +18,13 @@ export interface CommunityPlaylistsResponse {
 }
 
 export const playlistsApi = {
-  getAll: async (): Promise<Playlist[]> => {
-    const { data } = await apiClient.get<Playlist[]>('/playlists');
+  getAll: async (
+    page: number = 1,
+    limit: number = 12
+  ): Promise<PaginatedResponse<Playlist>> => {
+    const { data } = await apiClient.get<PaginatedResponse<Playlist>>('/playlists', {
+      params: { page, limit },
+    });
     return data;
   },
 

@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rolesApi } from '@/lib/api';
-import { Role, UpdateRoleData } from '@/types/auth';
+import { UpdateRoleData } from '@/types/auth';
 import { useDialog } from '@/contexts/DialogContext';
 import { getErrorMessage } from '@/types/api-error';
 
-export function useRoles(enabled = true) {
+export function useRoles(page: number = 1, limit: number = 20, enabled = true) {
   return useQuery({
-    queryKey: ['roles'],
-    queryFn: () => rolesApi.getAll(),
+    queryKey: ['roles', { page, limit }],
+    queryFn: () => rolesApi.getAll(page, limit),
     enabled,
   });
 }
@@ -18,10 +18,8 @@ export function useCreateRole() {
 
   return useMutation({
     mutationFn: rolesApi.create,
-    onSuccess: (newRole) => {
-      queryClient.setQueryData<Role[]>(['roles'], (old = []) => {
-        return [newRole, ...old];
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
       showToast('Role created successfully', 'success');
     },
     onError: (error: unknown) => {
@@ -36,10 +34,8 @@ export function useUpdateRole() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateRoleData }) => rolesApi.update(id, data),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<Role[]>(['roles'], (old = []) => {
-        return old.map((role) => (role.id === updated.id ? updated : role));
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
       showToast('Role updated successfully', 'success');
     },
     onError: (error: unknown) => {
@@ -54,10 +50,8 @@ export function useDeleteRole() {
 
   return useMutation({
     mutationFn: rolesApi.delete,
-    onSuccess: (_, deletedId) => {
-      queryClient.setQueryData<Role[]>(['roles'], (old = []) => {
-        return old.filter((role) => role.id !== deletedId);
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
       showToast('Role deleted successfully', 'success');
     },
     onError: (error: unknown) => {
@@ -94,9 +88,7 @@ export function useUpdateRolePermissions() {
       rolesApi.updatePermissions(id, permissionIds),
     onSuccess: (updatedRole) => {
       queryClient.setQueryData(['roles', updatedRole.id], updatedRole);
-      queryClient.setQueryData<Role[]>(['roles'], (old = []) => {
-        return old.map((role) => (role.id === updatedRole.id ? updatedRole : role));
-      });
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
 
       showToast('Role permissions updated successfully', 'success');
     },

@@ -32,7 +32,8 @@ export const jobsApi = {
     return data;
   },
 
-  getLogs: async (jobId: string, limit = 50, offset = 0): Promise<JobLogsResponse> => {
+  getLogs: async (jobId: string, page = 1, limit = 20): Promise<JobLogsResponse> => {
+    const offset = (page - 1) * limit;
     const { data } = await apiClient.get<JobLogsResponse>(`/jobs/${jobId}/logs`, {
       params: { limit, offset },
     });
