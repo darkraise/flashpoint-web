@@ -59,7 +59,10 @@ export function ProtectedRoute({
   }
 
   if (requireAuth && !isAuthenticated && !isGuest) {
-    return <Navigate to={fallbackPath} state={{ from: location }} replace />;
+    // Include returnUrl as query param so it survives cross-browser navigation
+    const returnUrl = location.pathname + location.search;
+    const loginUrl = `${fallbackPath}?returnUrl=${encodeURIComponent(returnUrl)}`;
+    return <Navigate to={loginUrl} state={{ from: location }} replace />;
   }
 
   if (requireFeature && !featureFlags[requireFeature]) {

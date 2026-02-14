@@ -10,7 +10,7 @@ import { logger } from '../lib/logger';
 
 interface AuthContextType {
   login: (credentials: LoginCredentials, redirectPath?: string) => Promise<void>;
-  loginAsGuest: () => void;
+  loginAsGuest: (redirectPath?: string) => void;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
@@ -83,10 +83,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [setAuth, queryClient, checkMaintenanceMode, navigate]
   );
 
-  const loginAsGuest = useCallback(() => {
-    setGuestMode();
-    navigate('/');
-  }, [setGuestMode, navigate]);
+  const loginAsGuest = useCallback(
+    (redirectPath?: string) => {
+      setGuestMode();
+      navigate(redirectPath || '/', { replace: true });
+    },
+    [setGuestMode, navigate]
+  );
 
   const register = useCallback(
     async (userData: RegisterData) => {
