@@ -38,7 +38,8 @@ export function BrowseCommunityPlaylistsModal({
   const [downloadedInSession, setDownloadedInSession] = useState<Set<string>>(new Set());
 
   const { data, isLoading, error, refetch } = useCommunityPlaylists();
-  const { data: localPlaylistsData } = usePlaylists();
+  // Fetch all playlists for duplicate detection (use high limit)
+  const { data: localPlaylistsData } = usePlaylists(1, 1000);
   const localPlaylists = localPlaylistsData?.data ?? [];
   const downloadMutation = useDownloadCommunityPlaylist();
   const { showToast } = useDialog();
