@@ -6,6 +6,7 @@ import { BrowseCommunityPlaylistsModal } from '@/components/playlist/BrowseCommu
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { PaginationWithInfo } from '@/components/ui/pagination';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,16 +26,26 @@ import {
 import { toast } from 'sonner';
 import type { Playlist } from '@/types/game';
 
+const PAGE_SIZE = 50;
+
 export function PlaylistsView() {
-  const { data: allPlaylists, isLoading, error } = usePlaylists();
+  const [page, setPage] = useState(1);
+  const { data, isLoading, error } = usePlaylists(page, PAGE_SIZE);
   const deletePlaylist = useDeletePlaylist();
   const [isBrowseModalOpen, setIsBrowseModalOpen] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
 
+  const allPlaylists = data?.data ?? [];
+  const pagination = data?.pagination;
+
   const playlists = useMemo(() => {
-    if (!allPlaylists) return [];
     return allPlaylists.filter((playlist) => playlist.id !== FAVORITES_PLAYLIST_ID);
   }, [allPlaylists]);
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleDeleteClick = (e: React.MouseEvent, playlist: Playlist) => {
     e.preventDefault();
@@ -78,7 +89,7 @@ export function PlaylistsView() {
           </Button>
         </div>
 
-        {playlists.length === 0 ? (
+        {playlists.length === 0 && !isLoading ? (
           <div className="text-center py-16">
             <div className="inline-flex items-center justify-center w-24 h-24 bg-muted rounded-full mb-4">
               <List size={48} className="text-muted-foreground" />
@@ -98,57 +109,71 @@ export function PlaylistsView() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {playlists.map((playlist) => (
-              <Card
-                key={playlist.id}
-                className="p-4 hover:ring-2 hover:ring-primary/40 hover:shadow-lg transition-all group"
-              >
-                <div className="flex items-start gap-3">
-                  <Link to={`/flashpoint-playlists/${playlist.id}`} className="flex-shrink-0">
-                    <div className="bg-accent p-2 rounded">
-                      <List size={24} />
-                    </div>
-                  </Link>
-                  <Link to={`/flashpoint-playlists/${playlist.id}`} className="flex-1 min-w-0">
-                    <h3 className="font-semibold mb-1">{playlist.title}</h3>
-                    {playlist.description ? (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {playlist.description}
-                      </p>
-                    ) : null}
-                    {playlist.gameIds ? (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {playlist.gameIds.length} games
-                      </p>
-                    ) : null}
-                  </Link>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label="More options"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical size={16} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => handleDeleteClick(e, playlist)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 size={16} className="mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {playlists.map((playlist) => (
+                <Card
+                  key={playlist.id}
+                  className="p-4 hover:ring-2 hover:ring-primary/40 hover:shadow-lg transition-all group"
+                >
+                  <div className="flex items-start gap-3">
+                    <Link to={`/flashpoint-playlists/${playlist.id}`} className="flex-shrink-0">
+                      <div className="bg-accent p-2 rounded">
+                        <List size={24} />
+                      </div>
+                    </Link>
+                    <Link to={`/flashpoint-playlists/${playlist.id}`} className="flex-1 min-w-0">
+                      <h3 className="font-semibold mb-1">{playlist.title}</h3>
+                      {playlist.description ? (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {playlist.description}
+                        </p>
+                      ) : null}
+                      {playlist.gameIds ? (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {playlist.gameIds.length} games
+                        </p>
+                      ) : null}
+                    </Link>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="More options"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical size={16} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => handleDeleteClick(e, playlist)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 size={16} className="mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {pagination && pagination.totalPages > 1 ? (
+              <div className="mt-8">
+                <PaginationWithInfo
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  pageSize={pagination.limit}
+                  totalItems={pagination.total}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            ) : null}
+          </>
         )}
 
         <BrowseCommunityPlaylistsModal

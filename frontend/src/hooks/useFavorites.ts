@@ -30,16 +30,16 @@ export function useFavoriteGameIds() {
 }
 
 export function useFavoriteGames(
-  limit?: number,
-  offset?: number,
+  page: number = 1,
+  limit: number = 24,
   sortBy?: 'title' | 'dateAdded',
   sortOrder?: 'asc' | 'desc'
 ) {
   const { enableFavorites } = useFeatureFlags();
 
   return useQuery({
-    queryKey: ['favorites', 'games', { limit, offset, sortBy, sortOrder }],
-    queryFn: () => favoritesApi.getGames(limit, offset, sortBy, sortOrder),
+    queryKey: ['favorites', 'games', { page, limit, sortBy, sortOrder }],
+    queryFn: () => favoritesApi.getGames(page, limit, sortBy, sortOrder),
     enabled: enableFavorites,
   });
 }

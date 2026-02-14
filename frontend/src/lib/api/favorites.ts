@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import type { PaginatedResponse } from '@/types/auth';
 import type {
   Favorite,
   FavoriteGame,
@@ -25,13 +26,13 @@ export const favoritesApi = {
   },
 
   getGames: async (
-    limit?: number,
-    offset?: number,
+    page: number = 1,
+    limit: number = 24,
     sortBy?: 'title' | 'dateAdded',
     sortOrder?: 'asc' | 'desc'
-  ): Promise<FavoriteGame[]> => {
-    const { data } = await apiClient.get<FavoriteGame[]>('/favorites/games', {
-      params: { limit, offset, sortBy, sortOrder },
+  ): Promise<PaginatedResponse<FavoriteGame>> => {
+    const { data } = await apiClient.get<PaginatedResponse<FavoriteGame>>('/favorites/games', {
+      params: { page, limit, sortBy, sortOrder },
     });
     return data;
   },

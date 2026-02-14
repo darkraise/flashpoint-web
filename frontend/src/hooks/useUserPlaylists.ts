@@ -5,7 +5,6 @@ import type { PlaylistWithGames } from '@/lib/api/userPlaylists';
 import {
   UpdatePlaylistData,
   UserPlaylist,
-  PlaylistStats,
   EnableSharingOptions,
   ShareLinkData,
 } from '@/types/playlist';
@@ -14,12 +13,12 @@ import { useFeatureFlags } from './useFeatureFlags';
 import { useDialog } from '@/contexts/DialogContext';
 import { getErrorMessage } from '@/types/api-error';
 
-export function useUserPlaylists(enabled = true) {
+export function useUserPlaylists(page: number = 1, limit: number = 12, enabled = true) {
   const { enablePlaylists } = useFeatureFlags();
 
   return useQuery({
-    queryKey: ['user-playlists'],
-    queryFn: () => userPlaylistsApi.getAll(),
+    queryKey: ['user-playlists', { page, limit }],
+    queryFn: () => userPlaylistsApi.getAll(page, limit),
     enabled: enablePlaylists && enabled,
   });
 }
@@ -30,10 +29,8 @@ export function useCreateUserPlaylist() {
 
   return useMutation({
     mutationFn: userPlaylistsApi.create,
-    onSuccess: (newPlaylist) => {
-      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
-        return [newPlaylist, ...old];
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
       showToast('Playlist created successfully', 'success');
     },
     onError: (error: unknown) => {
@@ -50,12 +47,8 @@ export function useUpdateUserPlaylist() {
     mutationFn: ({ id, data }: { id: number; data: UpdatePlaylistData }) =>
       userPlaylistsApi.update(id, data),
     onSuccess: (updated) => {
-      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
-        return old.map((playlist) => (playlist.id === updated.id ? updated : playlist));
-      });
-
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
       queryClient.setQueryData(['user-playlist', updated.id], updated);
-
       showToast('Playlist updated successfully', 'success');
     },
     onError: (error: unknown) => {
@@ -70,10 +63,8 @@ export function useDeleteUserPlaylist() {
 
   return useMutation({
     mutationFn: userPlaylistsApi.delete,
-    onSuccess: (_, deletedId) => {
-      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
-        return old.filter((playlist) => playlist.id !== deletedId);
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
       showToast('Playlist deleted successfully', 'success');
     },
     onError: (error: unknown) => {
@@ -120,7 +111,7 @@ export function useAddGamesToUserPlaylist() {
     PlaylistWithGames,
     unknown,
     { id: number; gameIds: string[] },
-    { previousPlaylist: unknown; previousGames: unknown; previousPlaylists: unknown }
+    { previousPlaylist: unknown; previousGames: unknown }
   >({
     mutationFn: ({ id, gameIds }: { id: number; gameIds: string[] }) =>
       userPlaylistsApi.addGames(id, gameIds),
@@ -128,13 +119,11 @@ export function useAddGamesToUserPlaylist() {
     onMutate: async ({ id }) => {
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id] });
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
-      await queryClient.cancelQueries({ queryKey: ['user-playlists'] });
 
       const previousPlaylist = queryClient.getQueryData(['user-playlist', id]);
       const previousGames = queryClient.getQueryData(['user-playlist', id, 'games']);
-      const previousPlaylists = queryClient.getQueryData(['user-playlists']);
 
-      return { previousPlaylist, previousGames, previousPlaylists };
+      return { previousPlaylist, previousGames };
     },
 
     onSuccess: (response, variables) => {
@@ -151,12 +140,7 @@ export function useAddGamesToUserPlaylist() {
       });
 
       queryClient.setQueryData(['user-playlist', variables.id, 'games'], response.games);
-
-      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
-        return old.map((playlist) =>
-          playlist.id === variables.id ? { ...playlist, gameCount: response.gameCount } : playlist
-        );
-      });
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
 
       showToast('Games added to playlist', 'success');
     },
@@ -167,9 +151,6 @@ export function useAddGamesToUserPlaylist() {
       }
       if (context?.previousGames) {
         queryClient.setQueryData(['user-playlist', variables.id, 'games'], context.previousGames);
-      }
-      if (context?.previousPlaylists) {
-        queryClient.setQueryData(['user-playlists'], context.previousPlaylists);
       }
 
       const message = getErrorMessage(err) || 'Failed to add games to playlist';
@@ -186,7 +167,7 @@ export function useRemoveGamesFromUserPlaylist() {
     PlaylistWithGames,
     unknown,
     { id: number; gameIds: string[] },
-    { previousPlaylist: unknown; previousGames: unknown; previousPlaylists: unknown }
+    { previousPlaylist: unknown; previousGames: unknown }
   >({
     mutationFn: ({ id, gameIds }: { id: number; gameIds: string[] }) =>
       userPlaylistsApi.removeGames(id, gameIds),
@@ -194,11 +175,9 @@ export function useRemoveGamesFromUserPlaylist() {
     onMutate: async ({ id, gameIds }) => {
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id] });
       await queryClient.cancelQueries({ queryKey: ['user-playlist', id, 'games'] });
-      await queryClient.cancelQueries({ queryKey: ['user-playlists'] });
 
       const previousPlaylist = queryClient.getQueryData(['user-playlist', id]);
       const previousGames = queryClient.getQueryData<Game[]>(['user-playlist', id, 'games']);
-      const previousPlaylists = queryClient.getQueryData(['user-playlists']);
 
       if (previousGames) {
         queryClient.setQueryData<Game[]>(
@@ -207,7 +186,7 @@ export function useRemoveGamesFromUserPlaylist() {
         );
       }
 
-      return { previousPlaylist, previousGames, previousPlaylists };
+      return { previousPlaylist, previousGames };
     },
 
     onSuccess: (response, variables) => {
@@ -224,12 +203,7 @@ export function useRemoveGamesFromUserPlaylist() {
       });
 
       queryClient.setQueryData(['user-playlist', variables.id, 'games'], response.games);
-
-      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
-        return old.map((playlist) =>
-          playlist.id === variables.id ? { ...playlist, gameCount: response.gameCount } : playlist
-        );
-      });
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
 
       showToast('Games removed from playlist', 'success');
     },
@@ -240,9 +214,6 @@ export function useRemoveGamesFromUserPlaylist() {
       }
       if (context?.previousGames) {
         queryClient.setQueryData(['user-playlist', variables.id, 'games'], context.previousGames);
-      }
-      if (context?.previousPlaylists) {
-        queryClient.setQueryData(['user-playlists'], context.previousPlaylists);
       }
 
       const message = getErrorMessage(err) || 'Failed to remove games from playlist';
@@ -305,15 +276,8 @@ export function useCopyFlashpointPlaylist() {
     }) => userPlaylistsApi.copyFlashpointPlaylist(flashpointPlaylistId, newTitle),
 
     onSuccess: (newPlaylist) => {
-      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
-        return [newPlaylist, ...old];
-      });
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
       queryClient.setQueryData(['user-playlist', newPlaylist.id], newPlaylist);
-      queryClient.setQueryData<PlaylistStats>(['user-playlists', 'stats'], (old) => {
-        if (!old) return old;
-        return { ...old, totalPlaylists: (old.totalPlaylists || 0) + 1 };
-      });
-
       showToast('Playlist copied successfully', 'success');
     },
 
@@ -396,15 +360,8 @@ export function useCloneSharedPlaylist() {
       sharedPlaylistsApi.clonePlaylist(shareToken, newTitle),
 
     onSuccess: (newPlaylist) => {
-      queryClient.setQueryData<UserPlaylist[]>(['user-playlists'], (old = []) => {
-        return [newPlaylist, ...old];
-      });
+      queryClient.invalidateQueries({ queryKey: ['user-playlists'] });
       queryClient.setQueryData(['user-playlist', newPlaylist.id], newPlaylist);
-      queryClient.setQueryData<PlaylistStats>(['user-playlists', 'stats'], (old) => {
-        if (!old) return old;
-        return { ...old, totalPlaylists: (old.totalPlaylists || 0) + 1 };
-      });
-
       showToast('Playlist cloned successfully', 'success');
     },
 

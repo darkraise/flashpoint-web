@@ -340,10 +340,9 @@ export function GameBrowseLayout({
               pageSize={filters.limit || 50}
               totalItems={data.total}
               onPageChange={handlePageChange}
-              siblingCount={1}
               showFirstLast={true}
               showInfo={true}
-              className="mt-8 pb-2"
+              className="mt-8 pb-4"
             />
           ) : null}
         </>

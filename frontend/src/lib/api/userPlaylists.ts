@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import type { PaginatedResponse } from '@/types/auth';
 import type {
   UserPlaylist,
   CreatePlaylistData,
@@ -17,8 +18,13 @@ export interface PlaylistWithGames extends UserPlaylist {
 }
 
 export const userPlaylistsApi = {
-  getAll: async (): Promise<UserPlaylist[]> => {
-    const { data } = await apiClient.get<UserPlaylist[]>('/user-playlists');
+  getAll: async (
+    page: number = 1,
+    limit: number = 12
+  ): Promise<PaginatedResponse<UserPlaylist>> => {
+    const { data } = await apiClient.get<PaginatedResponse<UserPlaylist>>('/user-playlists', {
+      params: { page, limit },
+    });
     return data;
   },
 

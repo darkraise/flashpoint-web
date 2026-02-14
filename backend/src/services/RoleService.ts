@@ -66,6 +66,89 @@ export class RoleService {
     }));
   }
 
+  async getRolesPaginated(
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{ data: Role[]; total: number }> {
+    // Get total count
+    const countResult = UserDatabaseService.get<{ count: number }>(
+      'SELECT COUNT(*) as count FROM roles',
+      []
+    );
+    const total = countResult?.count ?? 0;
+
+    if (total === 0) {
+      return { data: [], total: 0 };
+    }
+
+    const offset = (page - 1) * limit;
+
+    // Fetch paginated roles
+    const roles = UserDatabaseService.all<{
+      id: number;
+      name: string;
+      description: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }>(
+      `SELECT id, name, description, created_at as createdAt, updated_at as updatedAt
+       FROM roles
+       ORDER BY name ASC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+
+    if (roles.length === 0) {
+      return { data: [], total };
+    }
+
+    // Get role IDs for permission lookup
+    const roleIds = roles.map((r) => r.id);
+
+    // Fetch permissions for these roles only
+    const placeholders = roleIds.map(() => '?').join(',');
+    const rolePermissions = UserDatabaseService.all<{
+      role_id: number;
+      id: number;
+      name: string;
+      description: string | null;
+      resource: string;
+      action: string;
+    }>(
+      `SELECT rp.role_id, p.id, p.name, p.description, p.resource, p.action
+       FROM role_permissions rp
+       JOIN permissions p ON p.id = rp.permission_id
+       WHERE rp.role_id IN (${placeholders})
+       ORDER BY p.resource, p.action`,
+      roleIds
+    );
+
+    // Group permissions by role_id
+    const permissionsByRole = new Map<number, Permission[]>();
+    for (const perm of rolePermissions) {
+      const rolePerms = permissionsByRole.get(perm.role_id) || [];
+      rolePerms.push({
+        id: perm.id,
+        name: perm.name,
+        description: perm.description ?? undefined,
+        resource: perm.resource,
+        action: perm.action,
+      });
+      permissionsByRole.set(perm.role_id, rolePerms);
+    }
+
+    const data = roles.map((role) => ({
+      id: role.id,
+      name: role.name,
+      description: role.description ?? undefined,
+      createdAt: role.createdAt,
+      updatedAt: role.updatedAt,
+      permissions: permissionsByRole.get(role.id) || [],
+    }));
+
+    return { data, total };
+  }
+
   async getRoleById(id: number): Promise<Role | null> {
     const role = UserDatabaseService.get<{
       id: number;

@@ -67,7 +67,9 @@ interface UserFormProps {
 export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
-  const { data: roles, isLoading: rolesLoading, isError: rolesError } = useRoles();
+  // Fetch all roles for dropdown (use high limit)
+  const { data: rolesData, isLoading: rolesLoading, isError: rolesError } = useRoles(1, 100);
+  const roles = rolesData?.data ?? [];
 
   const isEditMode = !!user;
 
@@ -215,7 +217,7 @@ export function UserForm({ user, onClose, onSuccess }: UserFormProps) {
                           <SelectItem value="error" disabled>
                             Failed to load roles
                           </SelectItem>
-                        ) : !roles || roles.length === 0 ? (
+                        ) : roles.length === 0 ? (
                           <SelectItem value="empty" disabled>
                             No roles available
                           </SelectItem>

@@ -66,11 +66,27 @@ router.get(
       throw new AppError(401, 'Authentication required');
     }
 
-    const playlists = playlistService.getUserPlaylists(req.user.id);
+    const rawPage = parseInt(req.query.page as string, 10);
+    const page = isNaN(rawPage) ? 1 : Math.max(1, rawPage);
 
-    res.locals.playlistCount = playlists.length;
+    const rawLimit = parseInt(req.query.limit as string, 10);
+    const limit = isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 100));
 
-    res.json(playlists);
+    const result = playlistService.getUserPlaylistsPaginated(req.user.id, page, limit);
+
+    res.locals.playlistCount = result.total;
+
+    const totalPages = Math.ceil(result.total / limit);
+
+    res.json({
+      data: result.data,
+      pagination: {
+        page,
+        limit,
+        total: result.total,
+        totalPages,
+      },
+    });
   })
 );
 

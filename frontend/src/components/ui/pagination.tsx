@@ -18,7 +18,7 @@ export interface PaginationProps {
 function generatePageNumbers(
   currentPage: number,
   totalPages: number,
-  siblingCount: number = 1
+  siblingCount: number = 2
 ): (number | string)[] {
   // If total pages is small enough, show all pages
   if (totalPages <= 7) {
@@ -69,7 +69,7 @@ export function Pagination({
   currentPage,
   totalPages,
   onPageChange,
-  siblingCount = 1,
+  siblingCount = 2,
   showFirstLast = true,
   className,
 }: PaginationProps) {

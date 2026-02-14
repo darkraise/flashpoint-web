@@ -38,17 +38,16 @@ export function BrowseCommunityPlaylistsModal({
   const [downloadedInSession, setDownloadedInSession] = useState<Set<string>>(new Set());
 
   const { data, isLoading, error, refetch } = useCommunityPlaylists();
-  const { data: localPlaylists } = usePlaylists();
+  const { data: localPlaylistsData } = usePlaylists();
+  const localPlaylists = localPlaylistsData?.data ?? [];
   const downloadMutation = useDownloadCommunityPlaylist();
   const { showToast } = useDialog();
 
   const downloadedTitles = useMemo(() => {
     const titles = new Set<string>();
-    if (localPlaylists) {
-      localPlaylists.forEach((playlist) => {
-        titles.add(playlist.title.toLowerCase().trim());
-      });
-    }
+    localPlaylists.forEach((playlist) => {
+      titles.add(playlist.title.toLowerCase().trim());
+    });
     downloadedInSession.forEach((title) => {
       titles.add(title.toLowerCase().trim());
     });

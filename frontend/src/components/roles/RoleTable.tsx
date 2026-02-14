@@ -3,7 +3,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRoles, useDeleteRole } from '@/hooks/useRoles';
-import { Role } from '@/types/auth';
+import { Role, Permission } from '@/types/auth';
 import { RoleGuard } from '../common/RoleGuard';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { DataTable } from '../ui/data-table';
@@ -28,14 +28,18 @@ interface RoleTableProps {
 }
 
 export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
+  const [page, setPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
-  const { data: roles, isLoading, isError, error } = useRoles();
+  const limit = 50;
+
+  const { data, isLoading, isError, error } = useRoles(page, limit);
+  const roles = data?.data ?? [];
   const deleteRoleMutation = useDeleteRole();
 
   // Sort roles: system roles (admin=1, user=2, guest=3) pinned at top, then others by name
   const sortedRoles = useMemo(() => {
-    if (!roles) return [];
+    if (roles.length === 0) return [];
     return [...roles].sort((a, b) => {
       const aIsSystem = SYSTEM_ROLE_IDS.has(a.id);
       const bIsSystem = SYSTEM_ROLE_IDS.has(b.id);
@@ -107,7 +111,7 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
       accessorKey: 'permissions',
       header: 'Permissions',
       cell: ({ row }) => {
-        const permissions = row.getValue('permissions') as string[];
+        const permissions = row.getValue('permissions') as Permission[];
         return <div className="text-muted-foreground">{permissions.length} permissions</div>;
       },
     },
@@ -175,6 +179,8 @@ export function RoleTable({ onEdit, onManagePermissions }: RoleTableProps) {
       <DataTable
         columns={columns}
         data={sortedRoles}
+        pagination={data?.pagination}
+        onPageChange={setPage}
         isLoading={isLoading}
         emptyMessage="No roles found"
       />

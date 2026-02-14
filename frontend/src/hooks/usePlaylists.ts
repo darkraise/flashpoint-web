@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playlistsApi } from '@/lib/api';
 
-export function usePlaylists() {
+export function usePlaylists(page: number = 1, limit: number = 12) {
   return useQuery({
-    queryKey: ['playlists'],
-    queryFn: () => playlistsApi.getAll(),
+    queryKey: ['playlists', { page, limit }],
+    queryFn: () => playlistsApi.getAll(page, limit),
   });
 }
 
