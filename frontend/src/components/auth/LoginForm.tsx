@@ -30,17 +30,27 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 interface LocationState {
-  from?: {
-    pathname: string;
-  };
+  // Can be a full Location object (from ProtectedRoute) or a string (from UnauthorizedView)
+  from?: string | { pathname: string; search?: string };
   setupComplete?: boolean;
 }
 
 /** Validate return URL to prevent open redirects */
-function isValidReturnUrl(url: string | null): url is string {
+function isValidReturnUrl(url: string | null | undefined): url is string {
   if (!url) return false;
   // Must start with / and not be protocol-relative (//)
   return url.startsWith('/') && !url.startsWith('//');
+}
+
+/** Normalize location state to a path string, including search params */
+function normalizeFromState(from: LocationState['from']): string | null {
+  if (!from) return null;
+  if (typeof from === 'string') {
+    return isValidReturnUrl(from) ? from : null;
+  }
+  // Location object - combine pathname and search
+  const path = from.pathname + (from.search ?? '');
+  return isValidReturnUrl(path) ? path : null;
 }
 
 export function LoginForm() {
@@ -50,9 +60,10 @@ export function LoginForm() {
 
   // Check query param first (survives cross-browser), then fall back to state
   const returnUrl = searchParams.get('returnUrl');
+  const fromState = (location.state as LocationState)?.from;
   const from =
     (isValidReturnUrl(returnUrl) ? returnUrl : null) ||
-    (location.state as LocationState)?.from?.pathname ||
+    normalizeFromState(fromState) ||
     '/';
   const setupComplete = (location.state as LocationState)?.setupComplete ?? false;
 
