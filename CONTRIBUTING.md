@@ -50,17 +50,26 @@ frontend/   # React + Vite application (:5173)
 docs/       # Documentation
 ```
 
-### Option 1: Docker (Recommended)
+### Option 1: Docker
 
 ```bash
-# Start all services
-docker-compose up -d
+# Configure environment
+cp .env.example .env
+# Edit .env - set FLASHPOINT_HOST_PATH and JWT_SECRET (required)
+
+# Build and start (development)
+docker compose -f docker-compose.dev.yml up -d --build
 
 # View logs
-docker-compose logs -f
+docker compose -f docker-compose.dev.yml logs -f
+
+# Rebuild specific service
+docker compose -f docker-compose.dev.yml up -d --build backend
 ```
 
-### Option 2: Manual Setup
+Frontend runs on `http://localhost:80`, backend API on `http://localhost:3100`.
+
+### Option 2: Manual Setup (Recommended for Development)
 
 **Prerequisites:**
 - Node.js 20+
@@ -78,7 +87,7 @@ cp backend/.env.example backend/.env
 npm run dev
 ```
 
-Backend runs on `http://localhost:3100`, frontend on `http://localhost:5173`.
+Frontend runs on `http://localhost:5173`, backend on `http://localhost:3100`.
 
 ## Running Tests
 
