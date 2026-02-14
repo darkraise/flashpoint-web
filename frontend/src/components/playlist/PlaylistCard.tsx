@@ -14,6 +14,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { UserPlaylist } from '@/types/playlist';
 import { PlaylistIcon } from './PlaylistIcon';
 import { toast } from 'sonner';
+import { buildShareUrl } from '@/hooks/useDomains';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
 
 interface PlaylistCardProps {
   playlist: UserPlaylist;
@@ -30,6 +32,9 @@ const PlaylistCardComponent = function PlaylistCard({
   onShare,
   showActions = true,
 }: PlaylistCardProps) {
+  const { data: publicSettings } = usePublicSettings();
+  const defaultDomain = publicSettings?.domains?.defaultDomain ?? null;
+
   const handleEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -54,11 +59,11 @@ const PlaylistCardComponent = function PlaylistCard({
 
     if (!playlist.shareToken) return;
 
-    const shareUrl = `${window.location.origin}/playlists/shared/${playlist.shareToken}`;
+    const shareUrl = buildShareUrl(defaultDomain, playlist.shareToken);
     try {
       await navigator.clipboard.writeText(shareUrl);
       toast.success('Share link copied to clipboard');
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy link');
     }
   };

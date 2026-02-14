@@ -22,6 +22,23 @@ vi.mock('./PlaylistIcon', () => ({
   ),
 }));
 
+vi.mock('@/hooks/usePublicSettings', () => ({
+  usePublicSettings: () => ({
+    data: {
+      domains: {
+        defaultDomain: 'share.example.com',
+      },
+    },
+  }),
+}));
+
+vi.mock('@/hooks/useDomains', () => ({
+  buildShareUrl: (hostname: string | null, shareToken: string) => {
+    const base = hostname ? `https://${hostname}` : 'http://localhost:5173';
+    return `${base}/playlists/shared/${shareToken}`;
+  },
+}));
+
 describe('PlaylistCard', () => {
   const mockPlaylist: UserPlaylist = {
     id: 1,

@@ -27,6 +27,9 @@ jobs:
     permissions:
       contents: read
 
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -99,3 +102,56 @@ jobs:
           echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-backend:latest" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-frontend:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  create-release:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          echo "## Docker Images" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "Pull the images from Docker Hub:" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-backend:${{ steps.version.outputs.version }}" >> release_notes.md
+          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-frontend:${{ steps.version.outputs.version }}" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "" >> release_notes.md
+
+          if [ -n "$PREV_TAG" ]; then
+            echo "## Changes since $PREV_TAG" >> release_notes.md
+            echo "" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD >> release_notes.md
+            echo "" >> release_notes.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

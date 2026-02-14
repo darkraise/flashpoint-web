@@ -24,9 +24,14 @@ export function usePublicSettings() {
       logger.debug('[usePublicSettings] Fetch complete:', result);
       return result;
     },
+    // Data rarely changes, so we use aggressive caching:
+    // - staleTime: Infinity means data is never considered stale automatically
+    // - But when other code calls invalidateQueries (e.g., after domain changes),
+    //   data is marked stale and will refetch on next mount
+    // - refetchOnMount defaults to true, so invalidated data WILL refetch
     staleTime: Infinity,
     gcTime: Infinity,
-    refetchOnMount: false,
+    // Keep these disabled to prevent unnecessary refetches on tab focus/reconnect
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     retry: false,
