@@ -1,478 +1,172 @@
 # Contributing to Flashpoint Web
 
-Thank you for your interest in contributing to Flashpoint Web! This document
-provides guidelines and instructions for contributing to this project.
+Thanks for your interest in contributing! We welcome bug fixes, features, documentation improvements, and questions.
+
+## What is Flashpoint Web?
+
+A self-hosted web application for browsing and playing games from [Flashpoint Archive](https://flashpointarchive.org/).
+
+**Tech Stack:** Node.js 20+, Express, React 18, TypeScript, SQLite, TanStack Query, Tailwind CSS
 
 ## Table of Contents
 
-- [Code of Conduct](#code-of-conduct)
+- [Where to Start](#where-to-start)
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
-- [How to Contribute](#how-to-contribute)
-- [Pull Request Process](#pull-request-process)
-- [Coding Standards](#coding-standards)
-- [Commit Guidelines](#commit-guidelines)
-- [Testing](#testing)
-- [Documentation](#documentation)
-- [Community](#community)
+- [Running Tests](#running-tests)
+- [Making Changes](#making-changes)
+- [Submitting a Pull Request](#submitting-a-pull-request)
+- [Code Style](#code-style)
+- [Reporting Bugs](#reporting-bugs)
+- [License](#license)
 
-## Code of Conduct
+## Where to Start
 
-### Our Pledge
-
-We are committed to providing a welcoming and inspiring community for all. By
-participating in this project, you agree to:
-
-- Be respectful and inclusive
-- Accept constructive criticism gracefully
-- Focus on what is best for the community
-- Show empathy towards other community members
-
-### Unacceptable Behavior
-
-- Harassment, discrimination, or offensive comments
-- Trolling or insulting/derogatory comments
-- Public or private harassment
-- Publishing others' private information without permission
+- Browse issues labeled [`good first issue`](../../labels/good%20first%20issue) or [`help wanted`](../../labels/help%20wanted)
+- Check the [project documentation](docs/) for architecture and patterns
 
 ## Getting Started
 
-### Prerequisites
+```bash
+# Fork the repository on GitHub, then clone your fork
+git clone https://github.com/YOUR_USERNAME/flashpoint-web.git
+cd flashpoint-web
 
-Before contributing, ensure you have:
+# Add upstream remote
+git remote add upstream https://github.com/ORIGINAL_OWNER/flashpoint-web.git
 
-- [Node.js](https://nodejs.org/) 20.0.0 or higher
-- [npm](https://www.npmjs.com/) 9.0.0 or higher
-- [Git](https://git-scm.com/)
-- [Flashpoint Archive](https://flashpointarchive.org/) installed locally
-- A code editor (VS Code recommended)
-
-### Fork and Clone
-
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/flashpoint-web.git
-   cd flashpoint-web
-   ```
-3. **Add upstream remote**:
-   ```bash
-   git remote add upstream https://github.com/ORIGINAL_OWNER/flashpoint-web.git
-   ```
+# Keep your fork synced
+git fetch upstream
+git rebase upstream/master
+```
 
 ## Development Setup
 
-### Quick Setup
+### Project Structure
+
+```
+backend/    # Express REST API + game content serving (:3100)
+frontend/   # React + Vite application (:5173)
+docs/       # Documentation
+```
+
+### Option 1: Docker (Recommended)
 
 ```bash
-# Install all dependencies
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+```
+
+### Option 2: Manual Setup
+
+**Prerequisites:**
+- Node.js 20+
+- Flashpoint Archive installed locally
+
+```bash
+# Install dependencies
 npm run install:all
 
-# Copy environment files
+# Configure environment
 cp backend/.env.example backend/.env
-
-# Edit .env file with your Flashpoint path
-# See docs/08-development/setup-guide.md for details
+# Edit backend/.env - set FLASHPOINT_PATH to your Flashpoint installation
 
 # Start development servers
 npm run dev
 ```
 
-### Verify Setup
+Backend runs on `http://localhost:3100`, frontend on `http://localhost:5173`.
+
+## Running Tests
 
 ```bash
-# Run type checking
-npm run typecheck
+# Run all tests
+npm test
 
-# Run tests
-cd backend && npm test
-cd ../frontend && npm test
+# Backend tests with coverage
+cd backend && npm test -- --coverage
+
+# Frontend tests
+cd frontend && npm test
 ```
 
-For detailed setup instructions, see
-[Setup Guide](docs/08-development/setup-guide.md).
-
-## How to Contribute
-
-### Reporting Bugs
-
-Before reporting a bug:
-
-1. Search [existing issues](https://github.com/OWNER/flashpoint-web/issues) to
-   avoid duplicates
-2. Use the [Bug Report template](.github/ISSUE_TEMPLATE/bug_report.md)
-3. Include:
-   - Clear description of the issue
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Environment details (OS, Node version, browser)
-   - Screenshots or logs if applicable
-
-### Suggesting Features
-
-1. Check if the feature has already been requested
-2. Use the [Feature Request template](.github/ISSUE_TEMPLATE/feature_request.md)
-3. Explain the use case and benefits
-4. Consider how it fits with existing features
-
-### Contributing Code
-
-1. **Find an issue** to work on or create one
-2. **Comment on the issue** to let others know you're working on it
-3. **Create a branch** from `master`
-4. **Make your changes** following our coding standards
-5. **Write tests** for new functionality
-6. **Submit a pull request**
-
-### First-Time Contributors
-
-Look for issues labeled:
-
-- `good first issue` - Simple issues for newcomers
-- `help wanted` - Issues where we need community help
-- `documentation` - Documentation improvements
-
-## Pull Request Process
-
-### Before Submitting
-
-1. **Sync with upstream**:
-
-   ```bash
-   git fetch upstream
-   git rebase upstream/master
-   ```
-
-2. **Run all checks**:
-
-   ```bash
-   npm run typecheck
-   npm run format:check
-   cd backend && npm test
-   ```
-
-3. **Update documentation** if needed
-
-### PR Requirements
-
-- [ ] Branch is up-to-date with `master`
-- [ ] Code follows project coding standards
-- [ ] All tests pass
-- [ ] TypeScript has no errors
-- [ ] Documentation is updated (if applicable)
-- [ ] Commit messages follow guidelines
-- [ ] PR description explains the changes
+## Making Changes
 
 ### Branch Naming
 
-Use descriptive branch names:
-
 ```
-feature/add-playlist-export
+feat/add-playlist-export
 fix/game-search-pagination
+refactor/auth-service
 docs/update-api-reference
-refactor/auth-service-cleanup
 ```
 
-### PR Title Format
+### Commit Messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-type: short description
+<type>(<scope>): <description>
 
-Examples:
-feat: add game export to playlist
-fix: resolve pagination bug in game search
-docs: update Docker deployment guide
-refactor: simplify authentication middleware
-```
-
-## Coding Standards
-
-### TypeScript
-
-- Use TypeScript for all code
-- Enable strict mode
-- Define interfaces for all data structures
-- Avoid `any` type - use `unknown` if type is truly unknown
-
-```typescript
-// Good
-interface GameFilters {
-  platform?: string;
-  search?: string;
-  limit: number;
-}
-
-function searchGames(filters: GameFilters): Promise<Game[]> {
-  // ...
-}
-
-// Avoid
-function searchGames(filters: any): Promise<any> {
-  // ...
-}
-```
-
-### React Components
-
-- Use functional components with hooks
-- Define prop types with TypeScript interfaces
-- Keep components focused and single-purpose
-
-```typescript
-// Good
-interface GameCardProps {
-  game: Game;
-  onPlay: (id: string) => void;
-}
-
-export function GameCard({ game, onPlay }: GameCardProps) {
-  return (
-    <Card onClick={() => onPlay(game.id)}>
-      <CardTitle>{game.title}</CardTitle>
-    </Card>
-  );
-}
-```
-
-### API Endpoints
-
-- Use RESTful conventions
-- Add typed API methods to `frontend/src/lib/api.ts`
-- Never use raw `fetch()` for backend calls
-
-```typescript
-// In api.ts
-export const gamesApi = {
-  getById: async (id: string): Promise<Game> => {
-    const { data } = await api.get<ApiResponse<Game>>(`/games/${id}`);
-    return data.data;
-  },
-};
-
-// In component - CORRECT
-const game = await gamesApi.getById(id);
-
-// In component - WRONG (no auth headers)
-const response = await fetch(`/api/games/${id}`);
-```
-
-### Styling
-
-- Use Tailwind CSS utility classes
-- Follow existing component patterns
-- Use Shadcn UI components when available
-
-### File Organization
-
-```
-src/
-├── components/     # Reusable UI components
-│   ├── ui/         # Base UI components (Shadcn)
-│   └── [domain]/   # Domain-specific components
-├── views/          # Page components
-├── lib/            # Utilities and API client
-├── hooks/          # Custom React hooks
-├── store/          # Zustand stores
-└── types/          # TypeScript type definitions
-```
-
-## Commit Guidelines
-
-### Commit Message Format
-
-```
-type(scope): subject
-
-body (optional)
-
-footer (optional)
-```
-
-### Types
-
-| Type       | Description                                 |
-| ---------- | ------------------------------------------- |
-| `feat`     | New feature                                 |
-| `fix`      | Bug fix                                     |
-| `docs`     | Documentation changes                       |
-| `style`    | Code style changes (formatting, semicolons) |
-| `refactor` | Code refactoring                            |
-| `test`     | Adding or updating tests                    |
-| `chore`    | Maintenance tasks                           |
-| `perf`     | Performance improvements                    |
-
-### Examples
-
-```bash
 feat(games): add advanced search filters
-
-- Add platform filter dropdown
-- Add year range selector
-- Update API to support new parameters
-
-Closes #123
-
----
-
 fix(auth): resolve token refresh race condition
-
-Multiple simultaneous requests could trigger multiple refresh
-calls. Added mutex lock to prevent duplicate refreshes.
-
----
-
-docs: update API reference for v2 endpoints
+docs: update deployment guide
+refactor(api): simplify error handling
 ```
 
-### Commit Best Practices
+**Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`
 
-- Keep commits atomic (one logical change per commit)
-- Write meaningful commit messages
-- Reference issues when applicable (`Fixes #123`, `Closes #456`)
+### Workflow
 
-## Testing
+1. Create a branch from `master`
+2. Make your changes
+3. Run `npm run typecheck` and `npm test`
+4. Update documentation if needed
+5. Submit a pull request
 
-### Backend Tests
+## Submitting a Pull Request
+
+### Before Submitting
 
 ```bash
-cd backend
-npm test              # Run all tests
-npm test -- --watch   # Watch mode
-npm test -- --coverage # Coverage report
+git fetch upstream
+git rebase upstream/master
+npm run typecheck
+npm run format
+npm test
 ```
 
-### Frontend Tests
+### PR Guidelines
 
-```bash
-cd frontend
-npm test              # Run all tests
-npm test -- --ui      # Open Vitest UI
-```
+- Keep PRs focused and reasonably sized
+- Reference related issues (`Fixes #123`)
+- Include a clear description of changes
+- Update documentation for new features
 
-### Writing Tests
+## Code Style
 
-- Write tests for new features
-- Include edge cases
-- Mock external dependencies
+See [CLAUDE.md](CLAUDE.md) for detailed coding standards. Key points:
 
-```typescript
-// Example test
-import { describe, it, expect, vi } from 'vitest';
-import { GameService } from './GameService';
+- **TypeScript:** No `any` types, use `unknown` or proper interfaces
+- **Backend:** Wrap async handlers with `asyncHandler()`, static routes before parameterized
+- **Frontend:** Use `@/` imports, all API calls through `lib/api.ts`, use theme tokens
+- **General:** Validate inputs, handle errors properly, clean up resources
 
-describe('GameService', () => {
-  it('should return games matching search query', async () => {
-    const games = await GameService.search({ query: 'mario' });
+Run `npm run format` before committing.
 
-    expect(games).toHaveLength(10);
-    expect(games[0].title).toContain('Mario');
-  });
+## Reporting Bugs
 
-  it('should handle empty results gracefully', async () => {
-    const games = await GameService.search({ query: 'nonexistent12345' });
+Before reporting, search [existing issues](../../issues) to avoid duplicates.
 
-    expect(games).toHaveLength(0);
-  });
-});
-```
+Include:
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details (OS, Node version, browser)
+- Screenshots or logs if applicable
 
-## Documentation
+## License
 
-### When to Update Docs
-
-Update documentation when you:
-
-- Add new features
-- Change API endpoints
-- Modify configuration options
-- Change architecture or patterns
-
-### Documentation Structure
-
-```
-docs/
-├── 01-overview/        # Project introduction
-├── 02-architecture/    # System design
-├── 03-backend/         # Backend service docs (including game content serving)
-├── 04-frontend/        # Frontend service docs
-├── 06-api-reference/   # API documentation
-├── 07-design-system/   # UI/UX guidelines
-├── 08-development/     # Development guides
-├── 09-deployment/      # Deployment guides
-├── 10-features/        # Feature documentation
-└── 12-reference/       # Reference materials
-```
-
-### Documentation Standards
-
-- Use clear, concise language
-- Include code examples
-- Keep content up-to-date with code changes
-- Add diagrams for complex concepts
-
-## Project Structure
-
-```
-flashpoint-web/
-├── backend/           # Express REST API with game content serving
-│   ├── src/
-│   │   ├── routes/    # API route handlers
-│   │   ├── services/  # Business logic
-│   │   ├── middleware/# Express middleware
-│   │   ├── game/      # Game content serving (proxy, ZIP mounting)
-│   │   └── utils/     # Utility functions
-│   └── package.json
-│
-├── frontend/          # React application
-│   ├── src/
-│   │   ├── components/# UI components
-│   │   ├── views/     # Page components
-│   │   ├── lib/       # API client & utilities
-│   │   ├── hooks/     # Custom hooks
-│   │   └── store/     # State management
-│   └── package.json
-│
-├── docs/              # Documentation
-└── package.json       # Root package
-```
-
-## Community
-
-### Getting Help
-
-- Check the [documentation](docs/)
-- Search [existing issues](https://github.com/OWNER/flashpoint-web/issues)
-- Join discussions in issues or PRs
-
-### Communication
-
-- Be patient - maintainers are volunteers
-- Provide context and details in discussions
-- Be open to feedback and alternative approaches
-
-## Recognition
-
-Contributors are recognized in:
-
-- GitHub contributors list
-- Release notes for significant contributions
-- README acknowledgments section
-
----
-
-## Quick Reference
-
-| Task                | Command                   |
-| ------------------- | ------------------------- |
-| Install dependencies | `npm run install:all`     |
-| Start dev servers   | `npm run dev`             |
-| Type check          | `npm run typecheck`       |
-| Format code         | `npm run format`          |
-| Run backend tests   | `cd backend && npm test`  |
-| Build all           | `npm run build`           |
-
----
-
-Thank you for contributing to Flashpoint Web! Your efforts help preserve gaming
-history for future generations.
+This project is licensed under [GPL-3.0](LICENSE). By contributing, you agree that your contributions will be licensed under the same license.

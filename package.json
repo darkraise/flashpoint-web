@@ -1,47 +1,26 @@
 {
   "name": "flashpoint-web-app",
   "version": "1.0.0",
-  "description": "Flashpoint Archive web application - monorepo for backend and frontend",
+  "description": "Flashpoint Archive web application",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "install:all": "npm run install:backend && npm run install:frontend",
-    "install:backend": "cd backend && npm install",
-    "install:frontend": "cd frontend && npm install",
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:backend": "cd backend && npm run build",
-    "build:frontend": "cd frontend && npm run build",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
     "start": "cd backend && npm start",
-    "start:backend": "cd backend && npm start",
-    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
-    "typecheck:backend": "cd backend && npm run typecheck",
-    "typecheck:frontend": "cd frontend && npm run typecheck",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md,yml,yaml}\"",
-    "format:backend": "cd backend && npm run format",
-    "format:frontend": "cd frontend && npm run format",
-    "clean": "npm run clean:backend && npm run clean:frontend",
-    "clean:backend": "cd backend && rm -rf dist node_modules",
-    "clean:frontend": "cd frontend && rm -rf dist node_modules"
+    "typecheck": "cd backend && npm run typecheck && cd ../frontend && npm run typecheck",
+    "test": "cd backend && npm test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "clean": "cd backend && rm -rf dist node_modules && cd ../frontend && rm -rf dist node_modules"
   },
-  "keywords": [
-    "flashpoint",
-    "archive",
-    "games",
-    "web-app",
-    "monorepo"
-  ],
-  "author": "",
   "license": "GPL-3.0",
   "devDependencies": {
     "concurrently": "^8.2.2",
     "prettier": "^3.2.4"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=20.0.0"
   },
   "workspaces": [
     "backend",
