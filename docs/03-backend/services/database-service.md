@@ -13,9 +13,14 @@ hot-reload.
 - **Singleton pattern**: Single database connection per process
 - **File watching**: Detects when Flashpoint Launcher updates the database
 - **Hot-reload**: Automatically reconnects when database changes
-- **Read/Write access**: Allows play statistics updates
+- **Read-only access**: Flashpoint database is read-only (use UserDatabaseService
+  for writes)
+- **Local copy support**: Optional local database copy for network storage
+  performance
 - **Synchronous API**: Uses better-sqlite3 for better performance than async
   wrappers
+- **Cache invalidation**: Clears GameSearchCache and filter caches on database
+  reload
 
 ## Public API
 
@@ -42,24 +47,27 @@ const result = db.prepare('SELECT * FROM game WHERE id = ?').get(gameId);
 
 ---
 
-### `get(sql: string, params: any[]): any | null`
+### `get<T>(sql: string, params: unknown[]): T | undefined`
 
 Execute a query and return the first result row.
 
 ```typescript
-const game = DatabaseService.get('SELECT * FROM game WHERE id = ?', [gameId]);
+const game = DatabaseService.get<GameRow>(
+  'SELECT * FROM game WHERE id = ?',
+  [gameId]
+);
 ```
 
-**Returns**: First result row or null if no results
+**Returns**: First result row or undefined if no results
 
 ---
 
-### `all(sql: string, params: any[]): any[]`
+### `all<T>(sql: string, params: unknown[]): T[]`
 
 Execute a query and return all result rows.
 
 ```typescript
-const games = DatabaseService.all(
+const games = DatabaseService.all<GameRow>(
   'SELECT * FROM game WHERE platformName = ? LIMIT ?',
   ['Flash', 100]
 );
@@ -69,16 +77,39 @@ const games = DatabaseService.all(
 
 ---
 
-### `run(sql: string, params: any[]): void`
+### `exec<T>(sql: string, params: unknown[]): T[]`
 
-Execute an INSERT, UPDATE, or DELETE query.
+Execute a query and return results as objects. Same as `all()` but with
+different naming convention.
 
 ```typescript
-DatabaseService.run(
-  'UPDATE game SET playtime = ?, playCounter = ? WHERE id = ?',
-  [3600, 5, gameId]
+const results = DatabaseService.exec<{ id: number; name: string }>(
+  'SELECT id, name FROM game',
+  []
 );
 ```
+
+---
+
+### `getTableColumns(tableName: string): Set<string>`
+
+Get column names for a table using PRAGMA table_info. Used for runtime schema
+introspection.
+
+```typescript
+const columns = DatabaseService.getTableColumns('game');
+// Returns Set {'id', 'title', 'developer', ...}
+```
+
+---
+
+### `getStatus(): DatabaseStatus`
+
+Get current database connection status.
+
+```typescript
+const status = DatabaseService.getStatus();
+// { connected: true, sourcePath: '...', activePath: '...', usingLocalCopy: false, lastModified: Date }
 
 ---
 

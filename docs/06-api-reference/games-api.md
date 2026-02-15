@@ -8,10 +8,11 @@ Search, browse, and retrieve game information.
 
 Query params: `search` (title/developer/publisher), `platform`, `series`,
 `developers`, `publishers`, `playModes`, `languages`, `library`
-(arcade|theatre), `tags`, `yearFrom`, `yearTo`, `sortBy`
-(title|releaseDate|dateAdded|developer, default: title), `sortOrder` (asc|desc,
-default: asc), `page` (default: 1), `limit` (default: 50, max: 100),
-`showBroken` (default: false), `showExtreme` (default: false)
+(arcade|theatre), `tags`, `yearFrom`, `yearTo`, `dateAddedSince` (ISO datetime),
+`dateModifiedSince` (ISO datetime), `sortBy`
+(title|releaseDate|dateAdded|dateModified|developer, default: title),
+`sortOrder` (asc|desc, default: asc), `page` (default: 1), `limit` (default: 50,
+max: 100), `showBroken` (default: false), `showExtreme` (default: false)
 
 Returns paginated array with essential game fields (id, title, developer,
 platformName, library, tags, orderTitle).

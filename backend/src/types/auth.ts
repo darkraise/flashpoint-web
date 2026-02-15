@@ -2,9 +2,7 @@
  * Authentication and Authorization Types
  */
 
-// ===================================
 // User Types
-// ===================================
 
 export interface User {
   id: number;
@@ -44,9 +42,7 @@ export interface UpdateUserData {
   isActive?: boolean;
 }
 
-// ===================================
 // Authentication Types
-// ===================================
 
 export interface LoginCredentials {
   username: string;
@@ -65,9 +61,7 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
-// ===================================
 // Role and Permission Types
-// ===================================
 
 export interface Permission {
   id: number;
@@ -86,9 +80,7 @@ export interface Role {
   updatedAt: string;
 }
 
-// ===================================
 // Activity Log Types
-// ===================================
 
 export interface ActivityLog {
   id: number;
@@ -114,9 +106,7 @@ export interface LogActivityData {
   userAgent?: string;
 }
 
-// ===================================
 // Auth Settings Types
-// ===================================
 
 export interface AuthSettings {
   guestAccessEnabled: boolean;

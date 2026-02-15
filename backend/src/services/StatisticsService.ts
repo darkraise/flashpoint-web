@@ -99,7 +99,6 @@ export class StatisticsService {
         // Continue with 0 count
       }
 
-      // Statistics will be returned
       const statistics: Statistics = {
         totalGames,
         totalAnimations,

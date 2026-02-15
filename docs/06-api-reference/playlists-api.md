@@ -20,7 +20,7 @@ Error: `404 Not Found`
 
 ## Create Playlist
 
-`POST /api/playlists` - Optional auth
+`POST /api/playlists` - Requires auth + `playlists.create` permission
 
 Body:
 `{ "title": "string (required)", "description": "string (optional)", "author": "string (optional)", "icon": "string (optional)", "library": "arcade"|"theatre" (optional), "extreme": boolean (optional) }`
@@ -29,7 +29,7 @@ Returns `201 Created` with new playlist (empty games array).
 
 ## Add Games to Playlist
 
-`POST /api/playlists/:id/games` - Optional auth
+`POST /api/playlists/:id/games` - Requires auth + `playlists.update` permission
 
 Body: `{ "gameIds": ["uuid1", "uuid2", ...] }`
 
@@ -39,7 +39,7 @@ Error: `404 Not Found` if playlist not found
 
 ## Remove Games from Playlist
 
-`DELETE /api/playlists/:id/games` - Optional auth
+`DELETE /api/playlists/:id/games` - Requires auth + `playlists.update` permission
 
 Body: `{ "gameIds": ["uuid1", "uuid2", ...] }`
 
@@ -47,7 +47,7 @@ Returns updated playlist with remaining games.
 
 ## Delete Playlist
 
-`DELETE /api/playlists/:id` - Optional auth
+`DELETE /api/playlists/:id` - Requires auth + `playlists.delete` permission
 
 Returns `{ "success": true }`
 

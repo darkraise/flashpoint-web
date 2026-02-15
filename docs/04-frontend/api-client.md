@@ -8,7 +8,32 @@ endpoints.
 The API client is a centralized Axios instance with request/response
 interceptors for authentication and error handling.
 
-**Location:** `frontend/src/lib/api.ts`
+**Location:** `frontend/src/lib/api/`
+
+```
+lib/api/
+├── client.ts        # Axios instance with interceptors
+├── index.ts         # Re-exports all API modules
+├── activities.ts    # Activity log endpoints
+├── auth.ts          # Authentication endpoints
+├── domains.ts       # Domain management
+├── favorites.ts     # User favorites
+├── games.ts         # Game search/details
+├── github.ts        # GitHub integration
+├── jobs.ts          # Background jobs
+├── platforms.ts     # Platform list
+├── playTracking.ts  # Play session tracking
+├── playlists.ts     # Playlist management
+├── roles.ts         # Role/permission management
+├── ruffle.ts        # Ruffle emulator settings
+├── settings.ts      # System settings
+├── sharedPlaylists.ts # Shared playlist access
+├── statistics.ts    # User statistics
+├── tags.ts          # Tag list
+├── updates.ts       # Update checking
+├── userPlaylists.ts # User playlist operations
+└── users.ts         # User management
+```
 
 ## Client Configuration
 

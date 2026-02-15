@@ -9,21 +9,26 @@ Components are organized by domain and functionality:
 
 ```
 components/
-├── auth/              # Authentication components (4 components)
-├── common/            # Shared/utility components (11 components)
+├── activities/        # Activity log components (2 components)
+├── auth/              # Authentication components (8 components)
+├── common/            # Shared/utility components (14 components)
 ├── dialogs/           # Modal dialogs (1 component)
+├── error/             # Error handling components (8 components)
 ├── game/              # Game-specific components (1 component)
-├── layout/            # Layout structure (3 components)
-├── library/           # Game browsing/display (9 components)
-├── player/            # Game players (2 components)
-├── playlist/          # Playlist management (3 components)
+├── github/            # GitHub integration (1 component)
+├── home/              # Home page components (1 component)
+├── jobs/              # Job management (4 components)
+├── layout/            # Layout structure (9 components)
+├── library/           # Game browsing/display (10 components)
+├── player/            # Game players (3 components)
+├── playlist/          # Playlist management (10 components)
 │   └── SharePlaylistDialog includes domain selector for admins
-├── roles/             # Role management (2 components)
-├── search/            # Search and filtering (2 components)
-├── settings/          # Settings tabs including AppSettingsTab with Domain Settings
-├── stats/             # Statistics/charts (4 components)
-├── theme/             # Theme controls (2 components)
-├── ui/                # Shadcn UI primitives (40+ components)
+├── roles/             # Role management (3 components)
+├── search/            # Search and filtering (5 components)
+├── settings/          # Settings tabs (6 components)
+├── stats/             # Statistics/charts (5 components)
+├── theme/             # Theme controls (1 component)
+├── ui/                # Shadcn UI primitives (36 components)
 └── users/             # User management (3 components)
 ```
 

@@ -5,16 +5,18 @@ frontend.
 
 ## Overview
 
-The application uses 18+ custom hooks organized by functionality:
+The application uses 30 custom hooks organized by functionality:
 
-- **Data Fetching** - useGames, usePlaylists, useUsers, useRoles, useActivities
-- **Authentication** - useAuth
+- **Data Fetching** - useGames, usePlaylists, useUserPlaylists, useUsers,
+  useRoles, useActivities, useFavorites
+- **Authentication** - useAuth, usePublicSettings
 - **UI** - useDebounce, useSwipeGesture, useMountEffect, useToast,
-  useDateTimeFormat
-- **Game Data** - useFilterOptions, useTags, usePlatforms, useStatistics,
-  useDownload
-- **Play Tracking** - usePlayTracking
+  useDateTimeFormat, useMediaQuery, useFeatureFlags
+- **Game Data** - useFilterOptions, useFilterDropdowns, useTags, usePlatforms,
+  useStatistics, useDownload, useMostPlayedGames, useRecentGames
+- **Play Tracking** - usePlayTracking, useActivityFilters
 - **Community** - useCommunityPlaylists
+- **Shared Access** - useSharedAccessToken, useSharedPlaylistAccess, useDomains
 
 ## Data Fetching Hooks
 

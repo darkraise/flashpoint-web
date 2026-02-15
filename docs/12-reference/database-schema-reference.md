@@ -280,6 +280,22 @@ Aggregated play statistics per user per game.
 
 **Indexes:** user_id, game_id, total_plays, total_playtime_seconds
 
+### user_stats
+
+Aggregate user statistics (overall totals across all games).
+
+| Column               | Type    | Default | Description                   |
+| -------------------- | ------- | ------- | ----------------------------- |
+| user_id              | INTEGER | -       | Primary key, foreign key to users.id |
+| total_games_played   | INTEGER | 0       | Total unique games played     |
+| total_playtime_seconds | INTEGER | 0     | Total playtime across all games |
+| total_sessions       | INTEGER | 0       | Total play sessions           |
+| first_play_at        | TEXT    | NULL    | First ever play timestamp     |
+| last_play_at         | TEXT    | NULL    | Most recent play timestamp    |
+| updated_at           | TEXT    | now()   | ISO 8601                      |
+
+**Foreign Key:** user_id references users(id) ON DELETE CASCADE
+
 ### user_settings
 
 Flexible user preference storage (key-value).

@@ -11,9 +11,9 @@ Flashpoint Web uses JWT-based authentication with role-based access control
 graph TB
     subgraph "Frontend"
         LoginForm[Login Form]
-        AuthStore[Zustand Auth Store<br/>Access Token Only]
+        AuthStore[Zustand Auth Store<br/>User Info Only]
         APIClient[Axios API Client]
-        Cookies[HTTP-only Cookies<br/>fp_refresh]
+        Cookies[HTTP-only Cookies<br/>fp_access + fp_refresh]
     end
 
     subgraph "Backend"
@@ -30,15 +30,14 @@ graph TB
     end
 
     LoginForm --> AuthStore
-    AuthRoute -.Set Cookie.-> Cookies
-    AuthRoute -.accessToken.-> APIClient
+    AuthRoute -.Set Cookies.-> Cookies
     AuthStore --> APIClient
     APIClient --> AuthRoute
     AuthRoute --> AuthService
     AuthService --> UserDB
     UserDB -.return user.-> AuthService
     AuthService -.JWT tokens.-> AuthRoute
-    AuthRoute -.accessToken only.-> APIClient
+    AuthRoute -.user info + expiresIn.-> APIClient
     APIClient --> AuthStore
 
     APIClient -.JWT Bearer.-> GameRoutes
@@ -89,9 +88,9 @@ sequenceDiagram
 
         AuthService->>AuthService: Generate JWT tokens
         AuthService-->>Backend: {user, accessToken, refreshToken}
-        Backend->>Backend: Set fp_refresh HTTP-only cookie
-        Backend-->>API: 201 Created (only accessToken in body)
-        API->>AuthStore: setAuth(user, accessToken)
+        Backend->>Backend: Set fp_access + fp_refresh HTTP-only cookies
+        Backend-->>API: 201 Created (user info + expiresIn only)
+        API->>AuthStore: setAuth(user)
         AuthStore-->>RegisterForm: Success
         RegisterForm->>User: Redirect to dashboard
     end
@@ -142,13 +141,13 @@ sequenceDiagram
         API-->>LoginForm: Show error
     else Valid credentials
         AuthService->>UserDB: SELECT user permissions
-        AuthService->>AuthService: Generate JWT access token (15m expiry)
+        AuthService->>AuthService: Generate JWT access token (1h expiry, configurable)
         AuthService->>AuthService: Generate JWT refresh token (30d expiry)
         AuthService-->>Backend: {user, accessToken, refreshToken}
-        Backend->>Backend: Set fp_refresh HTTP-only cookie
-        Backend-->>API: 200 OK (only accessToken in body)
+        Backend->>Backend: Set fp_access + fp_refresh HTTP-only cookies
+        Backend-->>API: 200 OK (user info + expiresIn only)
 
-        API->>AuthStore: setAuth(user, accessToken)
+        API->>AuthStore: setAuth(user)
         AuthStore->>ThemeStore: loadThemeFromServer()
         AuthStore-->>LoginForm: Success
         LoginForm->>User: Redirect to /browse
@@ -158,7 +157,7 @@ sequenceDiagram
 **JWT Token Structure**:
 
 ```typescript
-// Access Token
+// Access Token (stored in HTTP-only cookie fp_access, path: /api)
 {
   userId: 1,
   username: "user",
@@ -166,10 +165,10 @@ sequenceDiagram
   role: "user",
   permissions: ["games.read", "games.play"],
   iat: 1705579200,
-  exp: 1705580100   // 15 minutes
+  exp: 1705582800   // 1 hour (configurable via JWT_EXPIRES_IN)
 }
 
-// Refresh Token (stored in HTTP-only cookie)
+// Refresh Token (stored in HTTP-only cookie fp_refresh, path: /api/auth)
 {
   userId: 1,
   type: "refresh",
@@ -473,7 +472,8 @@ export const ProtectedRoute = ({ children, requiredPermission }) => {
 ## 7. Guest Mode
 
 When `auth.guest_access_enabled` is true in system settings, unauthenticated
-users can browse games with limited permissions.
+users can browse games with limited permissions. **Note:** Guests cannot play
+games — only authenticated users have the `games.play` permission.
 
 ```typescript
 // Frontend
@@ -481,7 +481,7 @@ const guestUser: User = {
   id: 0,
   username: 'Guest',
   role: 'guest',
-  permissions: ['games.read', 'games.play'],
+  permissions: ['games.read', 'playlists.read'],  // No games.play
 };
 
 // Backend
@@ -501,7 +501,7 @@ export const optionalAuth = async (req, res, next) => {
       id: 0,
       username: 'guest',
       role: 'guest',
-      permissions: ['games.read'],
+      permissions: ['games.read', 'playlists.read'],  // Read-only access
     };
   }
 
@@ -511,12 +511,13 @@ export const optionalAuth = async (req, res, next) => {
 
 ## Security Measures
 
-**Password Security**: Bcrypt with 10 rounds
+**Password Security**: Bcrypt with 10 rounds (configurable via `BCRYPT_SALT_ROUNDS`)
 
 **JWT Security**:
 
-- Short-lived access tokens (15 minutes) - held in memory only
-- Long-lived refresh tokens (30 days) - stored in HTTP-only cookies
+- Access tokens (1 hour default, configurable via `JWT_EXPIRES_IN`) - stored in HTTP-only cookie `fp_access` with path `/api`
+- Long-lived refresh tokens (30 days) - stored in HTTP-only cookie `fp_refresh` with path `/api/auth`
+- Both tokens in HTTP-only cookies prevents XSS token theft
 - Refresh tokens are rotated on each use to prevent token reuse attacks
 - Signed with random 256-bit JWT_SECRET
 - Verify algorithm: HS256

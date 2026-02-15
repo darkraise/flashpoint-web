@@ -38,13 +38,14 @@ Instead of HTTP endpoints, GameZip Server provides direct method calls:
 
 ```typescript
 // Called from backend
-await gameZipServer.mountZip(id: string, params: MountParams)
+const result = await gameZipServer.mountZip(params: MountParams)
 ```
 
 Parameters:
 
 ```typescript
 interface MountParams {
+  id: string;                // Required: Mount ID (typically game UUID)
   zipPath: string;           // Required: Absolute path to ZIP file
   gameId?: string;           // Optional: Game UUID (enables auto-download)
   dateAdded?: string;        // Optional: ISO date (used for filename)
@@ -54,20 +55,32 @@ interface MountParams {
 
 **Response:**
 
-Throws on error, returns void on success.
+```typescript
+interface MountResult {
+  success: boolean;        // True if mounted or download started
+  downloading?: boolean;   // True if download in progress (HTTP 202)
+  statusCode: number;      // HTTP status code (200, 202, 400, 403, 404, 500, 503)
+}
+```
 
 ```typescript
 // Example usage
-try {
-  await gameZipServer.mountZip('game-abc123', {
-    zipPath: 'D:/Flashpoint/Data/Games/Flash/G/game.zip',
-    gameId: 'game-abc123',
-    dateAdded: '2024-01-15T10:30:00.000Z',
-    sha256: 'ABC123...'
-  });
-  console.log('ZIP mounted successfully');
-} catch (error) {
-  console.error('Mount failed:', error.message);
+const result = await gameZipServer.mountZip({
+  id: 'game-abc123',
+  zipPath: 'D:/Flashpoint/Data/Games/Flash/G/game.zip',
+  gameId: 'game-abc123',
+  dateAdded: '2024-01-15T10:30:00.000Z',
+  sha256: 'ABC123...'
+});
+
+if (result.success) {
+  if (result.downloading) {
+    console.log('Download in progress, poll for completion');
+  } else {
+    console.log('ZIP mounted successfully');
+  }
+} else {
+  console.error(`Mount failed with status ${result.statusCode}`);
 }
 ```
 
@@ -290,7 +303,7 @@ Connection: keep-alive
 
 ```http
 Access-Control-Allow-Origin: *
-Access-Control-Allow-Methods: GET, POST, OPTIONS
+Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS
 Access-Control-Allow-Headers: *
 ```
 

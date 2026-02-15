@@ -7,9 +7,11 @@ Manage system-wide configuration settings.
 
 ## Get All Settings
 
-`GET /api/settings` - Requires `settings.read` permission
+`GET /api/settings` - Requires `settings.update` permission
 
 Returns grouped settings by category (auth, app, metadata, features, game).
+
+**Note:** This endpoint requires `settings.update` (not `settings.read`) because it returns all settings including sensitive values.
 
 ## Get Category Settings
 

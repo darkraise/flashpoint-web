@@ -226,7 +226,7 @@ private sendError(res: ServerResponse, statusCode: number, message: string) {
   // CRITICAL: Set CORS headers even for errors
   if (settings.allowCrossDomain) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', '*');
   }
 

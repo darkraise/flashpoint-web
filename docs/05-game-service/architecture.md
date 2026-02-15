@@ -420,7 +420,7 @@ Return null if not found in any ZIP
 **Purpose**: Read Flashpoint preferences.json and expose gameDataSources for
 auto-downloading game ZIPs.
 
-**Location**: `backend/src/game/services/PreferencesService.ts`
+**Location**: `backend/src/services/PreferencesService.ts`
 
 **Architecture**:
 
@@ -820,66 +820,6 @@ Future improvements:
 - Local cache: Sequential writes
 - Solution: SSD recommended, RAM disk for cache, bounded resource cleanup
 
-## Code Quality & Security Improvements (Second Pass Review)
-
-The following medium and low severity fixes were implemented to improve code
-quality and maintainability:
-
-### HTML Injection & Logging
-- `htmlInjector.ts` now uses project logger instead of `console.log`
-- Dead code branch removed from polyfill injection logic
-- Improves consistency with logging across the module
-
-### PreferencesService Initialization
-- Logs warning on re-initialization with different path
-- Prevents silent configuration changes that could affect game downloads
-- Helps identify configuration issues during development
-
-### Schema Validation
-- Hostname schema minimum length corrected to 2 (matches regex requirement)
-- Enforces consistency between validation rules and runtime expectations
-
-### Regex Pattern Fixes
-- `pathSecurity.ts` regex patterns no longer use `/g` flag with `test()`
-- Prevents stateful matching bugs that could skip validation on consecutive calls
-- Single-flag patterns are checked per call, not maintained across calls
-
-### Code Cleanup
-- Unused exports removed from:
-  - `mimeTypes.ts` - Cleaning up unused MIME type exports
-  - `validation/schemas.ts` - Removing unused Zod schema exports
-  - `utils/cors.ts` - Removing unused utility functions
-  - `utils/pathSecurity.ts` - Removing unused security utilities
-- Reduces module surface area and maintenance burden
-
-### Download Validation
-- `GameDataDownloader.getFilename()` now validates timestamps
-- Rejects NaN timestamps to prevent corrupted filenames
-- Ensures valid download filename format
-
-### Resource Leak Prevention
-- `GameDataDownloader` destroys response stream on size limit
-- Prevents resource leaks when downloads exceed maximum size
-- Proper cleanup when download constraints are violated
-
-### DRY Principle
-- `GameDataService` uses `GameDataDownloader.getFilename()` instead of duplicating logic
-- Centralizes filename generation, preventing consistency issues
-
-### Additional Low-Priority Improvements (2026-02-07)
-
-**Error Handling & Streaming Safety**:
-- `proxy-request-handler` `sendError()` now guards against `headersSent` to prevent write-after-headers errors in streaming scenarios
-- `collectRequestBody` now uses `settled` flag to prevent double resolve/reject when both `end` and `error` events fire
-
-**Visibility & Encapsulation**:
-- `findActiveDownload` in `gamezipserver.ts` is now private (was publicly accessible but only used internally)
-- `PRIVATE_IP_RANGES` in `GameDataDownloader.ts` is now `static readonly`
-
-**Module Boundaries**:
-- Removed unused imports and convenience re-exports from service index files for cleaner module boundaries
-- Internal-only constants like `CUSTOM_MIME_TYPES` no longer exported, reducing public API surface
-
 ## Security Hardening
 
 The game content module implements multiple defense-in-depth security measures:
@@ -1057,82 +997,35 @@ private sendError(res: Response, status: number, message: string) {
 
 ## Security Architecture
 
-### Request Body Size Limits
-
-**DoS Protection**: The GameZip server limits request body sizes to prevent
-memory exhaustion attacks:
-
-```typescript
-// gamezipserver.ts
-private readBody(req: http.IncomingMessage, maxSize: number = 1024 * 1024): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-      if (body.length > maxSize) {
-        req.destroy();  // Immediately terminate connection
-        reject(new Error('Request body too large'));
-      }
-    });
-    req.on('end', () => resolve(body));
-    req.on('error', reject);
-  });
-}
-```
-
-**Protection**:
-
-- 1MB maximum request size by default
-- Connection destroyed immediately on overflow
-- Prevents memory exhaustion attacks
-- Configurable per endpoint if needed
-
 ### Path Traversal Prevention
 
-All file paths are normalized:
+**ZIP Mount ID Validation**: Uses Zod schema to validate game IDs:
 
 ```typescript
-path.normalize(filePath).toLowerCase();
+// validation/schemas.ts
+const mountGameSchema = z.object({
+  gameId: z
+    .string()
+    .min(1)
+    .max(255)
+    .regex(/^[a-zA-Z0-9\-_]+$/), // Only alphanumeric, hyphens, underscores
+});
 ```
 
-**ZIP Mount ID Validation**:
+**ZIP Path Validation**: Resolved paths must stay within the allowed games
+directory:
 
 ```typescript
-// Reject IDs with path traversal sequences
-if (
-  id.includes('/') ||
-  id.includes('\\') ||
-  id.includes('..') ||
-  id.includes('\0')
-) {
-  this.sendError(res, 400, 'Invalid mount ID');
-  return;
-}
-```
-
-**ZIP Path Validation**:
-
-```typescript
-// Ensure ZIP files are within allowed directory
 const resolvedZipPath = path.resolve(normalizedZipPath);
 const resolvedGamesPath = path.resolve(allowedGamesPath);
 
-if (!resolvedZipPath.startsWith(resolvedGamesPath)) {
-  this.sendError(
-    res,
-    403,
-    'Forbidden: ZIP file must be within games directory'
-  );
-  return;
+if (!resolvedZipPath.startsWith(resolvedGamesPath + path.sep)) {
+  return { success: false, statusCode: 403 };
 }
 ```
 
-Prevents attacks like:
-
-- `../../../etc/passwd`
-- `..\\..\\windows\\system32`
-- Null byte injection (`file.txt\0.jpg`)
-- Directory escape via mount IDs
+Prevents attacks like path traversal (`../../../etc/passwd`), backslash
+escapes, and directory escape via mount IDs.
 
 ### ZIP Access Control
 

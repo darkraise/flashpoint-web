@@ -31,8 +31,9 @@ static async initialize(): Promise<void> {
   // Open database connection
   this.db = new BetterSqlite3(config.userDbPath);
 
-  // Enable foreign keys
+  // Enable foreign keys and WAL mode
   this.db.pragma('foreign_keys = ON');
+  this.db.pragma('journal_mode = WAL');
 
   // Create tables from schema file
   await this.createTables();
@@ -40,10 +41,14 @@ static async initialize(): Promise<void> {
   // Run migrations
   await this.runMigrations();
 
-  // Create default admin user
-  await this.createDefaultAdmin();
+  // Check if initial setup is needed (first user becomes admin)
+  this.needsInitialSetup();
 }
 ```
+
+**Note:** UserDatabaseService uses WAL (Write-Ahead Logging) journal mode for
+better concurrent access, while DatabaseService (flashpoint.sqlite) uses DELETE
+mode.
 
 ### 2. Schema Management
 

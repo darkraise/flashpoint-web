@@ -13,20 +13,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
-  // Server configuration
+  // Server configuration (hardcoded)
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3100', 10),
-  host: process.env.HOST || '0.0.0.0',
+  port: 3100,  // Hardcoded, not configurable
+  host: '0.0.0.0',  // Hardcoded, not configurable
 
   // Flashpoint paths (only FLASHPOINT_PATH is needed)
   flashpointPath: process.env.FLASHPOINT_PATH || 'D:/Flashpoint',
-  // All other paths are derived automatically:
-  // - flashpointDbPath: ${flashpointPath}/Data/flashpoint.sqlite
-  // - htdocsPath: ${flashpointPath}/Legacy/htdocs
-  // - imagesPath: ${flashpointPath}/Data/Images
-  // - logosPath: ${flashpointPath}/Data/Logos
-  // - playlistsPath: ${flashpointPath}/Data/Playlists
-  // - gamesPath: ${flashpointPath}/Data/Games
+  // All other paths are derived automatically
   // ... more config
 };
 ```
@@ -46,26 +40,8 @@ export const config = {
   NODE_ENV=production
   ```
 
-#### `PORT`
-
-- **Type**: number
-- **Default**: `3100`
-- **Description**: HTTP server port
-- **Usage**:
-  ```bash
-  PORT=3100
-  ```
-
-#### `HOST`
-
-- **Type**: string
-- **Default**: `0.0.0.0`
-- **Description**: Server bind address
-- **Usage**:
-  ```bash
-  HOST=0.0.0.0  # Listen on all interfaces
-  HOST=localhost  # Listen on localhost only
-  ```
+**Note:** `PORT` and `HOST` are hardcoded to `3100` and `0.0.0.0` respectively
+and cannot be changed via environment variables.
 
 ### Flashpoint Paths
 

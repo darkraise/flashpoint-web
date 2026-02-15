@@ -70,12 +70,14 @@ web application for browsing and playing games from the Flashpoint Archive.
   - [HTML5 Player](04-frontend/player-implementation/html5-player.md) - HTML5
     games
 
-### 05. Game Service
+### 05. Game Service (Integrated into Backend)
 
 - [Game Service Overview](05-game-service/README.md) - Game service introduction
-- [Architecture](05-game-service/architecture.md) - Dual-server design
-- [Proxy Server](05-game-service/proxy-server.md) - HTTP proxy (port 22500)
-- [GameZip Server](05-game-service/gamezip-server.md) - ZIP server (port 22501)
+- [Architecture](05-game-service/architecture.md) - Integrated single-service
+  design
+- [Proxy Server](05-game-service/proxy-server.md) - HTTP proxy (/game-proxy/\*)
+- [GameZip Server](05-game-service/gamezip-server.md) - ZIP server
+  (/game-zip/\*)
 - [Legacy Server](05-game-service/legacy-server.md) - Legacy content serving
 - [ZIP Manager](05-game-service/zip-manager.md) - ZIP mounting
 - [MIME Types](05-game-service/mime-types.md) - MIME type handling

@@ -138,6 +138,55 @@ const permissions = ['games.read', 'games.play'];
 PermissionCache.setUserPermissions(5, permissions);
 ```
 
+### getRolePermissions(roleId: number): string[] | null
+
+Get role permissions from cache.
+
+**Parameters:**
+
+- `roleId` (number): Role ID to lookup
+
+**Returns:**
+
+- `string[]`: Array of permission strings if cache hit
+- `null`: If cache miss or entry expired
+
+**Example:**
+
+```typescript
+const cached = PermissionCache.getRolePermissions(2);
+if (cached) {
+  // Use cached permissions
+  return cached;
+} else {
+  // Query database
+  const permissions = await queryRolePermissions(2);
+  PermissionCache.setRolePermissions(2, permissions);
+  return permissions;
+}
+```
+
+### setRolePermissions(roleId: number, permissions: string[]): void
+
+Store role permissions in cache.
+
+**Parameters:**
+
+- `roleId` (number): Role ID
+- `permissions` (string[]): Array of permission strings
+
+**Side Effects:**
+
+- Creates cache entry with 10-minute TTL
+- Logs debug message to console
+
+**Example:**
+
+```typescript
+const permissions = ['games.read', 'games.play', 'playlists.create'];
+PermissionCache.setRolePermissions(2, permissions);
+```
+
 ### invalidateUser(userId: number): void
 
 Remove user's permission cache entry.
@@ -235,7 +284,41 @@ for (const user of usersWithRole) {
 But for now, the simpler approach of clearing all user cache is more
 reliable.
 
+### invalidateAllUsers(): void
 
+Clear all user permission cache entries.
+
+**Use Cases:**
+
+- Bulk user permission changes
+- Role structure changes
+- System-wide permission refresh
+
+**Example:**
+
+```typescript
+// After bulk permission update
+await permissionService.bulkUpdate(userIds);
+PermissionCache.invalidateAllUsers();
+```
+
+### invalidateAllRoles(): void
+
+Clear all role permission cache entries.
+
+**Use Cases:**
+
+- Bulk role permission changes
+- Permission structure changes
+- System-wide role refresh
+
+**Example:**
+
+```typescript
+// After updating permission definitions
+await permissionService.rebuildPermissions();
+PermissionCache.invalidateAllRoles();
+```
 
 ### clearAll(): void
 
@@ -253,6 +336,27 @@ Clear entire cache (both user and role caches).
 ```typescript
 PermissionCache.clearAll();
 logger.info('All permission caches cleared');
+```
+
+### cleanup(): void
+
+Remove expired cache entries from both user and role caches.
+
+**Behavior:**
+
+- Iterates through all cache entries
+- Removes entries where `expiresAt < Date.now()`
+- Logs count of removed entries if any were expired
+- Called automatically by the cleanup interval
+
+**Note:** This is called automatically every 5 minutes when `startCleanup()` has
+been invoked. Manual calls are typically not needed.
+
+**Example:**
+
+```typescript
+// Manual cleanup (rarely needed)
+PermissionCache.cleanup();
 ```
 
 ### getStats(): CacheStats

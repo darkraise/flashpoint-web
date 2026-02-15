@@ -41,10 +41,16 @@ backend/
 │   │   └── ... (other routes)
 │   │
 │   ├── game/                     # Game service (merged from game-service/)
-│   │   ├── handlers/             # Request handlers
-│   │   ├── services/             # Game-related services
-│   │   ├── utils/                # Game utilities
-│   │   └── ... (game-specific code)
+│   │   ├── gamezipserver.ts     # ZIP mount/serve manager
+│   │   ├── legacy-server.ts     # Legacy content fallback chain
+│   │   ├── zip-manager.ts       # ZIP file handling with LRU cache
+│   │   ├── proxy-request-handler.ts # Proxy request routing
+│   │   ├── config.ts            # Game service configuration
+│   │   ├── mimeTypes.ts         # MIME type mappings
+│   │   ├── cgi/                 # CGI script execution
+│   │   ├── services/            # Game-related services
+│   │   ├── utils/               # Game utilities (CORS, path security)
+│   │   └── validation/          # Zod schemas for validation
 │   │
 │   ├── services/                 # Business logic layer
 │   │   ├── DatabaseService.ts   # Flashpoint DB (read-only)
@@ -124,8 +130,8 @@ frontend/
 │   ├── store/                    # Zustand stores
 │   │   ├── auth.ts              # User & auth state
 │   │   ├── theme.ts             # Theme preferences
-│   │   ├── ui.ts                # UI state
-│   │   └── preferences.ts       # User preferences
+│   │   ├── ui.ts                # UI state (sidebar, etc.)
+│   │   └── sharedAccess.ts      # Shared playlist access tokens
 │   │
 │   ├── lib/                      # Library code
 │   │   ├── api.ts               # Axios client (authenticated)
