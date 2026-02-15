@@ -61,12 +61,14 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`,
 - [POST /api/auth/refresh](./authentication-api.md#refresh-token)
 - [POST /api/auth/logout](./authentication-api.md#logout)
 - [GET /api/auth/me](./authentication-api.md#get-current-user)
+- [GET /api/auth/setup-status](./authentication-api.md#check-setup-status)
 
 ### Games
 
 - [GET /api/games](./games-api.md#search-games)
 - [GET /api/games/filter-options](./games-api.md#get-filter-options)
 - [GET /api/games/random](./games-api.md#get-random-game)
+- [GET /api/games/most-played](./games-api.md#get-most-played-games)
 - [GET /api/games/:id](./games-api.md#get-game-details)
 - [GET /api/games/:id/launch](./games-api.md#get-launch-data)
 - [GET /api/games/:id/related](./games-api.md#get-related-games)
@@ -81,6 +83,8 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`,
 - [POST /api/users/:id/change-password](./users-api.md#change-password)
 - [GET /api/users/me/settings](./users-api.md#get-user-settings)
 - [PATCH /api/users/me/settings](./users-api.md#update-user-settings)
+- [GET /api/users/me/theme](./users-api.md#get-theme-settings)
+- [PATCH /api/users/me/theme](./users-api.md#update-theme-settings)
 
 ### Roles & Permissions
 
@@ -92,7 +96,7 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`,
 - [PUT /api/roles/:id/permissions](./roles-api.md#update-role-permissions)
 - [DELETE /api/roles/:id](./roles-api.md#delete-role)
 
-### Playlists
+### Playlists (Flashpoint)
 
 - [GET /api/playlists](./playlists-api.md#list-playlists)
 - [GET /api/playlists/:id](./playlists-api.md#get-playlist)
@@ -100,6 +104,20 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`,
 - [POST /api/playlists/:id/games](./playlists-api.md#add-games)
 - [DELETE /api/playlists/:id/games](./playlists-api.md#remove-games)
 - [DELETE /api/playlists/:id](./playlists-api.md#delete-playlist)
+
+### User Playlists
+
+- [GET /api/user-playlists](./user-playlists-api.md#list-user-playlists)
+- [GET /api/user-playlists/stats](./user-playlists-api.md#get-playlist-statistics)
+- [GET /api/user-playlists/:id](./user-playlists-api.md#get-single-playlist)
+- [POST /api/user-playlists](./user-playlists-api.md#create-playlist)
+- [PATCH /api/user-playlists/:id](./user-playlists-api.md#update-playlist)
+- [DELETE /api/user-playlists/:id](./user-playlists-api.md#delete-playlist)
+- [POST /api/user-playlists/:id/games](./user-playlists-api.md#add-games-to-playlist)
+- [DELETE /api/user-playlists/:id/games](./user-playlists-api.md#remove-games-from-playlist)
+- [POST /api/user-playlists/:id/share/enable](./user-playlists-api.md#enable-sharing)
+- [POST /api/user-playlists/:id/share/disable](./user-playlists-api.md#disable-sharing)
+- [POST /api/user-playlists/copy-flashpoint](./user-playlists-api.md#copy-flashpoint-playlist)
 
 ### Favorites
 
@@ -125,15 +143,35 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`,
 - [GET /api/play/activity-over-time](./play-tracking-api.md#get-activity-over-time)
 - [GET /api/play/games-distribution](./play-tracking-api.md#get-games-distribution)
 
-### Shared & Community Playlists
+### Shared Playlists
 
-- [GET /api/playlists/shared/:shareToken](./shared-playlists-api.md#get-shared-playlist-metadata)
-- [GET /api/playlists/shared/:shareToken/games](./shared-playlists-api.md#get-games-in-shared-playlist)
-- [POST /api/playlists/shared/:shareToken/clone](./shared-playlists-api.md#clone-shared-playlist-to-user-account)
-- [GET /api/community-playlists](./shared-playlists-api.md#list-community-playlists)
-- [POST /api/community-playlists/download](./shared-playlists-api.md#download-community-playlist)
-- [POST /api/games/:id/download](./shared-playlists-api.md#start-game-download)
-- [GET /api/games/:id/download/progress](./shared-playlists-api.md#monitor-download-progress-sse)
+- [GET /api/shared-playlists/:shareToken](./shared-playlists-api.md#get-shared-playlist)
+- [GET /api/shared-playlists/:shareToken/games](./shared-playlists-api.md#get-shared-playlist-games)
+- [GET /api/shared-playlists/:shareToken/games/:gameId/validate](./shared-playlists-api.md#validate-game-access)
+- [POST /api/shared-playlists/:shareToken/generate-access-token](./shared-playlists-api.md#generate-access-token)
+- [POST /api/shared-playlists/:shareToken/clone](./shared-playlists-api.md#clone-shared-playlist)
+
+### Community Playlists
+
+- [GET /api/community-playlists](./community-playlists-api.md#browse-community-playlists)
+- [POST /api/community-playlists/download](./community-playlists-api.md#download-community-playlist)
+
+### Downloads
+
+- [POST /api/downloads/:id/download](./downloads-api.md#start-download)
+- [GET /api/downloads/:id/download/progress](./downloads-api.md#get-download-progress)
+- [DELETE /api/downloads/:id/download](./downloads-api.md#cancel-download)
+
+### Jobs
+
+- [GET /api/jobs](./jobs-api.md#list-all-jobs)
+- [GET /api/jobs/logs/all](./jobs-api.md#get-all-job-logs)
+- [GET /api/jobs/:jobId](./jobs-api.md#get-job-details)
+- [PATCH /api/jobs/:jobId](./jobs-api.md#update-job)
+- [POST /api/jobs/:jobId/start](./jobs-api.md#start-job-scheduler)
+- [POST /api/jobs/:jobId/stop](./jobs-api.md#stop-job-scheduler)
+- [POST /api/jobs/:jobId/trigger](./jobs-api.md#trigger-job-manually)
+- [GET /api/jobs/:jobId/logs](./jobs-api.md#get-job-execution-logs)
 
 ### Platforms & Tags
 
@@ -177,6 +215,10 @@ Default: 100 requests per 15 minutes. Headers: `X-RateLimit-Limit`,
 - [GET /api/settings/:category](./settings-api.md#get-category-settings)
 - [PATCH /api/settings/:category](./settings-api.md#update-category-settings)
 - [PATCH /api/settings/:category/:key](./settings-api.md#update-single-setting)
+- [GET /api/settings/_cache/stats](./settings-api.md#get-cache-stats)
+- [POST /api/settings/_cache/clear](./settings-api.md#clear-settings-cache)
+- [GET /api/settings/_cache/permissions/stats](./settings-api.md#get-permission-cache-stats)
+- [POST /api/settings/_cache/permissions/clear](./settings-api.md#clear-permission-cache)
 
 ## Support
 

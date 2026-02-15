@@ -56,17 +56,52 @@ provided)
 
 ### Get Permission Cache Stats
 
-`GET /_cache/permissions/stats` - Admin only
+`GET /api/settings/_cache/permissions/stats` - Requires auth + `settings.update` permission
+
+Returns statistics about the permission cache.
+
+**Response:**
+
+```json
+{
+  "userCacheSize": 42,
+  "roleCacheSize": 3,
+  "totalSize": 45,
+  "description": {
+    "userCacheSize": "Number of cached user permissions",
+    "roleCacheSize": "Number of cached role permissions",
+    "totalSize": "Total cached entries",
+    "ttl": {
+      "userPermissions": "5 minutes",
+      "rolePermissions": "10 minutes"
+    }
+  }
+}
+```
 
 ### Clear Permission Cache
 
-`POST /_cache/permissions/clear` - Admin only
+`POST /api/settings/_cache/permissions/clear` - Requires auth + `settings.update` permission
 
-Body options:
+Clears permission cache entries.
 
-- `{ "type": "user", "id": 5 }` - Clear user 5
-- `{ "type": "role", "id": 2 }` - Clear role 2
-- `{ "type": "all" }` or `{}` - Clear all
+**Request Body Options:**
+
+| Body | Description |
+|------|-------------|
+| `{ "type": "user", "id": 5 }` | Clear cache for user ID 5 |
+| `{ "type": "role", "id": 2 }` | Clear cache for role ID 2 (also clears all user caches) |
+| `{ "type": "users" }` | Clear all user permission caches |
+| `{ "type": "roles" }` | Clear all role permission caches |
+| `{ "type": "all" }` | Clear all permission caches |
+
+**Response:**
+
+```json
+{
+  "message": "Permission cache cleared successfully"
+}
+```
 
 ## Settings Categories
 

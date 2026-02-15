@@ -77,6 +77,66 @@ Body: `{ "theme_mode": "dark", "primary_color": "blue", ... }`
 
 All fields optional. Values stored as strings.
 
+## Get Theme Settings
+
+`GET /api/users/me/theme` - Requires authentication
+
+Returns user's theme preferences in a structured format.
+
+**Response:**
+
+```json
+{
+  "mode": "dark",
+  "primaryColor": "blue"
+}
+```
+
+## Update Theme Settings
+
+`PATCH /api/users/me/theme` - Requires authentication
+
+Updates user's theme preferences.
+
+**Request Body:**
+
+```json
+{
+  "mode": "dark",
+  "primaryColor": "purple"
+}
+```
+
+| Field | Type | Options |
+|-------|------|---------|
+| mode | string | light, dark, system |
+| primaryColor | string | blue, green, red, purple, orange, pink, etc. |
+
+**Response:** Updated theme settings
+
+## Get Theme Settings (Alternate)
+
+`GET /api/users/me/settings/theme` - Requires authentication
+
+Alternative endpoint for getting theme settings.
+
+**Response:**
+
+```json
+{
+  "mode": "dark",
+  "primaryColor": "blue"
+}
+```
+
+## Update Theme Settings (Alternate)
+
+`PATCH /api/users/me/settings/theme` - Requires authentication
+
+Alternative endpoint for updating theme settings.
+
+**Request Body:** Same as PATCH `/api/users/me/theme`
+
 ## Best Practices
 
 - Store values as strings in settings (convert on client)

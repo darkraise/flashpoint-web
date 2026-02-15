@@ -2,26 +2,46 @@
 
 ## Overview
 
-Playlists are JSON files stored in the Flashpoint Playlists directory for
-organizing games. Favorites are database-driven per-user favorites stored in the
-`user_favorites` table. Both features allow users to curate game collections.
+Flashpoint Web provides three systems for organizing games:
+
+1. **Flashpoint Playlists** - JSON files compatible with Flashpoint Launcher
+2. **User Playlists** - Database-driven per-user playlists with sharing
+3. **Favorites** - Quick per-user favorites list
+
+## Playlist Systems Comparison
+
+| Feature | Flashpoint Playlists | User Playlists | Favorites |
+|---------|---------------------|----------------|-----------|
+| Storage | JSON files | SQLite (user.db) | SQLite (user.db) |
+| Scope | Shared/Community | Per-user | Per-user |
+| Sharing | Public by default | Token-based sharing | Not shareable |
+| Launcher Compatible | Yes | No | No |
+| API Path | `/api/playlists` | `/api/user-playlists` | `/api/favorites` |
+| Game Order | Manual ordering | Manual ordering | By date added |
+| Metadata | Title, author, icon | Title, description, icon | None |
 
 ## Architecture
 
 **Backend Components:**
 
-- `PlaylistService`: File-based playlist management
+- `PlaylistService`: Flashpoint file-based playlist management
+- `UserPlaylistService`: Database-driven user playlist management
 - `FavoritesService`: Database-driven favorites management
-- Playlist routes (routes/playlists.ts): REST API for playlists
-- Favorites routes (routes/favorites.ts): REST API for favorites
+- `routes/playlists.ts`: Flashpoint playlists REST API
+- `routes/user-playlists.ts`: User playlists REST API with sharing
+- `routes/shared-playlists.ts`: Public access to shared playlists
+- `routes/favorites.ts`: REST API for favorites
 
 **Frontend Components:**
 
-- `PlaylistsView`: List all playlists
+- `PlaylistsView`: List all Flashpoint playlists
+- `UserPlaylistsView`: List user's personal playlists
 - `PlaylistDetailView`: Single playlist with games
+- `SharedPlaylistView`: View shared playlist (no auth required)
 - `FavoritesView`: Favorites-specific view
 - `CreatePlaylistModal`: Playlist creation dialog
-- `usePlaylists` hook: Playlist operations
+- `usePlaylists` hook: Flashpoint playlist operations
+- `useUserPlaylists` hook: User playlist operations
 - `useFavorites` hook: Favorites management
 
 ## Playlist File Format
@@ -40,10 +60,82 @@ organizing games. Favorites are database-driven per-user favorites stored in the
 
 **Location:** `D:/Flashpoint/Data/Playlists/`
 
+## User Playlists
+
+User playlists are stored in the application database and support:
+
+- **Per-user ownership** - Each playlist belongs to a specific user
+- **Privacy** - Playlists are private by default
+- **Sharing** - Generate share tokens with optional expiration
+- **Cloning** - Clone from Flashpoint playlists or shared playlists
+
+### User Playlist Sharing
+
+Share tokens allow public access without authentication:
+
+```javascript
+// Enable sharing
+const { shareToken, shareUrl } = await api.post(
+  `/user-playlists/${id}/share/enable`,
+  { expiresAt: '2024-12-31T23:59:59Z', showOwner: true }
+);
+
+// Disable sharing
+await api.post(`/user-playlists/${id}/share/disable`);
+
+// Regenerate token (invalidates old links)
+const { shareToken: newToken } = await api.post(
+  `/user-playlists/${id}/share/regenerate`
+);
+```
+
+### Copying Between Systems
+
+```javascript
+// Copy Flashpoint playlist to User playlist
+await api.post('/user-playlists/copy-flashpoint', {
+  flashpointPlaylistId: 'flashpoint-uuid',
+  newTitle: 'My Copy'
+});
+
+// Clone shared User playlist to own collection
+await api.post(`/shared-playlists/${shareToken}/clone`, {
+  newTitle: 'Cloned Playlist'
+});
+```
+
 ## Database Schema
 
-**Playlists:** Stored as JSON files in Flashpoint directory. NOT in database.
-This maintains compatibility with Flashpoint Launcher.
+**Flashpoint Playlists:** Stored as JSON files in Flashpoint directory. NOT in
+database. This maintains compatibility with Flashpoint Launcher.
+
+**User Playlists:**
+
+```sql
+CREATE TABLE user_playlists (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  icon TEXT,
+  share_token TEXT UNIQUE,
+  share_expires_at TIMESTAMP,
+  show_owner INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_playlist_games (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  playlist_id INTEGER NOT NULL,
+  game_id TEXT NOT NULL,
+  order_index INTEGER DEFAULT 0,
+  added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(playlist_id, game_id),
+  FOREIGN KEY(playlist_id) REFERENCES user_playlists(id) ON DELETE CASCADE
+);
+```
 
 **Favorites:**
 
@@ -98,6 +190,34 @@ Remove games from a playlist.
 Delete a playlist.
 
 - **Response:** `{ "success": true }`
+
+### User Playlists API Endpoints
+
+Complete documentation: [User Playlists API](../06-api-reference/user-playlists-api.md)
+
+**Key Endpoints:**
+
+- `GET /api/user-playlists` - Get user's playlists
+- `POST /api/user-playlists` - Create playlist
+- `GET /api/user-playlists/:id` - Get single playlist
+- `PATCH /api/user-playlists/:id` - Update playlist
+- `DELETE /api/user-playlists/:id` - Delete playlist
+- `POST /api/user-playlists/:id/games` - Add games
+- `DELETE /api/user-playlists/:id/games` - Remove games
+- `POST /api/user-playlists/:id/share/enable` - Enable sharing
+- `POST /api/user-playlists/:id/share/disable` - Disable sharing
+- `POST /api/user-playlists/copy-flashpoint` - Copy from Flashpoint playlist
+
+### Shared Playlists API Endpoints
+
+Complete documentation: [Shared Playlists API](../06-api-reference/shared-playlists-api.md)
+
+**Key Endpoints (no auth required except clone):**
+
+- `GET /api/shared-playlists/:shareToken` - Get shared playlist
+- `GET /api/shared-playlists/:shareToken/games` - Get games
+- `POST /api/shared-playlists/:shareToken/generate-access-token` - Get temp token
+- `POST /api/shared-playlists/:shareToken/clone` - Clone to user's collection
 
 #### Favorites API Endpoints
 

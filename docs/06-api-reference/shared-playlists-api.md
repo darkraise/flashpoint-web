@@ -1,146 +1,311 @@
-# Shared & Community Playlists API
+# Shared Playlists API
 
-## Shared Playlists
+Access playlists shared via share tokens without authentication.
 
-### Get Shared Playlist Metadata
+**Base Path:** `/api/shared-playlists`
 
-`GET /api/playlists/shared/:shareToken` - No auth required
+**Authentication:** Not required (except for cloning)
 
-Returns id, title, description, icon (base64), gameCount, createdAt, updatedAt,
-ownerUsername (if enabled).
+**Rate Limiting:** Strict rate limiting applied to prevent abuse
 
-Error: `404 Not Found` or `410 Gone` (if revoked).
+## Overview
 
-### Get Games in Shared Playlist
+The Shared Playlists API allows anonymous access to playlists that have been shared
+via a share token. Users with the share token can view the playlist, see its games,
+generate temporary access tokens for playing games, and clone the playlist to their
+own collection.
 
-`GET /api/playlists/shared/:shareToken/games` - No auth required
+## Get Shared Playlist
 
-Returns array of game objects with id, title, platform, developer, publisher,
-releaseDate, thumbnail, launchCommand.
+`GET /api/shared-playlists/:shareToken` - No auth required
 
-### Validate Game in Shared Playlist
+Returns playlist details for a valid share token.
 
-`GET /api/playlists/shared/:shareToken/games/:gameId/validate` - No auth
-required
+**URL Parameters:**
 
-Returns `{ "valid": true|false }`
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| shareToken | string | Share token for the playlist |
 
-### Generate Temporary Access Token
-
-`POST /api/playlists/shared/:shareToken/generate-access-token` - No auth
-required
-
-Returns `{ "accessToken": "jwt...", "expiresIn": 3600, "playlistId": 42 }`
-
-Token valid for 60 minutes.
-
-### Clone Shared Playlist to User Account
-
-`POST /api/playlists/shared/:shareToken/clone` - Requires `playlists.create`
-permission
-
-Body (optional): `{ "newTitle": "My Retro Games Collection" }`
-
-Returns `201 Created` with cloned playlist details. Original playlist not
-modified.
-
-## Community Playlists
-
-### List Community Playlists
-
-`GET /api/community-playlists` - Optional auth
-
-Returns categories array with name and playlists (fetched from official
-Flashpoint wiki). Cached 24 hours.
+**Response:**
 
 ```json
 {
-  "categories": [
-    {
-      "name": "Platformers",
-      "playlists": [
-        {
-          "id": "id-1",
-          "title": "Classic Platformers",
-          "description": "...",
-          "icon": "https://...",
-          "gameCount": 42,
-          "downloadUrl": "https://wiki.../playlists/platformers.json",
-          "creator": "Community Curators",
-          "lastUpdated": "2024-01-20T12:00:00Z"
-        }
-      ]
-    }
-  ]
+  "id": 1,
+  "title": "Best Flash Games",
+  "description": "A curated collection of classic Flash games",
+  "icon": "star",
+  "gameCount": 25,
+  "createdAt": "2024-01-15T10:00:00.000Z",
+  "updatedAt": "2024-01-20T14:30:00.000Z",
+  "ownerUsername": "john_doe"
 }
 ```
 
-### Download Community Playlist
+**Response Fields:**
 
-`POST /api/community-playlists/download` - Optional auth
+| Field | Type | Description |
+|-------|------|-------------|
+| id | number | Playlist ID |
+| title | string | Playlist title |
+| description | string | Playlist description (may be null) |
+| icon | string | Playlist icon (may be null) |
+| gameCount | number | Number of games in playlist |
+| createdAt | string (ISO) | Creation timestamp |
+| updatedAt | string (ISO) | Last update timestamp |
+| ownerUsername | string | Owner's username (only if `showOwner` is enabled) |
 
-Body: `{ "downloadUrl": "https://..." }`
+**Errors:**
 
-Returns `201 Created` with playlist details. Authenticated users save to
-account; anonymous users get in-memory response.
+| Status | Description |
+|--------|-------------|
+| `404 Not Found` | Invalid or expired share token |
 
-## Game Downloads
+## Get Shared Playlist Games
 
-### Start Game Download
+`GET /api/shared-playlists/:shareToken/games` - No auth required
 
-`POST /api/games/:id/download` - Requires `games.download` permission
+Returns all games in the shared playlist.
 
-Body (optional): `{ "gameDataId": 12345 }`
+**URL Parameters:**
 
-Returns `202 Accepted` with gameDataId and sha256 hash.
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| shareToken | string | Share token for the playlist |
 
-Error: `409 Conflict` if already downloading or exists.
+**Response:**
 
-### Monitor Download Progress (SSE)
-
-`GET /api/games/:id/download/progress` - Requires `games.download` permission
-
-Server-sent events with events: `progress` (percent, status:
-downloading|validating|importing), `complete`, `error`.
-
-```javascript
-const eventSource = new EventSource('/api/games/game-123/download/progress');
-
-eventSource.addEventListener('progress', (event) => {
-  const data = JSON.parse(event.data);
-  updateProgressBar(data.percent); // 0-100
-});
-
-eventSource.addEventListener('complete', () => {
-  eventSource.close();
-});
+```json
+[
+  {
+    "id": "game-uuid-1",
+    "title": "Super Mario Flash",
+    "developer": "Pouetpu",
+    "publisher": null,
+    "platformName": "Flash",
+    "releaseDate": "2006-04-15",
+    "tagsStr": "Platformer;Action",
+    "orderIndex": 0
+  },
+  {
+    "id": "game-uuid-2",
+    "title": "Interactive Buddy",
+    "developer": "Shock Value",
+    "publisher": null,
+    "platformName": "Flash",
+    "releaseDate": "2005-01-01",
+    "tagsStr": "Sandbox;Violence",
+    "orderIndex": 1
+  }
+]
 ```
 
-### Cancel Download
+**Game Fields:**
 
-`DELETE /api/games/:id/download` - Requires `games.download` permission
+| Field | Type | Description |
+|-------|------|-------------|
+| id | string (UUID) | Game ID |
+| title | string | Game title |
+| developer | string | Developer name |
+| publisher | string | Publisher name (may be null) |
+| platformName | string | Platform (Flash, HTML5, etc.) |
+| releaseDate | string | Release date (YYYY-MM-DD) |
+| tagsStr | string | Semicolon-separated tags |
+| orderIndex | number | Position in playlist |
 
-Returns `{ "success": true, "cancelled": true }`
+**Errors:**
+
+| Status | Description |
+|--------|-------------|
+| `404 Not Found` | Invalid or expired share token |
+
+## Validate Game Access
+
+`GET /api/shared-playlists/:shareToken/games/:gameId/validate` - No auth required
+
+Validates whether a specific game is part of the shared playlist. Used to authorize
+game access for unauthenticated users viewing shared playlists.
+
+**URL Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| shareToken | string | Share token for the playlist |
+| gameId | string (UUID) | Game ID to validate |
+
+**Response:**
+
+```json
+{
+  "valid": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| valid | boolean | Whether the game is in the playlist |
+
+## Generate Access Token
+
+`POST /api/shared-playlists/:shareToken/generate-access-token` - No auth required
+
+Generates a temporary access token for playing games from the shared playlist.
+This token can be used to authenticate game content requests for unauthenticated
+users who are viewing a shared playlist.
+
+**URL Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| shareToken | string | Share token for the playlist |
+
+**Response:**
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "expiresIn": 3600,
+  "playlistId": 1
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| accessToken | string (JWT) | Temporary access token |
+| expiresIn | number | Token lifetime in seconds (60 minutes) |
+| playlistId | number | Playlist ID the token is scoped to |
+
+**Usage:**
+
+The access token should be included in subsequent requests to game content
+endpoints (`/game-proxy/*`, `/game-zip/*`) to authorize access without a user
+login.
+
+## Clone Shared Playlist
+
+`POST /api/shared-playlists/:shareToken/clone` - Requires auth + `playlists.create` permission
+
+Clones the shared playlist to the authenticated user's collection.
+
+**URL Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| shareToken | string | Share token for the playlist |
+
+**Request Body:**
+
+```json
+{
+  "newTitle": "My Copy of Best Flash Games"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| newTitle | string | No | Title for cloned playlist (1-255 chars, defaults to original) |
+
+**Response:** `201 Created`
+
+```json
+{
+  "id": 5,
+  "title": "My Copy of Best Flash Games",
+  "description": "A curated collection of classic Flash games",
+  "icon": "star",
+  "gameCount": 25,
+  "createdAt": "2024-01-25T10:00:00.000Z",
+  "updatedAt": "2024-01-25T10:00:00.000Z",
+  "shareToken": null,
+  "shareExpiresAt": null,
+  "showOwner": false
+}
+```
+
+**Errors:**
+
+| Status | Description |
+|--------|-------------|
+| `400 Bad Request` | Invalid title or unable to clone |
+| `401 Unauthorized` | Not authenticated |
+| `403 Forbidden` | Missing `playlists.create` permission |
+| `404 Not Found` | Invalid or expired share token |
+
+## Share Token Lifecycle
+
+```
+1. Owner enables sharing → Share token generated
+   ↓
+2. Owner shares URL with others
+   ↓
+3. Recipients access via share token
+   ↓
+4. Owner can:
+   - Update share settings (expiration, showOwner)
+   - Regenerate token (invalidates old URL)
+   - Disable sharing (invalidates token)
+```
 
 ## Rate Limiting
 
-- Shared playlist reads: 10 req/min per IP
-- Token generation: 10 req/min per IP
-- Playlist cloning: 5 req/min per user
-- Community downloads: 5 req/min per user
+| Endpoint | Limit | Description |
+|----------|-------|-------------|
+| `GET /:shareToken` | 10 req/min per IP | Playlist metadata |
+| `GET /:shareToken/games` | 10 req/min per IP | Game list |
+| `POST /generate-access-token` | 10 req/min per IP | Token generation |
+| `POST /clone` | 5 req/min per user | Playlist cloning |
 
-Headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+Response headers: `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
 
-## Error Responses
+## Security Considerations
 
-All follow format:
-`{ "error": "Type", "message": "...", "code": "CODE", "statusCode": 400 }`
+- **Rate Limiting:** Strict rate limits prevent brute-force token guessing
+- **Token Validation:** Middleware validates token before each request
+- **Expiration:** Share tokens can have expiration dates
+- **Scoped Access:** Access tokens are scoped to specific playlists
+- **No Sensitive Data:** Share token responses exclude userId and internal fields
+- **Optional Attribution:** Owner visibility is controlled by `showOwner` setting
 
-Common codes:
+## Example Workflow
 
-- `400 INVALID_REQUEST` - Malformed request
-- `401 UNAUTHORIZED` - Auth required
-- `403 FORBIDDEN` - Insufficient permissions
-- `404 NOT_FOUND` - Resource not found
-- `410 GONE` - Link revoked
-- `429 RATE_LIMIT_EXCEEDED` - Too many requests
+```javascript
+// 1. Access shared playlist (no auth needed)
+const playlist = await fetch(`/api/shared-playlists/${shareToken}`).then(r => r.json());
+console.log(`${playlist.title} - ${playlist.gameCount} games`);
+
+// 2. Get games in the playlist
+const games = await fetch(`/api/shared-playlists/${shareToken}/games`).then(r => r.json());
+
+// 3. Generate access token for playing games
+const { accessToken } = await fetch(`/api/shared-playlists/${shareToken}/generate-access-token`, {
+  method: 'POST'
+}).then(r => r.json());
+
+// 4. Use access token for game content requests
+const gameContent = await fetch(`/game-proxy/${games[0].launchCommand}`, {
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+
+// 5. Clone to own collection (requires auth)
+const cloned = await api.post(`/shared-playlists/${shareToken}/clone`, {
+  newTitle: 'My Copy'
+});
+```
+
+## Frontend Route
+
+The frontend handles shared playlists at:
+
+```
+/shared/playlist/:shareToken
+```
+
+This route renders the shared playlist view without requiring user authentication.
+
+## Related Documentation
+
+- [User Playlists API](./user-playlists-api.md) - Create and manage playlists, enable sharing
+- [Community Playlists API](./community-playlists-api.md) - Browse community-curated playlists
+- [Games API](./games-api.md) - Game details and launch data

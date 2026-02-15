@@ -106,6 +106,32 @@ Returns current user object with permissions array.
 
 Error: `401 Unauthorized`
 
+## Check Setup Status
+
+`GET /api/auth/setup-status` - No auth required
+
+Checks if the system requires initial setup (first admin account creation).
+
+**Response (needs setup):**
+
+```json
+{
+  "needsSetup": true,
+  "message": "No users exist. Please create the first admin account."
+}
+```
+
+**Response (setup complete):**
+
+```json
+{
+  "needsSetup": false,
+  "message": "System is configured."
+}
+```
+
+**Usage:** Frontend checks this on app load to redirect to initial setup page if needed.
+
 ## Usage Pattern
 
 **Frontend (with Axios client configured with `withCredentials: true`)**:

@@ -1,6 +1,28 @@
-# Playlists API
+# Playlists API (Flashpoint)
 
-Manage curated game collections.
+Manage Flashpoint's file-based playlists compatible with Flashpoint Launcher.
+
+**Base Path:** `/api/playlists`
+
+## Overview
+
+This API manages **Flashpoint Playlists** - JSON files stored in the Flashpoint
+Data folder. These playlists are compatible with the Flashpoint Launcher desktop
+application and are shared across all users.
+
+**Note:** For personal playlists stored in the database, see
+[User Playlists API](./user-playlists-api.md).
+
+## Flashpoint vs User Playlists
+
+| Feature | Flashpoint Playlists (this API) | User Playlists |
+|---------|--------------------------------|----------------|
+| Storage | JSON files in Flashpoint Data | SQLite database (user.db) |
+| Base Path | `/api/playlists` | `/api/user-playlists` |
+| Ownership | Shared/Community | Per-user |
+| Sharing | Public by default | Private with optional sharing |
+| Compatibility | Flashpoint Launcher | Web-only |
+| Persistence | Synced with Launcher | Separate from Launcher |
 
 ## List Playlists
 
@@ -118,3 +140,10 @@ await api.post(`/playlists/${playlist.id}/games`, { gameIds });
 - Regularly review for broken or removed games
 - Use batch operations (add/remove multiple at once)
 - Cache playlist metadata locally to reduce API calls
+
+## Related Documentation
+
+- [User Playlists API](./user-playlists-api.md) - Per-user database playlists with sharing
+- [Shared Playlists API](./shared-playlists-api.md) - Accessing shared user playlists
+- [Community Playlists API](./community-playlists-api.md) - Download community playlists
+- [Playlists & Favorites Feature](../10-features/05-playlists-favorites.md) - Feature overview

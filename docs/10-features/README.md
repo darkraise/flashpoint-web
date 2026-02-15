@@ -25,6 +25,8 @@ Web application.
    management with validation and caching
 10. [Date & Time Formatting](./10-date-time-formatting.md) - Consistent
     date/time formatting and localization across the application
+11. [Maintenance Mode](./11-maintenance-mode.md) - Temporarily restrict access
+    during system updates while allowing admin access
 
 ## Quick Reference
 

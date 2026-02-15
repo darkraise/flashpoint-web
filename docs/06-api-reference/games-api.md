@@ -41,6 +41,37 @@ Returns single random game object.
 
 Error: `404 Not Found` if no games match criteria
 
+## Get Most Played Games
+
+`GET /api/games/most-played` - No auth required
+
+Returns games sorted by global play count across all users.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| limit | number | 20 | Max results (max: 50) |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "game-uuid",
+      "title": "Popular Game",
+      "developer": "Dev Studio",
+      "platformName": "Flash",
+      "totalPlays": 1523,
+      "totalPlaytime": 45690
+    }
+  ],
+  "total": 50
+}
+```
+
 ## Get Game Details
 
 `GET /api/games/:id` - No auth required
