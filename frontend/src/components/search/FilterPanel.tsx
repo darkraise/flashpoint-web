@@ -1,37 +1,13 @@
+import { useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, X } from 'lucide-react';
+import { Filter, AlertCircle, RefreshCw } from 'lucide-react';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useFilterDropdowns } from '@/hooks/useFilterDropdowns';
-import { Badge } from '@/components/ui/badge';
 import { FilterDropdown } from './FilterDropdown';
+import { YearRangeFilter } from './YearRangeFilter';
+import { Button } from '@/components/ui/button';
 import { FILTER_CONFIGS } from './filterConfig';
 import type { GameFilters } from '@/types/game';
-
-/**
- * Create generic toggle and clear handlers for any filter
- * Eliminates need for 7 separate toggle/clear functions
- */
-const createFilterHandlers = (
-  paramKey: keyof GameFilters,
-  dropdownId: string,
-  filters: GameFilters,
-  updateFilter: (key: string, value: string) => void,
-  dropdowns: ReturnType<typeof useFilterDropdowns>
-) => ({
-  toggle: (value: string) => {
-    const currentValue = filters[paramKey];
-    const current = typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
-    const updated = current.includes(value)
-      ? current.filter((v: string) => v !== value)
-      : [...current, value];
-    updateFilter(paramKey, updated.join(','));
-  },
-  clear: () => {
-    updateFilter(paramKey, '');
-    dropdowns.setOpen(`${dropdownId}-desktop`, false);
-    dropdowns.setOpen(`${dropdownId}-mobile`, false);
-  },
-});
 
 interface FilterPanelProps {
   filters: GameFilters;
@@ -43,40 +19,99 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
 
   const dropdowns = useFilterDropdowns();
 
-  const { data: filterOptions } = useFilterOptions();
+  const {
+    data: filterOptions,
+    isLoading: filterOptionsLoading,
+    error: filterOptionsError,
+    refetch: refetchFilterOptions,
+  } = useFilterOptions();
 
-  const updateFilter = (key: string, value: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    if (value) {
-      newParams.set(key, value);
-    } else {
-      newParams.delete(key);
-    }
-    newParams.delete('page'); // Reset to page 1
-    setSearchParams(newParams);
-  };
+  const updateFilter = useCallback(
+    (key: string, value: string) => {
+      const newParams = new URLSearchParams(searchParams);
+      if (value) {
+        newParams.set(key, value);
+      } else {
+        newParams.delete(key);
+      }
+      newParams.delete('page'); // Reset to page 1
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
+
+  // Memoize handlers for all filter configs to avoid recreation on every render
+  const filterHandlers = useMemo(() => {
+    const handlers: Record<
+      string,
+      { toggle: (value: string) => void; clear: () => void }
+    > = {};
+
+    FILTER_CONFIGS.forEach((config) => {
+      handlers[config.id] = {
+        toggle: (value: string) => {
+          const currentValue = filters[config.paramKey];
+          const current =
+            typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
+          const updated = current.includes(value)
+            ? current.filter((v: string) => v !== value)
+            : [...current, value];
+          updateFilter(config.paramKey, updated.join(','));
+        },
+        clear: () => {
+          updateFilter(config.paramKey, '');
+          dropdowns.setOpen(`${config.id}-desktop`, false);
+          dropdowns.setOpen(`${config.id}-mobile`, false);
+        },
+      };
+    });
+
+    return handlers;
+  }, [filters, updateFilter, dropdowns]);
+
+  // Get visible filter configs based on showPlatformFilter prop
+  const visibleConfigs = useMemo(
+    () => FILTER_CONFIGS.filter((config) => showPlatformFilter || config.id !== 'platform'),
+    [showPlatformFilter]
+  );
+
+  // Handle year range changes
+  const handleYearChange = useCallback(
+    (yearFrom: number | undefined, yearTo: number | undefined) => {
+      const newParams = new URLSearchParams(searchParams);
+
+      if (yearFrom !== undefined) {
+        newParams.set('yearFrom', yearFrom.toString());
+      } else {
+        newParams.delete('yearFrom');
+      }
+
+      if (yearTo !== undefined) {
+        newParams.set('yearTo', yearTo.toString());
+      } else {
+        newParams.delete('yearTo');
+      }
+
+      newParams.delete('page'); // Reset to page 1
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
 
   /**
    * Render all filters with consistent behavior
    * Handles both desktop and mobile layouts with single function
    */
-  const renderFilters = (isMobile: boolean) => {
-    const suffix = isMobile ? 'mobile' : 'desktop';
+  const renderFilters = useCallback(
+    (isMobile: boolean) => {
+      const suffix = isMobile ? 'mobile' : 'desktop';
 
-    return FILTER_CONFIGS.filter((config) => showPlatformFilter || config.id !== 'platform').map(
-      (config) => {
-        const handlers = createFilterHandlers(
-          config.paramKey,
-          config.id,
-          filters,
-          updateFilter,
-          dropdowns
-        );
-
+      return visibleConfigs.map((config) => {
+        const handlers = filterHandlers[config.id];
         const currentValue = filters[config.paramKey];
         const selectedValues =
           typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
-        const options = filterOptions?.[config.optionsKey] || [];
+        const options = filterOptions?.[config.optionsKey] ?? [];
 
         return (
           <FilterDropdown
@@ -90,54 +125,14 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
             onToggle={handlers.toggle}
             onClear={handlers.clear}
             placeholder={config.placeholder}
-            emptyMessage={config.emptyMessage}
+            emptyMessage={filterOptionsLoading ? 'Loading...' : config.emptyMessage}
             compact={isMobile}
           />
         );
-      }
-    );
-  };
-
-  /**
-   * Render filter badges dynamically from config
-   * Eliminates 7 separate badge sections
-   */
-  const renderFilterBadges = () => {
-    return FILTER_CONFIGS.filter((config) => showPlatformFilter || config.id !== 'platform').map(
-      (config) => {
-        const currentValue = filters[config.paramKey];
-        const selectedValues =
-          typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
-        if (selectedValues.length === 0) return null;
-
-        const handlers = createFilterHandlers(
-          config.paramKey,
-          config.id,
-          filters,
-          updateFilter,
-          dropdowns
-        );
-
-        return (
-          <div key={config.id} className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-muted-foreground">{config.badgeLabel}:</span>
-            {selectedValues.map((value: string) => (
-              <Badge key={value} variant="secondary" className="gap-1">
-                {value}
-                <button
-                  onClick={() => handlers.toggle(value)}
-                  className="ml-1 hover:text-destructive"
-                  aria-label={`Remove ${value}`}
-                >
-                  <X size={12} />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        );
-      }
-    );
-  };
+      });
+    },
+    [visibleConfigs, filterHandlers, filters, filterOptions, filterOptionsLoading, dropdowns]
+  );
 
   return (
     <fieldset className="space-y-4 border-0 p-0">
@@ -146,15 +141,49 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
         Filters
       </legend>
 
-      <div className="space-y-3">
-        {/* Desktop Layout */}
-        <div className="hidden md:flex items-center gap-3 flex-wrap">{renderFilters(false)}</div>
+      {/* Error state with retry */}
+      {filterOptionsError && !filterOptions ? (
+        <div className="flex items-center gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <AlertCircle size={18} className="text-destructive flex-shrink-0" aria-hidden="true" />
+          <span className="text-sm text-destructive">Failed to load filter options</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchFilterOptions()}
+            className="ml-auto h-7 px-2 text-xs"
+          >
+            <RefreshCw size={14} className="mr-1" aria-hidden="true" />
+            Retry
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Desktop Layout */}
+          <div className="hidden md:flex items-center gap-3 flex-wrap">
+            {renderFilters(false)}
+            <YearRangeFilter
+              yearFrom={filters.yearFrom}
+              yearTo={filters.yearTo}
+              minYear={filterOptions?.yearRange?.min ?? 1980}
+              maxYear={filterOptions?.yearRange?.max ?? new Date().getFullYear()}
+              onYearChange={handleYearChange}
+            />
+          </div>
 
-        {/* Mobile Layout */}
-        <div className="md:hidden flex items-center gap-2">{renderFilters(true)}</div>
-
-        <div className="space-y-2">{renderFilterBadges()}</div>
-      </div>
+          {/* Mobile Layout */}
+          <div className="md:hidden flex items-center gap-2">
+            {renderFilters(true)}
+            <YearRangeFilter
+              yearFrom={filters.yearFrom}
+              yearTo={filters.yearTo}
+              minYear={filterOptions?.yearRange?.min ?? 1980}
+              maxYear={filterOptions?.yearRange?.max ?? new Date().getFullYear()}
+              onYearChange={handleYearChange}
+              compact
+            />
+          </div>
+        </div>
+      )}
     </fieldset>
   );
 }

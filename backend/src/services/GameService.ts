@@ -103,7 +103,8 @@ export class GameService {
   private static filterOptionsCache: FilterOptionsResult | null = null;
 
   /**
-   * Get the set of Flash game IDs whose game_data.launchCommand points to a .swf file.
+   * Get the set of Flash game IDs with .swf launch commands.
+   * Checks both game_data.launchCommand and game.launchCommand as fallback.
    * Results are cached in memory for 1 hour (read-only DB changes rarely).
    */
   private getFlashSwfGameIds(): Set<string> {
@@ -113,7 +114,9 @@ export class GameService {
     }
 
     const startTime = performance.now();
-    const sql = `
+
+    // Query 1: Games with .swf in game_data.launchCommand
+    const sqlGameData = `
       SELECT DISTINCT gd.gameId
       FROM game_data gd
       JOIN game g ON g.id = gd.gameId
@@ -121,8 +124,22 @@ export class GameService {
         AND (LOWER(gd.launchCommand) LIKE '%.swf' OR LOWER(gd.launchCommand) LIKE '%.swf?%')
     `;
 
-    const rows = DatabaseService.all(sql, []) as Array<{ gameId: string }>;
-    GameService.flashSwfGameIds = new Set(rows.map((r) => r.gameId));
+    // Query 2: Games with .swf in game.launchCommand (fallback)
+    const sqlGameTable = `
+      SELECT DISTINCT g.id as gameId
+      FROM game g
+      WHERE g.platformName = 'Flash'
+        AND (LOWER(g.launchCommand) LIKE '%.swf' OR LOWER(g.launchCommand) LIKE '%.swf?%')
+    `;
+
+    const rowsGameData = DatabaseService.all(sqlGameData, []) as Array<{ gameId: string }>;
+    const rowsGameTable = DatabaseService.all(sqlGameTable, []) as Array<{ gameId: string }>;
+
+    // Combine both sets
+    GameService.flashSwfGameIds = new Set([
+      ...rowsGameData.map((r) => r.gameId),
+      ...rowsGameTable.map((r) => r.gameId),
+    ]);
     GameService.flashSwfCacheExpiry = now + GameService.FLASH_SWF_CACHE_TTL;
 
     const duration = Math.round(performance.now() - startTime);
@@ -167,7 +184,7 @@ export class GameService {
 
   /**
    * SQL condition to exclude Flash games without SWF launch commands.
-   * Uses EXISTS subquery against game_data table (leverages UNIQUE(gameId, dateAdded) index).
+   * Checks both game_data.launchCommand and game.launchCommand as fallback.
    *
    * Performance: ~150ms overhead per query. Acceptable for searchGames() since results
    * are cached by GameSearchCache (5-min TTL). For aggregate queries like
@@ -181,6 +198,7 @@ export class GameService {
         WHERE gd.gameId = ${tableAlias}.id
         AND (LOWER(gd.launchCommand) LIKE '%.swf' OR LOWER(gd.launchCommand) LIKE '%.swf?%')
       )
+      OR (LOWER(${tableAlias}.launchCommand) LIKE '%.swf' OR LOWER(${tableAlias}.launchCommand) LIKE '%.swf?%')
     )`;
   }
 
@@ -778,6 +796,7 @@ export class GameService {
           AND (extreme = 0 OR extreme IS NULL)
         GROUP BY playMode
         ORDER BY count DESC, playMode ASC
+        LIMIT 100
       `;
 
       const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;

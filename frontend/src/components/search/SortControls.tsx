@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +9,8 @@ interface SortControlsProps {
   compact?: boolean;
 }
 
+const DATE_SORT_FIELDS = ['releaseDate', 'dateAdded', 'dateModified'];
+
 export function SortControls({
   sortBy = 'title',
   sortOrder = 'asc',
@@ -17,6 +20,13 @@ export function SortControls({
   const handleSortOrderToggle = () => {
     onSortChange('sortOrder', sortOrder === 'asc' ? 'desc' : 'asc');
   };
+
+  const sortOrderLabel = useMemo(() => {
+    if (DATE_SORT_FIELDS.includes(sortBy)) {
+      return sortOrder === 'asc' ? 'Oldest' : 'Newest';
+    }
+    return sortOrder === 'asc' ? 'A-Z' : 'Z-A';
+  }, [sortBy, sortOrder]);
 
   return (
     <div className="flex items-center gap-2">
@@ -38,10 +48,11 @@ export function SortControls({
         onClick={handleSortOrderToggle}
         className={`h-10 ${compact ? 'px-2' : 'px-3'}`}
         type="button"
-        title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+        title={sortOrderLabel}
+        aria-label={`Sort order: ${sortOrderLabel}`}
       >
-        <ArrowUpDown size={16} />
-        {!compact && <span className="ml-1 text-xs">{sortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>}
+        <ArrowUpDown size={16} aria-hidden="true" />
+        {!compact && <span className="ml-1 text-xs">{sortOrderLabel}</span>}
       </Button>
     </div>
   );

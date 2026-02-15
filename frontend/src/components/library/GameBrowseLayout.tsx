@@ -68,8 +68,14 @@ export function GameBrowseLayout({
         return isNaN(parsed) ? undefined : parsed;
       })(),
       sortBy: searchParams.get('sortBy') || 'title',
-      sortOrder: (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc',
-      page: parseInt(searchParams.get('page') || '1', 10),
+      sortOrder: (() => {
+        const raw = searchParams.get('sortOrder');
+        return raw === 'asc' || raw === 'desc' ? raw : 'asc';
+      })(),
+      page: (() => {
+        const parsed = parseInt(searchParams.get('page') || '1', 10);
+        return isNaN(parsed) ? 1 : Math.max(1, parsed);
+      })(),
       limit: 50,
     }),
     [searchParams, platform, library]
@@ -194,6 +200,23 @@ export function GameBrowseLayout({
       });
     }
 
+    // Year range filters
+    if (filters.yearFrom !== undefined || filters.yearTo !== undefined) {
+      const yearValue =
+        filters.yearFrom !== undefined && filters.yearTo !== undefined
+          ? `${filters.yearFrom} - ${filters.yearTo}`
+          : filters.yearFrom !== undefined
+            ? `From ${filters.yearFrom}`
+            : `To ${filters.yearTo}`;
+
+      chips.push({
+        id: 'yearRange',
+        label: 'Year',
+        value: yearValue,
+        category: 'Year',
+      });
+    }
+
     return chips;
   }, [filters, platform]);
 
@@ -205,6 +228,9 @@ export function GameBrowseLayout({
         newParams.delete('search');
       } else if (chipId === 'platform') {
         newParams.delete('platform');
+      } else if (chipId === 'yearRange') {
+        newParams.delete('yearFrom');
+        newParams.delete('yearTo');
       } else {
         const paramMap: Record<string, { param: string; value: string | undefined }> = {
           'series-': { param: 'series', value: filters.series },
