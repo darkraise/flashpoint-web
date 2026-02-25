@@ -1,13 +1,10 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 
 export function useFilterDropdowns() {
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
 
   // Store current state in ref for stable callback
   const openDropdownsRef = useRef(openDropdowns);
-  useEffect(() => {
-    openDropdownsRef.current = openDropdowns;
-  }, [openDropdowns]);
 
   // Stable callback - reads from ref instead of closure
   const isOpen = useCallback((filterName: string) => {
@@ -15,6 +12,8 @@ export function useFilterDropdowns() {
   }, []);
 
   const setOpen = useCallback((filterName: string, open: boolean) => {
+    // Update ref synchronously before state update
+    openDropdownsRef.current = { ...openDropdownsRef.current, [filterName]: open };
     setOpenDropdowns((prev) => ({
       ...prev,
       [filterName]: open,
@@ -22,6 +21,7 @@ export function useFilterDropdowns() {
   }, []);
 
   const closeAll = useCallback(() => {
+    openDropdownsRef.current = {};
     setOpenDropdowns({});
   }, []);
 

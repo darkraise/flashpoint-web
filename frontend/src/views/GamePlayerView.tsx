@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Breadcrumbs,
   type PlayerBreadcrumbContext,
@@ -31,8 +31,6 @@ export function GamePlayerView() {
     | undefined;
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [logoError, setLogoError] = useState(false);
-  const [logoLoading, setLogoLoading] = useState(true);
 
   const { data: game, isLoading: gameLoading, error: gameError } = useGame(id ?? '');
   const {
@@ -50,10 +48,22 @@ export function GamePlayerView() {
     }
   }, [launchData?.platform, launchData?.canPlayInBrowser]);
 
+  // Listen for F11 to toggle fullscreen mode (prevent browser fullscreen)
   useEffect(() => {
-    setLogoLoading(true);
-    setLogoError(false);
-  }, [id]);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'F11') {
+        event.preventDefault();
+        setIsFullscreen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    navigate(-1);
+  }, [navigate]);
 
   const playerProps = useMemo(
     () => ({
@@ -62,13 +72,19 @@ export function GamePlayerView() {
       contentUrl: launchData?.contentUrl,
       launchCommand: launchData?.launchCommand,
       canPlayInBrowser: launchData?.canPlayInBrowser ?? false,
+      logoUrl: game ? getGameLogoUrl(game.id) : undefined,
+      developer: game?.developer,
+      onBack: handleBack,
     }),
     [
       game?.title,
+      game?.id,
+      game?.developer,
       launchData?.platform,
       launchData?.contentUrl,
       launchData?.launchCommand,
       launchData?.canPlayInBrowser,
+      handleBack,
     ]
   );
 
@@ -174,39 +190,6 @@ export function GamePlayerView() {
               : 'bg-card rounded-lg overflow-hidden shadow-xl border border-border'
           }
         >
-          {!isFullscreen ? (
-            <div className="px-6 py-4 border-b border-border">
-              <div className="flex items-start gap-4">
-                {getGameLogoUrl(game.id) && !logoError ? (
-                  <div className="flex-shrink-0 w-16 h-16 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-1.5 relative">
-                    {logoLoading ? (
-                      <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
-                        <Loader2 size={16} className="text-muted-foreground animate-spin" />
-                      </div>
-                    ) : null}
-                    <img
-                      src={getGameLogoUrl(game.id)}
-                      alt={`${game.title} logo`}
-                      className="w-full h-full object-contain relative z-10"
-                      onLoad={() => setLogoLoading(false)}
-                      onError={() => {
-                        setLogoError(true);
-                        setLogoLoading(false);
-                      }}
-                    />
-                  </div>
-                ) : null}
-
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold mb-1">{game.title}</h1>
-                  {game.developer ? (
-                    <p className="text-muted-foreground text-sm">by {game.developer}</p>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
           {/* Game Player Container - ALWAYS VISIBLE, persists in both modes */}
           <div className={isFullscreen ? 'w-full h-screen' : 'aspect-video bg-black'}>
             {launchData?.downloading ? (

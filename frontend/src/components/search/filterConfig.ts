@@ -17,6 +17,8 @@ export interface FilterConfig {
   placeholder?: string;
   emptyMessage?: string;
   badgeLabel: string; // Plural form for badges ("Platforms", "Tags", etc.)
+  /** Category name used in filter order tracking (must match FilterChips category) */
+  categoryName: string;
 }
 
 export const FILTER_CONFIGS: FilterConfig[] = [
@@ -26,9 +28,9 @@ export const FILTER_CONFIGS: FilterConfig[] = [
     icon: Gamepad2,
     paramKey: 'platform',
     optionsKey: 'platforms',
-    placeholder: 'Select Platforms',
     emptyMessage: 'No platforms available',
     badgeLabel: 'Platforms',
+    categoryName: 'Platform',
   },
   {
     id: 'series',
@@ -38,6 +40,7 @@ export const FILTER_CONFIGS: FilterConfig[] = [
     optionsKey: 'series',
     emptyMessage: 'No series available',
     badgeLabel: 'Series',
+    categoryName: 'Series',
   },
   {
     id: 'developer',
@@ -47,6 +50,7 @@ export const FILTER_CONFIGS: FilterConfig[] = [
     optionsKey: 'developers',
     emptyMessage: 'No developers available',
     badgeLabel: 'Developers',
+    categoryName: 'Developer',
   },
   {
     id: 'publisher',
@@ -56,6 +60,7 @@ export const FILTER_CONFIGS: FilterConfig[] = [
     optionsKey: 'publishers',
     emptyMessage: 'No publishers available',
     badgeLabel: 'Publishers',
+    categoryName: 'Publisher',
   },
   {
     id: 'playMode',
@@ -65,6 +70,7 @@ export const FILTER_CONFIGS: FilterConfig[] = [
     optionsKey: 'playModes',
     emptyMessage: 'No play modes available',
     badgeLabel: 'Play Modes',
+    categoryName: 'Play Mode',
   },
   {
     id: 'language',
@@ -74,6 +80,7 @@ export const FILTER_CONFIGS: FilterConfig[] = [
     optionsKey: 'languages',
     emptyMessage: 'No languages available',
     badgeLabel: 'Languages',
+    categoryName: 'Language',
   },
   {
     id: 'tag',
@@ -83,5 +90,6 @@ export const FILTER_CONFIGS: FilterConfig[] = [
     optionsKey: 'tags',
     emptyMessage: 'No tags available',
     badgeLabel: 'Tags',
+    categoryName: 'Tag',
   },
 ];

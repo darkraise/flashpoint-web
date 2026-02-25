@@ -9,15 +9,52 @@ import type {
 
 export const gamesApi = {
   search: async (filters: GameFilters, signal?: AbortSignal): Promise<PaginatedResult<Game>> => {
-    const { data } = await apiClient.get<PaginatedResult<Game>>('/games', {
-      params: filters,
+    // Convert comma-separated filter strings to arrays for POST body
+    const body = {
+      search: filters.search,
+      platforms: filters.platform?.split(',').filter(Boolean),
+      series: filters.series?.split(',').filter(Boolean),
+      developers: filters.developers?.split(',').filter(Boolean),
+      publishers: filters.publishers?.split(',').filter(Boolean),
+      playModes: filters.playModes?.split(',').filter(Boolean),
+      languages: filters.languages?.split(',').filter(Boolean),
+      library: filters.library,
+      tags: filters.tags?.split(',').filter(Boolean),
+      yearFrom: filters.yearFrom,
+      yearTo: filters.yearTo,
+      dateAddedSince: filters.dateAddedSince,
+      dateModifiedSince: filters.dateModifiedSince,
+      sortBy: filters.sortBy,
+      sortOrder: filters.sortOrder,
+      page: filters.page,
+      limit: filters.limit,
+    };
+
+    const { data } = await apiClient.post<PaginatedResult<Game>>('/games', body, {
       signal,
     });
     return data;
   },
 
-  getFilterOptions: async (): Promise<FilterOptions> => {
-    const { data } = await apiClient.get<FilterOptions>('/games/filter-options');
+  getFilterOptions: async (params?: {
+    platform?: string;
+    library?: string;
+    // Context filters for dynamic options
+    series?: string;
+    developers?: string;
+    publishers?: string;
+    playModes?: string;
+    languages?: string;
+    tags?: string;
+    yearFrom?: number;
+    yearTo?: number;
+    // Exclude filter types from response (comma-separated)
+    // Used to skip re-fetching options for already-active filters
+    exclude?: string;
+  }): Promise<Partial<FilterOptions>> => {
+    const { data } = await apiClient.get<Partial<FilterOptions>>('/games/filter-options', {
+      params,
+    });
     return data;
   },
 

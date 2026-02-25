@@ -73,14 +73,28 @@ export interface PaginatedResult<T> {
 }
 
 interface FilterOptionsResult {
-  series: Array<{ name: string; count: number }>;
-  developers: Array<{ name: string; count: number }>;
-  publishers: Array<{ name: string; count: number }>;
-  playModes: Array<{ name: string; count: number }>;
-  languages: Array<{ name: string; count: number }>;
-  tags: Array<{ name: string; count: number }>;
-  platforms: Array<{ name: string; count: number }>;
+  series: string[];
+  developers: string[];
+  publishers: string[];
+  playModes: string[];
+  languages: string[];
+  tags: string[];
+  platforms: string[];
   yearRange: { min: number; max: number };
+}
+
+export interface FilterOptionsParams {
+  platform?: string;
+  library?: string;
+  // Additional filters for context-aware options
+  series?: string[];
+  developers?: string[];
+  publishers?: string[];
+  playModes?: string[];
+  languages?: string[];
+  tags?: string[];
+  yearFrom?: number;
+  yearTo?: number;
 }
 
 export class GameService {
@@ -96,11 +110,88 @@ export class GameService {
   private static flashSwfCacheExpiry = 0;
   private static readonly FLASH_SWF_CACHE_TTL = 3600000; // 1 hour
 
+
   /**
-   * Cached filter options result. The 8 GROUP BY queries (~1.8s total) only change
-   * when flashpoint.sqlite reloads, so we cache indefinitely and clear on DB reload.
+   * Cached filter options results keyed by platform+library combination.
+   * The 8 GROUP BY queries (~1.8s total) only change when flashpoint.sqlite reloads,
+   * so we cache indefinitely and clear on DB reload.
    */
-  private static filterOptionsCache: FilterOptionsResult | null = null;
+  private static filterOptionsCache: Map<string, FilterOptionsResult> = new Map();
+
+  /**
+   * Short-TTL cache for dynamic filter combinations.
+   * Stores { result, expiry } for context-aware filter options.
+   * TTL: 30 seconds - balances freshness with performance during filter exploration.
+   */
+  private static dynamicFilterCache: Map<string, { result: FilterOptionsResult; expiry: number }> =
+    new Map();
+  private static readonly DYNAMIC_FILTER_CACHE_TTL = 30000; // 30 seconds
+  private static readonly DYNAMIC_FILTER_CACHE_MAX_SIZE = 100; // Max entries to prevent memory bloat
+
+  /**
+   * Generate cache key from filter params
+   * Returns { key, isDynamic } to determine which cache to use
+   */
+  private static getFilterOptionsCacheKey(params?: FilterOptionsParams): {
+    key: string;
+    isDynamic: boolean;
+  } {
+    const hasDynamicFilters =
+      (params?.series?.length ?? 0) > 0 ||
+      (params?.developers?.length ?? 0) > 0 ||
+      (params?.publishers?.length ?? 0) > 0 ||
+      (params?.playModes?.length ?? 0) > 0 ||
+      (params?.languages?.length ?? 0) > 0 ||
+      (params?.tags?.length ?? 0) > 0 ||
+      params?.yearFrom !== undefined ||
+      params?.yearTo !== undefined;
+
+    if (hasDynamicFilters) {
+      // Build full cache key for dynamic filters
+      const key = JSON.stringify({
+        platform: params?.platform ?? '',
+        library: params?.library ?? '',
+        series: params?.series ? [...params.series].sort() : [],
+        developers: params?.developers ? [...params.developers].sort() : [],
+        publishers: params?.publishers ? [...params.publishers].sort() : [],
+        playModes: params?.playModes ? [...params.playModes].sort() : [],
+        languages: params?.languages ? [...params.languages].sort() : [],
+        tags: params?.tags ? [...params.tags].sort() : [],
+        yearFrom: params?.yearFrom,
+        yearTo: params?.yearTo,
+      });
+      return { key, isDynamic: true };
+    }
+
+    // Base page combination (no dynamic filters)
+    return { key: `${params?.platform ?? ''}_${params?.library ?? ''}`, isDynamic: false };
+  }
+
+  /**
+   * Clean up expired entries from dynamic filter cache
+   */
+  private static cleanupDynamicFilterCache(): void {
+    const now = Date.now();
+    for (const [key, entry] of GameService.dynamicFilterCache) {
+      if (now > entry.expiry) {
+        GameService.dynamicFilterCache.delete(key);
+      }
+    }
+
+    // If still over max size, remove oldest entries
+    if (GameService.dynamicFilterCache.size > GameService.DYNAMIC_FILTER_CACHE_MAX_SIZE) {
+      const entries = [...GameService.dynamicFilterCache.entries()].sort(
+        (a, b) => a[1].expiry - b[1].expiry
+      );
+      const toRemove = entries.slice(
+        0,
+        GameService.dynamicFilterCache.size - GameService.DYNAMIC_FILTER_CACHE_MAX_SIZE
+      );
+      for (const [key] of toRemove) {
+        GameService.dynamicFilterCache.delete(key);
+      }
+    }
+  }
 
   /**
    * Get the set of Flash game IDs with .swf launch commands.
@@ -149,6 +240,7 @@ export class GameService {
     return GameService.flashSwfGameIds;
   }
 
+
   /**
    * Clear the Flash SWF game IDs cache.
    * Call when the flashpoint.sqlite database is reloaded.
@@ -164,22 +256,47 @@ export class GameService {
    * Called when flashpoint.sqlite is reloaded (data may have changed).
    */
   static clearFilterOptionsCache(): void {
-    GameService.filterOptionsCache = null;
-    logger.debug('[GameService] Filter options cache cleared');
+    GameService.filterOptionsCache.clear();
+    GameService.dynamicFilterCache.clear();
+    logger.debug('[GameService] Filter options cache cleared (base + dynamic)');
   }
 
   /**
-   * Pre-warm the filter options cache at startup.
-   * Runs the ~1.8s GROUP BY queries once so the first request is instant.
+   * Pre-warm the filter options cache at startup for all common page combinations.
+   * Runs the GROUP BY queries once so the first request to each page is instant.
+   *
+   * Pages pre-warmed:
+   * - Browse: { library: 'arcade' }
+   * - Flash Games: { library: 'arcade', platform: 'Flash' }
+   * - HTML5 Games: { library: 'arcade', platform: 'HTML5' }
+   * - Animations: { library: 'theatre' }
    */
   static async prewarmFilterOptions(): Promise<void> {
     const startTime = performance.now();
     const service = new GameService();
-    // Force computation by calling with empty cache
-    GameService.filterOptionsCache = null;
-    await service.getFilterOptions();
+
+    // Clear caches to force fresh computation
+    GameService.filterOptionsCache.clear();
+    GameService.dynamicFilterCache.clear();
+
+    // Define all page combinations to pre-warm
+    const pageCombinations: Array<FilterOptionsParams | undefined> = [
+      undefined, // Global (no filters)
+      { library: 'arcade' }, // Browse page
+      { library: 'arcade', platform: 'Flash' }, // Flash Games page
+      { library: 'arcade', platform: 'HTML5' }, // HTML5 Games page
+      { library: 'theatre' }, // Animations page
+    ];
+
+    // Pre-warm each combination
+    for (const params of pageCombinations) {
+      await service.getFilterOptions(params);
+    }
+
     const duration = Math.round(performance.now() - startTime);
-    logger.info(`[GameService] Filter options pre-warmed in ${duration}ms`);
+    logger.info(
+      `[GameService] Filter options pre-warmed for ${pageCombinations.length} page combinations in ${duration}ms`
+    );
   }
 
   /**
@@ -285,31 +402,50 @@ export class GameService {
       }
 
       if (query.developers && query.developers.length > 0) {
-        // Use OR condition for multiple developers
-        const developerPlaceholders = query.developers.map(() => '?').join(', ');
-        sql += ` AND g.developer IN (${developerPlaceholders})`;
-        params.push(...query.developers);
+        // Developers are semicolon-delimited (e.g., "Studio A; Studio B")
+        // Use INSTR for matching - game should have ANY of the selected developers
+        sql += ` AND g.developer IS NOT NULL AND g.developer != ''`;
+        const devConditions = query.developers.map(
+          () => `INSTR(';' || g.developer || ';', ?) > 0`
+        );
+        sql += ` AND (${devConditions.join(' OR ')})`;
+        params.push(...query.developers.map((dev) => `;${dev};`));
       }
 
       if (query.publishers && query.publishers.length > 0) {
-        // Use OR condition for multiple publishers
-        const publisherPlaceholders = query.publishers.map(() => '?').join(', ');
-        sql += ` AND g.publisher IN (${publisherPlaceholders})`;
-        params.push(...query.publishers);
+        // Publishers are semicolon-delimited (e.g., "Publisher A; Publisher B")
+        // Use INSTR for matching - game should have ANY of the selected publishers
+        sql += ` AND g.publisher IS NOT NULL AND g.publisher != ''`;
+        const pubConditions = query.publishers.map(
+          () => `INSTR(';' || g.publisher || ';', ?) > 0`
+        );
+        sql += ` AND (${pubConditions.join(' OR ')})`;
+        params.push(...query.publishers.map((pub) => `;${pub};`));
       }
 
       if (query.playModes && query.playModes.length > 0) {
-        // Use OR condition for multiple play modes
-        const playModePlaceholders = query.playModes.map(() => '?').join(', ');
-        sql += ` AND g.playMode IN (${playModePlaceholders})`;
-        params.push(...query.playModes);
+        // Play modes are semicolon-delimited (e.g., "Single Player;Multiplayer")
+        // Use INSTR for matching - game should have ANY of the selected play modes
+        sql += ` AND g.playMode IS NOT NULL AND g.playMode != ''`;
+        const modeConditions = query.playModes.map(
+          () => `INSTR(';' || g.playMode || ';', ?) > 0`
+        );
+        sql += ` AND (${modeConditions.join(' OR ')})`;
+        params.push(...query.playModes.map((mode) => `;${mode};`));
       }
 
       if (query.languages && query.languages.length > 0) {
-        // Use OR condition for multiple languages
-        const languagePlaceholders = query.languages.map(() => '?').join(', ');
-        sql += ` AND g.language IN (${languagePlaceholders})`;
-        params.push(...query.languages);
+        // Ensure language is not NULL/empty (matches filter options query)
+        sql += ` AND g.language IS NOT NULL AND g.language != ''`;
+        // Languages are semicolon-delimited, may have various whitespace
+        // Normalize: lowercase + remove all common whitespace chars to match JS \s regex
+        // Space, Tab(9), LF(10), VT(11), FF(12), CR(13)
+        // Use OR logic - game should have ANY of the selected languages
+        const langConditions = query.languages.map(() =>
+          `INSTR(';' || LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(g.language, ' ', ''), CHAR(9), ''), CHAR(10), ''), CHAR(11), ''), CHAR(12), ''), CHAR(13), '')) || ';', ?) > 0`
+        );
+        sql += ` AND (${langConditions.join(' OR ')})`;
+        params.push(...query.languages.map((lang) => `;${lang.toLowerCase()};`));
       }
 
       if (query.library) {
@@ -358,7 +494,12 @@ export class GameService {
       }
 
       // Exclude Flash games without SWF launch commands (not web-playable)
-      sql += ` AND ${this.getFlashSwfCondition('g')}`;
+      // Skip this filter when explicitly filtering by Flash platform - show all Flash games
+      const isFlashOnlyFilter =
+        query.platforms?.length === 1 && query.platforms[0] === 'Flash';
+      if (!isFlashOnlyFilter) {
+        sql += ` AND ${this.getFlashSwfCondition('g')}`;
+      }
 
       if (query.search) {
         sql += ` AND (
@@ -632,6 +773,10 @@ export class GameService {
 
   async getRandomGame(library?: string, platforms?: string[]): Promise<Game | null> {
     try {
+      // Skip Flash SWF filter when explicitly requesting Flash platform
+      const isFlashOnlyFilter = platforms?.length === 1 && platforms[0] === 'Flash';
+      const flashCondition = isFlashOnlyFilter ? '' : `AND ${this.getFlashSwfCondition('g')}`;
+
       let sql = `
         SELECT
           g.id, g.title, g.alternateTitles, g.developer, g.publisher,
@@ -639,7 +784,7 @@ export class GameService {
           g.tagsStr, g.orderTitle
         FROM game g
         WHERE (g.broken = 0 OR g.broken IS NULL)
-          AND ${this.getFlashSwfCondition('g')}
+          ${flashCondition}
       `;
 
       const params: unknown[] = [];
@@ -667,40 +812,212 @@ export class GameService {
 
   private getSortColumn(sortBy: string): string {
     const columnMap: Record<string, string> = {
-      title: 'g.orderTitle',
+      // Use COALESCE with NULLIF to fall back to title when orderTitle is empty
+      // Many games have empty orderTitle, causing sort to fall back to row ID order
+      title: "COALESCE(NULLIF(g.orderTitle, ''), g.title)",
       releaseDate: 'g.releaseDate',
       dateAdded: 'g.dateAdded',
       dateModified: 'g.dateModified',
       developer: 'g.developer',
     };
-    return columnMap[sortBy] || 'g.orderTitle';
+    return columnMap[sortBy] || "COALESCE(NULLIF(g.orderTitle, ''), g.title)";
+  }
+
+  /**
+   * Build common WHERE clause conditions for filter options queries
+   * Returns conditions array and params array for parameterized queries
+   * @param params - Filter parameters to apply
+   * @param excludeFilter - Filter type to exclude (so a filter doesn't filter itself)
+   *
+   * Note: Flash SWF exclusion is NOT applied here for performance.
+   * The slight count discrepancy (including non-playable Flash games) is acceptable.
+   * getPlatformOptions() handles accurate Flash counts separately.
+   */
+  private buildFilterOptionsConditions(
+    params?: FilterOptionsParams,
+    excludeFilter?: 'series' | 'developers' | 'publishers' | 'playModes' | 'languages' | 'tags' | 'platforms' | 'yearRange'
+  ): {
+    conditions: string[];
+    queryParams: unknown[];
+  } {
+    const conditions: string[] = [
+      '(broken = 0 OR broken IS NULL)',
+      '(extreme = 0 OR extreme IS NULL)',
+    ];
+    const queryParams: unknown[] = [];
+
+    if (params?.platform && excludeFilter !== 'platforms') {
+      conditions.push('platformName = ?');
+      queryParams.push(params.platform);
+    }
+
+    if (params?.library) {
+      conditions.push('library = ?');
+      queryParams.push(params.library);
+    }
+
+    // Apply series filter (unless we're getting series options)
+    if (params?.series?.length && excludeFilter !== 'series') {
+      const placeholders = params.series.map(() => '?').join(', ');
+      conditions.push(`series IN (${placeholders})`);
+      queryParams.push(...params.series);
+    }
+
+    // Apply developers filter (using INSTR for semicolon-delimited matching)
+    // Use OR logic - game should have ANY of the selected developers
+    if (params?.developers?.length && excludeFilter !== 'developers') {
+      conditions.push("developer IS NOT NULL AND developer != ''");
+      const devConditions = params.developers.map(
+        () => `INSTR(';' || developer || ';', ?) > 0`
+      );
+      conditions.push(`(${devConditions.join(' OR ')})`);
+      queryParams.push(...params.developers.map((dev) => `;${dev};`));
+    }
+
+    // Apply publishers filter (using INSTR for semicolon-delimited matching)
+    // Use OR logic - game should have ANY of the selected publishers
+    if (params?.publishers?.length && excludeFilter !== 'publishers') {
+      conditions.push("publisher IS NOT NULL AND publisher != ''");
+      const pubConditions = params.publishers.map(
+        () => `INSTR(';' || publisher || ';', ?) > 0`
+      );
+      conditions.push(`(${pubConditions.join(' OR ')})`);
+      queryParams.push(...params.publishers.map((pub) => `;${pub};`));
+    }
+
+    // Apply playModes filter (using INSTR for semicolon-delimited matching)
+    // Use OR logic - game should have ANY of the selected play modes
+    if (params?.playModes?.length && excludeFilter !== 'playModes') {
+      conditions.push("playMode IS NOT NULL AND playMode != ''");
+      const modeConditions = params.playModes.map(
+        () => `INSTR(';' || playMode || ';', ?) > 0`
+      );
+      conditions.push(`(${modeConditions.join(' OR ')})`);
+      queryParams.push(...params.playModes.map((mode) => `;${mode};`));
+    }
+
+    // Apply languages filter (using INSTR for semicolon-delimited matching)
+    // Use OR logic - game should have ANY of the selected languages
+    if (params?.languages?.length && excludeFilter !== 'languages') {
+      conditions.push("language IS NOT NULL AND language != ''");
+      const langConditions = params.languages.map(() =>
+        `INSTR(';' || LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(language, ' ', ''), CHAR(9), ''), CHAR(10), ''), CHAR(11), ''), CHAR(12), ''), CHAR(13), '')) || ';', ?) > 0`
+      );
+      conditions.push(`(${langConditions.join(' OR ')})`);
+      queryParams.push(...params.languages.map((lang) => `;${lang.toLowerCase()};`));
+    }
+
+    // Apply tags filter (using INSTR for semicolon-delimited matching)
+    if (params?.tags?.length && excludeFilter !== 'tags') {
+      params.tags.forEach((tag) => {
+        conditions.push(`INSTR(';' || tagsStr || ';', ?) > 0`);
+        queryParams.push(`;${tag};`);
+      });
+    }
+
+    // Apply year range filter
+    if (params?.yearFrom !== undefined && excludeFilter !== 'yearRange') {
+      conditions.push('releaseDate >= ?');
+      queryParams.push(`${params.yearFrom}-01-01`);
+    }
+
+    if (params?.yearTo !== undefined && excludeFilter !== 'yearRange') {
+      conditions.push('releaseDate <= ?');
+      queryParams.push(`${params.yearTo}-12-31`);
+    }
+
+    return { conditions, queryParams };
   }
 
   /**
    * Get all filter options for dropdowns in a single call
    * Returns: series, developers, publishers, playModes, languages, tags, platforms, yearRange
-   * Note: Methods are synchronous but wrapped in async for consistent API contract
+   * When params are provided, filters options to only include values relevant to the current view
+   *
+   * @param params - Filter parameters to apply
+   * @param excludeSet - Set of filter types to exclude from response (e.g., 'series', 'developers')
+   *                     Used to skip re-fetching options for already-active filters
+   *
+   * Caching strategy:
+   * - Base page combinations (platform+library only): Cached indefinitely until DB reload
+   * - Dynamic filter combinations: Cached with 30s TTL for performance during filter exploration
    */
-  async getFilterOptions(): Promise<FilterOptionsResult> {
-    // Return cached result if available (cache cleared only on DB reload)
-    if (GameService.filterOptionsCache) {
-      return GameService.filterOptionsCache;
+  async getFilterOptions(
+    params?: FilterOptionsParams,
+    excludeSet?: Set<string>
+  ): Promise<Partial<FilterOptionsResult>> {
+    const { key: cacheKey, isDynamic } = GameService.getFilterOptionsCacheKey(params);
+    const now = Date.now();
+
+    // Check appropriate cache based on filter type
+    // Note: We still return full cached results even with excludeSet,
+    // because the cache contains complete data
+    if (isDynamic) {
+      // Check dynamic filter cache (short TTL)
+      const cached = GameService.dynamicFilterCache.get(cacheKey);
+      if (cached && now < cached.expiry) {
+        logger.debug('[GameService] Dynamic filter cache HIT');
+        // Filter out excluded types from cached result
+        if (excludeSet?.size) {
+          return this.filterExcludedTypes(cached.result, excludeSet);
+        }
+        return cached.result;
+      }
+    } else {
+      // Check base page cache (indefinite TTL)
+      const cached = GameService.filterOptionsCache.get(cacheKey);
+      if (cached) {
+        if (excludeSet?.size) {
+          return this.filterExcludedTypes(cached, excludeSet);
+        }
+        return cached;
+      }
     }
 
     try {
+      const startTime = performance.now();
+
+      // Build result, skipping excluded types for performance
       const result: FilterOptionsResult = {
-        series: this.getSeriesOptions(),
-        developers: this.getDeveloperOptions(),
-        publishers: this.getPublisherOptions(),
-        playModes: this.getPlayModeOptions(),
-        languages: this.getLanguageOptions(),
-        tags: this.getTagOptions(),
-        platforms: this.getPlatformOptions(),
-        yearRange: this.getYearRange(),
+        series: excludeSet?.has('series') ? [] : this.getSeriesOptions(params),
+        developers: excludeSet?.has('developers') ? [] : this.getDeveloperOptions(params),
+        publishers: excludeSet?.has('publishers') ? [] : this.getPublisherOptions(params),
+        playModes: excludeSet?.has('playModes') ? [] : this.getPlayModeOptions(params),
+        languages: excludeSet?.has('languages') ? [] : this.getLanguageOptions(params),
+        tags: excludeSet?.has('tags') ? [] : this.getTagOptions(params),
+        platforms: excludeSet?.has('platforms') ? [] : this.getPlatformOptions(params),
+        yearRange: excludeSet?.has('yearRange')
+          ? { min: 1970, max: new Date().getFullYear() }
+          : this.getYearRange(params),
       };
 
-      GameService.filterOptionsCache = result;
-      return result;
+      const duration = Math.round(performance.now() - startTime);
+
+      // Only cache if we fetched everything (no excludeSet)
+      // Partial results shouldn't pollute the cache
+      if (!excludeSet?.size) {
+        if (isDynamic) {
+          // Cleanup old entries periodically
+          if (GameService.dynamicFilterCache.size > GameService.DYNAMIC_FILTER_CACHE_MAX_SIZE / 2) {
+            GameService.cleanupDynamicFilterCache();
+          }
+          GameService.dynamicFilterCache.set(cacheKey, {
+            result,
+            expiry: now + GameService.DYNAMIC_FILTER_CACHE_TTL,
+          });
+          logger.debug(`[GameService] Dynamic filter options computed in ${duration}ms, cached for 30s`);
+        } else {
+          GameService.filterOptionsCache.set(cacheKey, result);
+          logger.debug(`[GameService] Base filter options computed in ${duration}ms, cached indefinitely`);
+        }
+      } else {
+        logger.debug(
+          `[GameService] Partial filter options computed in ${duration}ms (excluded: ${[...excludeSet].join(', ')})`
+        );
+      }
+
+      // Return partial result without excluded types
+      return this.filterExcludedTypes(result, excludeSet);
     } catch (error) {
       logger.error('Error getting filter options:', error);
       throw error;
@@ -708,24 +1025,44 @@ export class GameService {
   }
 
   /**
-   * Get distinct series with game counts
+   * Filter out excluded types from result, returning undefined for excluded fields
+   */
+  private filterExcludedTypes(
+    result: FilterOptionsResult,
+    excludeSet?: Set<string>
+  ): Partial<FilterOptionsResult> {
+    if (!excludeSet?.size) return result;
+
+    return {
+      series: excludeSet.has('series') ? undefined : result.series,
+      developers: excludeSet.has('developers') ? undefined : result.developers,
+      publishers: excludeSet.has('publishers') ? undefined : result.publishers,
+      playModes: excludeSet.has('playModes') ? undefined : result.playModes,
+      languages: excludeSet.has('languages') ? undefined : result.languages,
+      tags: excludeSet.has('tags') ? undefined : result.tags,
+      platforms: excludeSet.has('platforms') ? undefined : result.platforms,
+      yearRange: excludeSet.has('yearRange') ? undefined : result.yearRange,
+    };
+  }
+
+  /**
+   * Get distinct series names
    * Applies default filters: excludes broken/extreme games
    */
-  getSeriesOptions(): Array<{ name: string; count: number }> {
+  getSeriesOptions(params?: FilterOptionsParams): string[] {
     try {
+      const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'series');
+      conditions.unshift("series IS NOT NULL AND series != ''");
+
       const sql = `
-        SELECT series as name, COUNT(*) as count
+        SELECT DISTINCT series as name
         FROM game
-        WHERE series IS NOT NULL AND series != ''
-          AND (broken = 0 OR broken IS NULL)
-          AND (extreme = 0 OR extreme IS NULL)
-        GROUP BY series
-        ORDER BY count DESC, series ASC
-        LIMIT 100
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY series ASC
       `;
 
-      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
-      return results;
+      const results = DatabaseService.all(sql, queryParams) as Array<{ name: string }>;
+      return results.map((r) => r.name);
     } catch (error) {
       logger.error('Error getting series options:', error);
       return [];
@@ -733,24 +1070,34 @@ export class GameService {
   }
 
   /**
-   * Get distinct developers with game counts
+   * Get distinct developers
    * Applies default filters: excludes broken/extreme games
+   * Developers are semicolon-delimited (e.g., "Studio A; Studio B"), so we split and deduplicate
    */
-  getDeveloperOptions(): Array<{ name: string; count: number }> {
+  getDeveloperOptions(params?: FilterOptionsParams): string[] {
     try {
+      const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'developers');
+      conditions.unshift("developer IS NOT NULL AND developer != ''");
+
       const sql = `
-        SELECT developer as name, COUNT(*) as count
+        SELECT developer
         FROM game
-        WHERE developer IS NOT NULL AND developer != ''
-          AND (broken = 0 OR broken IS NULL)
-          AND (extreme = 0 OR extreme IS NULL)
-        GROUP BY developer
-        ORDER BY count DESC, developer ASC
-        LIMIT 100
+        WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
-      return results;
+      const results = DatabaseService.all(sql, queryParams) as Array<{ developer: string }>;
+
+      // Developers are semicolon-delimited
+      const developerSet = new Set<string>();
+
+      for (const row of results) {
+        for (const dev of row.developer.split(';').map((d) => d.trim()).filter((d) => d)) {
+          developerSet.add(dev);
+        }
+      }
+
+      // Convert to sorted array
+      return [...developerSet].sort((a, b) => a.localeCompare(b));
     } catch (error) {
       logger.error('Error getting developer options:', error);
       return [];
@@ -758,24 +1105,34 @@ export class GameService {
   }
 
   /**
-   * Get distinct publishers with game counts
+   * Get distinct publishers
    * Applies default filters: excludes broken/extreme games
+   * Publishers are semicolon-delimited (e.g., "Publisher A; Publisher B"), so we split and deduplicate
    */
-  getPublisherOptions(): Array<{ name: string; count: number }> {
+  getPublisherOptions(params?: FilterOptionsParams): string[] {
     try {
+      const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'publishers');
+      conditions.unshift("publisher IS NOT NULL AND publisher != ''");
+
       const sql = `
-        SELECT publisher as name, COUNT(*) as count
+        SELECT publisher
         FROM game
-        WHERE publisher IS NOT NULL AND publisher != ''
-          AND (broken = 0 OR broken IS NULL)
-          AND (extreme = 0 OR extreme IS NULL)
-        GROUP BY publisher
-        ORDER BY count DESC, publisher ASC
-        LIMIT 100
+        WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
-      return results;
+      const results = DatabaseService.all(sql, queryParams) as Array<{ publisher: string }>;
+
+      // Publishers are semicolon-delimited
+      const publisherSet = new Set<string>();
+
+      for (const row of results) {
+        for (const pub of row.publisher.split(';').map((p) => p.trim()).filter((p) => p)) {
+          publisherSet.add(pub);
+        }
+      }
+
+      // Convert to sorted array
+      return [...publisherSet].sort((a, b) => a.localeCompare(b));
     } catch (error) {
       logger.error('Error getting publisher options:', error);
       return [];
@@ -783,24 +1140,35 @@ export class GameService {
   }
 
   /**
-   * Get distinct play modes with game counts
+   * Get distinct play modes
    * Applies default filters: excludes broken/extreme games
+   * Play modes are semicolon-delimited (e.g., "Single Player;Multiplayer"), so we split and deduplicate
    */
-  getPlayModeOptions(): Array<{ name: string; count: number }> {
+  getPlayModeOptions(params?: FilterOptionsParams): string[] {
     try {
+      const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'playModes');
+      conditions.unshift("playMode IS NOT NULL AND playMode != ''");
+
       const sql = `
-        SELECT playMode as name, COUNT(*) as count
+        SELECT playMode
         FROM game
-        WHERE playMode IS NOT NULL AND playMode != ''
-          AND (broken = 0 OR broken IS NULL)
-          AND (extreme = 0 OR extreme IS NULL)
-        GROUP BY playMode
-        ORDER BY count DESC, playMode ASC
-        LIMIT 100
+        WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
-      return results;
+      const results = DatabaseService.all(sql, queryParams) as Array<{ playMode: string }>;
+
+      // Play modes are semicolon-delimited (like tags/languages)
+      const playModeSet = new Set<string>();
+
+      for (const row of results) {
+        // Split and add to set (auto-deduplicates)
+        for (const mode of row.playMode.split(';').map((m) => m.trim()).filter((m) => m)) {
+          playModeSet.add(mode);
+        }
+      }
+
+      // Convert to sorted array
+      return [...playModeSet].sort((a, b) => a.localeCompare(b));
     } catch (error) {
       logger.error('Error getting play mode options:', error);
       return [];
@@ -808,24 +1176,46 @@ export class GameService {
   }
 
   /**
-   * Get distinct languages with game counts
+   * Get distinct languages
    * Applies default filters: excludes broken/extreme games
+   * Languages are semicolon-delimited (e.g., "en;jp;ru"), so we split and deduplicate
    */
-  getLanguageOptions(): Array<{ name: string; count: number }> {
+  getLanguageOptions(params?: FilterOptionsParams): string[] {
     try {
+      const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'languages');
+      conditions.unshift("language IS NOT NULL AND language != ''");
+
       const sql = `
-        SELECT language as name, COUNT(*) as count
+        SELECT language
         FROM game
-        WHERE language IS NOT NULL AND language != ''
-          AND (broken = 0 OR broken IS NULL)
-          AND (extreme = 0 OR extreme IS NULL)
-        GROUP BY language
-        ORDER BY count DESC, language ASC
-        LIMIT 100
+        WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
-      return results;
+      const results = DatabaseService.all(sql, queryParams) as Array<{ language: string }>;
+
+      // Languages are semicolon-delimited (like tags)
+      // Normalize using exact same logic as searchGames SQL query:
+      // Remove: space, tab(9), LF(10), VT(11), FF(12), CR(13), then lowercase
+      const languageSet = new Set<string>();
+
+      for (const row of results) {
+        const normalized = row.language
+          .replace(/ /g, '')      // space
+          .replace(/\t/g, '')     // tab (CHAR 9)
+          .replace(/\n/g, '')     // LF (CHAR 10)
+          .replace(/\v/g, '')     // VT (CHAR 11)
+          .replace(/\f/g, '')     // FF (CHAR 12)
+          .replace(/\r/g, '')     // CR (CHAR 13)
+          .toLowerCase();
+
+        // Split and add to set (auto-deduplicates)
+        for (const lang of normalized.split(';').filter((l) => l)) {
+          languageSet.add(lang);
+        }
+      }
+
+      // Convert to sorted array (no limit - languages are short codes)
+      return [...languageSet].sort((a, b) => a.localeCompare(b));
     } catch (error) {
       logger.error('Error getting language options:', error);
       return [];
@@ -833,41 +1223,33 @@ export class GameService {
   }
 
   /**
-   * Get distinct tags with game counts (reusing existing logic from tags route)
+   * Get distinct tags
    * Applies default filters: excludes broken/extreme games
    */
-  getTagOptions(): Array<{ name: string; count: number }> {
+  getTagOptions(params?: FilterOptionsParams): string[] {
     try {
+      const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'tags');
+      conditions.unshift("tagsStr IS NOT NULL AND tagsStr != ''");
+
       const sql = `
-        SELECT DISTINCT tagsStr
+        SELECT tagsStr
         FROM game
-        WHERE tagsStr IS NOT NULL AND tagsStr != ''
-          AND (broken = 0 OR broken IS NULL)
-          AND (extreme = 0 OR extreme IS NULL)
+        WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, []) as Array<{ tagsStr: string }>;
+      const results = DatabaseService.all(sql, queryParams) as Array<{ tagsStr: string }>;
 
       // Tags are semicolon-delimited
-      const tagCounts = new Map<string, number>();
+      const tagSet = new Set<string>();
 
       for (const row of results) {
-        const tags = row.tagsStr
-          .split(';')
-          .map((tag) => tag.trim())
-          .filter((tag) => tag);
-        for (const tag of tags) {
-          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+        for (const tag of row.tagsStr.split(';').map((t) => t.trim()).filter((t) => t)) {
+          tagSet.add(tag);
         }
       }
 
-      // Convert to array and sort
-      const tagOptions = Array.from(tagCounts.entries())
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-        .slice(0, 100); // Limit to top 100
-
-      return tagOptions;
+      // Convert to sorted array (no limit - frontend uses virtualization for large lists)
+      return [...tagSet].sort((a, b) => a.localeCompare(b));
     } catch (error) {
       logger.error('Error getting tag options:', error);
       return [];
@@ -875,32 +1257,24 @@ export class GameService {
   }
 
   /**
-   * Get distinct platforms with game counts
-   * Applies default filters: excludes broken/extreme games
+   * Get distinct platforms
+   * Applies default filters and context-aware filters (except platform itself)
    */
-  getPlatformOptions(): Array<{ name: string; count: number }> {
+  getPlatformOptions(params?: FilterOptionsParams): string[] {
     try {
-      // Query all platforms without Flash SWF filter (fast, no EXISTS)
+      // Use common conditions but exclude platform filter (would defeat the purpose)
+      const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'platforms');
+      conditions.unshift("platformName IS NOT NULL AND platformName != ''");
+
       const sql = `
-        SELECT platformName as name, COUNT(*) as count
+        SELECT DISTINCT platformName as name
         FROM game
-        WHERE platformName IS NOT NULL AND platformName != ''
-          AND (broken = 0 OR broken IS NULL)
-          AND (extreme = 0 OR extreme IS NULL)
-        GROUP BY platformName
+        WHERE ${conditions.join(' AND ')}
         ORDER BY platformName ASC
       `;
 
-      const results = DatabaseService.all(sql, []) as Array<{ name: string; count: number }>;
-
-      // Adjust Flash count using cached SWF game IDs (avoids slow EXISTS subquery)
-      const flashSwfIds = this.getFlashSwfGameIds();
-      const flashIndex = results.findIndex((r) => r.name === 'Flash');
-      if (flashIndex !== -1) {
-        results[flashIndex].count = flashSwfIds.size;
-      }
-
-      return results;
+      const results = DatabaseService.all(sql, queryParams) as Array<{ name: string }>;
+      return results.map((r) => r.name);
     } catch (error) {
       logger.error('Error getting platform options:', error);
       return [];
@@ -911,22 +1285,21 @@ export class GameService {
    * Get year range from release dates
    * Applies default filters: excludes broken/extreme games
    */
-  getYearRange(): { min: number; max: number } {
+  getYearRange(params?: FilterOptionsParams): { min: number; max: number } {
     try {
+      const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'yearRange');
+      conditions.unshift("releaseDate IS NOT NULL AND releaseDate != '' AND LENGTH(releaseDate) >= 4");
+
       const sql = `
         SELECT
           MIN(CAST(SUBSTR(releaseDate, 1, 4) AS INTEGER)) as min,
           MAX(CAST(SUBSTR(releaseDate, 1, 4) AS INTEGER)) as max
         FROM game
-        WHERE releaseDate IS NOT NULL
-          AND releaseDate != ''
-          AND LENGTH(releaseDate) >= 4
-          AND (broken = 0 OR broken IS NULL)
-          AND (extreme = 0 OR extreme IS NULL)
+        WHERE ${conditions.join(' AND ')}
       `;
 
-      const result = DatabaseService.get(sql, []) as { min: number; max: number } | null;
-      return result || { min: 1970, max: new Date().getFullYear() };
+      const result = DatabaseService.get(sql, queryParams) as { min: number; max: number } | null;
+      return result ?? { min: 1970, max: new Date().getFullYear() };
     } catch (error) {
       logger.error('Error getting year range:', error);
       return { min: 1970, max: new Date().getFullYear() };

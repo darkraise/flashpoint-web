@@ -24,35 +24,38 @@ const booleanSchema = z.preprocess((val) => {
 
 const gameIdSchema = z.string().uuid('Invalid game ID format');
 
-const searchQuerySchema = z.object({
+// Schema for POST search requests (arrays in JSON body) - supports complex filter combinations
+const searchBodySchema = z.object({
   search: z.string().optional(),
-  platform: z.string().optional(),
-  series: z.string().optional(),
-  developers: z.string().optional(),
-  publishers: z.string().optional(),
-  playModes: z.string().optional(),
-  languages: z.string().optional(),
+  platforms: z.array(z.string()).optional(),
+  series: z.array(z.string()).optional(),
+  developers: z.array(z.string()).optional(),
+  publishers: z.array(z.string()).optional(),
+  playModes: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(),
   library: z.enum(['arcade', 'theatre']).optional(),
-  tags: z.string().optional(),
-  yearFrom: z.coerce.number().int().min(1970).max(2100).optional(),
-  yearTo: z.coerce.number().int().min(1970).max(2100).optional(),
+  tags: z.array(z.string()).optional(),
+  yearFrom: z.number().int().min(1970).max(2100).optional(),
+  yearTo: z.number().int().min(1970).max(2100).optional(),
   dateAddedSince: z.string().datetime().optional(),
   dateModifiedSince: z.string().datetime().optional(),
   sortBy: z
     .enum(['title', 'releaseDate', 'dateAdded', 'dateModified', 'developer'])
     .default('title'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-  showBroken: booleanSchema.default(false),
-  showExtreme: booleanSchema.default(false),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(50),
+  showBroken: z.boolean().default(false),
+  showExtreme: z.boolean().default(false),
 });
 
-router.get(
+// POST search endpoint - handles complex filter combinations without URL length limits
+router.post(
   '/',
   logActivity('games.search', 'games', (req, res) => {
+    const body = req.body || {};
     const filters = [
-      'platform',
+      'platforms',
       'series',
       'developers',
       'publishers',
@@ -63,38 +66,41 @@ router.get(
       'yearFrom',
       'yearTo',
     ];
-    const activeFilters = filters.filter((f) => req.query[f]).length;
+    const activeFilters = filters.filter((f) => {
+      const val = body[f];
+      return Array.isArray(val) ? val.length > 0 : val !== undefined;
+    }).length;
 
     return {
-      query: req.query.search || null,
+      query: body.search || null,
       filterCount: activeFilters,
       resultCount: res.locals.resultCount || 0,
-      hasSearch: !!req.query.search,
+      hasSearch: !!body.search,
     };
   }),
   asyncHandler(async (req, res) => {
-    const query = searchQuerySchema.parse(req.query);
+    const body = searchBodySchema.parse(req.body);
 
     const result = await GameSearchCache.searchGames({
-      search: query.search,
-      platforms: query.platform?.split(',').filter(Boolean),
-      series: query.series?.split(',').filter(Boolean),
-      developers: query.developers?.split(',').filter(Boolean),
-      publishers: query.publishers?.split(',').filter(Boolean),
-      playModes: query.playModes?.split(',').filter(Boolean),
-      languages: query.languages?.split(',').filter(Boolean),
-      library: query.library,
-      tags: query.tags?.split(',').filter(Boolean),
-      yearFrom: query.yearFrom,
-      yearTo: query.yearTo,
-      dateAddedSince: query.dateAddedSince,
-      dateModifiedSince: query.dateModifiedSince,
-      sortBy: query.sortBy,
-      sortOrder: query.sortOrder,
-      page: query.page,
-      limit: query.limit,
-      showBroken: query.showBroken,
-      showExtreme: query.showExtreme,
+      search: body.search,
+      platforms: body.platforms,
+      series: body.series,
+      developers: body.developers,
+      publishers: body.publishers,
+      playModes: body.playModes,
+      languages: body.languages,
+      library: body.library,
+      tags: body.tags,
+      yearFrom: body.yearFrom,
+      yearTo: body.yearTo,
+      dateAddedSince: body.dateAddedSince,
+      dateModifiedSince: body.dateModifiedSince,
+      sortBy: body.sortBy,
+      sortOrder: body.sortOrder,
+      page: body.page,
+      limit: body.limit,
+      showBroken: body.showBroken,
+      showExtreme: body.showExtreme,
       fields: 'list',
     });
 
@@ -104,10 +110,54 @@ router.get(
   })
 );
 
+const filterOptionsQuerySchema = z.object({
+  platform: z.string().optional(),
+  library: z.enum(['arcade', 'theatre']).optional(),
+  // Context-aware filter params - when set, filter options reflect current selection
+  series: z.string().optional(),
+  developers: z.string().optional(),
+  publishers: z.string().optional(),
+  playModes: z.string().optional(),
+  languages: z.string().optional(),
+  tags: z.string().optional(),
+  yearFrom: z.coerce.number().int().min(1970).max(2100).optional(),
+  yearTo: z.coerce.number().int().min(1970).max(2100).optional(),
+  refresh: booleanSchema.optional(),
+  // Exclude filter types from response (comma-separated: series,developers,publishers,playModes,languages,tags)
+  // Used to skip re-fetching options for already-active filters
+  exclude: z.string().optional(),
+});
+
 router.get(
   '/filter-options',
   asyncHandler(async (req, res) => {
-    const filterOptions = await gameService.getFilterOptions();
+    const query = filterOptionsQuerySchema.parse(req.query);
+
+    // Clear all related caches if refresh requested - ensures filter counts match search results
+    if (query.refresh) {
+      GameService.clearFilterOptionsCache();
+      GameSearchCache.clearCache();
+    }
+
+    // Parse excluded filter types
+    const excludeSet = new Set(query.exclude?.split(',').filter(Boolean) ?? []);
+
+    const filterOptions = await gameService.getFilterOptions(
+      {
+        platform: query.platform,
+        library: query.library,
+        // Pass context filters (comma-separated strings become arrays)
+        series: query.series?.split(',').filter(Boolean),
+        developers: query.developers?.split(',').filter(Boolean),
+        publishers: query.publishers?.split(',').filter(Boolean),
+        playModes: query.playModes?.split(',').filter(Boolean),
+        languages: query.languages?.split(',').filter(Boolean),
+        tags: query.tags?.split(',').filter(Boolean),
+        yearFrom: query.yearFrom,
+        yearTo: query.yearTo,
+      },
+      excludeSet
+    );
     res.json(filterOptions);
   })
 );

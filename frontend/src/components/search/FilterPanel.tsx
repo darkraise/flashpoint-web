@@ -1,65 +1,121 @@
 import { useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Filter, AlertCircle, RefreshCw } from 'lucide-react';
-import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useFilterDropdowns } from '@/hooks/useFilterDropdowns';
 import { FilterDropdown } from './FilterDropdown';
+import { FilterChips, FilterChip } from './FilterChips';
 import { YearRangeFilter } from './YearRangeFilter';
 import { Button } from '@/components/ui/button';
 import { FILTER_CONFIGS } from './filterConfig';
-import type { GameFilters } from '@/types/game';
+import {
+  parseFilterParams,
+  buildFilterSearchParams,
+  FilterUrlParams,
+} from '@/lib/filterUrlCompression';
+import type { GameFilters, FilterOptions } from '@/types/game';
 
 interface FilterPanelProps {
   filters: GameFilters;
+  filterOptions: FilterOptions | undefined;
+  filterOptionsLoading: boolean;
+  filterOptionsError: Error | null;
+  refetchFilterOptions: () => void;
   showPlatformFilter?: boolean;
+  /** Active filter chips to display */
+  filterChips?: FilterChip[];
+  /** Callback when a chip is removed */
+  onRemoveChip?: (chipId: string) => void;
+  /** Callback when removing a group and its children */
+  onRemoveWithChildren?: (categoryOrder: number) => void;
+  /** Callback to clear all filters */
+  onClearAllFilters?: () => void;
 }
 
-export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelProps) {
+export function FilterPanel({
+  filters,
+  filterOptions,
+  filterOptionsLoading,
+  filterOptionsError,
+  refetchFilterOptions,
+  showPlatformFilter = true,
+  filterChips = [],
+  onRemoveChip,
+  onRemoveWithChildren,
+  onClearAllFilters,
+}: FilterPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const dropdowns = useFilterDropdowns();
 
-  const {
-    data: filterOptions,
-    isLoading: filterOptionsLoading,
-    error: filterOptionsError,
-    refetch: refetchFilterOptions,
-  } = useFilterOptions();
+  // Parse current URL params (handles both compressed and legacy)
+  const urlParams = useMemo(() => parseFilterParams(searchParams), [searchParams]);
 
-  const updateFilter = useCallback(
-    (key: string, value: string) => {
-      const newParams = new URLSearchParams(searchParams);
-      if (value) {
-        newParams.set(key, value);
-      } else {
-        newParams.delete(key);
+  // Helper to update filter order when categories are added/removed
+  const getUpdatedFilterOrder = useCallback(
+    (currentFo: string | undefined, categoryName: string, action: 'add' | 'remove'): string | undefined => {
+      const currentOrder = currentFo?.split(',').filter(Boolean) ?? [];
+
+      if (action === 'add' && !currentOrder.includes(categoryName)) {
+        currentOrder.push(categoryName);
+        return currentOrder.join(',');
+      } else if (action === 'remove') {
+        const idx = currentOrder.indexOf(categoryName);
+        if (idx !== -1) {
+          const newOrder = currentOrder.slice(0, idx);
+          return newOrder.length > 0 ? newOrder.join(',') : undefined;
+        }
       }
-      newParams.delete('page'); // Reset to page 1
-      setSearchParams(newParams);
+      return currentFo;
     },
-    [searchParams, setSearchParams]
+    []
   );
 
   // Memoize handlers for all filter configs to avoid recreation on every render
   const filterHandlers = useMemo(() => {
     const handlers: Record<
       string,
-      { toggle: (value: string) => void; clear: () => void }
+      { apply: (values: string[]) => void; clear: () => void }
     > = {};
 
     FILTER_CONFIGS.forEach((config) => {
       handlers[config.id] = {
-        toggle: (value: string) => {
+        // Apply receives the full array of selected values at once
+        apply: (values: string[]) => {
           const currentValue = filters[config.paramKey];
           const current =
             typeof currentValue === 'string' ? currentValue.split(',').filter(Boolean) : [];
-          const updated = current.includes(value)
-            ? current.filter((v: string) => v !== value)
-            : [...current, value];
-          updateFilter(config.paramKey, updated.join(','));
+          const hadValues = current.length > 0;
+          const hasValues = values.length > 0;
+
+          let newFo = urlParams.fo;
+
+          // Update filter order based on whether category now has values
+          if (!hadValues && hasValues) {
+            newFo = getUpdatedFilterOrder(urlParams.fo, config.categoryName, 'add');
+          } else if (hadValues && !hasValues) {
+            newFo = getUpdatedFilterOrder(urlParams.fo, config.categoryName, 'remove');
+          }
+
+          const newParams: FilterUrlParams = {
+            ...urlParams,
+            [config.paramKey]: hasValues ? values.join(',') : undefined,
+            fo: newFo,
+            page: undefined, // Reset to page 1
+          };
+
+          setSearchParams(buildFilterSearchParams(newParams));
         },
         clear: () => {
-          updateFilter(config.paramKey, '');
+          const newFo = getUpdatedFilterOrder(urlParams.fo, config.categoryName, 'remove');
+
+          const newParams: FilterUrlParams = {
+            ...urlParams,
+            [config.paramKey]: undefined,
+            fo: newFo,
+            page: undefined,
+          };
+
+          setSearchParams(buildFilterSearchParams(newParams));
           dropdowns.setOpen(`${config.id}-desktop`, false);
           dropdowns.setOpen(`${config.id}-mobile`, false);
         },
@@ -67,7 +123,7 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
     });
 
     return handlers;
-  }, [filters, updateFilter, dropdowns]);
+  }, [filters, urlParams, setSearchParams, dropdowns, getUpdatedFilterOrder]);
 
   // Get visible filter configs based on showPlatformFilter prop
   const visibleConfigs = useMemo(
@@ -78,24 +134,30 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
   // Handle year range changes
   const handleYearChange = useCallback(
     (yearFrom: number | undefined, yearTo: number | undefined) => {
-      const newParams = new URLSearchParams(searchParams);
+      // Check if year filter existed before
+      const hadYearFilter = urlParams.yearFrom !== undefined || urlParams.yearTo !== undefined;
+      const hasYearFilter = yearFrom !== undefined || yearTo !== undefined;
 
-      if (yearFrom !== undefined) {
-        newParams.set('yearFrom', yearFrom.toString());
-      } else {
-        newParams.delete('yearFrom');
+      let newFo = urlParams.fo;
+
+      // Update filter order
+      if (!hadYearFilter && hasYearFilter) {
+        newFo = getUpdatedFilterOrder(urlParams.fo, 'Year', 'add');
+      } else if (hadYearFilter && !hasYearFilter) {
+        newFo = getUpdatedFilterOrder(urlParams.fo, 'Year', 'remove');
       }
 
-      if (yearTo !== undefined) {
-        newParams.set('yearTo', yearTo.toString());
-      } else {
-        newParams.delete('yearTo');
-      }
+      const newParams: FilterUrlParams = {
+        ...urlParams,
+        yearFrom,
+        yearTo,
+        fo: newFo,
+        page: undefined, // Reset to page 1
+      };
 
-      newParams.delete('page'); // Reset to page 1
-      setSearchParams(newParams);
+      setSearchParams(buildFilterSearchParams(newParams));
     },
-    [searchParams, setSearchParams]
+    [urlParams, setSearchParams, getUpdatedFilterOrder]
   );
 
   /**
@@ -122,9 +184,9 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
             selectedValues={selectedValues}
             isOpen={dropdowns.isOpen(`${config.id}-${suffix}`)}
             onOpenChange={(open) => dropdowns.setOpen(`${config.id}-${suffix}`, open)}
-            onToggle={handlers.toggle}
+            onApply={handlers.apply}
             onClear={handlers.clear}
-            placeholder={config.placeholder}
+            placeholder={config.placeholder ?? config.label}
             emptyMessage={filterOptionsLoading ? 'Loading...' : config.emptyMessage}
             compact={isMobile}
           />
@@ -182,6 +244,16 @@ export function FilterPanel({ filters, showPlatformFilter = true }: FilterPanelP
               compact
             />
           </div>
+
+          {/* Active Filter Chips */}
+          {filterChips.length > 0 && onRemoveChip ? (
+            <FilterChips
+              chips={filterChips}
+              onRemove={onRemoveChip}
+              onRemoveWithChildren={onRemoveWithChildren}
+              onClearAll={onClearAllFilters}
+            />
+          ) : null}
         </div>
       )}
     </fieldset>
