@@ -22,6 +22,7 @@ import {
   getSectionFromPath,
   DEFAULT_BREADCRUMB_CONTEXT,
 } from '@/lib/sectionRoutes';
+import { buildFilterSearchParams } from '@/lib/filterUrlCompression';
 
 export function GameDetailView() {
   const { id } = useParams<{ id: string }>();
@@ -410,11 +411,20 @@ export function GameDetailView() {
             <div>
               <h2 className="text-lg font-semibold mb-2">Tags</h2>
               <div className="flex flex-wrap gap-2">
-                {game.tagsStr.split(';').map((tag) => (
-                  <Badge key={tag.trim()} variant="tag">
-                    {tag.trim()}
-                  </Badge>
-                ))}
+                {game.tagsStr.split(';').map((tag) => {
+                  const trimmedTag = tag.trim();
+                  const tagUrl = `/browse?${buildFilterSearchParams({ tags: trimmedTag, fo: 'Tag' }).toString()}`;
+                  return (
+                    <Link key={trimmedTag} to={tagUrl}>
+                      <Badge
+                        variant="tag"
+                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                      >
+                        {trimmedTag}
+                      </Badge>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           ) : null}

@@ -66,13 +66,13 @@ export interface GameFilters {
 }
 
 export interface FilterOptions {
-  series: Array<{ name: string; count: number }>;
-  developers: Array<{ name: string; count: number }>;
-  publishers: Array<{ name: string; count: number }>;
-  playModes: Array<{ name: string; count: number }>;
-  languages: Array<{ name: string; count: number }>;
-  tags: Array<{ name: string; count: number }>;
-  platforms: Array<{ name: string; count: number }>;
+  series: string[];
+  developers: string[];
+  publishers: string[];
+  playModes: string[];
+  languages: string[];
+  tags: string[];
+  platforms: string[];
   yearRange: { min: number; max: number };
 }
 

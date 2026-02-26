@@ -1,7 +1,36 @@
+import { Link } from 'react-router-dom';
 import { Game, GameLaunchData } from '@/types/game';
 import { PlatformIcon } from '@/components/ui/platform-icon';
 import { formatDate, formatReleaseDate } from '@/lib/date-utils';
+import { buildFilterSearchParams, FilterUrlParams } from '@/lib/filterUrlCompression';
 import { ExternalLink } from 'lucide-react';
+
+/**
+ * Create a link to browse page with a filter applied
+ */
+function FilterLink({
+  value,
+  paramKey,
+  categoryName,
+  children,
+}: {
+  value: string;
+  paramKey: keyof FilterUrlParams;
+  categoryName: string;
+  children: React.ReactNode;
+}) {
+  const params: FilterUrlParams = { [paramKey]: value, fo: categoryName };
+  const url = `/browse?${buildFilterSearchParams(params).toString()}`;
+
+  return (
+    <Link
+      to={url}
+      className="text-primary hover:text-primary/80 hover:underline transition-colors"
+    >
+      {children}
+    </Link>
+  );
+}
 
 interface GameInfoGridProps {
   game: Game;
@@ -37,14 +66,26 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Developer</dt>
         <dd className="font-medium text-sm">
-          {game.developer || <span className="text-muted-foreground">Unknown</span>}
+          {game.developer ? (
+            <FilterLink value={game.developer} paramKey="developers" categoryName="Developer">
+              {game.developer}
+            </FilterLink>
+          ) : (
+            <span className="text-muted-foreground">Unknown</span>
+          )}
         </dd>
       </div>
 
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Publisher</dt>
         <dd className="font-medium text-sm">
-          {game.publisher || <span className="text-muted-foreground">Unknown</span>}
+          {game.publisher ? (
+            <FilterLink value={game.publisher} paramKey="publishers" categoryName="Publisher">
+              {game.publisher}
+            </FilterLink>
+          ) : (
+            <span className="text-muted-foreground">Unknown</span>
+          )}
         </dd>
       </div>
 
@@ -74,7 +115,15 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Play Mode</dt>
         <dd className="font-medium text-sm">
-          {game.playMode || launchData?.playMode || (
+          {game.playMode || launchData?.playMode ? (
+            <FilterLink
+              value={game.playMode || launchData?.playMode || ''}
+              paramKey="playModes"
+              categoryName="Play Mode"
+            >
+              {game.playMode || launchData?.playMode}
+            </FilterLink>
+          ) : (
             <span className="text-muted-foreground">Unknown</span>
           )}
         </dd>
@@ -97,14 +146,26 @@ export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Series</dt>
         <dd className="font-medium text-sm">
-          {game.series || <span className="text-muted-foreground">Unknown</span>}
+          {game.series ? (
+            <FilterLink value={game.series} paramKey="series" categoryName="Series">
+              {game.series}
+            </FilterLink>
+          ) : (
+            <span className="text-muted-foreground">Unknown</span>
+          )}
         </dd>
       </div>
 
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Language</dt>
         <dd className="font-medium text-sm">
-          {game.language || <span className="text-muted-foreground">Unknown</span>}
+          {game.language ? (
+            <FilterLink value={game.language} paramKey="languages" categoryName="Language">
+              {game.language}
+            </FilterLink>
+          ) : (
+            <span className="text-muted-foreground">Unknown</span>
+          )}
         </dd>
       </div>
 

@@ -1,6 +1,8 @@
-import { useMemo, ReactNode, useCallback } from 'react';
+import { useMemo, ReactNode, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useGames } from '@/hooks/useGames';
+import { useFilterOptions, FilterOptionsParams } from '@/hooks/useFilterOptions';
+import { useDebounce } from '@/hooks/useDebounce';
 import { useFavoriteGameIds } from '@/hooks/useFavorites';
 import { GameGrid } from './GameGrid';
 import { GameList } from './GameList';
@@ -8,13 +10,19 @@ import { GameGridSkeleton } from './GameGridSkeleton';
 import { GameListSkeleton } from './GameListSkeleton';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { SortControls } from '@/components/search/SortControls';
-import { FilterChips, FilterChip } from '@/components/search/FilterChips';
+import type { FilterChip } from '@/components/search/FilterChips';
 import { ViewOptions } from '@/components/common/ViewOptions';
 import { PaginationWithInfo } from '@/components/ui/pagination';
 import { useUIStore } from '@/store/ui';
 import { useAuthStore } from '@/store/auth';
 import { GameFilters } from '@/types/game';
 import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
+import {
+  parseFilterParams,
+  buildFilterSearchParams,
+  hasLegacyParams,
+  FilterUrlParams,
+} from '@/lib/filterUrlCompression';
 
 interface GameBrowseLayoutProps {
   title: string;
@@ -37,6 +45,7 @@ export function GameBrowseLayout({
   const [searchParams, setSearchParams] = useSearchParams();
   const viewMode = useUIStore((state) => state.viewMode);
   const { isAuthenticated } = useAuthStore();
+  const hasMigrated = useRef(false);
 
   const { data: favoriteGameIdsArray } = useFavoriteGameIds();
   const favoriteGameIds = useMemo(
@@ -44,36 +53,69 @@ export function GameBrowseLayout({
     [favoriteGameIdsArray]
   );
 
+  // Parse URL params (handles both compressed and legacy formats)
+  const urlParams = useMemo(() => parseFilterParams(searchParams), [searchParams]);
+
+  // Migrate legacy params to compressed format on first load
+  useEffect(() => {
+    if (!hasMigrated.current && hasLegacyParams(searchParams)) {
+      hasMigrated.current = true;
+      const parsed = parseFilterParams(searchParams);
+      const compressed = buildFilterSearchParams(parsed);
+      setSearchParams(compressed, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const filters: GameFilters = useMemo(
     () => ({
-      search: searchParams.get('search') || undefined,
-      platform: searchParams.get('platform') || platform || undefined,
-      series: searchParams.get('series') || undefined,
-      developers: searchParams.get('developers') || undefined,
-      publishers: searchParams.get('publishers') || undefined,
-      playModes: searchParams.get('playModes') || undefined,
-      languages: searchParams.get('languages') || undefined,
+      search: urlParams.search,
+      platform: urlParams.platform ?? platform,
+      series: urlParams.series,
+      developers: urlParams.developers,
+      publishers: urlParams.publishers,
+      playModes: urlParams.playModes,
+      languages: urlParams.languages,
       library,
-      tags: searchParams.get('tags') || undefined,
-      yearFrom: (() => {
-        const raw = searchParams.get('yearFrom');
-        if (!raw) return undefined;
-        const parsed = parseInt(raw, 10);
-        return isNaN(parsed) ? undefined : parsed;
-      })(),
-      yearTo: (() => {
-        const raw = searchParams.get('yearTo');
-        if (!raw) return undefined;
-        const parsed = parseInt(raw, 10);
-        return isNaN(parsed) ? undefined : parsed;
-      })(),
-      sortBy: searchParams.get('sortBy') || 'title',
-      sortOrder: (searchParams.get('sortOrder') || 'asc') as 'asc' | 'desc',
-      page: parseInt(searchParams.get('page') || '1', 10),
+      tags: urlParams.tags,
+      yearFrom: urlParams.yearFrom,
+      yearTo: urlParams.yearTo,
+      sortBy: urlParams.sortBy ?? 'title',
+      sortOrder: (urlParams.sortOrder as 'asc' | 'desc') ?? 'asc',
+      page: urlParams.page ?? 1,
       limit: 50,
     }),
-    [searchParams, platform, library]
+    [urlParams, platform, library]
   );
+
+  // Memoize filter options params for context-aware filter options
+  // When a filter is applied, other filter options update to show only relevant values
+  const filterOptionsParams = useMemo<FilterOptionsParams>(
+    () => ({
+      platform: filters.platform,
+      library: filters.library,
+      // Pass current filter selections for context-aware options
+      series: filters.series?.split(',').filter(Boolean),
+      developers: filters.developers?.split(',').filter(Boolean),
+      publishers: filters.publishers?.split(',').filter(Boolean),
+      playModes: filters.playModes?.split(',').filter(Boolean),
+      languages: filters.languages?.split(',').filter(Boolean),
+      tags: filters.tags?.split(',').filter(Boolean),
+      yearFrom: filters.yearFrom,
+      yearTo: filters.yearTo,
+    }),
+    [filters]
+  );
+
+  // Debounce filter options params by 300ms to reduce API calls during rapid filter changes
+  const debouncedFilterOptionsParams = useDebounce(filterOptionsParams, 300);
+
+  // Fetch filter options at page level - context-aware based on current selections
+  const {
+    data: filterOptions,
+    isLoading: filterOptionsLoading,
+    error: filterOptionsError,
+    refetch: refetchFilterOptions,
+  } = useFilterOptions(debouncedFilterOptionsParams);
 
   const pageTitle = useMemo(() => {
     const parts: string[] = [];
@@ -107,8 +149,24 @@ export function GameBrowseLayout({
 
   const { data, isLoading, error } = useGames(filters);
 
+  // Get filter application order from URL (tracks the order categories were added)
+  // Format: "Series,Language,Tag" - first added is leftmost (parent)
+  const filterOrder = useMemo(
+    () => (urlParams.fo ? urlParams.fo.split(',').filter(Boolean) : []),
+    [urlParams.fo]
+  );
+
   const filterChips = useMemo(() => {
     const chips: FilterChip[] = [];
+
+    // Build a map of category -> order based on filterOrder array
+    const orderMap = new Map<string, number>();
+    filterOrder.forEach((cat, idx) => {
+      orderMap.set(cat, idx);
+    });
+
+    // Helper to get order for a category (use high number if not in order list)
+    const getOrder = (category: string) => orderMap.get(category) ?? 999;
 
     if (filters.search) {
       chips.push({
@@ -116,6 +174,7 @@ export function GameBrowseLayout({
         label: 'Search',
         value: filters.search,
         category: 'Search',
+        order: getOrder('Search'),
       });
     }
 
@@ -125,99 +184,148 @@ export function GameBrowseLayout({
         label: 'Platform',
         value: filters.platform,
         category: 'Platform',
+        order: getOrder('Platform'),
       });
     }
 
     if (filters.series) {
+      const order = getOrder('Series');
       filters.series.split(',').forEach((series) => {
         chips.push({
           id: `series-${encodeURIComponent(series.trim())}`,
           label: 'Series',
           value: series,
           category: 'Series',
+          order,
         });
       });
     }
 
     if (filters.developers) {
+      const order = getOrder('Developer');
       filters.developers.split(',').forEach((dev) => {
         chips.push({
           id: `developers-${encodeURIComponent(dev.trim())}`,
           label: 'Developer',
           value: dev,
           category: 'Developer',
+          order,
         });
       });
     }
 
     if (filters.publishers) {
+      const order = getOrder('Publisher');
       filters.publishers.split(',').forEach((pub) => {
         chips.push({
           id: `publishers-${encodeURIComponent(pub.trim())}`,
           label: 'Publisher',
           value: pub,
           category: 'Publisher',
+          order,
         });
       });
     }
 
     if (filters.playModes) {
+      const order = getOrder('Play Mode');
       filters.playModes.split(',').forEach((mode) => {
         chips.push({
           id: `playModes-${encodeURIComponent(mode.trim())}`,
           label: 'Play Mode',
           value: mode,
           category: 'Play Mode',
+          order,
         });
       });
     }
 
     if (filters.languages) {
+      const order = getOrder('Language');
       filters.languages.split(',').forEach((lang) => {
         chips.push({
           id: `languages-${encodeURIComponent(lang.trim())}`,
           label: 'Language',
           value: lang,
           category: 'Language',
+          order,
         });
       });
     }
 
     if (filters.tags) {
+      const order = getOrder('Tag');
       filters.tags.split(',').forEach((tag) => {
         chips.push({
           id: `tags-${encodeURIComponent(tag.trim())}`,
           label: 'Tag',
           value: tag,
           category: 'Tag',
+          order,
         });
       });
     }
 
-    return chips;
-  }, [filters, platform]);
+    // Year range filters
+    if (filters.yearFrom !== undefined || filters.yearTo !== undefined) {
+      const yearValue =
+        filters.yearFrom !== undefined && filters.yearTo !== undefined
+          ? `${filters.yearFrom} - ${filters.yearTo}`
+          : filters.yearFrom !== undefined
+            ? `From ${filters.yearFrom}`
+            : `To ${filters.yearTo}`;
+
+      chips.push({
+        id: 'yearRange',
+        label: 'Year',
+        value: yearValue,
+        category: 'Year',
+        order: getOrder('Year'),
+      });
+    }
+
+    // Sort chips by order to maintain hierarchy (application order)
+    return chips.sort((a, b) => a.order - b.order);
+  }, [filters, platform, filterOrder]);
+
+  // Helper to get updated filter order
+  const getUpdatedFilterOrder = useCallback(
+    (currentFo: string | undefined, categoriesToRemove: string[]): string | undefined => {
+      const currentOrder = currentFo?.split(',').filter(Boolean) ?? [];
+      const newOrder = currentOrder.filter((cat) => !categoriesToRemove.includes(cat));
+      return newOrder.length > 0 ? newOrder.join(',') : undefined;
+    },
+    []
+  );
 
   const handleRemoveChip = useCallback(
     (chipId: string) => {
-      const newParams = new URLSearchParams(searchParams);
+      const newParams: FilterUrlParams = { ...urlParams, page: undefined };
+      let categoryRemoved: string | null = null;
 
       if (chipId === 'search') {
-        newParams.delete('search');
+        newParams.search = undefined;
+        categoryRemoved = 'Search';
       } else if (chipId === 'platform') {
-        newParams.delete('platform');
+        newParams.platform = undefined;
+        categoryRemoved = 'Platform';
+      } else if (chipId === 'yearRange') {
+        newParams.yearFrom = undefined;
+        newParams.yearTo = undefined;
+        categoryRemoved = 'Year';
       } else {
-        const paramMap: Record<string, { param: string; value: string | undefined }> = {
-          'series-': { param: 'series', value: filters.series },
-          'developers-': { param: 'developers', value: filters.developers },
-          'publishers-': { param: 'publishers', value: filters.publishers },
-          'playModes-': { param: 'playModes', value: filters.playModes },
-          'languages-': { param: 'languages', value: filters.languages },
-          'tags-': { param: 'tags', value: filters.tags },
+        const paramMap: Record<string, { param: keyof FilterUrlParams; value: string | undefined; category: string }> = {
+          'series-': { param: 'series', value: filters.series, category: 'Series' },
+          'developers-': { param: 'developers', value: filters.developers, category: 'Developer' },
+          'publishers-': { param: 'publishers', value: filters.publishers, category: 'Publisher' },
+          'playModes-': { param: 'playModes', value: filters.playModes, category: 'Play Mode' },
+          'languages-': { param: 'languages', value: filters.languages, category: 'Language' },
+          'tags-': { param: 'tags', value: filters.tags, category: 'Tag' },
         };
 
         const prefix = Object.keys(paramMap).find((p) => chipId.startsWith(p));
         if (prefix) {
-          const { param, value } = paramMap[prefix];
+          const { param, value, category } = paramMap[prefix];
           const decodedValue = decodeURIComponent(chipId.replace(prefix, ''));
           const remaining = value
             ?.split(',')
@@ -225,45 +333,85 @@ export function GameBrowseLayout({
             .join(',');
 
           if (remaining) {
-            newParams.set(param, remaining);
+            (newParams as Record<string, unknown>)[param] = remaining;
           } else {
-            newParams.delete(param);
+            (newParams as Record<string, unknown>)[param] = undefined;
+            categoryRemoved = category;
           }
         }
       }
 
-      newParams.delete('page'); // Reset to page 1
-      setSearchParams(newParams);
+      // Update filter order if a category was completely removed
+      if (categoryRemoved) {
+        newParams.fo = getUpdatedFilterOrder(urlParams.fo, [categoryRemoved]);
+      }
+
+      setSearchParams(buildFilterSearchParams(newParams));
     },
-    [searchParams, filters, setSearchParams]
+    [urlParams, filters, setSearchParams, getUpdatedFilterOrder]
+  );
+
+  // Remove all filters at or after a certain order position (for tree hierarchy)
+  const handleRemoveWithChildren = useCallback(
+    (categoryOrder: number) => {
+      // Get categories to remove (all at or after the given order)
+      const categoriesToRemove = filterOrder.slice(categoryOrder);
+
+      // Map category to param keys
+      const categoryToParamKeys: Record<string, (keyof FilterUrlParams)[]> = {
+        Search: ['search'],
+        Platform: ['platform'],
+        Series: ['series'],
+        Developer: ['developers'],
+        Publisher: ['publishers'],
+        'Play Mode': ['playModes'],
+        Language: ['languages'],
+        Tag: ['tags'],
+        Year: ['yearFrom', 'yearTo'],
+      };
+
+      const newParams: FilterUrlParams = { ...urlParams, page: undefined };
+
+      // Clear all params for categories being removed
+      for (const category of categoriesToRemove) {
+        const paramKeys = categoryToParamKeys[category];
+        if (paramKeys) {
+          paramKeys.forEach((key) => {
+            (newParams as Record<string, unknown>)[key] = undefined;
+          });
+        }
+      }
+
+      // Update filter order - keep only categories before the removed one
+      newParams.fo = getUpdatedFilterOrder(urlParams.fo, categoriesToRemove);
+
+      setSearchParams(buildFilterSearchParams(newParams));
+    },
+    [urlParams, setSearchParams, filterOrder, getUpdatedFilterOrder]
   );
 
   const handleClearAllFilters = useCallback(() => {
-    const newParams = new URLSearchParams();
-    const sortBy = searchParams.get('sortBy');
-    const sortOrder = searchParams.get('sortOrder');
-    if (sortBy) newParams.set('sortBy', sortBy);
-    if (sortOrder) newParams.set('sortOrder', sortOrder);
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
+    const newParams: FilterUrlParams = {
+      sortBy: urlParams.sortBy,
+      sortOrder: urlParams.sortOrder,
+    };
+    setSearchParams(buildFilterSearchParams(newParams));
+  }, [urlParams.sortBy, urlParams.sortOrder, setSearchParams]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.set('page', newPage.toString());
-      setSearchParams(newParams);
+      const newParams: FilterUrlParams = { ...urlParams, page: newPage };
+      setSearchParams(buildFilterSearchParams(newParams));
     },
-    [searchParams, setSearchParams]
+    [urlParams, setSearchParams]
   );
 
   const handleSortChange = useCallback(
     (key: 'sortBy' | 'sortOrder', value: string) => {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.set(key, value);
-      newParams.delete('page'); // Reset to page 1
-      setSearchParams(newParams);
+      const newParams: FilterUrlParams = { ...urlParams, [key]: value, page: undefined };
+      setSearchParams(buildFilterSearchParams(newParams));
     },
-    [searchParams, setSearchParams]
+    [urlParams, setSearchParams]
   );
 
   return (
@@ -292,16 +440,19 @@ export function GameBrowseLayout({
       </div>
 
       <div className="bg-card rounded-lg p-4 border border-border relative">
-        <FilterPanel filters={filters} showPlatformFilter={!platform} />
-      </div>
-
-      {filterChips.length > 0 ? (
-        <FilterChips
-          chips={filterChips}
-          onRemove={handleRemoveChip}
-          onClearAll={handleClearAllFilters}
+        <FilterPanel
+          filters={filters}
+          filterOptions={filterOptions}
+          filterOptionsLoading={filterOptionsLoading}
+          filterOptionsError={filterOptionsError}
+          refetchFilterOptions={refetchFilterOptions}
+          showPlatformFilter={!platform}
+          filterChips={filterChips}
+          onRemoveChip={handleRemoveChip}
+          onRemoveWithChildren={handleRemoveWithChildren}
+          onClearAllFilters={handleClearAllFilters}
         />
-      ) : null}
+      </div>
 
       {error ? (
         <div className="bg-destructive/10 border border-destructive rounded-lg p-4 text-destructive">
