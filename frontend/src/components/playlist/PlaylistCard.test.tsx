@@ -118,7 +118,7 @@ describe('PlaylistCard', () => {
 
       // The icon link's accessible name is "Icon: star 5 games" (from mock + badge content)
       const iconLink = screen.getByRole('link', { name: /icon: star 5 games/i });
-      expect(iconLink).toHaveAttribute('href', '/playlists/playlist-1');
+      expect(iconLink).toHaveAttribute('href', '/playlists/1');
     });
 
     it('should link to playlist detail page from content', () => {
@@ -126,7 +126,7 @@ describe('PlaylistCard', () => {
 
       const titleElement = screen.getByText('Test Playlist');
       const contentLink = titleElement.closest('a');
-      expect(contentLink).toHaveAttribute('href', '/playlists/playlist-1');
+      expect(contentLink).toHaveAttribute('href', '/playlists/1');
     });
   });
 

@@ -1175,6 +1175,48 @@ Before submitting code, verify:
 - [ ] Forms reset on dialog close
 - [ ] Loading and error states handled
 - [ ] Prettier and typecheck pass
+- [ ] **All tests pass** (see Testing Requirements below)
+
+---
+
+## Testing Requirements (MANDATORY)
+
+**All tests must pass when updating or adding new features/functions.**
+
+### Before Completing Any Code Change
+
+1. Run all tests to verify nothing is broken:
+   ```bash
+   cd backend && npm test      # Backend tests
+   cd frontend && npm test     # Frontend tests
+   ```
+
+2. **If your changes cause existing tests to fail:**
+   - **DO NOT** modify tests to make them pass without asking
+   - **DO NOT** delete or skip failing tests
+   - **ASK THE USER** for instructions on how to proceed
+   - Explain which tests are failing and why
+
+3. **When adding new functionality:**
+   - Add corresponding unit tests for new code
+   - Ensure new tests follow existing patterns in the codebase
+   - Test edge cases and error conditions
+
+### Test Commands
+
+```bash
+# Run all tests
+cd backend && npm test
+cd frontend && npm test
+
+# Run specific test file
+cd backend && npm test -- src/services/AuthService.test.ts
+cd frontend && npm test -- src/hooks/useAuth.test.tsx
+
+# Run tests with coverage
+cd backend && npm test -- --coverage
+cd frontend && npm test -- --coverage
+```
 
 ---
 
@@ -1183,7 +1225,7 @@ Before submitting code, verify:
 1. **Run Prettier**: `npx prettier --write <files>`
 2. **Run typecheck**: `npm run typecheck`
 3. **Run build**: `npm run build`
-4. **Run tests**: `npm test` (if applicable)
+4. **Run tests**: `npm test` — **ALL TESTS MUST PASS**
 5. Ask user if docs need updating
 
 ---

@@ -84,6 +84,17 @@ export const handlers = [
     });
   }),
 
+  // POST search endpoint (used by gamesApi.search)
+  http.post(`/api/games`, () => {
+    return HttpResponse.json({
+      data: [mockGame],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    });
+  }),
+
   // Static routes MUST come before parameterized routes
   http.get(`/api/games/random`, () => {
     return HttpResponse.json(mockGame);
