@@ -4,28 +4,29 @@ Configuration reference for all Flashpoint Web services.
 
 ## Backend Variables
 
-Location: `backend/.env`
+Location: `backend/.env` (local development)
 
 **Server:**
 
-| Variable   | Default     | Description                                     |
-| ---------- | ----------- | ----------------------------------------------- |
-| `NODE_ENV` | development | Environment: development, production, test      |
-| `PORT`     | 3100        | HTTP server port                                |
-| `HOST`     | 0.0.0.0     | Bind address (use 127.0.0.1 for localhost only) |
+| Variable   | Default     | Description                                |
+| ---------- | ----------- | ------------------------------------------ |
+| `NODE_ENV` | development | Environment: development, production, test |
 
-**Paths (only set FLASHPOINT_PATH):**
+> **Note:** Port (3100) and bind address (0.0.0.0) are hardcoded in the backend.
+> In Docker, use `API_PORT` to map a different host port to the container.
 
-| Variable          | Description                                                                                                            |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `FLASHPOINT_PATH` | Root Flashpoint directory. All other paths auto-derived. Edition (Infinity/Ultimate) auto-detected from `version.txt`. |
+**Paths:**
 
+| Variable               | Default                                     | Description                                                                                                            |
+| ---------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `FLASHPOINT_PATH`      | `D:/Flashpoint` (dev), `/data/flashpoint` (prod) | Root Flashpoint directory. All other paths auto-derived. Edition (Infinity/Ultimate) auto-detected from `version.txt`. |
+| `FLASHPOINT_GAMES_PATH`| `<FLASHPOINT_PATH>/Data/Games`              | Override game ZIP directory (rarely needed).                                                                           |
 
 **Authentication & Security:**
 
 | Variable             | Default               | Description                                          |
 | -------------------- | --------------------- | ---------------------------------------------------- |
-| `JWT_SECRET`         | INSECURE-...          | Secret for JWT signing (CHANGE IN PRODUCTION!)       |
+| `JWT_SECRET`         | auto-generated (dev)  | Secret for JWT signing (**required in production**)  |
 | `JWT_EXPIRES_IN`     | 1h                    | Access token expiration (15m, 1h, 7d, etc.)          |
 | `BCRYPT_SALT_ROUNDS` | 10                    | Password hash cost (higher = more secure but slower) |
 | `DOMAIN`             | http://localhost:5173 | CORS origin (use specific domain in production)      |
@@ -45,11 +46,39 @@ openssl rand -hex 64
 
 **Logging:**
 
-| Variable    | Default | Description                     |
-| ----------- | ------- | ------------------------------- |
-| `LOG_LEVEL` | info    | Level: error, warn, info, debug |
-| `LOG_FILE`  | -       | Optional log file path          |
+| Variable    | Default                        | Description                                  |
+| ----------- | ------------------------------ | -------------------------------------------- |
+| `LOG_LEVEL` | info                           | Level: error, warn, info, debug              |
+| `LOG_FILE`  | `/app/logs/backend.log` (prod) | Log file path (unset in dev = stdout only)   |
 
+**Database Performance:**
+
+| Variable              | Default     | Description                                                      |
+| --------------------- | ----------- | ---------------------------------------------------------------- |
+| `ENABLE_LOCAL_DB_COPY`| false       | Copy flashpoint.sqlite locally (for network storage SMB/NFS)    |
+| `SQLITE_CACHE_SIZE`   | -64000      | SQLite page cache size (negative = KB, -64000 = 64MB)           |
+| `SQLITE_MMAP_SIZE`    | 268435456   | Memory-mapped I/O size in bytes (256MB)                          |
+| `ENABLE_CACHE_PREWARM`| true        | Pre-load common queries on startup                               |
+
+**Game Content Serving:**
+
+| Variable             | Default | Description                                      |
+| -------------------- | ------- | ------------------------------------------------ |
+| `ENABLE_CGI`         | false   | Enable PHP CGI execution for legacy game content |
+| `HOME_RECENT_HOURS`  | 24      | Hours to look back for "recently added" games    |
+
+**OpenTelemetry:**
+
+| Variable                       | Default                    | Description                              |
+| ------------------------------ | -------------------------- | ---------------------------------------- |
+| `OTEL_ENABLED`                 | false                      | Enable distributed tracing and metrics   |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | http://localhost:4318      | OTLP collector endpoint                  |
+| `OTEL_API_KEY`                 | -                          | API key for authentication               |
+| `OTEL_SERVICE_NAME`            | flashpoint-web-backend     | Service name in traces/metrics           |
+| `OTEL_TRACES_ENABLED`         | true                       | Enable trace export (when OTEL enabled)  |
+| `OTEL_METRICS_ENABLED`        | true                       | Enable metrics export (when OTEL enabled)|
+| `OTEL_METRICS_EXPORT_INTERVAL`| 60000                      | Metrics export interval (ms)             |
+| `OTEL_LOG_LEVEL`              | info                       | OTEL SDK log level                       |
 
 ## Frontend Variables
 
@@ -57,33 +86,46 @@ The frontend has no environment variables in development or production. API
 calls are proxied through the backend.
 
 - **Development**: Via Vite proxy to `http://localhost:3100`
-- **Production**: Via Nginx or reverse proxy
+- **Production**: Via Nginx reverse proxy (configured by `BACKEND_HOST`/`BACKEND_PORT`)
 
 ## Docker Environment Variables
 
-Location: `.env` in project root
+Location: `.env` in project root (used by docker-compose)
 
-**Core Configuration:**
+**Required:**
 
-| Variable               | Default       | Description                          |
-| ---------------------- | ------------- | ------------------------------------ |
-| `FLASHPOINT_HOST_PATH` | D:/Flashpoint | Host path to Flashpoint installation |
-| `NODE_ENV`             | production    | Environment for all services         |
-| `JWT_SECRET`           | -             | Secret for JWT signing (required)    |
+| Variable               | Description                                               |
+| ---------------------- | --------------------------------------------------------- |
+| `FLASHPOINT_HOST_PATH` | Host path to Flashpoint installation (bind-mounted as ro) |
+| `JWT_SECRET`           | Secret for JWT signing (generate with `openssl rand -hex 64`) |
 
 **Port Mapping:**
 
-| Variable   | Default | Description          |
-| ---------- | ------- | -------------------- |
+| Variable   | Default | Description           |
+| ---------- | ------- | --------------------- |
 | `WEB_PORT` | 80      | Frontend exposed port |
 | `API_PORT` | 3100    | Backend exposed port  |
 
-**Other:**
+**Container Settings:**
 
-| Variable    | Default          | Description   |
-| ----------- | ---------------- | ------------- |
-| `DOMAIN`    | http://localhost | CORS origin   |
-| `LOG_LEVEL` | info             | Logging level |
+| Variable    | Default | Description                                          |
+| ----------- | ------- | ---------------------------------------------------- |
+| `PUID`      | 1000    | Container user ID (match host user: `id -u`)         |
+| `PGID`      | 1000    | Container group ID (match host user: `id -g`)        |
+| `TZ`        | UTC     | Container timezone                                   |
+| `IMAGE_TAG` | latest  | Docker image tag (production compose only)           |
+| `DATA_PATH` | ./data  | Host path for persistent data (production compose)   |
+| `LOGS_PATH` | ./logs  | Host path for log files                              |
+
+**Frontend Nginx:**
+
+| Variable       | Default  | Description                             |
+| -------------- | -------- | --------------------------------------- |
+| `BACKEND_HOST` | backend  | Backend hostname (Docker service name)  |
+| `BACKEND_PORT` | 3100     | Backend port for Nginx proxy_pass       |
+
+All backend variables listed above are also passable via docker-compose. See
+`docker-compose.yml` for the full list with defaults.
 
 ## Docker Compose Setup
 
@@ -92,7 +134,6 @@ Location: `.env` in project root
 ```bash
 cat > .env << EOF
 FLASHPOINT_HOST_PATH=/path/to/flashpoint
-NODE_ENV=production
 JWT_SECRET=$(openssl rand -hex 64)
 DOMAIN=https://flashpoint.example.com
 WEB_PORT=80
@@ -104,17 +145,15 @@ EOF
 **Start services:**
 
 ```bash
-docker-compose --env-file .env up -d
+docker compose up -d
 ```
 
 ## Environment Templates
 
-**Development (.env.development):**
+**Development (`backend/.env`):**
 
 ```bash
 NODE_ENV=development
-PORT=3100
-HOST=0.0.0.0
 FLASHPOINT_PATH=D:/Flashpoint
 JWT_SECRET=development-secret-change-in-production
 DOMAIN=http://localhost:5173
@@ -122,33 +161,29 @@ RATE_LIMIT_MAX_REQUESTS=1000
 LOG_LEVEL=debug
 ```
 
-**Production (.env.production):**
+**Production (`.env` for Docker):**
 
 ```bash
-NODE_ENV=production
-PORT=3100
-HOST=127.0.0.1
-FLASHPOINT_PATH=/data/flashpoint
+FLASHPOINT_HOST_PATH=/data/flashpoint
 JWT_SECRET=CHANGE-THIS-TO-A-RANDOM-64-CHARACTER-STRING
 DOMAIN=https://flashpoint.example.com
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX_REQUESTS=100
+WEB_PORT=80
+API_PORT=3100
 LOG_LEVEL=warn
-LOG_FILE=/var/log/flashpoint-backend.log
 ```
 
 ## Validation and Defaults
 
 **Required Variables:**
 
-**Backend:**
+**Backend (local dev):**
 
 - `FLASHPOINT_PATH` (only this is required; others auto-derive)
 
 **Docker Production:**
 
+- `FLASHPOINT_HOST_PATH` (must point to Flashpoint installation)
 - `JWT_SECRET` (must be changed from default)
-- `DOMAIN` (must match frontend URL)
 
 **Verify configuration:**
 

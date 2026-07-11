@@ -2,6 +2,7 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs/promises';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 import { zipManager } from './zip-manager';
 import { ConfigManager } from './config';
 import { getMimeType } from './mimeTypes';
@@ -73,11 +74,8 @@ export class GameZipServer {
       return { success: false, statusCode: 400 };
     }
 
-    const flashpointPath =
-      process.env.FLASHPOINT_PATH ||
-      (process.env.NODE_ENV === 'production' ? '/data/flashpoint' : 'D:/Flashpoint');
     const allowedGamesPath =
-      process.env.FLASHPOINT_GAMES_PATH || path.join(flashpointPath, 'Data', 'Games');
+      process.env.FLASHPOINT_GAMES_PATH ?? config.flashpointGamesPath;
 
     try {
       const normalizedZipPath = path.normalize(zipPath);
@@ -318,7 +316,7 @@ export class GameZipServer {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', fileData.length);
     res.setHeader('Cache-Control', 'public, max-age=86400');
-    if (process.env.NODE_ENV !== 'production') {
+    if (config.nodeEnv !== 'production') {
       res.setHeader('X-Source', `gamezipserver:${result.mountId}`);
     }
     res.setHeader('Connection', 'keep-alive');

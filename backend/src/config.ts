@@ -66,7 +66,7 @@ const flashpointVersion = parseVersionFile();
 
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: 3100,
+  port: 3100, // Hardcoded — Docker EXPOSE and healthcheck depend on this value
   host: '0.0.0.0',
 
   flashpointPath,
@@ -100,8 +100,14 @@ export const config = {
   enableLocalDbCopy: process.env.ENABLE_LOCAL_DB_COPY === 'true',
   localDbPath: '/app/data/flashpoint.sqlite',
 
-  sqliteCacheSize: parseInt(process.env.SQLITE_CACHE_SIZE || '', 10) || -64000, // Negative = KB (-64000 = 64MB)
-  sqliteMmapSize: parseInt(process.env.SQLITE_MMAP_SIZE || '', 10) || 268435456, // 256MB
+  sqliteCacheSize: (() => {
+    const parsed = parseInt(process.env.SQLITE_CACHE_SIZE ?? '', 10);
+    return isNaN(parsed) ? -64000 : parsed; // Negative = KB (-64000 = 64MB)
+  })(),
+  sqliteMmapSize: (() => {
+    const parsed = parseInt(process.env.SQLITE_MMAP_SIZE ?? '', 10);
+    return isNaN(parsed) ? 268435456 : parsed; // 256MB
+  })(),
   enableCachePrewarm: process.env.ENABLE_CACHE_PREWARM !== 'false',
 
   // Auto-detected from version.txt; affects metadata sync and image path availability
