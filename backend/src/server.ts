@@ -3,6 +3,7 @@ import './telemetry';
 
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -36,6 +37,26 @@ import { zipManager } from './game/zip-manager';
 import { gameZipServer } from './game/gamezipserver';
 import gameProxyRouter from './routes/game-proxy';
 import gameZipRouter from './routes/game-zip';
+
+/**
+ * Compute SHA-256 CSP hashes for inline <script> blocks (those without a src
+ * attribute) in the given HTML — e.g. the theme bootstrap in index.html — so the
+ * CSP can allow exactly those scripts by hash instead of the blanket
+ * 'unsafe-inline'. Returns values like "'sha256-…'".
+ */
+function inlineScriptCspHashes(html: string): string[] {
+  const hashes: string[] = [];
+  const inlineScript = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = inlineScript.exec(html)) !== null) {
+    // The HTML parser normalizes CRLF/CR to LF before hashing the script text,
+    // so normalize here too or the hash won't match on CRLF-checked-out builds.
+    const body = match[1].replace(/\r\n?/g, '\n');
+    const digest = crypto.createHash('sha256').update(body, 'utf8').digest('base64');
+    hashes.push(`'sha256-${digest}'`);
+  }
+  return hashes;
+}
 
 async function cleanupActivityLogs(): Promise<void> {
   try {
@@ -84,17 +105,25 @@ async function startServer() {
   app.use('/game-proxy', gameCors, gameProxyRouter);
   app.use('/game-zip', gameCors, gameZipRouter);
 
-  // When the backend also serves the SPA, the CSP mirrors the policy the former
-  // nginx frontend used. 'unsafe-inline' (styles) is required by Radix/shadcn
-  // inline style attributes; 'unsafe-eval' (scripts) is required by Ruffle's WASM.
+  // When the backend also serves the SPA, allow the app's own resources by
+  // hash/keyword rather than the blanket 'unsafe-inline'/'unsafe-eval':
+  //   - scriptSrc: 'self' for hashed bundles, sha256 hashes for the inline theme
+  //     bootstrap in index.html, and 'wasm-unsafe-eval' for Ruffle's WASM (no
+  //     general eval). No 'unsafe-inline', so injected inline scripts are blocked.
+  //   - styleSrc: keep 'unsafe-inline' — Radix/shadcn set inline style attributes
+  //     at runtime, which hashes/nonces cannot cover (style-src-attr). Style
+  //     injection is far lower risk than script injection.
   // No upgrade-insecure-requests, so self-hosted HTTP deployments keep working.
   // When running API-only, keep the strict 'none' policy.
-  // TODO(security): tighten via per-request nonces + 'wasm-unsafe-eval' once the
-  // SPA and Ruffle are verified to work without the broad 'unsafe-*' allowances.
+  const frontendIndexHtml = path.join(config.frontendDistPath, 'index.html');
+  const inlineScriptHashes =
+    config.serveFrontend && fs.existsSync(frontendIndexHtml)
+      ? inlineScriptCspHashes(fs.readFileSync(frontendIndexHtml, 'utf8'))
+      : [];
   const cspDirectives: Record<string, string[]> = config.serveFrontend
     ? {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        scriptSrc: ["'self'", "'wasm-unsafe-eval'", ...inlineScriptHashes],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'https:'],
         fontSrc: ["'self'", 'data:'],
