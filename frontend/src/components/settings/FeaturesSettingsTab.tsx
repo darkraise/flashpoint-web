@@ -134,6 +134,29 @@ export function FeaturesSettingsTab({ tabContentVariants }: FeaturesSettingsTabP
                 disabled={updateSystemSettings.isPending}
               />
             </div>
+
+            {/* Ratings */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="enable-ratings" className="text-base">
+                  Enable Ratings
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow users to rate games with a 5-star rating system.
+                </p>
+              </div>
+              <Switch
+                id="enable-ratings"
+                checked={featureSettings.enableRatings !== false}
+                onCheckedChange={(checked: boolean) => {
+                  updateSystemSettings.mutate({
+                    category: 'features',
+                    settings: { enableRatings: checked },
+                  });
+                }}
+                disabled={updateSystemSettings.isPending}
+              />
+            </div>
           </div>
         </div>
       ) : null}

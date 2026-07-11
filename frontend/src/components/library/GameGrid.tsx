@@ -2,6 +2,7 @@ import { Game } from '@/types/game';
 import { GameCard } from './GameCard';
 import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 import { useUIStore } from '@/store/ui';
+import type { BatchRatingAggregate } from '@/types/rating';
 
 interface GameGridProps {
   games: Game[];
@@ -13,6 +14,8 @@ interface GameGridProps {
   breadcrumbContext?: BreadcrumbContext;
   /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
   sectionKey?: string | null;
+  /** Batch rating data keyed by game ID */
+  ratingDataMap?: Record<string, BatchRatingAggregate>;
 }
 
 export function GameGrid({
@@ -24,6 +27,7 @@ export function GameGrid({
   shareToken = null,
   breadcrumbContext,
   sectionKey = null,
+  ratingDataMap,
 }: GameGridProps) {
   const cardSize = useUIStore((state) => state.cardSize);
 
@@ -55,6 +59,7 @@ export function GameGrid({
           shareToken={shareToken}
           breadcrumbContext={breadcrumbContext}
           sectionKey={sectionKey}
+          ratingData={ratingDataMap?.[game.id]}
         />
       ))}
     </div>

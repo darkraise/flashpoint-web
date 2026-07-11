@@ -21,6 +21,8 @@ export { sharedPlaylistsApi } from './sharedPlaylists';
 
 export { favoritesApi } from './favorites';
 
+export { ratingsApi } from './ratings';
+
 export { activitiesApi } from './activities';
 
 export { statisticsApi } from './statistics';

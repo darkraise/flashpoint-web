@@ -5,6 +5,8 @@ import { useFavoriteGameIds } from '@/hooks/useFavorites';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import { HomeSection } from '@/components/home/HomeSection';
 import { useAuthStore } from '@/store/auth';
+import { useTopRatedGames } from '@/hooks/useRatings';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 export function HomeView() {
   const { isAuthenticated } = useAuthStore();
@@ -34,6 +36,8 @@ export function HomeView() {
     recentHours
   );
   const { data: mostPlayed, isLoading: loadingMostPlayed } = useMostPlayedGames(20);
+  const { enableRatings } = useFeatureFlags();
+  const { data: topRated, isLoading: loadingTopRated } = useTopRatedGames(20);
 
   const { data: favoriteGameIdsArray } = useFavoriteGameIds();
   const favoriteGameIds = useMemo(
@@ -51,6 +55,17 @@ export function HomeView() {
           Discover recently active games from the preservation archive
         </p>
       </div>
+
+      {enableRatings ? (
+        <HomeSection
+          title="Highest Rated Games"
+          description="Games with the highest community ratings"
+          games={topRated ?? []}
+          isLoading={loadingTopRated}
+          viewAllHref="/browse?sortBy=rating&sortOrder=desc"
+          favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
+        />
+      ) : null}
 
       <HomeSection
         title="Most Played Games"

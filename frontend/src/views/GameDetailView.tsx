@@ -23,6 +23,8 @@ import {
   DEFAULT_BREADCRUMB_CONTEXT,
 } from '@/lib/sectionRoutes';
 import { buildFilterSearchParams } from '@/lib/filterUrlCompression';
+import { GameRatingSection } from '@/components/game/GameRatingSection';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 export function GameDetailView() {
   const { id } = useParams<{ id: string }>();
@@ -31,12 +33,14 @@ export function GameDetailView() {
   const [searchParams] = useSearchParams();
   const shareToken = searchParams.get('shareToken');
   const { isAuthenticated } = useAuthStore();
+  const { enableRatings } = useFeatureFlags();
   const { generateToken, hasValidToken, isGenerating } = useSharedAccessToken();
 
   // Derive breadcrumb context: URL path takes precedence, then state, then default
   const urlBreadcrumbContext = getBreadcrumbContextFromPath(location.pathname);
   const stateBreadcrumbContext = location.state?.breadcrumbContext as BreadcrumbContext | undefined;
-  const breadcrumbContext = urlBreadcrumbContext ?? stateBreadcrumbContext ?? DEFAULT_BREADCRUMB_CONTEXT;
+  const breadcrumbContext =
+    urlBreadcrumbContext ?? stateBreadcrumbContext ?? DEFAULT_BREADCRUMB_CONTEXT;
 
   // Get current section for building play URLs
   const currentSection = getSectionFromPath(location.pathname);
@@ -398,7 +402,20 @@ export function GameDetailView() {
             </div>
           ) : null}
 
-          <GameInfoGrid game={game} />
+          {enableRatings ? (
+            <div className="flex flex-col lg:flex-row py-4 border-y border-border">
+              <GameRatingSection
+                gameId={game.id}
+                layout="detail"
+                className="pb-4 lg:pb-0 lg:pr-6"
+              />
+              <div className="flex-1 min-w-0 border-t pt-4 lg:border-t-0 lg:pt-0 lg:border-l lg:pl-6 border-border">
+                <GameInfoGrid game={game} className="border-y-0 py-0 lg:grid-cols-3" />
+              </div>
+            </div>
+          ) : (
+            <GameInfoGrid game={game} />
+          )}
 
           {game.originalDescription ? (
             <div>

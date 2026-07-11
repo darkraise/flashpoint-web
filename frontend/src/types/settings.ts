@@ -16,6 +16,7 @@ export interface FeatureSettings {
   enableFavorites: boolean;
   enableSearch: boolean;
   enableStatistics: boolean;
+  enableRatings: boolean;
 }
 
 export interface GameSettings {

@@ -4,6 +4,7 @@ import { PlatformIcon } from '@/components/ui/platform-icon';
 import { formatDate, formatReleaseDate } from '@/lib/date-utils';
 import { buildFilterSearchParams, FilterUrlParams } from '@/lib/filterUrlCompression';
 import { ExternalLink } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /**
  * Create a link to browse page with a filter applied
@@ -23,10 +24,7 @@ function FilterLink({
   const url = `/browse?${buildFilterSearchParams(params).toString()}`;
 
   return (
-    <Link
-      to={url}
-      className="text-primary hover:text-primary/80 hover:underline transition-colors"
-    >
+    <Link to={url} className="text-primary hover:text-primary/80 hover:underline transition-colors">
       {children}
     </Link>
   );
@@ -35,6 +33,7 @@ function FilterLink({
 interface GameInfoGridProps {
   game: Game;
   launchData?: GameLaunchData;
+  className?: string;
 }
 
 function isValidUrl(str?: string): boolean {
@@ -47,11 +46,16 @@ function isValidUrl(str?: string): boolean {
   }
 }
 
-export function GameInfoGrid({ game, launchData }: GameInfoGridProps) {
+export function GameInfoGrid({ game, launchData, className }: GameInfoGridProps) {
   const isSourceUrl = isValidUrl(game.source);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 py-4 border-y border-border">
+    <div
+      className={cn(
+        'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 py-4 border-y border-border',
+        className
+      )}
+    >
       <div>
         <dt className="text-sm text-muted-foreground mb-1">Platform</dt>
         <dd>

@@ -48,6 +48,10 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        star: {
+          DEFAULT: 'hsl(var(--star))',
+          muted: 'hsl(var(--star-muted))',
+        },
         'toast-success': {
           DEFAULT: 'hsl(var(--toast-success))',
           foreground: 'hsl(var(--toast-success-foreground))',

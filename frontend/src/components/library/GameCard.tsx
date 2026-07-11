@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FavoriteButton } from '@/components/common/FavoriteButton';
+import { StarRating } from '@/components/common/StarRating';
+import type { BatchRatingAggregate } from '@/types/rating';
 import { RemoveFavoriteButton } from '@/components/common/RemoveFavoriteButton';
 import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
 import { useAuthStore } from '@/store/auth';
@@ -28,6 +30,8 @@ interface GameCardProps {
   breadcrumbContext?: BreadcrumbContext;
   /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
   sectionKey?: string | null;
+  /** Rating aggregate data for this game */
+  ratingData?: BatchRatingAggregate;
 }
 
 const GameCardComponent = function GameCard({
@@ -41,6 +45,7 @@ const GameCardComponent = function GameCard({
   shareToken = null,
   breadcrumbContext,
   sectionKey = null,
+  ratingData,
 }: GameCardProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -250,6 +255,17 @@ const GameCardComponent = function GameCard({
             </p>
           ) : null}
         </div>
+
+        {ratingData ? (
+          <div className="h-4 min-h-[16px] w-full">
+            <StarRating
+              size="sm"
+              averageRating={ratingData.averageRating}
+              totalRatings={ratingData.totalRatings}
+              showCount
+            />
+          </div>
+        ) : null}
       </CardFooter>
 
       {isPlaylistModalOpen ? (
@@ -285,6 +301,13 @@ export const GameCard = memo(GameCardComponent, (prevProps, nextProps) => {
     prevProps.breadcrumbContext?.label !== nextProps.breadcrumbContext?.label ||
     prevProps.breadcrumbContext?.href !== nextProps.breadcrumbContext?.href ||
     prevProps.sectionKey !== nextProps.sectionKey
+  ) {
+    return false;
+  }
+
+  if (
+    prevProps.ratingData?.averageRating !== nextProps.ratingData?.averageRating ||
+    prevProps.ratingData?.totalRatings !== nextProps.ratingData?.totalRatings
   ) {
     return false;
   }

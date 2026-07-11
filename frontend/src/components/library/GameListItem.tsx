@@ -14,6 +14,8 @@ import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
 import { getGameLogoUrl } from '@/utils/gameUtils';
 import { buildSectionGameUrl } from '@/lib/sectionRoutes';
+import { StarRating } from '@/components/common/StarRating';
+import type { BatchRatingAggregate } from '@/types/rating';
 
 interface GameListItemProps {
   game: Game;
@@ -27,6 +29,8 @@ interface GameListItemProps {
   breadcrumbContext?: BreadcrumbContext;
   /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
   sectionKey?: string | null;
+  /** Rating aggregate data for this game */
+  ratingData?: BatchRatingAggregate;
 }
 
 export const GameListItem = memo(
@@ -41,6 +45,7 @@ export const GameListItem = memo(
     shareToken = null,
     breadcrumbContext,
     sectionKey = null,
+    ratingData,
   }: GameListItemProps) {
     const [imageError, setImageError] = useState(false);
     const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
@@ -122,6 +127,14 @@ export const GameListItem = memo(
                   <span className="truncate" title={game.developer}>
                     {game.developer}
                   </span>
+                ) : null}
+                {ratingData ? (
+                  <StarRating
+                    size="sm"
+                    averageRating={ratingData.averageRating}
+                    totalRatings={ratingData.totalRatings}
+                    showCount
+                  />
                 ) : null}
               </div>
             </div>
@@ -206,7 +219,10 @@ export const GameListItem = memo(
       prevProps.breadcrumbContext?.href === nextProps.breadcrumbContext?.href &&
       prevProps.sectionKey === nextProps.sectionKey &&
       (prevProps.favoriteGameIds?.has(prevProps.game.id) ?? false) ===
-        (nextProps.favoriteGameIds?.has(nextProps.game.id) ?? false)
+        (nextProps.favoriteGameIds?.has(nextProps.game.id) ?? false) &&
+      prevProps.ratingData?.averageRating === nextProps.ratingData?.averageRating &&
+      prevProps.ratingData?.totalRatings === nextProps.ratingData?.totalRatings
     );
   }
 );
+GameListItem.displayName = 'GameListItem';

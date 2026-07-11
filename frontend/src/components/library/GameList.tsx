@@ -2,6 +2,7 @@ import { Game } from '@/types/game';
 import { GameListItem } from './GameListItem';
 import { useUIStore } from '@/store/ui';
 import { BreadcrumbContext } from '@/components/common/Breadcrumbs';
+import type { BatchRatingAggregate } from '@/types/rating';
 
 interface GameListProps {
   games: Game[];
@@ -13,6 +14,8 @@ interface GameListProps {
   breadcrumbContext?: BreadcrumbContext;
   /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
   sectionKey?: string | null;
+  /** Batch rating data keyed by game ID */
+  ratingDataMap?: Record<string, BatchRatingAggregate>;
 }
 
 export function GameList({
@@ -24,6 +27,7 @@ export function GameList({
   shareToken = null,
   breadcrumbContext,
   sectionKey = null,
+  ratingDataMap,
 }: GameListProps) {
   const listColumns = useUIStore((state) => state.listColumns);
 
@@ -53,6 +57,7 @@ export function GameList({
           shareToken={shareToken}
           breadcrumbContext={breadcrumbContext}
           sectionKey={sectionKey}
+          ratingData={ratingDataMap?.[game.id]}
         />
       ))}
     </div>

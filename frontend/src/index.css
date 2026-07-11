@@ -24,6 +24,8 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+    --star: 45 93% 47%;
+    --star-muted: 45 93% 47%;
 
     /* Scrollbar colors - thumb colors are dynamically set by theme.ts based on primary color */
     --scrollbar-track: 210 40% 96.1%; /* Light gray for track */
@@ -70,6 +72,8 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+    --star: 45 93% 47%;
+    --star-muted: 45 93% 47%;
 
     /* Scrollbar colors - thumb colors are dynamically set by theme.ts based on primary color */
     --scrollbar-track: 217.2 32.6% 17.5%; /* Dark gray for track */

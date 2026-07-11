@@ -4,6 +4,7 @@ import { useGames } from '@/hooks/useGames';
 import { useFilterOptions, FilterOptionsParams } from '@/hooks/useFilterOptions';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useFavoriteGameIds } from '@/hooks/useFavorites';
+import { useBatchRatingAggregates } from '@/hooks/useRatings';
 import { GameGrid } from './GameGrid';
 import { GameList } from './GameList';
 import { GameGridSkeleton } from './GameGridSkeleton';
@@ -148,6 +149,10 @@ export function GameBrowseLayout({
   }, [filters.search, filters.platform, filters.tags, title]);
 
   const { data, isLoading, error } = useGames(filters);
+
+  // Fetch batch rating aggregates for visible games
+  const gameIds = useMemo(() => data?.data.map((g) => g.id) ?? [], [data]);
+  const { data: ratingDataMap } = useBatchRatingAggregates(gameIds);
 
   // Get filter application order from URL (tracks the order categories were added)
   // Format: "Series,Language,Tag" - first added is leftmost (parent)
@@ -314,7 +319,10 @@ export function GameBrowseLayout({
         newParams.yearTo = undefined;
         categoryRemoved = 'Year';
       } else {
-        const paramMap: Record<string, { param: keyof FilterUrlParams; value: string | undefined; category: string }> = {
+        const paramMap: Record<
+          string,
+          { param: keyof FilterUrlParams; value: string | undefined; category: string }
+        > = {
           'series-': { param: 'series', value: filters.series, category: 'Series' },
           'developers-': { param: 'developers', value: filters.developers, category: 'Developer' },
           'publishers-': { param: 'publishers', value: filters.publishers, category: 'Publisher' },
@@ -474,6 +482,7 @@ export function GameBrowseLayout({
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
               breadcrumbContext={breadcrumbContext}
               sectionKey={sectionKey}
+              ratingDataMap={ratingDataMap}
             />
           ) : (
             <GameList
@@ -481,6 +490,7 @@ export function GameBrowseLayout({
               favoriteGameIds={isAuthenticated ? favoriteGameIds : undefined}
               breadcrumbContext={breadcrumbContext}
               sectionKey={sectionKey}
+              ratingDataMap={ratingDataMap}
             />
           )}
 

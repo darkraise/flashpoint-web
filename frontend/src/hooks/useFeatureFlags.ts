@@ -17,6 +17,7 @@ export function useFeatureFlags() {
     enablePlaylists: isAdmin || (features.enablePlaylists ?? true),
     enableFavorites: isAdmin || (features.enableFavorites ?? true),
     enableStatistics: isAdmin || (features.enableStatistics ?? true),
+    enableRatings: isAdmin || (features.enableRatings ?? true),
     isFeatureEnabled: (featureName: string) => {
       return isAdmin || ((features as Record<string, unknown>)[featureName] ?? true) !== false;
     },
