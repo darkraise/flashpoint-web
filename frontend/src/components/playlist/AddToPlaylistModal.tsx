@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogBody,
   DialogTitle,
@@ -95,8 +96,6 @@ export function AddToPlaylistModal({
     const newSelected = new Set(selectedPlaylists);
     newSelected.add(playlist.id);
     setSelectedPlaylists(newSelected);
-
-    toast.success('Playlist created');
   };
 
   return (
@@ -118,65 +117,82 @@ export function AddToPlaylistModal({
               className="w-full justify-start gap-2"
               onClick={() => setIsCreatingPlaylist(true)}
             >
-              <Plus size={18} />
+              <Plus size={18} aria-hidden="true" />
               Create New Playlist
             </Button>
 
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading playlists...</div>
+              <div
+                role="status"
+                aria-live="polite"
+                aria-busy="true"
+                className="text-center py-8 text-muted-foreground"
+              >
+                Loading playlists...
+              </div>
             ) : playlists.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <ListVideo size={48} className="mx-auto mb-2 opacity-50" />
+              <div
+                role="status"
+                aria-live="polite"
+                className="text-center py-8 text-muted-foreground"
+              >
+                <ListVideo size={48} className="mx-auto mb-2 opacity-50" aria-hidden="true" />
                 <p>No playlists yet</p>
                 <p className="text-sm">Create your first playlist to get started</p>
               </div>
             ) : (
-              <ScrollArea className="h-[300px] pr-4">
-                <div className="space-y-2">
-                  {playlists.map((playlist) => {
-                    const isSelected = selectedPlaylists.has(playlist.id);
+              <ScrollArea className="h-[300px]">
+                <fieldset className="border-0 p-0 m-0">
+                  <legend className="sr-only">Select playlists</legend>
+                  <div className="space-y-2">
+                    {playlists.map((playlist) => {
+                      const isSelected = selectedPlaylists.has(playlist.id);
 
-                    return (
-                      <div
-                        key={playlist.id}
-                        className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer"
-                        onClick={() => togglePlaylist(playlist.id)}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => togglePlaylist(playlist.id)}
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{playlist.title}</p>
-                          {playlist.description ? (
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {playlist.description}
+                      return (
+                        <label
+                          key={playlist.id}
+                          htmlFor={`playlist-cb-${playlist.id}`}
+                          className="flex items-start gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer"
+                        >
+                          <Checkbox
+                            id={`playlist-cb-${playlist.id}`}
+                            checked={isSelected}
+                            onCheckedChange={() => togglePlaylist(playlist.id)}
+                            aria-label={`Select playlist: ${playlist.title}`}
+                            className="mt-0.5 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{playlist.title}</p>
+                            {playlist.description ? (
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {playlist.description}
+                              </p>
+                            ) : null}
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {playlist.gameCount}{' '}
+                              {playlist.gameCount === 1 ? 'game' : 'games'}
                             </p>
-                          ) : null}
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {playlist.gameCount} {playlist.gameCount === 1 ? 'game' : 'games'}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </fieldset>
               </ScrollArea>
             )}
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={selectedPlaylists.size === 0 || addGamesMutation.isPending}
-              >
-                {addGamesMutation.isPending ? 'Adding...' : 'Add to Playlists'}
-              </Button>
-            </div>
           </DialogBody>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={selectedPlaylists.size === 0 || addGamesMutation.isPending}
+            >
+              {addGamesMutation.isPending ? 'Adding...' : 'Add to Playlists'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
