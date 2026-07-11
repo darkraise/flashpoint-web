@@ -13,16 +13,6 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - name: backend
-            context: .
-            dockerfile: ./backend/Dockerfile
-          - name: frontend
-            context: .
-            dockerfile: ./frontend/Dockerfile
 
     permissions:
       contents: read
@@ -52,7 +42,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY_DOCKERHUB }}/${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-${{ matrix.service.name }}
+          images: ${{ env.REGISTRY_DOCKERHUB }}/${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-web
           tags: |
             # Tag with full version (v1.0.0 -> 1.0.0)
             type=semver,pattern={{version}}
@@ -63,16 +53,16 @@ jobs:
             # Latest tag
             type=raw,value=latest
 
-      - name: Build and push Docker images
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.service.context }}
-          file: ${{ matrix.service.dockerfile }}
+          context: .
+          file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.service.name }}
-          cache-to: type=gha,scope=${{ matrix.service.name }},mode=max
+          cache-from: type=gha,scope=flashpoint-web
+          cache-to: type=gha,scope=flashpoint-web,mode=max
           platforms: linux/amd64
           build-args: |
             BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
@@ -90,17 +80,15 @@ jobs:
         run: |
           echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Images Built:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`flashpoint-backend\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`flashpoint-frontend\`" >> $GITHUB_STEP_SUMMARY
+          echo "### Image Built:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`flashpoint-web\` (API + UI)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Registry:" >> $GITHUB_STEP_SUMMARY
-          echo "- Docker Hub: \`${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-*\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker Hub: \`${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-web\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Pull Commands:" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Command:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-backend:latest" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-frontend:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-web:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
   create-release:
@@ -127,13 +115,12 @@ jobs:
           # Get the previous tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
-          echo "## Docker Images" >> release_notes.md
+          echo "## Docker Image" >> release_notes.md
           echo "" >> release_notes.md
-          echo "Pull the images from Docker Hub:" >> release_notes.md
+          echo "Pull the image from Docker Hub:" >> release_notes.md
           echo "" >> release_notes.md
           echo "\`\`\`bash" >> release_notes.md
-          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-backend:${{ steps.version.outputs.version }}" >> release_notes.md
-          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-frontend:${{ steps.version.outputs.version }}" >> release_notes.md
+          echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/flashpoint-web:${{ steps.version.outputs.version }}" >> release_notes.md
           echo "\`\`\`" >> release_notes.md
           echo "" >> release_notes.md
 

@@ -67,6 +67,16 @@ openssl rand -hex 64
 | `ENABLE_CGI`         | false   | Enable PHP CGI execution for legacy game content |
 | `HOME_RECENT_HOURS`  | 24      | Hours to look back for "recently added" games    |
 
+**Frontend Serving:**
+
+The backend serves the built React UI in the single-image deployment, so the app
+and API share one origin.
+
+| Variable             | Default                       | Description                                                    |
+| -------------------- | ----------------------------- | -------------------------------------------------------------- |
+| `SERVE_FRONTEND`     | true in production, else false | Serve the built frontend and SPA fallback from the backend    |
+| `FRONTEND_DIST_PATH` | `<backend>/../frontend/dist`  | Location of the built frontend (rarely needed)                 |
+
 **OpenTelemetry:**
 
 | Variable                       | Default                    | Description                              |
@@ -74,7 +84,7 @@ openssl rand -hex 64
 | `OTEL_ENABLED`                 | false                      | Enable distributed tracing and metrics   |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | http://localhost:4318      | OTLP collector endpoint                  |
 | `OTEL_API_KEY`                 | -                          | API key for authentication               |
-| `OTEL_SERVICE_NAME`            | flashpoint-web-backend     | Service name in traces/metrics           |
+| `OTEL_SERVICE_NAME`            | flashpoint-web             | Service name in traces/metrics           |
 | `OTEL_TRACES_ENABLED`         | true                       | Enable trace export (when OTEL enabled)  |
 | `OTEL_METRICS_ENABLED`        | true                       | Enable metrics export (when OTEL enabled)|
 | `OTEL_METRICS_EXPORT_INTERVAL`| 60000                      | Metrics export interval (ms)             |
@@ -82,11 +92,11 @@ openssl rand -hex 64
 
 ## Frontend Variables
 
-The frontend has no environment variables in development or production. API
-calls are proxied through the backend.
+The frontend has no environment variables of its own. API calls use relative
+paths (`/api`), so they resolve against whatever origin serves the app.
 
-- **Development**: Via Vite proxy to `http://localhost:3100`
-- **Production**: Via Nginx reverse proxy (configured by `BACKEND_HOST`/`BACKEND_PORT`)
+- **Development**: Vite dev server on port 5173 proxies `/api` to `http://localhost:3100`
+- **Production**: The backend serves the built UI and the API from the same origin
 
 ## Docker Environment Variables
 
@@ -101,10 +111,9 @@ Location: `.env` in project root (used by docker-compose)
 
 **Port Mapping:**
 
-| Variable   | Default | Description           |
-| ---------- | ------- | --------------------- |
-| `WEB_PORT` | 80      | Frontend exposed port |
-| `API_PORT` | 3100    | Backend exposed port  |
+| Variable   | Default | Description                                            |
+| ---------- | ------- | ------------------------------------------------------ |
+| `WEB_PORT` | 80      | Host port mapped to the container (serves UI + API)    |
 
 **Container Settings:**
 
@@ -116,13 +125,6 @@ Location: `.env` in project root (used by docker-compose)
 | `IMAGE_TAG` | latest  | Docker image tag (production compose only)           |
 | `DATA_PATH` | ./data  | Host path for persistent data (production compose)   |
 | `LOGS_PATH` | ./logs  | Host path for log files                              |
-
-**Frontend Nginx:**
-
-| Variable       | Default  | Description                             |
-| -------------- | -------- | --------------------------------------- |
-| `BACKEND_HOST` | backend  | Backend hostname (Docker service name)  |
-| `BACKEND_PORT` | 3100     | Backend port for Nginx proxy_pass       |
 
 All backend variables listed above are also passable via docker-compose. See
 `docker-compose.yml` for the full list with defaults.
@@ -137,7 +139,6 @@ FLASHPOINT_HOST_PATH=/path/to/flashpoint
 JWT_SECRET=$(openssl rand -hex 64)
 DOMAIN=https://flashpoint.example.com
 WEB_PORT=80
-API_PORT=3100
 LOG_LEVEL=warn
 EOF
 ```
@@ -168,7 +169,6 @@ FLASHPOINT_HOST_PATH=/data/flashpoint
 JWT_SECRET=CHANGE-THIS-TO-A-RANDOM-64-CHARACTER-STRING
 DOMAIN=https://flashpoint.example.com
 WEB_PORT=80
-API_PORT=3100
 LOG_LEVEL=warn
 ```
 

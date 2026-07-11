@@ -6,18 +6,17 @@ This directory contains automated workflows for the Flashpoint Web project.
 
 ### 1. Docker Build and Push (`docker-build-push.yml`)
 
-Builds and pushes Docker images for all three services to container registries.
+Builds and pushes the single Docker image to the container registry.
 
 #### Triggers
 
-- **Version tags** (`v*.*.*`): Builds and pushes images with version tags and `latest` tag
+- **Version tags** (`v*.*.*`): Builds and pushes the image with version tags and `latest` tag
 - **Manual dispatch**: Can be triggered manually from GitHub Actions tab
 
-#### Services Built
+#### Image Built
 
-- `flashpoint-backend` - REST API server
-- `flashpoint-frontend` - React web UI (Nginx)
-- `flashpoint-game-service` - Game content proxy and ZIP server
+- `flashpoint-web` - Single image serving both the REST API (including game
+  content) and the React web UI
 
 #### Container Registry
 
@@ -43,11 +42,9 @@ The workflow pushes images to **Docker Hub**.
      - `DOCKERHUB_USERNAME`: Your Docker Hub username
      - `DOCKERHUB_TOKEN`: The access token from step 2
 
-4. **Images will be pushed to**:
+4. **Image will be pushed to**:
    ```
-   docker.io/darkraise/flashpoint-backend:latest
-   docker.io/darkraise/flashpoint-frontend:latest
-   docker.io/darkraise/flashpoint-game-service:latest
+   docker.io/darkraise/flashpoint-web:latest
    ```
 
 #### Image Tags
@@ -98,51 +95,34 @@ The workflow uses GitHub Actions cache to speed up builds:
 
 #### Usage Examples
 
-##### Pull and Run Images
+##### Pull and Run the Image
 
 ```bash
-# Pull latest images
-docker pull darkraise/flashpoint-backend:latest
-docker pull darkraise/flashpoint-frontend:latest
-docker pull darkraise/flashpoint-game-service:latest
+# Pull the latest image
+docker pull darkraise/flashpoint-web:latest
 
 # Or use a specific version
-docker pull darkraise/flashpoint-backend:1.0.0
+docker pull darkraise/flashpoint-web:1.0.0
 ```
 
 ##### Use in Docker Compose
 
-Update your `docker-compose.yml` to use pre-built images:
+Update your `docker-compose.yml` to use the pre-built image:
 
 ```yaml
-version: '3.8'
-
 services:
-  backend:
-    image: darkraise/flashpoint-backend:latest
+  flashpoint-web:
+    image: darkraise/flashpoint-web:latest
     # Remove build section
     ports:
-      - "3100:3100"
-    # ... rest of config
-
-  frontend:
-    image: darkraise/flashpoint-frontend:latest
-    ports:
-      - "80:8080"
-    # ... rest of config
-
-  game-service:
-    image: darkraise/flashpoint-game-service:latest
-    ports:
-      - "22500:22500"
-      - "22501:22501"
+      - "80:3100"
     # ... rest of config
 ```
 
 Then simply run:
 ```bash
-docker-compose pull  # Pull latest images
-docker-compose up -d # Start services
+docker compose pull  # Pull the latest image
+docker compose up -d # Start the service
 ```
 
 #### Making Images Public
@@ -150,7 +130,7 @@ docker-compose up -d # Start services
 By default, Docker Hub images are private. To make them public:
 
 1. Go to https://hub.docker.com/repositories
-2. Click on the repository (e.g., `flashpoint-backend`)
+2. Click on the repository (e.g., `flashpoint-web`)
 3. Click "Settings"
 4. Change visibility to "Public"
 
@@ -179,10 +159,9 @@ docker login docker.io
 #### Performance
 
 Typical build times (optimized for amd64 only):
-- First build: 3-5 minutes per service
-- Subsequent builds (with cache): 1-2 minutes per service
-- Parallel execution: All 3 services build simultaneously
-- Total workflow time: ~6-10 minutes (down from 12+ minutes)
+- First build: 3-5 minutes
+- Subsequent builds (with cache): 1-2 minutes
+- Frontend and backend build stages run within a single image build
 
 **Optimizations applied:**
 - Single platform (amd64) instead of multi-platform

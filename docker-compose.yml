@@ -1,7 +1,8 @@
 # =============================================================================
 # Flashpoint Web - Production Docker Compose
 # =============================================================================
-# Uses pre-built images from container registry.
+# Single image serving both the API and the web UI.
+# Uses a pre-built image from the container registry.
 #
 # Usage:
 #   1. Copy .env.example to .env and configure required variables
@@ -16,13 +17,13 @@
 # =============================================================================
 
 services:
-  backend:
-    image: darkraise/flashpoint-backend:${IMAGE_TAG:-latest}
-    container_name: flashpoint-backend
+  flashpoint-web:
+    image: darkraise/flashpoint-web:${IMAGE_TAG:-latest}
+    container_name: flashpoint-web
     restart: unless-stopped
     ports:
-      - "${API_PORT:-3100}:3100"
-      # Backend now includes game content serving on /game-proxy and /game-zip
+      # Serves both the UI and the API (/api, /game-proxy, /game-zip) on one port
+      - "${WEB_PORT:-80}:3100"
     volumes:
       - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint:ro
       - ${DATA_PATH:-./data}:/app/data
@@ -31,6 +32,7 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - NODE_ENV=production
+      - SERVE_FRONTEND=true
       - TZ=${TZ:-UTC}
       - DOMAIN=${DOMAIN:-http://localhost:${WEB_PORT:-80}}
       - LOG_LEVEL=${LOG_LEVEL:-info}
@@ -51,7 +53,7 @@ services:
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       - OTEL_API_KEY=${OTEL_API_KEY:-}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-flashpoint-web-backend}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-flashpoint-web}
       - OTEL_TRACES_ENABLED=${OTEL_TRACES_ENABLED:-true}
       - OTEL_METRICS_ENABLED=${OTEL_METRICS_ENABLED:-true}
       - OTEL_METRICS_EXPORT_INTERVAL=${OTEL_METRICS_EXPORT_INTERVAL:-60000}
@@ -75,43 +77,6 @@ services:
         reservations:
           cpus: "0.5"
           memory: 512M
-    networks:
-      - flashpoint-network
-
-  frontend:
-    image: darkraise/flashpoint-frontend:${IMAGE_TAG:-latest}
-    container_name: flashpoint-frontend
-    restart: unless-stopped
-    ports:
-      - "${WEB_PORT:-80}:8080"
-    environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-UTC}
-      - BACKEND_HOST=${BACKEND_HOST:-backend}
-      - BACKEND_PORT=${BACKEND_PORT:-3100}
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8080/"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    logging:
-      driver: json-file
-      options:
-        max-size: "5m"
-        max-file: "3"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-        reservations:
-          cpus: "0.25"
-          memory: 128M
     networks:
       - flashpoint-network
 

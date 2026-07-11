@@ -69,6 +69,16 @@ export const config = {
   port: 3100, // Hardcoded — Docker EXPOSE and healthcheck depend on this value
   host: '0.0.0.0',
 
+  // Single-image deployment: the backend also serves the built frontend and its
+  // SPA fallback. On by default in production; opt in elsewhere via SERVE_FRONTEND.
+  serveFrontend: process.env.SERVE_FRONTEND
+    ? process.env.SERVE_FRONTEND === 'true'
+    : process.env.NODE_ENV === 'production',
+  // __dirname is backend/dist at runtime, so this resolves to the frontend build
+  // copied next to the backend in the image (/app/frontend/dist).
+  frontendDistPath:
+    process.env.FRONTEND_DIST_PATH ?? path.resolve(__dirname, '../../frontend/dist'),
+
   flashpointPath,
   flashpointDbPath: `${flashpointPath}/Data/flashpoint.sqlite`,
   flashpointHtdocsPath: `${flashpointPath}/Legacy/htdocs`,

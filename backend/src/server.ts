@@ -1,6 +1,8 @@
 // IMPORTANT: OpenTelemetry must be imported FIRST for auto-instrumentation
 import './telemetry';
 
+import path from 'path';
+import fs from 'fs';
 import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -82,13 +84,37 @@ async function startServer() {
   app.use('/game-proxy', gameCors, gameProxyRouter);
   app.use('/game-zip', gameCors, gameZipRouter);
 
+  // When the backend also serves the SPA, the CSP mirrors the policy the former
+  // nginx frontend used. 'unsafe-inline' (styles) is required by Radix/shadcn
+  // inline style attributes; 'unsafe-eval' (scripts) is required by Ruffle's WASM.
+  // No upgrade-insecure-requests, so self-hosted HTTP deployments keep working.
+  // When running API-only, keep the strict 'none' policy.
+  // TODO(security): tighten via per-request nonces + 'wasm-unsafe-eval' once the
+  // SPA and Ruffle are verified to work without the broad 'unsafe-*' allowances.
+  const cspDirectives: Record<string, string[]> = config.serveFrontend
+    ? {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        frameSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+      }
+    : {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      };
+
   app.use(
     helmet({
       contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'none'"],
-          frameAncestors: ["'none'"],
-        },
+        useDefaults: !config.serveFrontend,
+        directives: cspDirectives,
       },
       crossOriginEmbedderPolicy: false,
       frameguard: { action: 'deny' },
@@ -121,6 +147,51 @@ async function startServer() {
 
   app.use(cookieParser());
   app.use(compression());
+
+  // Single-image deployment: the backend serves the built frontend and its SPA
+  // fallback. Registered before auth/maintenance so the app shell always loads
+  // (the SPA then reflects login/maintenance state from API responses), and
+  // before the API catch-all 404 in setupRoutes so client routes reach index.html.
+  if (config.serveFrontend) {
+    const distPath = config.frontendDistPath;
+    const indexHtml = path.join(distPath, 'index.html');
+
+    if (fs.existsSync(indexHtml)) {
+      app.use(
+        express.static(distPath, {
+          index: false,
+          maxAge: '1y',
+          immutable: true,
+          setHeaders: (res, filePath) => {
+            // Hashed assets are immutable; index.html must always be revalidated.
+            if (filePath.endsWith('index.html')) {
+              res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            }
+          },
+        })
+      );
+
+      const backendPrefixes = ['/api/', '/game-proxy/', '/game-zip/', '/proxy/'];
+      app.get('*', (req, res, next) => {
+        if (
+          req.path === '/health' ||
+          backendPrefixes.some((prefix) => req.path.startsWith(prefix))
+        ) {
+          next();
+          return;
+        }
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.sendFile(indexHtml);
+      });
+
+      logger.info(`🖥️  Serving frontend from ${distPath}`);
+    } else {
+      logger.warn(
+        `⚠️  SERVE_FRONTEND is enabled but no build was found at ${indexHtml} — skipping static serving`
+      );
+    }
+  }
+
   app.use(requestTimeout(TimeoutConfig.DEFAULT));
 
   app.use((req, res, next) => {
@@ -282,7 +353,7 @@ async function startServer() {
   server.keepAliveTimeout = 65000; // 65s - slightly above common load balancer timeout
   server.headersTimeout = 66000; // Must be > keepAliveTimeout
   server.timeout = 120000; // 2 min max for any request (including game file streaming)
-  server.maxConnections = 500; // Defense-in-depth; nginx handles primary limiting
+  server.maxConnections = 500; // Defense-in-depth against connection exhaustion
 
   const playTrackingService = new PlayTrackingService();
   const playSessionCleanupInterval = setInterval(

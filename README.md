@@ -74,12 +74,12 @@ mkdir flashpoint-web && cd flashpoint-web
 <!-- prettier-ignore -->
 ```yaml
 services:
-  backend:
-    image: darkraise/flashpoint-backend:${IMAGE_TAG:-latest}
-    container_name: flashpoint-backend
+  flashpoint-web:
+    image: darkraise/flashpoint-web:${IMAGE_TAG:-latest}
+    container_name: flashpoint-web
     restart: unless-stopped
     ports:
-      - "${API_PORT:-3100}:3100"
+      - "${WEB_PORT:-80}:3100"
     volumes:
       - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint:ro
       - ${DATA_PATH:-./data}:/app/data
@@ -102,28 +102,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  frontend:
-    image: darkraise/flashpoint-frontend:${IMAGE_TAG:-latest}
-    container_name: flashpoint-frontend
-    restart: unless-stopped
-    ports:
-      - "${WEB_PORT:-80}:8080"
-    environment:
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
-      - TZ=${TZ:-UTC}
-      - BACKEND_HOST=${BACKEND_HOST:-backend}
-      - BACKEND_PORT=${BACKEND_PORT:-3100}
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8080/"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
 ```
 
 ### 3. Create `.env`
@@ -136,11 +114,10 @@ FLASHPOINT_HOST_PATH=/path/to/Flashpoint
 JWT_SECRET=your-secure-secret-key
 
 # Optional — uncomment and edit as needed
-# WEB_PORT=80              # Frontend port (default: 80)
-# API_PORT=3100            # Backend API port (default: 3100)
+# WEB_PORT=80              # Host port for the app (UI + API) (default: 80)
 # PUID=1000                # Host user ID (Linux — run 'id -u')
 # PGID=1000                # Host group ID (Linux — run 'id -g')
-# DOMAIN=http://localhost  # Public URL of the frontend
+# DOMAIN=http://localhost  # Public URL of the app
 # LOG_LEVEL=info           # debug, info, warn, error
 # TZ=UTC                   # Timezone
 # DATA_PATH=./data         # Persistent app data
