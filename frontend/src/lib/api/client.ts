@@ -94,6 +94,16 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // Guests are intentionally unauthenticated. A 401 from an auth-only
+      // endpoint (e.g. GET /favorites/game-ids fired by the home page) is
+      // expected for them, not an expired session — there is no token to
+      // refresh. Reject and let the caller handle it, instead of clearing guest
+      // state and redirecting to /login, which turns "Browse as Guest" into a
+      // redirect loop on any page that fetches such an endpoint.
+      if (useAuthStore.getState().isGuest) {
+        return Promise.reject(error);
+      }
+
       // Don't retry the refresh endpoint itself (prevents infinite loop)
       if (originalRequest.url?.includes('/auth/refresh')) {
         toast.error('Session expired. Please log in again.', { id: 'session-expired' });
