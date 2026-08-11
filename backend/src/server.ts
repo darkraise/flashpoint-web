@@ -11,6 +11,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { config } from './config';
 import { logger, getLoggingStatus, verifyFileLogging } from './utils/logger';
+import { isOriginAllowed } from './utils/origins';
 import { errorHandler } from './middleware/errorHandler';
 import { softAuth } from './middleware/auth';
 import { maintenanceMode } from './middleware/maintenanceMode';
@@ -154,21 +155,33 @@ async function startServer() {
   const domainService = DomainService.getInstance();
 
   app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (origin === config.domain) return callback(null, true);
+    cors((req, callback) => {
+      const origin = req.headers.origin;
 
-        try {
-          const allowed = domainService.getAllowedOrigins();
-          if (allowed.has(origin)) return callback(null, true);
-        } catch (error) {
-          logger.warn(`[CORS] Failed to check domains for origin "${origin}":`, error);
-        }
+      let domainOrigins: ReadonlySet<string> = new Set<string>();
+      try {
+        domainOrigins = domainService.getAllowedOrigins();
+      } catch (error) {
+        logger.warn(`[CORS] Failed to load domains for origin "${origin ?? ''}":`, error);
+      }
 
-        callback(new Error('Not allowed by CORS'));
-      },
-      credentials: true,
+      const allowed = isOriginAllowed({
+        origin,
+        host: req.headers.host,
+        configuredOrigins: config.allowedOrigins,
+        domainOrigins,
+      });
+
+      if (!allowed) {
+        logger.warn(
+          `[CORS] Rejected origin "${origin ?? ''}" (host "${req.headers.host ?? ''}"). ` +
+            `Allowed: ${config.allowedOrigins.join(', ') || 'none'}`
+        );
+      }
+
+      // origin: true reflects the request's own origin, which is required for
+      // credentialed requests — a wildcard is not permitted with cookies.
+      callback(null, { origin: allowed, credentials: true });
     })
   );
 

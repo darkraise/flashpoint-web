@@ -1,6 +1,7 @@
 import { UserDatabaseService } from './UserDatabaseService';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { normalizeOrigin } from '../utils/origins';
 
 export interface Domain {
   id: number;
@@ -192,10 +193,16 @@ export class DomainService {
       return this.cachedOrigins;
     }
 
+    // Normalized so a hostname stored with an explicit default port still matches
+    // the origin a browser sends, and so entries carrying a non-default port work.
     const origins = new Set<string>();
     for (const domain of domains) {
-      origins.add(`http://${domain.hostname}`);
-      origins.add(`https://${domain.hostname}`);
+      for (const scheme of ['http', 'https']) {
+        const origin = normalizeOrigin(`${scheme}://${domain.hostname}`);
+        if (origin !== null) {
+          origins.add(origin);
+        }
+      }
     }
 
     this.cachedOrigins = origins;

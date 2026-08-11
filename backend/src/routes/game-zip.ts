@@ -6,6 +6,7 @@ import { logger } from '../utils/logger';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { config } from '../config';
+import { isOriginAllowed } from '../utils/origins';
 import { asyncHandler } from '../middleware/asyncHandler';
 
 const mountBodySchema = z.object({
@@ -17,9 +18,22 @@ const mountBodySchema = z.object({
 
 const router = Router();
 
-// Restrictive CORS: only allow requests from the configured domain (admin routes)
+// Restrictive CORS: only allow requests from a configured origin (admin routes).
+// Reflects the caller's own origin when it is allowed, so a deployment reachable
+// at several addresses does not have to pick one.
 const adminCors = (req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('Access-Control-Allow-Origin', config.domain);
+  const origin = req.headers.origin;
+  const allowed =
+    origin !== undefined &&
+    isOriginAllowed({
+      origin,
+      host: req.headers.host,
+      configuredOrigins: config.allowedOrigins,
+      domainOrigins: new Set<string>(),
+    });
+
+  res.setHeader('Access-Control-Allow-Origin', allowed && origin ? origin : config.domain);
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');

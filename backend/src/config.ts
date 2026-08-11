@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { parseOriginList } from './utils/origins';
 
 dotenv.config();
 
@@ -87,7 +88,12 @@ export const config = {
   flashpointPlaylistsPath: `${flashpointPath}/Data/Playlists`,
   flashpointGamesPath: `${flashpointPath}/Data/Games`,
 
+  // Primary origin, used where a single value is required (e.g. share links).
   domain: process.env.DOMAIN || 'http://localhost:5173',
+  // DOMAIN accepts a comma-separated list so one deployment can be reached over
+  // both a LAN address and a public domain. Normalized, so an explicit :80/:443
+  // still matches the origin a browser actually sends.
+  allowedOrigins: parseOriginList(process.env.DOMAIN || 'http://localhost:5173'),
 
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '', 10) || 60000,
   rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '', 10) || 100,

@@ -29,13 +29,36 @@ Location: `backend/.env` (local development)
 | `JWT_SECRET`         | auto-generated (dev)  | Secret for JWT signing (**required in production**)  |
 | `JWT_EXPIRES_IN`     | 1h                    | Access token expiration (15m, 1h, 7d, etc.)          |
 | `BCRYPT_SALT_ROUNDS` | 10                    | Password hash cost (higher = more secure but slower) |
-| `DOMAIN`             | http://localhost:5173 | CORS origin (use specific domain in production)      |
+| `DOMAIN`             | http://localhost:5173 | Allowed CORS origin(s), comma-separated (see below)  |
 
 Generate secure JWT secret:
 
 ```bash
 openssl rand -hex 64
 ```
+
+**DOMAIN — allowed origins:**
+
+`DOMAIN` accepts one origin or a comma-separated list, so a single deployment can
+be reached over several addresses:
+
+```bash
+DOMAIN=http://192.168.0.118,https://flashpoint.example.com
+```
+
+The first entry is the primary origin, used where a single value is required.
+Requests from any listed origin are accepted, as are requests from hostnames in
+the domains table.
+
+Two notes that save debugging time:
+
+- Same-origin requests are always allowed, so `SERVE_FRONTEND=true` deployments
+  work at any address without listing it here. You only need `DOMAIN` when the UI
+  is served from a different origin than the API, or behind a reverse proxy that
+  rewrites the `Host` header.
+- Default ports are normalized away: `http://host:80` and `http://host` are
+  treated as the same origin, as are `https://host:443` and `https://host`.
+  Non-default ports must be written out, for example `http://host:8080`.
 
 **Rate Limiting:**
 
