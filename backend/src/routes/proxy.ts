@@ -3,7 +3,6 @@ import { config, getExternalImageUrls } from '../config';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
 import path from 'path';
-import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import axios from 'axios';
 
@@ -37,6 +36,30 @@ function validatePath(requestedPath: string, allowedBasePath: string): string | 
 // Prevent duplicate concurrent cache writes for the same file
 const pendingCacheWrites = new Set<string>();
 
+// Images are keyed by game UUID and effectively immutable, so a day of caching
+// removes the per-view revalidation that dominates cost on a network mount.
+const IMAGE_CACHE_CONTROL = 'public, max-age=86400';
+
+// realpath of a base directory is constant, but resolving it per request costs a
+// metadata round trip — punishing over SMB, where those dominate.
+const realBasePathCache = new Map<string, Promise<string>>();
+
+function getRealBasePath(basePath: string): Promise<string> {
+  const cached = realBasePathCache.get(basePath);
+  if (cached) {
+    return cached;
+  }
+
+  const resolving = fsPromises.realpath(basePath).catch((error: unknown) => {
+    // Don't cache a failure: the mount may simply not be ready yet.
+    realBasePathCache.delete(basePath);
+    throw error;
+  });
+
+  realBasePathCache.set(basePath, resolving);
+  return resolving;
+}
+
 async function serveFileWithFallback(
   localPath: string,
   relativePath: string,
@@ -46,13 +69,20 @@ async function serveFileWithFallback(
   allowedBasePath: string
 ) {
   try {
-    if (fs.existsSync(localPath)) {
+    // Async, not existsSync: a synchronous stat blocks the event loop for the
+    // full round trip, which is milliseconds per image on a network mount.
+    const localFileExists = await fsPromises
+      .stat(localPath)
+      .then((stats) => stats.isFile())
+      .catch(() => false);
+
+    if (localFileExists) {
       logger.debug(`[Proxy] Serving local file: ${localPath}`);
 
       // Resolve symlinks to prevent bypass via symlink to unauthorized location
       try {
         const realPath = await fsPromises.realpath(localPath);
-        const realBase = await fsPromises.realpath(allowedBasePath);
+        const realBase = await getRealBasePath(allowedBasePath);
         if (!realPath.startsWith(realBase + path.sep) && realPath !== realBase) {
           logger.warn(`[Security] Symlink escape detected: ${localPath} -> ${realPath}`);
           return res.status(403).json({ error: { message: 'Access denied', statusCode: 403 } });
@@ -67,6 +97,7 @@ async function serveFileWithFallback(
         res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
       }
       res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', IMAGE_CACHE_CONTROL);
       return res.sendFile(localPath);
     }
 
@@ -132,7 +163,7 @@ async function serveFileWithFallback(
             );
           }
           res.setHeader('X-Content-Type-Options', 'nosniff');
-          res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+          res.setHeader('Cache-Control', IMAGE_CACHE_CONTROL);
 
           return res.send(imageBuffer);
         }
