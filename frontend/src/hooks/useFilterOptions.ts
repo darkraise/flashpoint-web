@@ -6,6 +6,7 @@ import { FilterOptions } from '@/types/game';
 export interface FilterOptionsParams {
   platform?: string;
   library?: string;
+  downloaded?: boolean;
   // Context filters - when set, filter options update to reflect current selection
   series?: string[];
   developers?: string[];

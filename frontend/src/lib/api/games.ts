@@ -19,6 +19,7 @@ export const gamesApi = {
       playModes: filters.playModes?.split(',').filter(Boolean),
       languages: filters.languages?.split(',').filter(Boolean),
       library: filters.library,
+      downloaded: filters.downloaded,
       tags: filters.tags?.split(',').filter(Boolean),
       yearFrom: filters.yearFrom,
       yearTo: filters.yearTo,
@@ -39,6 +40,7 @@ export const gamesApi = {
   getFilterOptions: async (params?: {
     platform?: string;
     library?: string;
+    downloaded?: boolean;
     // Context filters for dynamic options
     series?: string;
     developers?: string;
