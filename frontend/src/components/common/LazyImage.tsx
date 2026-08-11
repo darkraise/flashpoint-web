@@ -1,6 +1,21 @@
 import { useState, useEffect, useRef, ImgHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
+/**
+ * Stop a preload that is still in flight.
+ *
+ * A detached Image keeps downloading after its component unmounts — nothing
+ * removes it from a document, so the browser has no reason to abort. Clearing
+ * src is what actually cancels the request; without it, navigating away from a
+ * grid leaves every thumbnail downloading, occupying the six connections the
+ * next page needs and keeping the server busy on results nobody will read.
+ */
+function abortImageLoad(img: HTMLImageElement): void {
+  img.onload = null;
+  img.onerror = null;
+  img.src = '';
+}
+
 interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'placeholder'> {
   src: string;
   alt: string;
@@ -100,6 +115,7 @@ export function LazyImage({
 
     return () => {
       cancelled = true;
+      abortImageLoad(img);
     };
   }, [isInView, src]);
 
@@ -218,6 +234,7 @@ export function LazyBackgroundImage({
     img.src = src;
     return () => {
       cancelled = true;
+      abortImageLoad(img);
     };
   }, [isInView, src]);
 

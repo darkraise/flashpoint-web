@@ -60,6 +60,11 @@ function getRealBasePath(basePath: string): Promise<string> {
   return resolving;
 }
 
+/** True once the client has gone, so remaining work would be wasted. */
+function clientGone(res: Response): boolean {
+  return res.req.destroyed || res.writableEnded;
+}
+
 async function serveFileWithFallback(
   localPath: string,
   relativePath: string,
@@ -69,6 +74,14 @@ async function serveFileWithFallback(
   allowedBasePath: string
 ) {
   try {
+    // A grid of thumbnails that the user navigated away from leaves dozens of
+    // abandoned requests. Serving them costs a round trip each on a network
+    // mount, starving the requests the user is actually waiting for.
+    if (clientGone(res)) {
+      logger.debug(`[Proxy] Client gone before serving: ${relativePath}`);
+      return;
+    }
+
     // Async, not existsSync: a synchronous stat blocks the event loop for the
     // full round trip, which is milliseconds per image on a network mount.
     const localFileExists = await fsPromises
@@ -102,6 +115,12 @@ async function serveFileWithFallback(
     }
 
     logger.debug(`[Proxy] Local file not found, trying external CDN: ${relativePath}`);
+
+    // Never start a 10-second CDN fetch for a client that has already left.
+    if (clientGone(res)) {
+      logger.debug(`[Proxy] Client gone before CDN fallback: ${relativePath}`);
+      return;
+    }
 
     for (const baseUrl of externalBaseUrls) {
       try {
