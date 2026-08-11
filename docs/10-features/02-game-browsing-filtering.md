@@ -165,7 +165,7 @@ Get detailed information for a single game.
 
 ```sql
 SELECT g.*, p.name as platformName,
-  (SELECT COUNT(*) FROM game_data WHERE gameId = g.id) > 0 as presentOnDisk
+  EXISTS (SELECT 1 FROM game_data WHERE gameId = g.id AND presentOnDisk = 1) as presentOnDisk
 FROM game g
 LEFT JOIN platform p ON g.platformId = p.id
 WHERE [filter conditions]

@@ -4,9 +4,9 @@ Search, browse, and retrieve game information.
 
 ## Search Games
 
-`GET /api/games` - No auth required
+`POST /api/games` - No auth required
 
-Query params: `search` (title/developer/publisher), `platform`, `series`,
+Body (JSON): `search` (title/developer/publisher), `platform`, `series`,
 `developers`, `publishers`, `playModes`, `languages`, `library`
 (arcade|theatre), `downloaded` (boolean, optional - restrict to games whose
 data is present on disk), `tags`, `yearFrom`, `yearTo`, `dateAddedSince` (ISO
