@@ -157,6 +157,30 @@ export function FeaturesSettingsTab({ tabContentVariants }: FeaturesSettingsTabP
                 disabled={updateSystemSettings.isPending}
               />
             </div>
+
+            {/* I'm Feeling Lucky button */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="enable-lucky-button" className="text-base">
+                  Show &quot;I&apos;m Feeling Lucky&quot; Button
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Display the floating shuffle button that opens a random game. This one also
+                  applies to admins.
+                </p>
+              </div>
+              <Switch
+                id="enable-lucky-button"
+                checked={featureSettings.enableLuckyButton !== false}
+                onCheckedChange={(checked: boolean) => {
+                  updateSystemSettings.mutate({
+                    category: 'features',
+                    settings: { enableLuckyButton: checked },
+                  });
+                }}
+                disabled={updateSystemSettings.isPending}
+              />
+            </div>
           </div>
         </div>
       ) : null}

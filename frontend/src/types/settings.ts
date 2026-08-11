@@ -17,6 +17,7 @@ export interface FeatureSettings {
   enableSearch: boolean;
   enableStatistics: boolean;
   enableRatings: boolean;
+  enableLuckyButton: boolean;
 }
 
 export interface GameSettings {

@@ -121,6 +121,8 @@ Clears permission cache entries.
 | features | enableFavorites         | boolean | true           | -                                      |
 | features | enableStatistics        | boolean | true           | -                                      |
 | features | enableActivityLog       | boolean | true           | -                                      |
+| features | enableRatings           | boolean | true           | -                                      |
+| features | enableLuckyButton       | boolean | true           | -                                      |
 | game     | defaultScaleMode        | string  | showall        | showall\|exactfit\|noborder\|noscale   |
 | game     | defaultVolume           | number  | 0.7            | 0-1                                    |
 

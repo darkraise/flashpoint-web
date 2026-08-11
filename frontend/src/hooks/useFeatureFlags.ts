@@ -18,6 +18,9 @@ export function useFeatureFlags() {
     enableFavorites: isAdmin || (features.enableFavorites ?? true),
     enableStatistics: isAdmin || (features.enableStatistics ?? true),
     enableRatings: isAdmin || (features.enableRatings ?? true),
+    // Cosmetic chrome rather than a capability: no admin bypass, otherwise an
+    // admin could never hide the button in their own session.
+    enableLuckyButton: (features.enableLuckyButton ?? true) !== false,
     isFeatureEnabled: (featureName: string) => {
       return isAdmin || ((features as Record<string, unknown>)[featureName] ?? true) !== false;
     },
