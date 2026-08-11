@@ -92,9 +92,10 @@ export class GameDataService {
       const result = await gameZipServer.mountZip({
         id: mountId,
         zipPath,
-        gameId: gameDataEntry?.gameId || gameId,
+        gameId: gameDataEntry?.gameId ?? gameId,
         dateAdded: gameDataEntry?.dateAdded,
         sha256: gameDataEntry?.sha256,
+        gameDataId: gameDataEntry?.id,
       });
 
       if (result.downloading) {
