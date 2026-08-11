@@ -34,6 +34,7 @@ const searchBodySchema = z.object({
   playModes: z.array(z.string()).optional(),
   languages: z.array(z.string()).optional(),
   library: z.enum(['arcade', 'theatre']).optional(),
+  downloaded: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
   yearFrom: z.number().int().min(1970).max(2100).optional(),
   yearTo: z.number().int().min(1970).max(2100).optional(),
@@ -62,6 +63,7 @@ router.post(
       'playModes',
       'languages',
       'library',
+      'downloaded',
       'tags',
       'yearFrom',
       'yearTo',
@@ -90,6 +92,7 @@ router.post(
       playModes: body.playModes,
       languages: body.languages,
       library: body.library,
+      downloaded: body.downloaded,
       tags: body.tags,
       yearFrom: body.yearFrom,
       yearTo: body.yearTo,
@@ -188,7 +191,10 @@ router.get(
     if (req.query.platforms) {
       const raw = req.query.platforms;
       if (typeof raw === 'string') {
-        platforms = raw.split(',').map((p) => p.trim()).filter(Boolean);
+        platforms = raw
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean);
       } else if (Array.isArray(raw)) {
         platforms = (raw as string[])
           .filter((p) => typeof p === 'string')
