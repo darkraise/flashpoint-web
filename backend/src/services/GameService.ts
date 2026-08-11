@@ -549,7 +549,9 @@ export class GameService {
       }
 
       // OPTIMIZATION: Single query execution with window function for count
-      const games = DatabaseService.all(sql, params) as (Game & { total_count: number })[];
+      const games = (await DatabaseService.allAsync(sql, params)) as (Game & {
+        total_count: number;
+      })[];
 
       // Extract total from first row (window function provides same count for all rows)
       const total = games.length > 0 ? games[0].total_count : 0;
@@ -567,7 +569,10 @@ export class GameService {
           GROUP BY gameId
         `;
 
-        const presentOnDiskResults = DatabaseService.all(presentOnDiskSql, gameIds) as Array<{
+        const presentOnDiskResults = (await DatabaseService.allAsync(
+          presentOnDiskSql,
+          gameIds
+        )) as Array<{
           gameId: string;
           presentOnDisk: number;
         }>;
@@ -1001,17 +1006,29 @@ export class GameService {
       const startTime = performance.now();
 
       // Build result, skipping excluded types for performance
+      const [series, developers, publishers, playModes, languages, tags, platforms, yearRange] =
+        await Promise.all([
+          excludeSet?.has('series') ? [] : this.getSeriesOptions(params),
+          excludeSet?.has('developers') ? [] : this.getDeveloperOptions(params),
+          excludeSet?.has('publishers') ? [] : this.getPublisherOptions(params),
+          excludeSet?.has('playModes') ? [] : this.getPlayModeOptions(params),
+          excludeSet?.has('languages') ? [] : this.getLanguageOptions(params),
+          excludeSet?.has('tags') ? [] : this.getTagOptions(params),
+          excludeSet?.has('platforms') ? [] : this.getPlatformOptions(params),
+          excludeSet?.has('yearRange')
+            ? { min: 1970, max: new Date().getFullYear() }
+            : this.getYearRange(params),
+        ]);
+
       const result: FilterOptionsResult = {
-        series: excludeSet?.has('series') ? [] : this.getSeriesOptions(params),
-        developers: excludeSet?.has('developers') ? [] : this.getDeveloperOptions(params),
-        publishers: excludeSet?.has('publishers') ? [] : this.getPublisherOptions(params),
-        playModes: excludeSet?.has('playModes') ? [] : this.getPlayModeOptions(params),
-        languages: excludeSet?.has('languages') ? [] : this.getLanguageOptions(params),
-        tags: excludeSet?.has('tags') ? [] : this.getTagOptions(params),
-        platforms: excludeSet?.has('platforms') ? [] : this.getPlatformOptions(params),
-        yearRange: excludeSet?.has('yearRange')
-          ? { min: 1970, max: new Date().getFullYear() }
-          : this.getYearRange(params),
+        series,
+        developers,
+        publishers,
+        playModes,
+        languages,
+        tags,
+        platforms,
+        yearRange,
       };
 
       const duration = Math.round(performance.now() - startTime);
@@ -1076,7 +1093,7 @@ export class GameService {
    * Get distinct series names
    * Applies default filters: excludes broken/extreme games
    */
-  getSeriesOptions(params?: FilterOptionsParams): string[] {
+  async getSeriesOptions(params?: FilterOptionsParams): Promise<string[]> {
     try {
       const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'series');
       conditions.unshift("series IS NOT NULL AND series != ''");
@@ -1088,7 +1105,7 @@ export class GameService {
         ORDER BY series ASC
       `;
 
-      const results = DatabaseService.all(sql, queryParams) as Array<{ name: string }>;
+      const results = (await DatabaseService.allAsync(sql, queryParams)) as Array<{ name: string }>;
       return results.map((r) => r.name);
     } catch (error) {
       logger.error('Error getting series options:', error);
@@ -1101,7 +1118,7 @@ export class GameService {
    * Applies default filters: excludes broken/extreme games
    * Developers are semicolon-delimited (e.g., "Studio A; Studio B"), so we split and deduplicate
    */
-  getDeveloperOptions(params?: FilterOptionsParams): string[] {
+  async getDeveloperOptions(params?: FilterOptionsParams): Promise<string[]> {
     try {
       const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'developers');
       conditions.unshift("developer IS NOT NULL AND developer != ''");
@@ -1112,7 +1129,9 @@ export class GameService {
         WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, queryParams) as Array<{ developer: string }>;
+      const results = (await DatabaseService.allAsync(sql, queryParams)) as Array<{
+        developer: string;
+      }>;
 
       // Developers are semicolon-delimited
       const developerSet = new Set<string>();
@@ -1139,7 +1158,7 @@ export class GameService {
    * Applies default filters: excludes broken/extreme games
    * Publishers are semicolon-delimited (e.g., "Publisher A; Publisher B"), so we split and deduplicate
    */
-  getPublisherOptions(params?: FilterOptionsParams): string[] {
+  async getPublisherOptions(params?: FilterOptionsParams): Promise<string[]> {
     try {
       const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'publishers');
       conditions.unshift("publisher IS NOT NULL AND publisher != ''");
@@ -1150,7 +1169,9 @@ export class GameService {
         WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, queryParams) as Array<{ publisher: string }>;
+      const results = (await DatabaseService.allAsync(sql, queryParams)) as Array<{
+        publisher: string;
+      }>;
 
       // Publishers are semicolon-delimited
       const publisherSet = new Set<string>();
@@ -1177,7 +1198,7 @@ export class GameService {
    * Applies default filters: excludes broken/extreme games
    * Play modes are semicolon-delimited (e.g., "Single Player;Multiplayer"), so we split and deduplicate
    */
-  getPlayModeOptions(params?: FilterOptionsParams): string[] {
+  async getPlayModeOptions(params?: FilterOptionsParams): Promise<string[]> {
     try {
       const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'playModes');
       conditions.unshift("playMode IS NOT NULL AND playMode != ''");
@@ -1188,7 +1209,9 @@ export class GameService {
         WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, queryParams) as Array<{ playMode: string }>;
+      const results = (await DatabaseService.allAsync(sql, queryParams)) as Array<{
+        playMode: string;
+      }>;
 
       // Play modes are semicolon-delimited (like tags/languages)
       const playModeSet = new Set<string>();
@@ -1216,7 +1239,7 @@ export class GameService {
    * Applies default filters: excludes broken/extreme games
    * Languages are semicolon-delimited (e.g., "en;jp;ru"), so we split and deduplicate
    */
-  getLanguageOptions(params?: FilterOptionsParams): string[] {
+  async getLanguageOptions(params?: FilterOptionsParams): Promise<string[]> {
     try {
       const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'languages');
       conditions.unshift("language IS NOT NULL AND language != ''");
@@ -1227,7 +1250,9 @@ export class GameService {
         WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, queryParams) as Array<{ language: string }>;
+      const results = (await DatabaseService.allAsync(sql, queryParams)) as Array<{
+        language: string;
+      }>;
 
       // Languages are semicolon-delimited (like tags)
       // Normalize using exact same logic as searchGames SQL query:
@@ -1262,7 +1287,7 @@ export class GameService {
    * Get distinct tags
    * Applies default filters: excludes broken/extreme games
    */
-  getTagOptions(params?: FilterOptionsParams): string[] {
+  async getTagOptions(params?: FilterOptionsParams): Promise<string[]> {
     try {
       const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'tags');
       conditions.unshift("tagsStr IS NOT NULL AND tagsStr != ''");
@@ -1273,7 +1298,9 @@ export class GameService {
         WHERE ${conditions.join(' AND ')}
       `;
 
-      const results = DatabaseService.all(sql, queryParams) as Array<{ tagsStr: string }>;
+      const results = (await DatabaseService.allAsync(sql, queryParams)) as Array<{
+        tagsStr: string;
+      }>;
 
       // Tags are semicolon-delimited
       const tagSet = new Set<string>();
@@ -1299,7 +1326,7 @@ export class GameService {
    * Get distinct platforms
    * Applies default filters and context-aware filters (except platform itself)
    */
-  getPlatformOptions(params?: FilterOptionsParams): string[] {
+  async getPlatformOptions(params?: FilterOptionsParams): Promise<string[]> {
     try {
       // Use common conditions but exclude platform filter (would defeat the purpose)
       const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'platforms');
@@ -1312,7 +1339,7 @@ export class GameService {
         ORDER BY platformName ASC
       `;
 
-      const results = DatabaseService.all(sql, queryParams) as Array<{ name: string }>;
+      const results = (await DatabaseService.allAsync(sql, queryParams)) as Array<{ name: string }>;
       return results.map((r) => r.name);
     } catch (error) {
       logger.error('Error getting platform options:', error);
@@ -1324,7 +1351,7 @@ export class GameService {
    * Get year range from release dates
    * Applies default filters: excludes broken/extreme games
    */
-  getYearRange(params?: FilterOptionsParams): { min: number; max: number } {
+  async getYearRange(params?: FilterOptionsParams): Promise<{ min: number; max: number }> {
     try {
       const { conditions, queryParams } = this.buildFilterOptionsConditions(params, 'yearRange');
       conditions.unshift(

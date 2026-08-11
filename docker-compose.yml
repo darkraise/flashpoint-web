@@ -36,6 +36,9 @@ services:
       - TZ=${TZ:-UTC}
       - DOMAIN=${DOMAIN:-http://localhost:${WEB_PORT:-80}}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      # File I/O parallelism: images and ZIP reads run on libuv's threadpool,
+      # whose default of 4 throttles every filesystem request in the process.
+      - UV_THREADPOOL_SIZE=${UV_THREADPOOL_SIZE:-16}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - ENABLE_LOCAL_DB_COPY=${ENABLE_LOCAL_DB_COPY:-false}
       - SQLITE_CACHE_SIZE=${SQLITE_CACHE_SIZE:--64000}

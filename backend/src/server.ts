@@ -19,6 +19,7 @@ import { requestTimeout, TimeoutConfig } from './middleware/requestTimeout';
 import { performanceTracking } from './middleware/performanceTracking';
 import { setupRoutes } from './routes';
 import { DatabaseService } from './services/DatabaseService';
+import { DbQueryPool } from './services/DbQueryPool';
 import { DownloadedReconciler } from './services/DownloadedReconciler';
 import { UserDatabaseService } from './services/UserDatabaseService';
 import { DomainService } from './services/DomainService';
@@ -493,6 +494,12 @@ async function startServer() {
       await zipManager.unmountAll();
     } catch (err) {
       logger.error('Failed to unmount ZIPs during shutdown:', err);
+    }
+
+    try {
+      await DbQueryPool.shutdown();
+    } catch (err) {
+      logger.error('Failed to stop database query workers during shutdown:', err);
     }
 
     try {

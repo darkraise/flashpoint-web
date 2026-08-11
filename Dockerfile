@@ -77,6 +77,8 @@ COPY --from=backend-builder /app/backend/dist ./backend/dist
 
 # Copy migration files to dist directory (needed at runtime)
 COPY --from=backend-builder /app/backend/src/migrations ./backend/dist/migrations
+# Plain-JS query worker: not compiled by tsc, loaded by path at runtime
+COPY --from=backend-builder /app/backend/src/workers ./backend/dist/workers
 
 # Copy entrypoint script
 COPY --from=backend-builder /app/backend/docker-entrypoint.sh ./backend/docker-entrypoint.sh
@@ -103,6 +105,9 @@ EXPOSE 3100
 ENV NODE_ENV=production
 ENV PUID=1000
 ENV PGID=1000
+# Image and ZIP reads run on libuv's threadpool; its default of 4 throttles
+# every filesystem request in the process, which shows up badly on a network mount.
+ENV UV_THREADPOOL_SIZE=16
 
 # Start as root, entrypoint will drop privileges after setting up user
 USER root

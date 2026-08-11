@@ -1,5 +1,6 @@
 import BetterSqlite3 from 'better-sqlite3';
 import { config } from '../config';
+import { DbQueryPool } from './DbQueryPool';
 import { logger } from '../utils/logger';
 import { measureQueryPerformance } from '../utils/queryPerformance';
 import fs from 'fs';
@@ -69,6 +70,7 @@ export class DatabaseService {
 
       // Start watching source database for changes
       this.startWatching();
+      DbQueryPool.start(this.activeDbPath);
     } catch (error) {
       logger.error('Failed to initialize database:', error);
       throw error;
@@ -353,6 +355,8 @@ export class DatabaseService {
         GameServiceStatic.clearFlashSwfCache();
         GameServiceStatic.clearFilterOptionsCache();
       }
+      DbQueryPool.reopen(this.activeDbPath);
+
       logger.info('Database reloaded, caches invalidated');
 
       // Re-run reconciliation since a local-copy sync overwrites our presentOnDisk flags.
@@ -573,6 +577,27 @@ export class DatabaseService {
       sql,
       params
     );
+  }
+
+  /**
+   * Read rows off the main thread when query workers are available.
+   *
+   * better-sqlite3 is synchronous, so a slow read on the main thread freezes the
+   * whole server. Use this for the heavy scans (search, filter options); point
+   * lookups are cheap enough that the message-passing round trip would dominate.
+   * Falls back to the in-process path whenever workers are unavailable.
+   */
+  static async allAsync<T = unknown>(sql: string, params: unknown[] = []): Promise<T[]> {
+    if (!DbQueryPool.isAvailable()) {
+      return this.all<T>(sql, params);
+    }
+
+    try {
+      return await DbQueryPool.all<T>(sql, params);
+    } catch (error: unknown) {
+      logger.warn('[DatabaseService] Worker query failed, retrying in process:', error);
+      return this.all<T>(sql, params);
+    }
   }
 
   /**

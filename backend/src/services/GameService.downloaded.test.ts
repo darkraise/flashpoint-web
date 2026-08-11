@@ -4,6 +4,7 @@ import BetterSqlite3 from 'better-sqlite3';
 vi.mock('./DatabaseService', () => ({
   DatabaseService: {
     all: vi.fn(),
+    allAsync: vi.fn(),
     get: vi.fn(),
     getDatabase: vi.fn(),
   },
@@ -46,6 +47,9 @@ beforeEach(() => {
   seed();
   vi.mocked(DatabaseService.all).mockImplementation(
     (sql: string, params: unknown[] = []) => db.prepare(sql).all(...params) as unknown[]
+  );
+  vi.mocked(DatabaseService.allAsync).mockImplementation(
+    async (sql: string, params: unknown[] = []) => db.prepare(sql).all(...params) as unknown[]
   );
   vi.mocked(DatabaseService.get).mockImplementation(
     (sql: string, params: unknown[] = []) => db.prepare(sql).get(...params) as unknown
@@ -94,13 +98,13 @@ describe('filter options honour the downloaded filter', () => {
     `);
   });
 
-  it('lists only series belonging to downloaded games', () => {
-    const options = new GameService().getSeriesOptions({ downloaded: true });
+  it('lists only series belonging to downloaded games', async () => {
+    const options = await new GameService().getSeriesOptions({ downloaded: true });
     expect(options).toEqual(['Downloaded Series']);
   });
 
-  it('lists every series when the filter is off', () => {
-    const options = new GameService().getSeriesOptions({});
+  it('lists every series when the filter is off', async () => {
+    const options = await new GameService().getSeriesOptions({});
     expect(options).toHaveLength(2);
   });
 });

@@ -2,7 +2,7 @@
 
 Defects found during deployment testing. Each entry records the symptom, the
 verified root cause, and either the agreed approach or the fix that landed.
-Items 3 and 6 remain open.
+Item 6 remains open; item 3 is fixed for the heavy read paths.
 
 ---
 
@@ -90,9 +90,16 @@ bind mount versus 0.08 s from the container's own volume and 0.147 s on the host
 Sequential throughput is fine (a full copy streams at ~132 MB/s); it is random
 4 KB page access that collapses.
 
-**Approach:** move database work to `worker_threads` with their own read-only
-connections so a slow query can never freeze the server. `ENABLE_LOCAL_DB_COPY`
-mitigates the symptom on slow storage but does not remove the blocking.
+**Status: fixed for the heavy read paths.** `DbQueryPool` runs read-only SQLite
+connections in worker threads; `DatabaseService.allAsync` routes the full-table
+scans (search and every filter-options query) through them and falls back to the
+in-process path when workers are unavailable. The filter-options queries now also
+run concurrently instead of one after another. `UV_THREADPOOL_SIZE=16` raises
+file-I/O parallelism alongside it.
+
+Still in process: point lookups and all writes, where the message-passing round
+trip would cost more than the query. Those are fast enough not to freeze the
+server, but a pathologically slow mount could still stall on one.
 
 ---
 

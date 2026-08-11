@@ -31,6 +31,8 @@ Location: `backend/.env` (local development)
 | `BCRYPT_SALT_ROUNDS` | 10                    | Password hash cost (higher = more secure but slower) |
 | `DOMAIN`             | http://localhost:5173 | Allowed CORS origin(s), comma-separated (see below)  |
 | `COOKIE_SECURE`      | auto                  | Secure flag on auth cookies: `auto`, `true`, `false` |
+| `UV_THREADPOOL_SIZE` | 16                    | Concurrent file I/O threads (Node's own default is 4) |
+| `DB_WORKER_COUNT`    | 4                     | Read-only SQLite query workers (1-16)                |
 
 Generate secure JWT secret:
 
