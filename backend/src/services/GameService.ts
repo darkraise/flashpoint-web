@@ -167,11 +167,11 @@ export class GameService {
       return { key, isDynamic: true };
     }
 
-    // Base page combination (no dynamic filters)
-    return {
-      key: `${params?.platform ?? ''}_${params?.library ?? ''}_${params?.downloaded === true ? 'dl' : ''}`,
-      isDynamic: false,
-    };
+    // Base page combination (no dynamic filters). A downloaded:true query always
+    // takes the dynamic branch above (see hasDynamicFilters), so it never reaches
+    // this key — the dynamic branch's JSON key is what keeps the downloaded and
+    // non-downloaded populations from colliding.
+    return { key: `${params?.platform ?? ''}_${params?.library ?? ''}`, isDynamic: false };
   }
 
   /**
