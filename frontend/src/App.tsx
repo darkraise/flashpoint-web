@@ -75,6 +75,9 @@ const UserPlaylistDetailView = lazy(() =>
 const SharedPlaylistView = lazy(() =>
   import('./views/SharedPlaylistView').then((m) => ({ default: m.SharedPlaylistView }))
 );
+const DownloadedView = lazy(() =>
+  import('@/views/DownloadedView').then((m) => ({ default: m.DownloadedView }))
+);
 
 // Admin views
 const SettingsView = lazy(() =>
@@ -441,6 +444,19 @@ function App() {
                 <ProtectedRoute requireFeature="enableFavorites">
                   <Suspense fallback={<RouteLoadingFallback />}>
                     <FavoritesView />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/downloaded"
+              element={
+                <ProtectedRoute
+                  requireFeature="enableDownloadedPage"
+                  requireFeatureForGuests="enableDownloadedPageForGuests"
+                >
+                  <Suspense fallback={<RouteLoadingFallback />}>
+                    <DownloadedView />
                   </Suspense>
                 </ProtectedRoute>
               }

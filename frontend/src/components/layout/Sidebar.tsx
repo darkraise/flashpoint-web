@@ -12,6 +12,7 @@ import {
   BarChart3,
   Clock,
   Home,
+  HardDriveDownload,
   LucideIcon,
 } from 'lucide-react';
 import { useUIStore } from '@/store/ui';
@@ -45,7 +46,13 @@ export function Sidebar({ isOpen }: SidebarProps) {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const isGuest = useAuthStore((state) => state.isGuest);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { enablePlaylists, enableFavorites, enableStatistics } = useFeatureFlags();
+  const {
+    enablePlaylists,
+    enableFavorites,
+    enableStatistics,
+    enableDownloadedPage,
+    enableDownloadedPageForGuests,
+  } = useFeatureFlags();
   const { data: publicSettings } = usePublicSettings();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
@@ -76,13 +83,20 @@ export function Sidebar({ isOpen }: SidebarProps) {
   ];
 
   const libraryNavItems: NavItem[] = [
-    enableFavorites && { path: '/favorites', icon: Heart, label: 'Favorites' },
-    enablePlaylists && { path: '/playlists', icon: ListVideo, label: 'My Playlists' },
-    enablePlaylists && {
-      path: '/flashpoint-playlists',
-      icon: ListIcon,
-      label: 'Flashpoint Playlists',
-    },
+    enableDownloadedPage &&
+      (!isGuest || enableDownloadedPageForGuests) && {
+        path: '/downloaded',
+        icon: HardDriveDownload,
+        label: 'Downloaded',
+      },
+    !isGuest && enableFavorites && { path: '/favorites', icon: Heart, label: 'Favorites' },
+    !isGuest && enablePlaylists && { path: '/playlists', icon: ListVideo, label: 'My Playlists' },
+    !isGuest &&
+      enablePlaylists && {
+        path: '/flashpoint-playlists',
+        icon: ListIcon,
+        label: 'Flashpoint Playlists',
+      },
   ].filter((item): item is Exclude<typeof item, false> => Boolean(item));
 
   const managementNavItems: NavItem[] = [
@@ -176,7 +190,7 @@ export function Sidebar({ isOpen }: SidebarProps) {
             </div>
           ) : null}
 
-          {!isGuest && libraryNavItems.length > 0 ? (
+          {libraryNavItems.length > 0 ? (
             <SidebarSection collapsed={effectiveCollapsed}>
               {libraryNavItems.map((item) => (
                 <SidebarItem
