@@ -2,6 +2,8 @@ import fs from 'fs/promises';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { DatabaseService } from './DatabaseService';
+import { GameSearchCache } from './GameSearchCache';
+import { GameService } from './GameService';
 
 const ZIP_NAME_PATTERN =
   /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(\d+)\.zip$/i;
@@ -76,6 +78,8 @@ export class DownloadedReconciler {
     })();
 
     DatabaseService.noteSelfWrite();
+    GameSearchCache.clearCache();
+    GameService.clearFilterOptionsCache();
 
     logger.info('[DownloadedReconciler] Reconciled downloaded game data', {
       scanned: files.length,
