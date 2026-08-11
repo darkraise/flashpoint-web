@@ -105,26 +105,29 @@ Clears permission cache entries.
 
 ## Settings Categories
 
-| Category | Setting                 | Type    | Default        | Validation                             |
-| -------- | ----------------------- | ------- | -------------- | -------------------------------------- |
-| auth     | guestAccessEnabled      | boolean | true           | -                                      |
-| auth     | userRegistrationEnabled | boolean | true           | -                                      |
-| auth     | maxLoginAttempts        | number  | 5              | 1-20                                   |
-| auth     | lockoutDurationMinutes  | number  | 15             | 1-1440                                 |
-| app      | siteName                | string  | Flashpoint Web | maxLength: 100                         |
-| app      | maintenanceMode         | boolean | false          | -                                      |
-| app      | defaultTheme            | string  | dark           | light\|dark\|system                    |
-| app      | defaultPrimaryColor     | string  | blue           | blue\|green\|red\|purple\|orange\|pink |
-| metadata | autoSyncEnabled         | boolean | false          | -                                      |
-| metadata | syncIntervalMinutes     | number  | 60             | 0-1440                                 |
-| features | enablePlaylists         | boolean | true           | -                                      |
-| features | enableFavorites         | boolean | true           | -                                      |
-| features | enableStatistics        | boolean | true           | -                                      |
-| features | enableActivityLog       | boolean | true           | -                                      |
-| features | enableRatings           | boolean | true           | -                                      |
-| features | enableLuckyButton       | boolean | true           | -                                      |
-| game     | defaultScaleMode        | string  | showall        | showall\|exactfit\|noborder\|noscale   |
-| game     | defaultVolume           | number  | 0.7            | 0-1                                    |
+| Category | Setting                       | Type    | Default        | Validation                             |
+| -------- | ----------------------------- | ------- | -------------- | -------------------------------------- |
+| auth     | guestAccessEnabled            | boolean | true           | -                                      |
+| auth     | userRegistrationEnabled       | boolean | true           | -                                      |
+| auth     | maxLoginAttempts              | number  | 5              | 1-20                                   |
+| auth     | lockoutDurationMinutes        | number  | 15             | 1-1440                                 |
+| app      | siteName                      | string  | Flashpoint Web | maxLength: 100                         |
+| app      | maintenanceMode               | boolean | false          | -                                      |
+| app      | defaultTheme                  | string  | dark           | light\|dark\|system                    |
+| app      | defaultPrimaryColor           | string  | blue           | blue\|green\|red\|purple\|orange\|pink |
+| metadata | autoSyncEnabled               | boolean | false          | -                                      |
+| metadata | syncIntervalMinutes           | number  | 60             | 0-1440                                 |
+| features | enablePlaylists               | boolean | true           | -                                      |
+| features | enableFavorites               | boolean | true           | -                                      |
+| features | enableStatistics              | boolean | true           | -                                      |
+| features | enableActivityLog             | boolean | true           | -                                      |
+| features | enableRatings                 | boolean | true           | -                                      |
+| features | enableLuckyButton             | boolean | true           | -                                      |
+| features | enableDownloadedPage          | boolean | true           | -                                      |
+| features | enableDownloadedPageForGuests | boolean | false          | -                                      |
+| features | enableDownloadedFilterDefault | boolean | false          | -                                      |
+| game     | defaultScaleMode              | string  | showall        | showall\|exactfit\|noborder\|noscale   |
+| game     | defaultVolume                 | number  | 0.7            | 0-1                                    |
 
 ## Implementation Notes
 

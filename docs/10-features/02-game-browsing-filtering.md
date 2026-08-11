@@ -38,6 +38,7 @@ grid and list view options.
 - Play Mode, Language, Tags
 - Year Range (1970-2100)
 - Library (arcade/theatre)
+- Downloaded only
 - Show/hide broken games and extreme content
 
 **Sorting:**
@@ -56,6 +57,37 @@ grid and list view options.
 - Grid view (responsive 1-5 columns)
 - List view (compact table format)
 - Adjustable card size
+
+## Downloaded Games
+
+A game counts as downloaded when it has at least one `game_data` row with
+`presentOnDisk = 1`.
+
+**Filter:** Browse pages carry a "Downloaded only" switch and a removable
+chip. Its state lives in the compressed URL under the single-character key
+`w`: `w.1` means the user turned it on, `w.0` means they explicitly turned it
+off, and an absent key means "use the admin default".
+
+**Downloaded page:** `/downloaded` lists downloaded games across both
+libraries. The filter is pinned on and its switch is hidden.
+
+**Admin settings** (Settings > Features, see
+[Settings API](../06-api-reference/settings-api.md)): `enableDownloadedPage`
+(default true) shows or hides the `/downloaded` page and nav entry;
+`enableDownloadedPageForGuests` (default false, only shown while the page
+setting is on) allows guest access to it; `enableDownloadedFilterDefault`
+(default false) sets whether the "Downloaded only" filter starts on for users
+who haven't set it explicitly.
+
+**Limitations:**
+
+- Games with no `game_data` rows at all - legacy titles served from htdocs -
+  can never appear as downloaded.
+- The `DownloadedReconciler`, which rebuilds the flag by scanning ZIP
+  filenames in the games directory at startup and after each database sync,
+  only ever sets the flag and never clears it. The Flashpoint Launcher may
+  store game data outside that directory, so a missing ZIP is not proof of
+  absence.
 
 ## API Endpoints
 
