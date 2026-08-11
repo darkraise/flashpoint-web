@@ -15,8 +15,6 @@ the Flashpoint Web application.
 5. **[Testing Guide](./testing-guide.md)** - Testing approach and best practices
 6. **[Debugging Guide](./debugging.md)** - Debugging tips and troubleshooting
 7. **[Common Pitfalls](./common-pitfalls.md)** - Known issues and solutions
-8. **[Known Issues](./known-issues.md)** - Open defects, with root cause and
-   agreed approach
 
 ## Quick Start
 
