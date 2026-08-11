@@ -116,6 +116,7 @@ router.post(
 const filterOptionsQuerySchema = z.object({
   platform: z.string().optional(),
   library: z.enum(['arcade', 'theatre']).optional(),
+  downloaded: booleanSchema.optional(),
   // Context-aware filter params - when set, filter options reflect current selection
   series: z.string().optional(),
   developers: z.string().optional(),
@@ -149,6 +150,7 @@ router.get(
       {
         platform: query.platform,
         library: query.library,
+        downloaded: query.downloaded,
         // Pass context filters (comma-separated strings become arrays)
         series: query.series?.split(',').filter(Boolean),
         developers: query.developers?.split(',').filter(Boolean),

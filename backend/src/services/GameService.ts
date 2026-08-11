@@ -88,6 +88,7 @@ interface FilterOptionsResult {
 export interface FilterOptionsParams {
   platform?: string;
   library?: string;
+  downloaded?: boolean;
   // Additional filters for context-aware options
   series?: string[];
   developers?: string[];
@@ -145,7 +146,8 @@ export class GameService {
       (params?.languages?.length ?? 0) > 0 ||
       (params?.tags?.length ?? 0) > 0 ||
       params?.yearFrom !== undefined ||
-      params?.yearTo !== undefined;
+      params?.yearTo !== undefined ||
+      params?.downloaded === true;
 
     if (hasDynamicFilters) {
       // Build full cache key for dynamic filters
@@ -160,12 +162,16 @@ export class GameService {
         tags: params?.tags ? [...params.tags].sort() : [],
         yearFrom: params?.yearFrom,
         yearTo: params?.yearTo,
+        downloaded: params?.downloaded ?? false,
       });
       return { key, isDynamic: true };
     }
 
     // Base page combination (no dynamic filters)
-    return { key: `${params?.platform ?? ''}_${params?.library ?? ''}`, isDynamic: false };
+    return {
+      key: `${params?.platform ?? ''}_${params?.library ?? ''}_${params?.downloaded === true ? 'dl' : ''}`,
+      isDynamic: false,
+    };
   }
 
   /**
@@ -863,6 +869,14 @@ export class GameService {
     if (params?.library) {
       conditions.push('library = ?');
       queryParams.push(params.library);
+    }
+
+    if (params?.downloaded === true) {
+      // These queries select `FROM game` with no alias, and game_data has its own
+      // `id` column, so the outer column must be qualified as game.id.
+      conditions.push(
+        'EXISTS (SELECT 1 FROM game_data gd WHERE gd.gameId = game.id AND gd.presentOnDisk = 1)'
+      );
     }
 
     // Apply series filter (unless we're getting series options)

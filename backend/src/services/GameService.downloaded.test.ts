@@ -83,3 +83,24 @@ describe('GameService downloaded filter', () => {
     expect(result.data).toHaveLength(2);
   });
 });
+
+describe('filter options honour the downloaded filter', () => {
+  beforeEach(() => {
+    db.exec(`
+      UPDATE game SET series = 'Downloaded Series'
+        WHERE id = '11111111-1111-1111-1111-111111111111';
+      UPDATE game SET series = 'Absent Series'
+        WHERE id = '22222222-2222-2222-2222-222222222222';
+    `);
+  });
+
+  it('lists only series belonging to downloaded games', () => {
+    const options = new GameService().getSeriesOptions({ downloaded: true });
+    expect(options).toEqual(['Downloaded Series']);
+  });
+
+  it('lists every series when the filter is off', () => {
+    const options = new GameService().getSeriesOptions({});
+    expect(options).toHaveLength(2);
+  });
+});
