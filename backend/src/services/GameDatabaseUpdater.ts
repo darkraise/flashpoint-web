@@ -1,4 +1,6 @@
 import { DatabaseService } from './DatabaseService';
+import { GameSearchCache } from './GameSearchCache';
+import { GameService } from './GameService';
 import { logger } from '../utils/logger';
 import path from 'path';
 import { config } from '../config';
@@ -98,6 +100,10 @@ export class GameDatabaseUpdater {
 
       updateTransaction();
       this.saveDatabase();
+
+      DatabaseService.noteSelfWrite();
+      GameSearchCache.clearCache();
+      GameService.clearFilterOptionsCache();
 
       logger.info('Database updated successfully', {
         gameDataId,
@@ -203,6 +209,10 @@ export class GameDatabaseUpdater {
       updateTransaction();
 
       this.saveDatabase();
+
+      DatabaseService.noteSelfWrite();
+      GameSearchCache.clearCache();
+      GameService.clearFilterOptionsCache();
 
       logger.info('Marked game data as not downloaded', { gameDataId });
     } catch (error) {

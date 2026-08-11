@@ -13,9 +13,6 @@ import { validateGameId, validateHostname } from './validation/schemas';
 import { gameDataDownloader } from './services';
 import { DownloadRegistry } from '../services/DownloadRegistry';
 import { GameDatabaseUpdater } from '../services/GameDatabaseUpdater';
-import { DatabaseService } from '../services/DatabaseService';
-import { GameSearchCache } from '../services/GameSearchCache';
-import { GameService } from '../services/GameService';
 
 /** Escape HTML special characters to prevent XSS */
 function escapeHtml(str: string): string {
@@ -392,9 +389,6 @@ export class GameZipServer {
           if (gameDataId !== undefined) {
             try {
               await GameDatabaseUpdater.markAsDownloaded(gameDataId, result.filePath);
-              DatabaseService.noteSelfWrite();
-              GameSearchCache.clearCache();
-              GameService.clearFilterOptionsCache();
             } catch (error: unknown) {
               // A failed flag update must not fail the download: the game is mounted and
               // playable, and the reconciler will mark it on the next run.
