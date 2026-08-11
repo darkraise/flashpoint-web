@@ -5,6 +5,7 @@ import * as path from 'path';
 import AdmZip from 'adm-zip';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 
 interface GitHubAsset {
   name: string;
@@ -16,7 +17,13 @@ export class RuffleService {
   private readonly githubApiUrl = 'https://api.github.com/repos/ruffle-rs/ruffle/releases';
 
   constructor() {
-    this.frontendPublicPath = path.resolve(__dirname, '../../../frontend/public/ruffle');
+    // Install into the directory that is actually served. In a built deployment
+    // that is the frontend's dist output; in development Vite serves public/.
+    // Pointing at public/ in a container made every fresh start re-download
+    // Ruffle even though the image already ships it in dist/.
+    this.frontendPublicPath = config.serveFrontend
+      ? path.join(config.frontendDistPath, 'ruffle')
+      : path.resolve(__dirname, '../../../frontend/public/ruffle');
   }
 
   /**
@@ -146,7 +153,9 @@ export class RuffleService {
     }
 
     const normalizedCurrent = this.normalizeVersion(currentVersion);
-    logger.debug(`[RuffleService] Current version: ${currentVersion} -> normalized: ${normalizedCurrent}`);
+    logger.debug(
+      `[RuffleService] Current version: ${currentVersion} -> normalized: ${normalizedCurrent}`
+    );
 
     // Filter releases that have web-selfhosted.zip and are newer than current version
     const newerReleases = releases.filter((release) => {
@@ -162,11 +171,15 @@ export class RuffleService {
       // Must be newer than current version
       const releaseVersion = this.normalizeVersion(release.tag_name);
       const isNewer = releaseVersion > normalizedCurrent;
-      logger.debug(`[RuffleService] Release ${release.tag_name} -> ${releaseVersion}, isNewer: ${isNewer}`);
+      logger.debug(
+        `[RuffleService] Release ${release.tag_name} -> ${releaseVersion}, isNewer: ${isNewer}`
+      );
       return isNewer;
     });
 
-    logger.info(`[RuffleService] Found ${newerReleases.length} releases newer than ${normalizedCurrent}`);
+    logger.info(
+      `[RuffleService] Found ${newerReleases.length} releases newer than ${normalizedCurrent}`
+    );
 
     if (newerReleases.length === 0) {
       return releases[0]?.body || 'No changelog available.';

@@ -288,20 +288,25 @@ async function startServer() {
     logger.warn('Failed to pre-warm filter options cache:', error);
   });
 
-  try {
-    const ruffleService = new RuffleService();
-    if (!ruffleService.verifyInstallation()) {
-      logger.info('🎮 Ruffle not found, downloading latest version...');
-      await ruffleService.updateRuffle();
-      logger.info('✅ Ruffle installation complete');
-    } else {
-      const version = ruffleService.getCurrentVersion();
-      logger.info(`✅ Ruffle verified (version: ${version || 'unknown'})`);
+  // Ruffle installs in the background: it downloads from GitHub, and awaiting it
+  // here kept the port closed for minutes on slow storage — indefinitely if the
+  // download stalled. Flash games need it, everything else does not.
+  void (async () => {
+    try {
+      const ruffleService = new RuffleService();
+      if (!ruffleService.verifyInstallation()) {
+        logger.info('🎮 Ruffle not found, downloading latest version...');
+        await ruffleService.updateRuffle();
+        logger.info('✅ Ruffle installation complete');
+      } else {
+        const version = ruffleService.getCurrentVersion();
+        logger.info(`✅ Ruffle verified (version: ${version || 'unknown'})`);
+      }
+    } catch (error) {
+      logger.error('Failed to install Ruffle:', error);
+      logger.warn('⚠️  Continuing without Ruffle - Flash games will not work');
     }
-  } catch (error) {
-    logger.error('Failed to install Ruffle:', error);
-    logger.warn('⚠️  Continuing without Ruffle - Flash games will not work');
-  }
+  })();
 
   try {
     const systemSettings = CachedSystemSettingsService.getInstance();
