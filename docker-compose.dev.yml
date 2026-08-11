@@ -34,6 +34,9 @@ services:
       - PGID=${PGID:-1000}
       - NODE_ENV=${NODE_ENV:-development}
       - SERVE_FRONTEND=true
+      # Matches the read-only mount above. Set explicitly because the backend's
+      # fallback only points here when NODE_ENV=production.
+      - FLASHPOINT_PATH=/data/flashpoint
       - TZ=${TZ:-UTC}
       - DOMAIN=${DOMAIN:-http://localhost:${WEB_PORT:-80}}
       - LOG_LEVEL=${LOG_LEVEL:-info}
