@@ -41,6 +41,8 @@ support, play tracking, and an intuitive interface.
 
 - **Browse & Search** - Fast search across 200,000+ games with advanced
   filtering by platform, developer, tags, and more
+- **Downloaded View** - A dedicated page and filter for games whose data is
+  already on disk, so a curated collection is one click away
 - **Play in Browser** - Flash games via [Ruffle](https://ruffle.rs/) emulator,
   HTML5 games natively
 - **Multi-User Support** - Individual accounts with role-based permissions
@@ -106,31 +108,38 @@ services:
 
 ### 3. Create `.env`
 
+Two values are required. This is a complete, working `.env`:
+
 ```env
-# Required — path to your Flashpoint installation on the host machine
-FLASHPOINT_HOST_PATH=/path/to/Flashpoint
+FLASHPOINT_HOST_PATH=/srv/Flashpoint
+JWT_SECRET=paste-the-output-of-openssl-rand-hex-32-here
+```
 
-# Required — secret key for JWT authentication (use a long random string)
-JWT_SECRET=your-secure-secret-key
+Generate the secret with `openssl rand -hex 32`. Everything else has a working
+default; add only what you need:
 
-# Optional — uncomment and edit as needed
-# WEB_PORT=80              # Host port for the app (UI + API) (default: 80)
+```env
+# WEB_PORT=8080            # Host port for the app (UI + API) (default: 80)
 # PUID=1000                # Host user ID (Linux — run 'id -u')
 # PGID=1000                # Host group ID (Linux — run 'id -g')
-# DOMAIN=http://localhost  # Public URL of the app
 # LOG_LEVEL=info           # debug, info, warn, error
 # TZ=UTC                   # Timezone
 # DATA_PATH=./data         # Persistent app data
 # LOGS_PATH=./logs         # Log files
 
-# Database performance (for network storage / large collections)
+# Extra allowed origins, comma-separated. Not needed for a normal install:
+# same-origin requests are always allowed. Set this only when the UI is served
+# from a different origin, or behind a proxy that rewrites the Host header.
+# DOMAIN=http://192.168.0.10,https://flashpoint.example.com
+
+# Database performance (network storage / large collections)
 # ENABLE_LOCAL_DB_COPY=false       # Copy flashpoint.sqlite to local storage
 # SQLITE_CACHE_SIZE=-64000         # SQLite cache in KB (64MB default)
 # SQLITE_MMAP_SIZE=268435456       # Memory-mapped I/O in bytes (256MB default)
 # ENABLE_CACHE_PREWARM=true        # Pre-warm common queries on startup
 ```
 
-### 4. Start the services
+### 4. Start it
 
 ```bash
 docker compose up -d
@@ -139,22 +148,17 @@ docker compose up -d
 Open **http://localhost** in your browser. The first user to register
 automatically becomes the **admin**.
 
-### Default Ports
-
-| Service  | URL                   |
-| -------- | --------------------- |
-| Frontend | http://localhost      |
-| Backend  | http://localhost:3100 |
+A single container serves both the UI and the API on one port — `WEB_PORT` on
+the host, 3100 inside the container.
 
 ### Common Commands
 
 ```bash
-docker compose up -d                # Start services
-docker compose down                 # Stop services
-docker compose logs -f              # View logs
-docker compose logs -f backend      # Logs for a specific service
-docker compose restart backend      # Restart a service
-docker compose pull && docker compose up -d  # Update to latest images
+docker compose up -d                         # Start
+docker compose down                          # Stop
+docker compose logs -f                       # Follow logs
+docker compose restart                       # Restart
+docker compose pull && docker compose up -d  # Update to the latest image
 ```
 
 ## Documentation
