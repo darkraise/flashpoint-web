@@ -354,6 +354,16 @@ export class DatabaseService {
         GameServiceStatic.clearFilterOptionsCache();
       }
       logger.info('Database reloaded, caches invalidated');
+
+      // Re-run reconciliation since a local-copy sync overwrites our presentOnDisk flags.
+      // Lazy require to match the cycle-avoidance pattern used for GameSearchCache above.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { DownloadedReconciler } = require('./DownloadedReconciler') as {
+        DownloadedReconciler: { reconcile: () => Promise<{ scanned: number; marked: number }> };
+      };
+      DownloadedReconciler.reconcile().catch((error: unknown) =>
+        logger.error('[DatabaseService] Post-sync reconciliation failed:', error)
+      );
     } catch (error) {
       logger.error('Failed to sync and reload database:', error);
       // Log but don't retry — calling initialize() here risks rapid retry loops
@@ -432,6 +442,21 @@ export class DatabaseService {
     }
   }
 
+  /**
+   * Record that this process just wrote to the database, so the file watcher does not
+   * mistake our own write for a Launcher change and trigger a full reload plus cache flush.
+   */
+  static noteSelfWrite(): void {
+    try {
+      const stats = fs.statSync(this.sourceDbPath);
+      if (stats.mtimeMs > this.lastModifiedTime) {
+        this.lastModifiedTime = stats.mtimeMs;
+      }
+    } catch (error: unknown) {
+      logger.debug('[DatabaseService] Could not stat source database after self-write:', error);
+    }
+  }
+
   static getDatabase(): BetterSqlite3.Database {
     if (!this.db) {
       throw new Error('Database not initialized');
@@ -449,9 +474,7 @@ export class DatabaseService {
    */
   static getTableColumns(tableName: string): Set<string> {
     const db = this.getDatabase();
-    const columns = db
-      .prepare(`PRAGMA table_info(${tableName})`)
-      .all() as Array<{ name: string }>;
+    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
     return new Set(columns.map((col) => col.name));
   }
 
