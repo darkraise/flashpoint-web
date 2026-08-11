@@ -134,8 +134,8 @@ router.post(
 
       logger.info(`[Auth] Login successful for user: ${credentials.username}`);
 
-      setRefreshTokenCookie(res, result.tokens.refreshToken);
-      setAccessTokenCookie(res, result.tokens.accessToken);
+      setRefreshTokenCookie(req, res, result.tokens.refreshToken);
+      setAccessTokenCookie(req, res, result.tokens.accessToken);
 
       res.json({
         user: result.user,
@@ -213,8 +213,8 @@ router.post(
 
       logger.info(`[Auth] Registration successful for user: ${data.username}`);
 
-      setRefreshTokenCookie(res, result.tokens.refreshToken);
-      setAccessTokenCookie(res, result.tokens.accessToken);
+      setRefreshTokenCookie(req, res, result.tokens.refreshToken);
+      setAccessTokenCookie(req, res, result.tokens.accessToken);
 
       res.status(201).json({
         user: result.user,
@@ -256,8 +256,8 @@ router.post(
       await authService.logout(refreshToken);
     }
 
-    clearRefreshTokenCookie(res);
-    clearAccessTokenCookie(res);
+    clearRefreshTokenCookie(req, res);
+    clearAccessTokenCookie(req, res);
 
     res.json({ success: true, message: 'Logged out successfully' });
   })
@@ -276,8 +276,8 @@ router.post(
     const tokens = await authService.refreshToken(refreshToken);
 
     // Token rotation: both tokens are replaced on every refresh
-    setRefreshTokenCookie(res, tokens.refreshToken);
-    setAccessTokenCookie(res, tokens.accessToken);
+    setRefreshTokenCookie(req, res, tokens.refreshToken);
+    setAccessTokenCookie(req, res, tokens.accessToken);
 
     res.json({
       expiresIn: tokens.expiresIn,

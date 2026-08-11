@@ -30,6 +30,16 @@ function getJwtSecret(): string {
   return devSecret;
 }
 
+function parseCookieSecure(value: string | undefined): boolean | 'auto' {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === 'true') return true;
+  if (normalized === 'false') return false;
+  if (normalized !== undefined && normalized !== '' && normalized !== 'auto') {
+    console.warn(`⚠️  Ignoring invalid COOKIE_SECURE="${value}" (use true, false, or auto).`);
+  }
+  return 'auto';
+}
+
 const getFlashpointPath = (): string => {
   if (process.env.FLASHPOINT_PATH) {
     return process.env.FLASHPOINT_PATH;
@@ -87,6 +97,11 @@ export const config = {
   flashpointLogosPath: `${flashpointPath}/Data/Logos`,
   flashpointPlaylistsPath: `${flashpointPath}/Data/Playlists`,
   flashpointGamesPath: `${flashpointPath}/Data/Games`,
+
+  // Auth cookie Secure flag. 'auto' (default) marks cookies Secure only on
+  // requests that actually arrived over TLS, so one deployment can serve plain
+  // HTTP on a LAN and HTTPS through a proxy. Force with COOKIE_SECURE=true|false.
+  cookieSecure: parseCookieSecure(process.env.COOKIE_SECURE),
 
   // Primary origin, used where a single value is required (e.g. share links).
   domain: process.env.DOMAIN || 'http://localhost:5173',

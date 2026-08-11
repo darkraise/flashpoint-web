@@ -30,12 +30,24 @@ Location: `backend/.env` (local development)
 | `JWT_EXPIRES_IN`     | 1h                    | Access token expiration (15m, 1h, 7d, etc.)          |
 | `BCRYPT_SALT_ROUNDS` | 10                    | Password hash cost (higher = more secure but slower) |
 | `DOMAIN`             | http://localhost:5173 | Allowed CORS origin(s), comma-separated (see below)  |
+| `COOKIE_SECURE`      | auto                  | Secure flag on auth cookies: `auto`, `true`, `false` |
 
 Generate secure JWT secret:
 
 ```bash
 openssl rand -hex 64
 ```
+
+**COOKIE_SECURE — auth cookies over HTTP and HTTPS:**
+
+Browsers discard a cookie marked `Secure` when it arrives over plain HTTP, which
+logs users straight back out. `auto` therefore decides per request: cookies are
+marked `Secure` only on connections that actually used TLS, so one deployment can
+serve a LAN over HTTP and the internet over HTTPS at the same time.
+
+Detection reads `X-Forwarded-Proto`, which is trusted only from a proxy. Set
+`COOKIE_SECURE=true` if your TLS-terminating proxy does not send that header, and
+`false` only if you deliberately want the flag off everywhere.
 
 **DOMAIN — allowed origins:**
 
