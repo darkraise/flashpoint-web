@@ -4,12 +4,13 @@ Search, browse, and retrieve game information.
 
 ## Search Games
 
-`GET /api/games` - No auth required
+`POST /api/games` - No auth required
 
-Query params: `search` (title/developer/publisher), `platform`, `series`,
+Body (JSON): `search` (title/developer/publisher), `platform`, `series`,
 `developers`, `publishers`, `playModes`, `languages`, `library`
-(arcade|theatre), `tags`, `yearFrom`, `yearTo`, `dateAddedSince` (ISO datetime),
-`dateModifiedSince` (ISO datetime), `sortBy`
+(arcade|theatre), `downloaded` (boolean, optional - restrict to games whose
+data is present on disk), `tags`, `yearFrom`, `yearTo`, `dateAddedSince` (ISO
+datetime), `dateModifiedSince` (ISO datetime), `sortBy`
 (title|releaseDate|dateAdded|dateModified|developer, default: title),
 `sortOrder` (asc|desc, default: asc), `page` (default: 1), `limit` (default: 50,
 max: 100), `showBroken` (default: false), `showExtreme` (default: false)
@@ -24,6 +25,9 @@ in results and platform counts.
 ## Get Filter Options
 
 `GET /api/games/filter-options` - No auth required
+
+Query param: `downloaded` (boolean, optional - restrict to games whose data is
+present on disk)
 
 Returns platforms, developers, publishers, series, playModes, languages arrays
 with name/code and count.

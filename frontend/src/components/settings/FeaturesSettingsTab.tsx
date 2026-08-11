@@ -181,6 +181,77 @@ export function FeaturesSettingsTab({ tabContentVariants }: FeaturesSettingsTabP
                 disabled={updateSystemSettings.isPending}
               />
             </div>
+
+            {/* Downloaded page */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="enable-downloaded-page" className="text-base">
+                  Enable Downloaded Page
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Show a page listing only games whose files are downloaded.
+                </p>
+              </div>
+              <Switch
+                id="enable-downloaded-page"
+                checked={featureSettings.enableDownloadedPage !== false}
+                onCheckedChange={(checked: boolean) => {
+                  updateSystemSettings.mutate({
+                    category: 'features',
+                    settings: { enableDownloadedPage: checked },
+                  });
+                }}
+                disabled={updateSystemSettings.isPending}
+              />
+            </div>
+
+            {featureSettings.enableDownloadedPage !== false ? (
+              <div className="flex items-center justify-between pl-6 border-l-2 border-border">
+                <div className="space-y-0.5">
+                  <Label htmlFor="enable-downloaded-page-guests" className="text-base">
+                    Show Downloaded Page To Guests
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Let signed-out guests open the Downloaded page.
+                  </p>
+                </div>
+                <Switch
+                  id="enable-downloaded-page-guests"
+                  checked={featureSettings.enableDownloadedPageForGuests === true}
+                  onCheckedChange={(checked: boolean) => {
+                    updateSystemSettings.mutate({
+                      category: 'features',
+                      settings: { enableDownloadedPageForGuests: checked },
+                    });
+                  }}
+                  disabled={updateSystemSettings.isPending}
+                />
+              </div>
+            ) : null}
+
+            {/* Downloaded filter default */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="enable-downloaded-filter-default" className="text-base">
+                  Filter To Downloaded By Default
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Browse pages start with the downloaded filter on. This one also applies to admins;
+                  anyone can still switch it off per page.
+                </p>
+              </div>
+              <Switch
+                id="enable-downloaded-filter-default"
+                checked={featureSettings.enableDownloadedFilterDefault === true}
+                onCheckedChange={(checked: boolean) => {
+                  updateSystemSettings.mutate({
+                    category: 'features',
+                    settings: { enableDownloadedFilterDefault: checked },
+                  });
+                }}
+                disabled={updateSystemSettings.isPending}
+              />
+            </div>
           </div>
         </div>
       ) : null}

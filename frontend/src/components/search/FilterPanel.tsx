@@ -6,6 +6,8 @@ import { FilterDropdown } from './FilterDropdown';
 import { FilterChips, FilterChip } from './FilterChips';
 import { YearRangeFilter } from './YearRangeFilter';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { FILTER_CONFIGS } from './filterConfig';
 import {
   parseFilterParams,
@@ -21,6 +23,10 @@ interface FilterPanelProps {
   filterOptionsError: Error | null;
   refetchFilterOptions: () => void;
   showPlatformFilter?: boolean;
+  /** Current resolved value of the downloaded filter */
+  downloaded?: boolean;
+  /** Hide the downloaded switch (the Downloaded page pins it on) */
+  showDownloadedFilter?: boolean;
   /** Active filter chips to display */
   filterChips?: FilterChip[];
   /** Callback when a chip is removed */
@@ -38,6 +44,8 @@ export function FilterPanel({
   filterOptionsError,
   refetchFilterOptions,
   showPlatformFilter = true,
+  downloaded,
+  showDownloadedFilter = true,
   filterChips = [],
   onRemoveChip,
   onRemoveWithChildren,
@@ -52,7 +60,11 @@ export function FilterPanel({
 
   // Helper to update filter order when categories are added/removed
   const getUpdatedFilterOrder = useCallback(
-    (currentFo: string | undefined, categoryName: string, action: 'add' | 'remove'): string | undefined => {
+    (
+      currentFo: string | undefined,
+      categoryName: string,
+      action: 'add' | 'remove'
+    ): string | undefined => {
       const currentOrder = currentFo?.split(',').filter(Boolean) ?? [];
 
       if (action === 'add' && !currentOrder.includes(categoryName)) {
@@ -72,10 +84,7 @@ export function FilterPanel({
 
   // Memoize handlers for all filter configs to avoid recreation on every render
   const filterHandlers = useMemo(() => {
-    const handlers: Record<
-      string,
-      { apply: (values: string[]) => void; clear: () => void }
-    > = {};
+    const handlers: Record<string, { apply: (values: string[]) => void; clear: () => void }> = {};
 
     FILTER_CONFIGS.forEach((config) => {
       handlers[config.id] = {
@@ -230,6 +239,30 @@ export function FilterPanel({
               maxYear={filterOptions?.yearRange?.max ?? new Date().getFullYear()}
               onYearChange={handleYearChange}
             />
+            {showDownloadedFilter ? (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="downloaded-filter-desktop"
+                  checked={downloaded === true}
+                  onCheckedChange={(checked: boolean) => {
+                    const newParams: FilterUrlParams = {
+                      ...urlParams,
+                      downloaded: checked ? '1' : '0',
+                      page: undefined,
+                      fo: getUpdatedFilterOrder(
+                        urlParams.fo,
+                        'Downloaded',
+                        checked ? 'add' : 'remove'
+                      ),
+                    };
+                    setSearchParams(buildFilterSearchParams(newParams));
+                  }}
+                />
+                <Label htmlFor="downloaded-filter-desktop" className="text-sm whitespace-nowrap">
+                  Downloaded only
+                </Label>
+              </div>
+            ) : null}
           </div>
 
           {/* Mobile Layout */}
@@ -243,6 +276,30 @@ export function FilterPanel({
               onYearChange={handleYearChange}
               compact
             />
+            {showDownloadedFilter ? (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="downloaded-filter-mobile"
+                  checked={downloaded === true}
+                  onCheckedChange={(checked: boolean) => {
+                    const newParams: FilterUrlParams = {
+                      ...urlParams,
+                      downloaded: checked ? '1' : '0',
+                      page: undefined,
+                      fo: getUpdatedFilterOrder(
+                        urlParams.fo,
+                        'Downloaded',
+                        checked ? 'add' : 'remove'
+                      ),
+                    };
+                    setSearchParams(buildFilterSearchParams(newParams));
+                  }}
+                />
+                <Label htmlFor="downloaded-filter-mobile" className="text-sm whitespace-nowrap">
+                  Downloaded only
+                </Label>
+              </div>
+            ) : null}
           </div>
 
           {/* Active Filter Chips */}

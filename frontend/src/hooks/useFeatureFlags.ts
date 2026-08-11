@@ -21,6 +21,11 @@ export function useFeatureFlags() {
     // Cosmetic chrome rather than a capability: no admin bypass, otherwise an
     // admin could never hide the button in their own session.
     enableLuckyButton: (features.enableLuckyButton ?? true) !== false,
+    enableDownloadedPage: isAdmin || (features.enableDownloadedPage ?? true),
+    // Default-off flags are read strictly: the `?? true` fallback used above would
+    // invert them while public settings are still loading or if the key is missing.
+    enableDownloadedPageForGuests: features.enableDownloadedPageForGuests === true,
+    enableDownloadedFilterDefault: features.enableDownloadedFilterDefault === true,
     isFeatureEnabled: (featureName: string) => {
       return isAdmin || ((features as Record<string, unknown>)[featureName] ?? true) !== false;
     },

@@ -5,6 +5,7 @@ import { useFilterOptions, FilterOptionsParams } from '@/hooks/useFilterOptions'
 import { useDebounce } from '@/hooks/useDebounce';
 import { useFavoriteGameIds } from '@/hooks/useFavorites';
 import { useBatchRatingAggregates } from '@/hooks/useRatings';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { GameGrid } from './GameGrid';
 import { GameList } from './GameList';
 import { GameGridSkeleton } from './GameGridSkeleton';
@@ -27,12 +28,14 @@ import {
 
 interface GameBrowseLayoutProps {
   title: string;
-  library: 'arcade' | 'theatre';
+  library?: 'arcade' | 'theatre';
   platform?: string;
   headerContent?: ReactNode;
   breadcrumbContext?: BreadcrumbContext;
   /** Section key for URL building ('flash', 'html5', 'animations', 'browse') */
   sectionKey?: string | null;
+  /** Pin the downloaded filter on and hide its switch (used by the Downloaded page) */
+  forceDownloaded?: boolean;
 }
 
 export function GameBrowseLayout({
@@ -42,6 +45,7 @@ export function GameBrowseLayout({
   headerContent,
   breadcrumbContext,
   sectionKey = null,
+  forceDownloaded,
 }: GameBrowseLayoutProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const viewMode = useUIStore((state) => state.viewMode);
@@ -67,6 +71,15 @@ export function GameBrowseLayout({
     }
   }, [searchParams, setSearchParams]);
 
+  const { enableDownloadedFilterDefault } = useFeatureFlags();
+
+  const downloaded = useMemo(() => {
+    if (forceDownloaded) return true;
+    if (urlParams.downloaded === '1') return true;
+    if (urlParams.downloaded === '0') return false;
+    return enableDownloadedFilterDefault;
+  }, [forceDownloaded, urlParams.downloaded, enableDownloadedFilterDefault]);
+
   const filters: GameFilters = useMemo(
     () => ({
       search: urlParams.search,
@@ -77,6 +90,7 @@ export function GameBrowseLayout({
       playModes: urlParams.playModes,
       languages: urlParams.languages,
       library,
+      downloaded: downloaded ? true : undefined,
       tags: urlParams.tags,
       yearFrom: urlParams.yearFrom,
       yearTo: urlParams.yearTo,
@@ -85,7 +99,7 @@ export function GameBrowseLayout({
       page: urlParams.page ?? 1,
       limit: 50,
     }),
-    [urlParams, platform, library]
+    [urlParams, platform, library, downloaded]
   );
 
   // Memoize filter options params for context-aware filter options
@@ -94,6 +108,7 @@ export function GameBrowseLayout({
     () => ({
       platform: filters.platform,
       library: filters.library,
+      downloaded: filters.downloaded,
       // Pass current filter selections for context-aware options
       series: filters.series?.split(',').filter(Boolean),
       developers: filters.developers?.split(',').filter(Boolean),
@@ -190,6 +205,16 @@ export function GameBrowseLayout({
         value: filters.platform,
         category: 'Platform',
         order: getOrder('Platform'),
+      });
+    }
+
+    if (filters.downloaded && !forceDownloaded) {
+      chips.push({
+        id: 'downloaded',
+        label: 'Downloaded',
+        value: 'Downloaded only',
+        category: 'Downloaded',
+        order: getOrder('Downloaded'),
       });
     }
 
@@ -291,7 +316,7 @@ export function GameBrowseLayout({
 
     // Sort chips by order to maintain hierarchy (application order)
     return chips.sort((a, b) => a.order - b.order);
-  }, [filters, platform, filterOrder]);
+  }, [filters, platform, filterOrder, forceDownloaded]);
 
   // Helper to get updated filter order
   const getUpdatedFilterOrder = useCallback(
@@ -314,6 +339,11 @@ export function GameBrowseLayout({
       } else if (chipId === 'platform') {
         newParams.platform = undefined;
         categoryRemoved = 'Platform';
+      } else if (chipId === 'downloaded') {
+        // Clearing the param would fall back to the admin default and re-apply the
+        // filter, so an explicit off is required when the default is on.
+        newParams.downloaded = enableDownloadedFilterDefault ? '0' : undefined;
+        categoryRemoved = 'Downloaded';
       } else if (chipId === 'yearRange') {
         newParams.yearFrom = undefined;
         newParams.yearTo = undefined;
@@ -356,7 +386,7 @@ export function GameBrowseLayout({
 
       setSearchParams(buildFilterSearchParams(newParams));
     },
-    [urlParams, filters, setSearchParams, getUpdatedFilterOrder]
+    [urlParams, filters, setSearchParams, getUpdatedFilterOrder, enableDownloadedFilterDefault]
   );
 
   // Remove all filters at or after a certain order position (for tree hierarchy)
@@ -369,6 +399,7 @@ export function GameBrowseLayout({
       const categoryToParamKeys: Record<string, (keyof FilterUrlParams)[]> = {
         Search: ['search'],
         Platform: ['platform'],
+        Downloaded: ['downloaded'],
         Series: ['series'],
         Developer: ['developers'],
         Publisher: ['publishers'],
@@ -390,21 +421,26 @@ export function GameBrowseLayout({
         }
       }
 
+      if (categoriesToRemove.includes('Downloaded') && enableDownloadedFilterDefault) {
+        newParams.downloaded = '0';
+      }
+
       // Update filter order - keep only categories before the removed one
       newParams.fo = getUpdatedFilterOrder(urlParams.fo, categoriesToRemove);
 
       setSearchParams(buildFilterSearchParams(newParams));
     },
-    [urlParams, setSearchParams, filterOrder, getUpdatedFilterOrder]
+    [urlParams, setSearchParams, filterOrder, getUpdatedFilterOrder, enableDownloadedFilterDefault]
   );
 
   const handleClearAllFilters = useCallback(() => {
     const newParams: FilterUrlParams = {
       sortBy: urlParams.sortBy,
       sortOrder: urlParams.sortOrder,
+      downloaded: enableDownloadedFilterDefault ? '0' : undefined,
     };
     setSearchParams(buildFilterSearchParams(newParams));
-  }, [urlParams.sortBy, urlParams.sortOrder, setSearchParams]);
+  }, [urlParams.sortBy, urlParams.sortOrder, enableDownloadedFilterDefault, setSearchParams]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
@@ -455,6 +491,8 @@ export function GameBrowseLayout({
           filterOptionsError={filterOptionsError}
           refetchFilterOptions={refetchFilterOptions}
           showPlatformFilter={!platform}
+          downloaded={downloaded}
+          showDownloadedFilter={!forceDownloaded}
           filterChips={filterChips}
           onRemoveChip={handleRemoveChip}
           onRemoveWithChildren={handleRemoveWithChildren}

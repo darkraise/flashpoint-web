@@ -18,6 +18,7 @@ import { requestTimeout, TimeoutConfig } from './middleware/requestTimeout';
 import { performanceTracking } from './middleware/performanceTracking';
 import { setupRoutes } from './routes';
 import { DatabaseService } from './services/DatabaseService';
+import { DownloadedReconciler } from './services/DownloadedReconciler';
 import { UserDatabaseService } from './services/UserDatabaseService';
 import { DomainService } from './services/DomainService';
 import { PlayTrackingService } from './services/PlayTrackingService';
@@ -245,6 +246,9 @@ async function startServer() {
   try {
     await DatabaseService.initialize();
     logger.info('Database connection established');
+    DownloadedReconciler.reconcile().catch((error: unknown) =>
+      logger.error('[Startup] Downloaded reconciliation failed:', error)
+    );
   } catch (error) {
     logger.error('Failed to connect to database:', error);
     process.exit(1);

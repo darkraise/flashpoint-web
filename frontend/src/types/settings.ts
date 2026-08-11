@@ -18,6 +18,9 @@ export interface FeatureSettings {
   enableStatistics: boolean;
   enableRatings: boolean;
   enableLuckyButton: boolean;
+  enableDownloadedPage: boolean;
+  enableDownloadedPageForGuests: boolean;
+  enableDownloadedFilterDefault: boolean;
 }
 
 export interface GameSettings {

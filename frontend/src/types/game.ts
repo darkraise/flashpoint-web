@@ -59,6 +59,7 @@ export interface GameFilters {
   yearTo?: number;
   dateAddedSince?: string; // ISO 8601 timestamp - filter games added after this date
   dateModifiedSince?: string; // ISO 8601 timestamp - filter games modified after this date
+  downloaded?: boolean;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   page?: number;

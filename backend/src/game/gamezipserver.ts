@@ -12,6 +12,7 @@ import { sanitizeUrlPath, sanitizeErrorMessage } from './utils/pathSecurity';
 import { validateGameId, validateHostname } from './validation/schemas';
 import { gameDataDownloader } from './services';
 import { DownloadRegistry } from '../services/DownloadRegistry';
+import { GameDatabaseUpdater } from '../services/GameDatabaseUpdater';
 
 /** Escape HTML special characters to prevent XSS */
 function escapeHtml(str: string): string {
@@ -60,8 +61,9 @@ export class GameZipServer {
     gameId?: string;
     dateAdded?: string;
     sha256?: string;
+    gameDataId?: number;
   }): Promise<{ success: boolean; downloading?: boolean; statusCode: number }> {
-    const { id, zipPath, gameId, dateAdded, sha256 } = params;
+    const { id, zipPath, gameId, dateAdded, sha256, gameDataId } = params;
 
     try {
       validateGameId(id);
@@ -74,8 +76,7 @@ export class GameZipServer {
       return { success: false, statusCode: 400 };
     }
 
-    const allowedGamesPath =
-      process.env.FLASHPOINT_GAMES_PATH ?? config.flashpointGamesPath;
+    const allowedGamesPath = process.env.FLASHPOINT_GAMES_PATH ?? config.flashpointGamesPath;
 
     try {
       const normalizedZipPath = path.normalize(zipPath);
@@ -155,7 +156,8 @@ export class GameZipServer {
         dateAdded,
         sha256,
         zipPath,
-        allowedGamesPath
+        allowedGamesPath,
+        gameDataId
       ).catch((err) => logger.error('[GameZipServer] Background download failed:', err));
 
       return { success: true, downloading: true, statusCode: 202 };
@@ -331,7 +333,8 @@ export class GameZipServer {
     dateAdded: string,
     sha256: string | undefined,
     zipPath: string,
-    targetPath: string
+    targetPath: string,
+    gameDataId: number | undefined
   ): Promise<void> {
     try {
       const result = await gameDataDownloader.download(
@@ -382,6 +385,20 @@ export class GameZipServer {
           await zipManager.mount(mountId, result.filePath);
           logger.info(`[GameZipServer] ✓ ZIP downloaded and mounted for game ${gameId}`);
           DownloadRegistry.complete(gameId);
+
+          if (gameDataId !== undefined) {
+            try {
+              await GameDatabaseUpdater.markAsDownloaded(gameDataId, result.filePath);
+            } catch (error: unknown) {
+              // A failed flag update must not fail the download: the game is mounted and
+              // playable, and the reconciler will mark it on the next run.
+              logger.warn(
+                `[GameZipServer] Could not record downloaded state for ${gameId}: ${
+                  error instanceof Error ? error.message : 'unknown error'
+                }`
+              );
+            }
+          }
         } catch (mountError) {
           const errorMessage = mountError instanceof Error ? mountError.message : 'Mount failed';
           logger.error(`[GameZipServer] Failed to mount downloaded ZIP: ${errorMessage}`);

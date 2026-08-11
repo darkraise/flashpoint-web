@@ -11,7 +11,13 @@ interface ProtectedRouteProps {
   requirePermissions?: string[];
   requireAllPermissions?: boolean;
   requireRole?: string;
-  requireFeature?: 'enablePlaylists' | 'enableFavorites' | 'enableStatistics';
+  requireFeature?:
+    | 'enablePlaylists'
+    | 'enableFavorites'
+    | 'enableStatistics'
+    | 'enableDownloadedPage';
+  /** Checked only when the viewer is a guest; the named flag must be true */
+  requireFeatureForGuests?: 'enableDownloadedPageForGuests';
   fallbackPath?: string;
   allowSharedAccess?: boolean;
 }
@@ -24,6 +30,7 @@ export function ProtectedRoute({
   requireAllPermissions = false,
   requireRole,
   requireFeature,
+  requireFeatureForGuests,
   fallbackPath = '/login',
   allowSharedAccess = false,
 }: ProtectedRouteProps) {
@@ -73,6 +80,16 @@ export function ProtectedRoute({
           requiredFeature: requireFeature,
           fromPath: location.pathname,
         }}
+        replace
+      />
+    );
+  }
+
+  if (requireFeatureForGuests && isGuest && !featureFlags[requireFeatureForGuests]) {
+    return (
+      <Navigate
+        to="/unauthorized"
+        state={{ requiredFeature: requireFeatureForGuests, fromPath: location.pathname }}
         replace
       />
     );
