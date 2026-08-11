@@ -26,7 +26,9 @@ services:
       # Serves both the UI and the API (/api, /game-proxy, /game-zip) on one port
       - "${WEB_PORT:-80}:3100"
     volumes:
-      - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint:ro
+      # Read-write: the app records downloaded state in flashpoint.sqlite and
+      # writes downloaded game data under Data/Games.
+      - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint
       - backend-db:/app/data
       - ${LOGS_PATH:-./logs}:/app/logs
     environment:

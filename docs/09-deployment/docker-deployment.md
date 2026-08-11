@@ -50,11 +50,11 @@ docker-compose up -d --build
 
 ## Volume Configuration
 
-**Flashpoint Data (read-only):**
+**Flashpoint Data (read-write):**
 
 ```yaml
 volumes:
-  - ${FLASHPOINT_HOST_PATH}:/data/flashpoint:ro
+  - ${FLASHPOINT_HOST_PATH}:/data/flashpoint
 ```
 
 **User Database (persistent):**
@@ -228,7 +228,7 @@ docker-compose exec backend curl http://localhost:3100/api/health
 1. Use named volumes for persistent data
 2. Set resource limits to prevent resource exhaustion
 3. Enable health checks for automatic recovery
-4. Use read-only mounts for Flashpoint data
+4. Restrict the Flashpoint mount to the single directory the app needs
 5. Run as non-root user
 6. Keep images updated with security patches
 7. Monitor logs regularly

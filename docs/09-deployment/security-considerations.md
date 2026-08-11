@@ -211,7 +211,7 @@ db.prepare(`SELECT * FROM game WHERE title LIKE '%${query}%'`).all();
 
 **Database permissions:**
 
-- Flashpoint database: read-only
+- Flashpoint database: read-write (downloaded state and metadata sync write to it)
 - User database: read/write by app only
 - No DROP/ALTER permissions
 - Foreign key constraints enabled

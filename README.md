@@ -83,7 +83,7 @@ services:
     ports:
       - "${WEB_PORT:-80}:3100"
     volumes:
-      - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint:ro
+      - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint
       - ${DATA_PATH:-./data}:/app/data
       - ${LOGS_PATH:-./logs}:/app/logs
     environment:
@@ -105,6 +105,11 @@ services:
       retries: 3
       start_period: 40s
 ```
+
+The Flashpoint directory is mounted read-write: the app records which games are
+downloaded in `flashpoint.sqlite` and saves downloaded game data under
+`Data/Games`. Mount it read-only and browsing still works, but downloads and the
+Downloaded page do not.
 
 ### 3. Create `.env`
 
