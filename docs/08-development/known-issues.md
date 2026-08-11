@@ -2,7 +2,7 @@
 
 Defects found during deployment testing. Each entry records the symptom, the
 verified root cause, and either the agreed approach or the fix that landed.
-Item 6 remains open; item 3 is fixed for the heavy read paths.
+Item 3 is fixed for the heavy read paths; every other item is fixed.
 
 ---
 
@@ -148,4 +148,9 @@ predates current work.
 **Why it matters:** with that many failures as the normal state, a real
 regression in those files would go unnoticed.
 
-**Approach:** provide a `localStorage` implementation in the frontend test setup.
+**Status: fixed.** The setup now installs a real in-memory `Storage` for
+`localStorage` and `sessionStorage`, cleared between tests. That surfaced two
+genuine failures the crash had been hiding, both fixed: `PlaylistCard` asserted a
+stale `/playlists/playlist-1` href when `Playlist.id` is a number, and the MSW
+mocks had no handler for `POST /api/games` (search became a POST when filter
+combinations outgrew the URL length limit). The frontend suite is now 115/115.

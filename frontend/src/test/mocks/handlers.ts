@@ -74,6 +74,17 @@ export const handlers = [
   }),
 
   // Games endpoints
+  // Search is a POST: filter combinations outgrew the URL length limit.
+  http.post(`/api/games`, () => {
+    return HttpResponse.json({
+      data: [mockGame],
+      total: 1,
+      page: 1,
+      limit: 20,
+      totalPages: 1,
+    });
+  }),
+
   http.get(`/api/games`, () => {
     return HttpResponse.json({
       data: [mockGame],
