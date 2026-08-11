@@ -82,6 +82,7 @@ export function useFilterOptions(params?: FilterOptionsParams) {
         ? {
             platform: params.platform,
             library: params.library,
+            downloaded: params.downloaded ? true : undefined,
             series: params.series?.join(','),
             developers: params.developers?.join(','),
             publishers: params.publishers?.join(','),
@@ -104,6 +105,7 @@ export function useFilterOptions(params?: FilterOptionsParams) {
       FILTER_OPTIONS_VERSION,
       params?.platform,
       params?.library,
+      params?.downloaded ? true : undefined,
       params?.series?.join(','),
       params?.developers?.join(','),
       params?.publishers?.join(','),
