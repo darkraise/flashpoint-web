@@ -1,7 +1,8 @@
 # Known Issues
 
-Open defects found but not yet fixed. Each entry records the symptom, the
-verified root cause, and the agreed approach where one has been decided.
+Defects found during deployment testing. Each entry records the symptom, the
+verified root cause, and either the agreed approach or the fix that landed.
+Items 3 and 6 remain open.
 
 ---
 
@@ -66,9 +67,11 @@ Contributing bug: `RuffleService` checks `frontend/public/ruffle` while the imag
 ships Ruffle at `frontend/dist/ruffle`, so a fresh container always re-downloads
 something it already has.
 
-**Approach:** move the Ruffle install after `listen()` as fire-and-forget with a
-`.catch()`, matching how cache pre-warming already works, and point the
-installation check at the directory the image actually ships.
+**Status: fixed** (`65af059`). The install runs in the background with its own
+error handling, and targets `config.frontendDistPath/ruffle` when the backend
+serves the frontend — so a container finds the Ruffle it already ships and skips
+the download entirely. Verified structurally (typecheck, code path); not yet
+observed end to end in a rebuilt container.
 
 ---
 
@@ -106,9 +109,9 @@ Each of those requests costs four or more metadata round trips to the share:
 `fs.existsSync` (line 49 — synchronous, so it blocks the event loop), `realpath`
 on the file, `realpath` on the base directory, then `sendFile`'s own `stat`.
 
-**Approach:** send the same cache header on the local branch, replace the
-synchronous `existsSync` with a single async check, and resolve the base
-directory once at startup instead of per request.
+**Status: fixed** (`7f2d763`). Both branches now send
+`public, max-age=86400`, the existence check is an async `stat`, and the base
+directory's realpath is resolved once and memoized.
 
 ---
 
@@ -121,7 +124,7 @@ holding resources.
 the root script forwards to it. `frontend/package.json` correctly uses
 `vitest run`.
 
-**Approach:** change the backend script to `vitest run`.
+**Status: fixed** (`9c3dfca`). `npm test` now runs once and exits (104 tests).
 
 ---
 
