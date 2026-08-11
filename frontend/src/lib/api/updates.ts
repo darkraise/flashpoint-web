@@ -25,7 +25,28 @@ export interface MetadataUpdateInfo {
   hasMetadataSource?: boolean;
 }
 
+export interface AssetDownloadProgress {
+  isRunning: boolean;
+  total: number;
+  processed: number;
+  downloaded: number;
+  skipped: number;
+  failed: number;
+  startedAt: string | null;
+  finishedAt: string | null;
+  cancelled: boolean;
+}
+
 export const updatesApi = {
+  getAssetDownloadStatus: async (): Promise<AssetDownloadProgress> => {
+    const { data } = await apiClient.get<AssetDownloadProgress>('/updates/metadata/assets/status');
+    return data;
+  },
+
+  cancelAssetDownload: async (): Promise<void> => {
+    await apiClient.post('/updates/metadata/assets/cancel');
+  },
+
   getMetadataInfo: async (): Promise<MetadataUpdateInfo> => {
     const { data } = await apiClient.get<MetadataUpdateInfo>('/updates/metadata');
     return data;

@@ -6,7 +6,12 @@ import { FormattedDate } from '@/components/common/FormattedDate';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDialog } from '@/contexts/DialogContext';
 import { useMountEffect } from '@/hooks/useMountEffect';
-import { updatesApi, MetadataUpdateInfo, systemSettingsApi } from '@/lib/api';
+import {
+  updatesApi,
+  MetadataUpdateInfo,
+  systemSettingsApi,
+  type AssetDownloadProgress,
+} from '@/lib/api';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -21,6 +26,8 @@ export function MetadataUpdateCard() {
   const { data: publicSettings } = usePublicSettings();
   const isUltimate = publicSettings?.metadata?.flashpointEdition === 'ultimate';
 
+  const [downloadAssetsEnabled, setDownloadAssetsEnabled] = useState(false);
+  const [assetProgress, setAssetProgress] = useState<AssetDownloadProgress | null>(null);
   const [customSourceEnabled, setCustomSourceEnabled] = useState(false);
   const [customSourceUrl, setCustomSourceUrl] = useState('');
   const [isSavingSource, setIsSavingSource] = useState(false);
@@ -70,6 +77,7 @@ export function MetadataUpdateCard() {
       setCustomSourceUrl(
         typeof settings.customSourceUrl === 'string' ? settings.customSourceUrl : ''
       );
+      setDownloadAssetsEnabled(settings.downloadAssetsEnabled === true);
     } catch (err) {
       logger.error('Error loading metadata source settings:', err);
     }
@@ -119,6 +127,56 @@ export function MetadataUpdateCard() {
       setIsSavingSource(false);
     }
   };
+
+  const handleToggleDownloadAssets = async (enabled: boolean) => {
+    setIsSavingSource(true);
+    try {
+      await systemSettingsApi.updateCategory('metadata', { downloadAssetsEnabled: enabled });
+      setDownloadAssetsEnabled(enabled);
+      showToast(
+        enabled ? 'Images will download after each sync' : 'Images will load on demand',
+        'success'
+      );
+    } catch (err) {
+      logger.error('Error updating asset download setting:', err);
+      showToast(getErrorMessage(err) || 'Failed to update setting', 'error');
+    } finally {
+      setIsSavingSource(false);
+    }
+  };
+
+  const handleCancelAssetDownload = async () => {
+    try {
+      await updatesApi.cancelAssetDownload();
+      showToast('Stopping image download...', 'info');
+    } catch (err) {
+      logger.error('Error cancelling asset download:', err);
+    }
+  };
+
+  // Poll only while a download is running, so an idle page stays quiet.
+  useEffect(() => {
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const progress = await updatesApi.getAssetDownloadStatus();
+        if (!cancelled) {
+          setAssetProgress(progress.isRunning || progress.processed > 0 ? progress : null);
+        }
+      } catch {
+        // A failed poll is not worth surfacing; the next tick retries.
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, assetProgress?.isRunning ? 2000 : 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [assetProgress?.isRunning]);
 
   const checkMetadataUpdates = async () => {
     isFetchingRef.current = false;
@@ -341,6 +399,42 @@ export function MetadataUpdateCard() {
               Source:{' '}
               <span className="font-mono">{customSourceUrl || DEFAULT_METADATA_SOURCE}</span>
             </p>
+          ) : null}
+
+          <div className="flex items-center justify-between gap-4 mt-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="metadata-download-assets" className="text-base">
+                Download Images After Sync
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Fetch logos and screenshots for newly synced games instead of loading them on
+                demand. Useful when the server is offline for its users.
+              </p>
+            </div>
+            <Switch
+              id="metadata-download-assets"
+              checked={downloadAssetsEnabled}
+              disabled={isSavingSource}
+              onCheckedChange={handleToggleDownloadAssets}
+            />
+          </div>
+
+          {assetProgress ? (
+            <div className="mt-3 bg-muted border border-border rounded-lg p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-foreground">
+                  {assetProgress.isRunning ? 'Downloading images' : 'Last image download'}:{' '}
+                  {assetProgress.processed}/{assetProgress.total} checked,{' '}
+                  {assetProgress.downloaded} downloaded, {assetProgress.skipped} already present
+                  {assetProgress.cancelled ? ' (cancelled)' : ''}
+                </p>
+                {assetProgress.isRunning ? (
+                  <Button variant="outline" size="sm" onClick={handleCancelAssetDownload}>
+                    Stop
+                  </Button>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </div>
       ) : null}

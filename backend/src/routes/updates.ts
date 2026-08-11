@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { updateService } from '../services/UpdateService';
 import { MetadataUpdateService } from '../services/MetadataUpdateService';
 import { MetadataSyncService } from '../services/MetadataSyncService';
+import { AssetDownloadService } from '../services/AssetDownloadService';
 import { SyncStatusService } from '../services/SyncStatusService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
@@ -105,6 +106,26 @@ router.get(
     const syncStatus = SyncStatusService.getInstance();
     const status = syncStatus.getStatus();
     res.json(status);
+  })
+);
+
+router.get(
+  '/metadata/assets/status',
+  authenticate,
+  requirePermission('settings.read'),
+  asyncHandler(async (req, res) => {
+    res.json(AssetDownloadService.getProgress());
+  })
+);
+
+router.post(
+  '/metadata/assets/cancel',
+  authenticate,
+  requirePermission('settings.update'),
+  logActivity('metadata.assets_cancel', 'system'),
+  asyncHandler(async (req, res) => {
+    AssetDownloadService.cancel();
+    res.json({ success: true, status: AssetDownloadService.getProgress() });
   })
 );
 

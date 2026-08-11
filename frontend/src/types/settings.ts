@@ -33,6 +33,8 @@ export interface MetadataSettings {
   /** Advanced: use an admin-set metadata source instead of Flashpoint preferences */
   customSourceEnabled: boolean;
   customSourceUrl: string;
+  /** Download game images after a sync instead of fetching them on demand */
+  downloadAssetsEnabled: boolean;
   enableExtendedMetadata: boolean;
   cacheImages: boolean;
   imageCacheExpiryDays: number;

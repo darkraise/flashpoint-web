@@ -3,6 +3,8 @@ import path from 'path';
 import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { AssetDownloadService } from './AssetDownloadService';
+import { CachedSystemSettingsService } from './CachedSystemSettingsService';
 import { MetadataSourceService } from './MetadataSourceService';
 import { ALLOWED_METADATA_HOSTS } from '../utils/metadataSources';
 import { DatabaseService } from './DatabaseService';
@@ -237,6 +239,10 @@ export class MetadataSyncService {
       latestGameDate = gameResult.latestDate;
       logger.info(`[MetadataSync] Games synced: ${gamesUpdated} updated, ${gamesDeleted} deleted`);
 
+      // Images for the games this sync touched, if the admin opted in. Deliberately
+      // not awaited: a slow or failing CDN must never block or fail the sync.
+      this.queueAssetDownload(gameResult.syncedGameIds);
+
       // Save database changes to disk
       this.syncStatusService.updateProgress('saving-database', 85, 'Saving database...');
       DatabaseService.save();
@@ -353,12 +359,16 @@ export class MetadataSyncService {
     }
   }
 
-  private async syncGames(
-    source: GameMetadataSource
-  ): Promise<{ updated: number; deleted: number; latestDate: string | null }> {
+  private async syncGames(source: GameMetadataSource): Promise<{
+    updated: number;
+    deleted: number;
+    latestDate: string | null;
+    syncedGameIds: string[];
+  }> {
     try {
       const after = source.games?.latestUpdateTime || '1970-01-01';
       let totalUpdated = 0;
+      const syncedGameIds: string[] = [];
       let afterId: string | null = null;
       let batchCount = 0;
       let latestDate: string = after;
@@ -407,6 +417,7 @@ export class MetadataSyncService {
         // Apply games to database
         await this.applyGames(games);
         totalUpdated += games.length;
+        syncedGameIds.push(...games.map((game) => game.id));
 
         // Get last game ID for pagination
         afterId = games[games.length - 1].id;
@@ -422,12 +433,40 @@ export class MetadataSyncService {
       return {
         updated: totalUpdated,
         deleted,
+        syncedGameIds,
         latestDate: latestDate !== after ? latestDate : null,
       };
     } catch (error) {
       logger.error('[MetadataSync] Error syncing games:', error);
       throw error;
     }
+  }
+
+  /**
+   * Start fetching images for the games a sync touched, when the admin enabled it.
+   * Fire-and-forget by design: sync success must not depend on the image CDN.
+   */
+  private queueAssetDownload(gameIds: readonly string[]): void {
+    if (gameIds.length === 0) {
+      return;
+    }
+
+    let enabled = false;
+    try {
+      const settings = CachedSystemSettingsService.getInstance().getCategory('metadata');
+      enabled = settings.downloadAssetsEnabled === true;
+    } catch (error: unknown) {
+      logger.warn('[MetadataSync] Could not read asset download setting:', error);
+    }
+
+    if (!enabled) {
+      return;
+    }
+
+    logger.info(`[MetadataSync] Queueing image download for ${gameIds.length} synced game(s)`);
+    AssetDownloadService.downloadForGames([...gameIds]).catch((error: unknown) =>
+      logger.error('[MetadataSync] Asset download failed:', error)
+    );
   }
 
   private async syncDeletedGames(source: GameMetadataSource): Promise<number> {
