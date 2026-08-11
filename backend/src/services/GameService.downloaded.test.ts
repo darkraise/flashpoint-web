@@ -104,3 +104,67 @@ describe('filter options honour the downloaded filter', () => {
     expect(options).toHaveLength(2);
   });
 });
+
+describe('downloaded filter options use the durable cache', () => {
+  function queryCount(): number {
+    return (
+      vi.mocked(DatabaseService.all).mock.calls.length +
+      vi.mocked(DatabaseService.get).mock.calls.length
+    );
+  }
+
+  beforeEach(() => {
+    db.exec(`
+      UPDATE game SET series = 'Downloaded Series'
+        WHERE id = '11111111-1111-1111-1111-111111111111';
+      UPDATE game SET series = 'Absent Series'
+        WHERE id = '22222222-2222-2222-2222-222222222222';
+    `);
+    GameService.clearFilterOptionsCache();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    GameService.clearFilterOptionsCache();
+  });
+
+  it('does not recompute once the dynamic cache TTL has elapsed', async () => {
+    const service = new GameService();
+    const now = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    await service.getFilterOptions({ downloaded: true });
+    const afterFirstCall = queryCount();
+    expect(afterFirstCall).toBeGreaterThan(0);
+
+    // Well past DYNAMIC_FILTER_CACHE_TTL (30s), which a dynamic entry would not survive.
+    clock.mockReturnValue(now + 120_000);
+    await service.getFilterOptions({ downloaded: true });
+
+    expect(queryCount()).toBe(afterFirstCall);
+  });
+
+  it('still expires a genuinely dynamic filter after the TTL', async () => {
+    const service = new GameService();
+    const now = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    await service.getFilterOptions({ tags: ['Action'] });
+    const afterFirstCall = queryCount();
+
+    clock.mockReturnValue(now + 120_000);
+    await service.getFilterOptions({ tags: ['Action'] });
+
+    expect(queryCount()).toBeGreaterThan(afterFirstCall);
+  });
+
+  it('keeps downloaded and unfiltered options in separate cache entries', async () => {
+    const service = new GameService();
+
+    const downloadedOptions = await service.getFilterOptions({ downloaded: true });
+    const allOptions = await service.getFilterOptions({});
+
+    expect(downloadedOptions.series).toEqual(['Downloaded Series']);
+    expect(allOptions.series).toHaveLength(2);
+  });
+});

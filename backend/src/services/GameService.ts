@@ -146,8 +146,7 @@ export class GameService {
       (params?.languages?.length ?? 0) > 0 ||
       (params?.tags?.length ?? 0) > 0 ||
       params?.yearFrom !== undefined ||
-      params?.yearTo !== undefined ||
-      params?.downloaded === true;
+      params?.yearTo !== undefined;
 
     if (hasDynamicFilters) {
       // Build full cache key for dynamic filters
@@ -167,11 +166,16 @@ export class GameService {
       return { key, isDynamic: true };
     }
 
-    // Base page combination (no dynamic filters). A downloaded:true query always
-    // takes the dynamic branch above (see hasDynamicFilters), so it never reaches
-    // this key — the dynamic branch's JSON key is what keeps the downloaded and
-    // non-downloaded populations from colliding.
-    return { key: `${params?.platform ?? ''}_${params?.library ?? ''}`, isDynamic: false };
+    // Base page combination (no dynamic filters). `downloaded` belongs here rather
+    // than in the dynamic branch: it is a two-valued dimension like platform and
+    // library, and its only invalidation triggers (presentOnDisk changes via
+    // GameDatabaseUpdater or DownloadedReconciler, and database reloads) already
+    // clear this cache. A 30-second TTL would recompute the Downloaded page's
+    // option queries twice a minute for a set that usually never changes.
+    return {
+      key: `${params?.platform ?? ''}_${params?.library ?? ''}_${params?.downloaded === true ? 'dl' : ''}`,
+      isDynamic: false,
+    };
   }
 
   /**
@@ -292,6 +296,7 @@ export class GameService {
       { library: 'arcade', platform: 'Flash' }, // Flash Games page
       { library: 'arcade', platform: 'HTML5' }, // HTML5 Games page
       { library: 'theatre' }, // Animations page
+      { downloaded: true }, // Downloaded page
     ];
 
     // Pre-warm each combination
