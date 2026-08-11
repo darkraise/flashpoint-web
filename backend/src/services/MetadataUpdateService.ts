@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { logger } from '../utils/logger';
+import { MetadataSourceService } from './MetadataSourceService';
 import { PreferencesService, GameMetadataSource } from './PreferencesService';
 
 export { GameMetadataSource } from './PreferencesService';
@@ -21,7 +22,7 @@ export class MetadataUpdateService {
    * This determines whether metadata sync feature is available
    */
   async hasMetadataSource(): Promise<boolean> {
-    return PreferencesService.hasMetadataSource();
+    return MetadataSourceService.hasSource();
   }
 
   /**
@@ -31,7 +32,7 @@ export class MetadataUpdateService {
    */
   async getMetadataUpdateInfo(): Promise<MetadataUpdateInfo> {
     try {
-      const sources = await PreferencesService.getGameMetadataSources();
+      const sources = await MetadataSourceService.getEffectiveSources();
 
       if (sources.length === 0) {
         logger.warn('[MetadataUpdate] No game metadata sources found in preferences');
@@ -127,7 +128,7 @@ export class MetadataUpdateService {
    */
   async checkRemoteUpdates(): Promise<{ latestUpdateTime: string } | null> {
     try {
-      const sources = await PreferencesService.getGameMetadataSources();
+      const sources = await MetadataSourceService.getEffectiveSources();
 
       if (sources.length === 0) {
         return null;

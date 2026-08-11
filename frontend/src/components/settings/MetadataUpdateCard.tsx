@@ -6,11 +6,24 @@ import { FormattedDate } from '@/components/common/FormattedDate';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDialog } from '@/contexts/DialogContext';
 import { useMountEffect } from '@/hooks/useMountEffect';
-import { updatesApi, MetadataUpdateInfo } from '@/lib/api';
+import { updatesApi, MetadataUpdateInfo, systemSettingsApi } from '@/lib/api';
+import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { getErrorMessage } from '@/types/api-error';
 import { AxiosError } from 'axios';
 
+/** The source the Infinity build ships with; the only one offered by the override. */
+const DEFAULT_METADATA_SOURCE = 'https://fpfss.flashpointarchive.org';
+
 export function MetadataUpdateCard() {
-  const { showToast } = useDialog();
+  const { showToast, showConfirm } = useDialog();
+  const { data: publicSettings } = usePublicSettings();
+  const isUltimate = publicSettings?.metadata?.flashpointEdition === 'ultimate';
+
+  const [customSourceEnabled, setCustomSourceEnabled] = useState(false);
+  const [customSourceUrl, setCustomSourceUrl] = useState('');
+  const [isSavingSource, setIsSavingSource] = useState(false);
 
   const [isSyncingMetadata, setIsSyncingMetadata] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
@@ -50,9 +63,62 @@ export function MetadataUpdateCard() {
     }
   };
 
+  const loadSourceSettings = async () => {
+    try {
+      const settings = await systemSettingsApi.getCategory('metadata');
+      setCustomSourceEnabled(settings.customSourceEnabled === true);
+      setCustomSourceUrl(
+        typeof settings.customSourceUrl === 'string' ? settings.customSourceUrl : ''
+      );
+    } catch (err) {
+      logger.error('Error loading metadata source settings:', err);
+    }
+  };
+
   useMountEffect(() => {
     fetchMetadataInfo();
+    loadSourceSettings();
   });
+
+  const handleToggleCustomSource = async (enabled: boolean) => {
+    if (enabled) {
+      const confirmed = await showConfirm({
+        title: 'Enable metadata updates?',
+        message:
+          'Metadata sync rewrites your Flashpoint database. It adds games released since your ' +
+          'package was built — which have no files on disk until downloaded — and removes games ' +
+          'deleted upstream, even when you still have their files. No backup is taken. Enable only ' +
+          'if you accept a library that mixes installed and not-installed games.',
+        confirmText: 'Enable',
+        variant: 'warning',
+      });
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setIsSavingSource(true);
+    try {
+      const url = enabled ? customSourceUrl || DEFAULT_METADATA_SOURCE : customSourceUrl;
+      await systemSettingsApi.updateCategory('metadata', {
+        customSourceEnabled: enabled,
+        customSourceUrl: url,
+      });
+
+      setCustomSourceEnabled(enabled);
+      setCustomSourceUrl(url);
+      showToast(enabled ? 'Metadata source enabled' : 'Metadata source disabled', 'success');
+
+      isFetchingRef.current = false;
+      await fetchMetadataInfo();
+    } catch (err) {
+      logger.error('Error updating metadata source:', err);
+      showToast(getErrorMessage(err) || 'Failed to update metadata source', 'error');
+    } finally {
+      setIsSavingSource(false);
+    }
+  };
 
   const checkMetadataUpdates = async () => {
     isFetchingRef.current = false;
@@ -229,15 +295,53 @@ export function MetadataUpdateCard() {
 
       {/* No metadata source configured: Sync not available */}
       {metadataInfo && !metadataInfo.hasMetadataSource ? (
-        <div className="bg-muted border border-border rounded-lg p-4 flex items-center gap-3">
-          <Info size={20} className="text-muted-foreground flex-shrink-0" />
+        <div className="bg-muted border border-border rounded-lg p-4 flex items-start gap-3">
+          <Info size={20} className="text-muted-foreground flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-foreground font-medium">Metadata sync not available</p>
-            <p className="text-muted-foreground text-sm mt-1">
-              No metadata source is configured. Metadata sync requires a configured metadata source
-              in the Flashpoint preferences.
-            </p>
+            {isUltimate ? (
+              <p className="text-muted-foreground text-sm mt-1">
+                The Ultimate edition ships without a metadata source, so it does not support
+                metadata updates. Updating means downloading a newer full package. Advanced
+                administrators can still enable updates below.
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-sm mt-1">
+                No metadata source is configured. Metadata sync requires a configured metadata
+                source in the Flashpoint preferences, or the advanced override below.
+              </p>
+            )}
           </div>
+        </div>
+      ) : null}
+
+      {/* Advanced: admin-configured metadata source */}
+      {metadataInfo ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="metadata-custom-source" className="text-base">
+                Advanced: Set Metadata Source
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Sync metadata from {DEFAULT_METADATA_SOURCE} even when Flashpoint preferences define
+                no source.
+              </p>
+            </div>
+            <Switch
+              id="metadata-custom-source"
+              checked={customSourceEnabled}
+              disabled={isSavingSource}
+              onCheckedChange={handleToggleCustomSource}
+            />
+          </div>
+
+          {customSourceEnabled ? (
+            <p className="text-xs text-muted-foreground mt-3">
+              Source:{' '}
+              <span className="font-mono">{customSourceUrl || DEFAULT_METADATA_SOURCE}</span>
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -253,89 +357,89 @@ export function MetadataUpdateCard() {
 
           {/* Metadata Update Info */}
           {metadataInfo.gamesUpdateAvailable ? (
-                <div className="bg-primary/10 border border-primary rounded-lg p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Info size={20} className="text-primary flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-foreground font-medium mb-1">
-                          {metadataInfo.gamesUpdateCount !== undefined &&
-                          metadataInfo.gamesUpdateCount >= 0
-                            ? `${metadataInfo.gamesUpdateCount} Game Info Update${metadataInfo.gamesUpdateCount !== 1 ? 's' : ''} Ready`
-                            : 'Game Info Updates Ready'}
-                        </p>
-                        <p className="text-muted-foreground text-sm">
-                          {metadataInfo.gamesUpdateCount !== undefined &&
-                          metadataInfo.gamesUpdateCount >= 0 ? (
-                            <>
-                              There {metadataInfo.gamesUpdateCount === 1 ? 'is' : 'are'}{' '}
-                              {metadataInfo.gamesUpdateCount} game info update
-                              {metadataInfo.gamesUpdateCount !== 1 ? 's' : ''} available
-                            </>
-                          ) : (
-                            <>Game metadata updates are available</>
-                          )}
-                        </p>
-                        {metadataInfo.lastCheckedTime ? (
-                          <p className="text-muted-foreground text-xs mt-2">
-                            Last synced:{' '}
-                            <FormattedDate date={metadataInfo.lastCheckedTime} type="datetime" />
-                          </p>
-                        ) : null}
-
-                        {/* Progress Bar */}
-                        {isSyncingMetadata ? (
-                          <div className="mt-3 space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-primary">{syncMessage}</span>
-                              <span className="text-primary font-medium">{syncProgress}%</span>
-                            </div>
-                            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                              <div
-                                className="bg-primary h-full transition-all duration-300 ease-out"
-                                style={{
-                                  width: `${syncProgress}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={syncMetadata}
-                          disabled={isSyncingMetadata}
-                          size="icon"
-                          className="flex-shrink-0"
-                        >
-                          {isSyncingMetadata ? (
-                            <RefreshCw size={18} className="animate-spin" />
-                          ) : (
-                            <Download size={18} />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{isSyncingMetadata ? 'Syncing...' : 'Sync Now'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-green-500/10 border border-green-500 rounded-lg p-4 flex items-center gap-3">
-                  <CheckCircle size={20} className="text-green-500" />
-                  <div>
-                    <p className="text-foreground font-medium">Game metadata is up to date</p>
+            <div className="bg-primary/10 border border-primary rounded-lg p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3 flex-1">
+                  <Info size={20} className="text-primary flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-foreground font-medium mb-1">
+                      {metadataInfo.gamesUpdateCount !== undefined &&
+                      metadataInfo.gamesUpdateCount >= 0
+                        ? `${metadataInfo.gamesUpdateCount} Game Info Update${metadataInfo.gamesUpdateCount !== 1 ? 's' : ''} Ready`
+                        : 'Game Info Updates Ready'}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      {metadataInfo.gamesUpdateCount !== undefined &&
+                      metadataInfo.gamesUpdateCount >= 0 ? (
+                        <>
+                          There {metadataInfo.gamesUpdateCount === 1 ? 'is' : 'are'}{' '}
+                          {metadataInfo.gamesUpdateCount} game info update
+                          {metadataInfo.gamesUpdateCount !== 1 ? 's' : ''} available
+                        </>
+                      ) : (
+                        <>Game metadata updates are available</>
+                      )}
+                    </p>
                     {metadataInfo.lastCheckedTime ? (
-                      <p className="text-muted-foreground text-xs mt-1">
+                      <p className="text-muted-foreground text-xs mt-2">
                         Last synced:{' '}
                         <FormattedDate date={metadataInfo.lastCheckedTime} type="datetime" />
                       </p>
                     ) : null}
+
+                    {/* Progress Bar */}
+                    {isSyncingMetadata ? (
+                      <div className="mt-3 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-primary">{syncMessage}</span>
+                          <span className="text-primary font-medium">{syncProgress}%</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-primary h-full transition-all duration-300 ease-out"
+                            style={{
+                              width: `${syncProgress}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={syncMetadata}
+                      disabled={isSyncingMetadata}
+                      size="icon"
+                      className="flex-shrink-0"
+                    >
+                      {isSyncingMetadata ? (
+                        <RefreshCw size={18} className="animate-spin" />
+                      ) : (
+                        <Download size={18} />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isSyncingMetadata ? 'Syncing...' : 'Sync Now'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-green-500/10 border border-green-500 rounded-lg p-4 flex items-center gap-3">
+              <CheckCircle size={20} className="text-green-500" />
+              <div>
+                <p className="text-foreground font-medium">Game metadata is up to date</p>
+                {metadataInfo.lastCheckedTime ? (
+                  <p className="text-muted-foreground text-xs mt-1">
+                    Last synced:{' '}
+                    <FormattedDate date={metadataInfo.lastCheckedTime} type="datetime" />
+                  </p>
+                ) : null}
+              </div>
+            </div>
           )}
         </>
       ) : null}

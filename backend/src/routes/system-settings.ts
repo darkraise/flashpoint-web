@@ -11,6 +11,7 @@ import { logActivity } from '../middleware/activityLogger';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { JobScheduler } from '../services/JobScheduler';
 import { logger } from '../utils/logger';
+import { ALLOWED_METADATA_HOSTS, isAllowedMetadataSourceUrl } from '../utils/metadataSources';
 import { CategorySettings } from '../types/settings';
 
 const router = Router();
@@ -273,6 +274,21 @@ router.patch(
     }
 
     const settings = validation.data;
+
+    // The metadata source drives writes to flashpoint.sqlite, so an admin may only
+    // point it at a host the project trusts.
+    if (category === 'metadata' && typeof settings.customSourceUrl === 'string') {
+      const url = settings.customSourceUrl.trim();
+      if (url !== '' && !isAllowedMetadataSourceUrl(url)) {
+        return res.status(400).json({
+          error: {
+            message: `Metadata source must be one of: ${ALLOWED_METADATA_HOSTS.join(', ')}`,
+          },
+        });
+      }
+      settings.customSourceUrl = url;
+    }
+
     const userId = req.user!.id;
 
     systemSettings.updateCategory(category, settings, userId);

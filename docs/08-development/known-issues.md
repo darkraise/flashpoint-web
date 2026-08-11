@@ -32,6 +32,10 @@ on Infinity, because the files are already on disk.
 - With `ENABLE_LOCAL_DB_COPY=true`, the writes land on the container's copy and
   are wiped the next time the Launcher touches the source.
 
+**Status: implemented** (advanced override, edition-aware message, confirmation
+on enable). The remaining safety work — making the deletion pass opt-in and
+snapshotting `flashpoint.sqlite` before a sync — is still open.
+
 **Agreed approach:** the mixed library that results is acceptable, but the
 capability stays behind an explicit opt-in.
 

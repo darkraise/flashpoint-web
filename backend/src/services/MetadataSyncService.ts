@@ -3,6 +3,8 @@ import path from 'path';
 import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { MetadataSourceService } from './MetadataSourceService';
+import { ALLOWED_METADATA_HOSTS } from '../utils/metadataSources';
 import { DatabaseService } from './DatabaseService';
 import {
   PreferencesService,
@@ -88,7 +90,7 @@ interface GameColumnMapping {
  * See: https://github.com/FlashpointProject/launcher/blob/master/src/back/sync.ts
  */
 export class MetadataSyncService {
-  private static readonly ALLOWED_HOSTS = ['fpfss.unstable.life', 'fpfss.flashpointarchive.org'];
+  private static readonly ALLOWED_HOSTS = ALLOWED_METADATA_HOSTS;
 
   /** All possible game columns with their value extractors */
   private static readonly GAME_COLUMN_MAPPINGS: GameColumnMapping[] = [
@@ -115,7 +117,11 @@ export class MetadataSyncService {
     { dbCol: 'orderTitle', getValue: (g) => g.order_title ?? g.title ?? '' },
     { dbCol: 'library', getValue: (g) => g.library ?? 'arcade' },
     { dbCol: 'tagsStr', getValue: (g) => g.tags_str ?? '' },
-    { dbCol: 'dateAdded', getValue: (g) => g.date_added ?? new Date().toISOString(), excludeFromUpdate: true },
+    {
+      dbCol: 'dateAdded',
+      getValue: (g) => g.date_added ?? new Date().toISOString(),
+      excludeFromUpdate: true,
+    },
     { dbCol: 'dateModified', getValue: (g) => g.date_modified ?? new Date().toISOString() },
     { dbCol: 'activeDataId', getValue: (g) => g.active_data_id ?? null },
     { dbCol: 'activeDataOnDisk', getValue: (g) => (g.active_data_on_disk ? 1 : 0) },
@@ -195,7 +201,10 @@ export class MetadataSyncService {
       this.syncStatusService.updateProgress('reading-config', 5, 'Reading preferences...');
       const preferencesContent = await fs.readFile(this.preferencesPath, 'utf-8');
       const preferences = JSON.parse(preferencesContent);
-      const sources: GameMetadataSource[] = preferences.gameMetadataSources || [];
+
+      // Prefer an admin-configured source: editions such as Ultimate ship without
+      // gameMetadataSources, and preferences alone would leave sync unavailable.
+      const sources: GameMetadataSource[] = await MetadataSourceService.getEffectiveSources();
 
       if (sources.length === 0) {
         throw new Error('No game metadata sources found in preferences');
@@ -538,7 +547,9 @@ export class MetadataSyncService {
       for (let i = 0; i < parentIdArray.length; i += BATCH_SIZE) {
         const batch = parentIdArray.slice(i, i + BATCH_SIZE);
         const placeholders = batch.map(() => '?').join(', ');
-        const rows = db.prepare(`SELECT id FROM game WHERE id IN (${placeholders})`).all(batch) as Array<{ id: string }>;
+        const rows = db
+          .prepare(`SELECT id FROM game WHERE id IN (${placeholders})`)
+          .all(batch) as Array<{ id: string }>;
         rows.forEach((row) => existingParentIds.add(row.id));
       }
     }
@@ -679,7 +690,9 @@ export class MetadataSyncService {
 
     // Log cycle summary once (not per-game)
     if (cycleCount > 0) {
-      logger.debug(`[MetadataSync] Found ${cycleCount} circular parent references in batch (handled)`);
+      logger.debug(
+        `[MetadataSync] Found ${cycleCount} circular parent references in batch (handled)`
+      );
     }
 
     return sorted;

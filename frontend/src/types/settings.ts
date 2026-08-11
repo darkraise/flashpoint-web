@@ -30,6 +30,9 @@ export interface GameSettings {
 }
 
 export interface MetadataSettings {
+  /** Advanced: use an admin-set metadata source instead of Flashpoint preferences */
+  customSourceEnabled: boolean;
+  customSourceUrl: string;
   enableExtendedMetadata: boolean;
   cacheImages: boolean;
   imageCacheExpiryDays: number;
