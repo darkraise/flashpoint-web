@@ -18,6 +18,8 @@ export interface FilterUrlParams {
   sortOrder?: string;
   page?: number;
   fo?: string; // filter order
+  /** '1' = downloaded only, '0' = explicitly off, undefined = use the admin default */
+  downloaded?: '0' | '1';
 }
 
 // Filter order category abbreviations
@@ -31,6 +33,7 @@ const CATEGORY_TO_ABBR: Record<string, string> = {
   Language: 'L',
   Tag: 'T',
   Year: 'Y',
+  Downloaded: 'W',
 };
 
 const ABBR_TO_CATEGORY: Record<string, string> = Object.fromEntries(
@@ -104,6 +107,7 @@ function toUrlSafeFormat(params: FilterUrlParams): string | null {
   if (params.tags) parts.push(`t.${escapeValue(params.tags)}`);
   if (params.yearFrom !== undefined) parts.push(`f.${params.yearFrom}`);
   if (params.yearTo !== undefined) parts.push(`e.${params.yearTo}`);
+  if (params.downloaded !== undefined) parts.push(`w.${params.downloaded}`);
   if (params.fo) parts.push(`o.${encodeFilterOrder(params.fo)}`);
 
   // Join with underscore (URL-safe)
@@ -162,6 +166,9 @@ function fromUrlSafeFormat(encoded: string): FilterUrlParams | null {
         }
         case 'o':
           params.fo = decodeFilterOrder(value);
+          break;
+        case 'w':
+          if (value === '0' || value === '1') params.downloaded = value;
           break;
       }
     }
@@ -367,6 +374,12 @@ export function parseFilterParams(searchParams: URLSearchParams): FilterUrlParam
     sortOrder: searchParams.get('sortOrder') ?? undefined,
     page: safeParseInt(searchParams.get('page')),
     fo: searchParams.get('fo') ?? undefined,
+    downloaded:
+      searchParams.get('downloaded') === '1'
+        ? '1'
+        : searchParams.get('downloaded') === '0'
+          ? '0'
+          : undefined,
   };
 }
 
@@ -413,6 +426,7 @@ export function hasLegacyParams(searchParams: URLSearchParams): boolean {
     'yearFrom',
     'yearTo',
     'fo',
+    'downloaded',
   ];
   return legacyKeys.some((key) => searchParams.has(key));
 }
