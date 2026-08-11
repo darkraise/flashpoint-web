@@ -54,6 +54,34 @@ describe('DbQueryPool', () => {
     expect(results.every((rows) => rows[0].count === 3)).toBe(true);
   });
 
+  it('rejects the in-flight query when its worker dies, instead of hanging', async () => {
+    // Kill one worker while the pool still has others: the caller whose query it
+    // was running must be rejected, not left waiting for a result that can never
+    // arrive. A hung promise here means a hung HTTP request in production.
+    const pool = DbQueryPool as unknown as {
+      slots: Array<{
+        worker: { terminate: () => Promise<number> };
+        busy: boolean;
+        queryId: number | null;
+      }>;
+      pending: Map<number, { reject: (e: Error) => void }>;
+      drain: () => void;
+    };
+
+    const victim = pool.slots[0];
+    victim.busy = true;
+    victim.queryId = 999_999;
+
+    const stranded = new Promise<void>((resolve, reject) => {
+      pool.pending.set(999_999, { reject: (error: Error) => reject(error) } as never);
+      setTimeout(resolve, 3000);
+    });
+
+    await victim.worker.terminate();
+
+    await expect(stranded).rejects.toThrow(/stopped while running/);
+  });
+
   it('rejects a bad statement without killing the worker', async () => {
     await expect(DbQueryPool.all('SELECT * FROM does_not_exist')).rejects.toThrow();
 

@@ -44,6 +44,8 @@ interface OriginCheck {
   readonly origin: string | undefined;
   /** Host header from the request, including a non-default port. */
   readonly host: string | undefined;
+  /** Request scheme ('http' or 'https'), honouring X-Forwarded-Proto behind a trusted proxy. */
+  readonly protocol?: string;
   /** Origins from the DOMAIN setting, already normalized. */
   readonly configuredOrigins: readonly string[];
   /** Origins derived from the domains table, already normalized. */
@@ -58,6 +60,7 @@ interface OriginCheck {
 export function isOriginAllowed({
   origin,
   host,
+  protocol,
   configuredOrigins,
   domainOrigins,
 }: OriginCheck): boolean {
@@ -70,13 +73,13 @@ export function isOriginAllowed({
     return false;
   }
 
-  if (host !== undefined && host !== '') {
-    try {
-      if (new URL(normalized).host === host) {
-        return true;
-      }
-    } catch {
-      // Unparseable normalized origin cannot be same-origin; fall through.
+  if (host !== undefined && host !== '' && protocol !== undefined && protocol !== '') {
+    // Compare the whole origin, not just the host: http://example.com and
+    // https://example.com are different origins, and treating them as one would
+    // let a plaintext page claim same-origin against an HTTPS deployment.
+    const requestOrigin = normalizeOrigin(`${protocol}://${host}`);
+    if (requestOrigin !== null && requestOrigin === normalized) {
+      return true;
     }
   }
 

@@ -113,6 +113,7 @@ describe('downloaded filter options use the durable cache', () => {
   function queryCount(): number {
     return (
       vi.mocked(DatabaseService.all).mock.calls.length +
+      vi.mocked(DatabaseService.allAsync).mock.calls.length +
       vi.mocked(DatabaseService.get).mock.calls.length
     );
   }

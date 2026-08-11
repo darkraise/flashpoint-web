@@ -14,7 +14,10 @@ export const DEFAULT_METADATA_SOURCE_URL = 'https://fpfss.flashpointarchive.org'
 
 export function isAllowedMetadataSourceUrl(baseUrl: string): boolean {
   try {
-    return ALLOWED_METADATA_HOSTS.includes(new URL(baseUrl).hostname);
+    const url = new URL(baseUrl);
+    // HTTPS only: a sync writes rows straight into flashpoint.sqlite, so a
+    // plaintext source would let anyone on the path rewrite the game database.
+    return url.protocol === 'https:' && ALLOWED_METADATA_HOSTS.includes(url.hostname);
   } catch {
     return false;
   }

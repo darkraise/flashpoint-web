@@ -1366,7 +1366,11 @@ export class GameService {
         WHERE ${conditions.join(' AND ')}
       `;
 
-      const result = DatabaseService.get(sql, queryParams) as { min: number; max: number } | null;
+      const rows = (await DatabaseService.allAsync(sql, queryParams)) as Array<{
+        min: number;
+        max: number;
+      }>;
+      const result = rows[0] ?? null;
       return result ?? { min: 1970, max: new Date().getFullYear() };
     } catch (error) {
       logger.error('Error getting year range:', error);

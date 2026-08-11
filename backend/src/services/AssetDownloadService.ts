@@ -16,6 +16,7 @@ export interface AssetDownloadProgress {
   cancelled: boolean;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CONCURRENCY = 4;
 const REQUEST_TIMEOUT_MS = 15000;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -59,8 +60,19 @@ export class AssetDownloadService {
     }
   }
 
-  /** Images live at Data/Images/{Logos,Screenshots}/ab/cd/{id}.png. */
+  /**
+   * Images live at Data/Images/{Logos,Screenshots}/ab/cd/{id}.png.
+   *
+   * Game IDs arrive from a remote API and are sliced straight into filesystem
+   * paths, so anything that is not a UUID is rejected rather than joined — an id
+   * containing path separators would otherwise escape the images directory.
+   */
   static relativePathsFor(gameId: string): string[] {
+    if (!UUID_PATTERN.test(gameId)) {
+      logger.warn(`[AssetDownload] Ignoring malformed game id: ${gameId}`);
+      return [];
+    }
+
     const shard = `${gameId.substring(0, 2)}/${gameId.substring(2, 4)}`;
     return [`Logos/${shard}/${gameId}.png`, `Screenshots/${shard}/${gameId}.png`];
   }

@@ -66,6 +66,7 @@ describe('isOriginAllowed', () => {
       isOriginAllowed({
         origin: 'http://192.168.0.118',
         host: '192.168.0.118',
+        protocol: 'http',
         configuredOrigins: [],
         domainOrigins: noDomains,
       })
@@ -77,6 +78,7 @@ describe('isOriginAllowed', () => {
       isOriginAllowed({
         origin: 'http://192.168.0.118:8080',
         host: '192.168.0.118:8080',
+        protocol: 'http',
         configuredOrigins: [],
         domainOrigins: noDomains,
       })
@@ -148,6 +150,20 @@ describe('isOriginAllowed', () => {
         origin: 'http://flashpoint.example.com',
         host: 'internal-proxy:3100',
         configuredOrigins: parseOriginList('https://flashpoint.example.com'),
+        domainOrigins: noDomains,
+      })
+    ).toBe(false);
+  });
+
+  it('rejects a plaintext origin claiming to be same-origin on an HTTPS request', () => {
+    // http://example.com and https://example.com are different origins. Matching
+    // on host alone would let an attacker's plaintext page pass as same-origin.
+    expect(
+      isOriginAllowed({
+        origin: 'http://example.com',
+        host: 'example.com',
+        protocol: 'https',
+        configuredOrigins: [],
         domainOrigins: noDomains,
       })
     ).toBe(false);

@@ -28,6 +28,7 @@ const adminCors = (req: Request, res: Response, next: NextFunction) => {
     isOriginAllowed({
       origin,
       host: req.headers.host,
+      protocol: req.protocol,
       configuredOrigins: config.allowedOrigins,
       domainOrigins: new Set<string>(),
     });

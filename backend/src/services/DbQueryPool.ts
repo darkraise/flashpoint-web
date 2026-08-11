@@ -12,6 +12,8 @@ interface PendingQuery {
 interface WorkerSlot {
   worker: Worker;
   busy: boolean;
+  /** Query this worker is executing, so a crash can reject exactly that caller. */
+  queryId: number | null;
 }
 
 interface QueuedQuery {
@@ -59,7 +61,7 @@ export class DbQueryPool {
 
     for (let i = 0; i < count; i += 1) {
       try {
-        this.slots.push({ worker: this.spawn(workerPath, dbPath), busy: false });
+        this.slots.push({ worker: this.spawn(workerPath, dbPath), busy: false, queryId: null });
       } catch (error: unknown) {
         logger.warn('[DbQueryPool] Failed to start worker; continuing with fewer:', error);
       }
@@ -100,6 +102,7 @@ export class DbQueryPool {
         const slot = this.slots.find((s) => s.worker === worker);
         if (slot) {
           slot.busy = false;
+          slot.queryId = null;
         }
 
         const waiting = this.pending.get(message.id);
@@ -133,21 +136,47 @@ export class DbQueryPool {
     return worker;
   }
 
-  /** A dead worker must not strand the queries it was holding. */
+  /**
+   * A dead worker must not strand the query it was holding.
+   *
+   * Rejecting only when the pool empties leaves the crashed worker's caller
+   * waiting forever — the request hangs until the timeout middleware kills it and
+   * the pending entry leaks. Reject that query specifically, and when no worker
+   * is left, reject everything still queued as well.
+   */
   private static dropWorker(worker: Worker): void {
     const index = this.slots.findIndex((s) => s.worker === worker);
     if (index === -1) {
       return;
     }
 
-    this.slots.splice(index, 1);
+    const [dropped] = this.slots.splice(index, 1);
 
-    if (this.slots.length === 0 && this.pending.size > 0) {
-      const stranded = new Error('Database query workers are unavailable');
-      for (const waiting of this.pending.values()) {
-        waiting.reject(stranded);
-      }
-      this.pending.clear();
+    if (dropped.queryId !== null) {
+      const waiting = this.pending.get(dropped.queryId);
+      this.pending.delete(dropped.queryId);
+      waiting?.reject(new Error('Database query worker stopped while running the query'));
+    }
+
+    if (this.slots.length === 0) {
+      logger.error('[DbQueryPool] All query workers are gone; falling back to in-process queries');
+      this.rejectOutstanding(new Error('Database query workers are unavailable'));
+    } else {
+      // A freed slot may exist now; keep the queue moving.
+      this.drain();
+    }
+  }
+
+  /** Settle everything in flight or waiting, so no caller is left hanging. */
+  private static rejectOutstanding(error: Error): void {
+    for (const waiting of this.pending.values()) {
+      waiting.reject(error);
+    }
+    this.pending.clear();
+
+    const queued = this.queue.splice(0, this.queue.length);
+    for (const item of queued) {
+      item.reject(error);
     }
   }
 
@@ -179,6 +208,7 @@ export class DbQueryPool {
       this.nextQueryId += 1;
 
       slot.busy = true;
+      slot.queryId = id;
       this.pending.set(id, { resolve: next.resolve, reject: next.reject });
       slot.worker.postMessage({ type: 'query', id, sql: next.sql, params: [...next.params] });
     }
@@ -196,6 +226,7 @@ export class DbQueryPool {
     const slots = [...this.slots];
     this.slots = [];
     this.started = false;
+    this.rejectOutstanding(new Error('Database query workers are shutting down'));
     await Promise.all(slots.map((slot) => slot.worker.terminate()));
   }
 }

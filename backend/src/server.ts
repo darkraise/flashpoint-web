@@ -169,6 +169,7 @@ async function startServer() {
       const allowed = isOriginAllowed({
         origin,
         host: req.headers.host,
+        protocol: req.protocol,
         configuredOrigins: config.allowedOrigins,
         domainOrigins,
       });

@@ -2,11 +2,23 @@ import fs from 'fs/promises';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import { DatabaseService } from './DatabaseService';
+import { GameDataDownloader } from '../game/services/GameDataDownloader';
 import { GameSearchCache } from './GameSearchCache';
 import { GameService } from './GameService';
 
 const ZIP_NAME_PATTERN =
   /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(\d+)\.zip$/i;
+
+/** SQLite's error code when the database or its filesystem is read-only. */
+function isReadOnlyError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    typeof (error as { code?: unknown }).code === 'string' &&
+    ((error as { code: string }).code.startsWith('SQLITE_READONLY') ||
+      (error as { code: string }).code === 'SQLITE_CANTOPEN')
+  );
+}
 
 interface PendingRow {
   id: number;
@@ -32,15 +44,16 @@ export class DownloadedReconciler {
       return { scanned: 0, marked: 0 };
     }
 
-    const onDisk = new Map<string, Set<number>>();
+    // Index by exact filename and compare against what GameDataDownloader would
+    // generate for each row. Re-deriving the timestamp here instead would miss
+    // rows whose dateAdded uses one of the formats that helper normalizes.
+    const onDisk = new Set<string>();
+    const onDiskGameIds = new Set<string>();
     for (const file of files) {
       const match = ZIP_NAME_PATTERN.exec(file);
       if (!match) continue;
-      const gameId = match[1].toLowerCase();
-      const timestamp = Number(match[2]);
-      const timestamps = onDisk.get(gameId) ?? new Set<number>();
-      timestamps.add(timestamp);
-      onDisk.set(gameId, timestamps);
+      onDisk.add(file);
+      onDiskGameIds.add(match[1].toLowerCase());
     }
 
     if (onDisk.size === 0) {
@@ -55,10 +68,16 @@ export class DownloadedReconciler {
       .all() as PendingRow[];
 
     const toMark = pending.filter((row) => {
-      const timestamps = onDisk.get(row.gameId.toLowerCase());
-      if (!timestamps) return false;
-      const parsed = new Date(row.dateAdded).getTime();
-      return !isNaN(parsed) && timestamps.has(parsed);
+      if (!onDiskGameIds.has(row.gameId.toLowerCase())) {
+        return false;
+      }
+
+      try {
+        return onDisk.has(GameDataDownloader.getFilename(row.gameId, row.dateAdded));
+      } catch {
+        // A row whose dateAdded cannot produce a filename simply has no match.
+        return false;
+      }
     });
 
     if (toMark.length === 0) {
@@ -70,12 +89,25 @@ export class DownloadedReconciler {
       'UPDATE game SET activeDataOnDisk = 1 WHERE id = ? AND activeDataId = ?'
     );
 
-    db.transaction(() => {
-      for (const row of toMark) {
-        markData.run(row.id);
-        markGame.run(row.gameId, row.id);
+    try {
+      db.transaction(() => {
+        for (const row of toMark) {
+          markData.run(row.id);
+          markGame.run(row.gameId, row.id);
+        }
+      })();
+    } catch (error: unknown) {
+      if (isReadOnlyError(error)) {
+        // The shipped compose mounts Flashpoint read-only. Say so once, clearly,
+        // instead of failing every startup with a stack trace.
+        logger.warn(
+          '[DownloadedReconciler] Database is read-only, cannot record downloaded state. ' +
+            'Mount Flashpoint read-write or set ENABLE_LOCAL_DB_COPY=true.'
+        );
+        return { scanned: files.length, marked: 0 };
       }
-    })();
+      throw error;
+    }
 
     DatabaseService.noteSelfWrite();
     GameSearchCache.clearCache();

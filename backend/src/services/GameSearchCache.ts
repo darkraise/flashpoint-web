@@ -57,7 +57,7 @@ export class GameSearchCache {
       playModes: query.playModes ? [...query.playModes].sort().join(',') : '',
       languages: query.languages ? [...query.languages].sort().join(',') : '',
       library: query.library || '',
-      downloaded: query.downloaded ?? '',
+      downloaded: query.downloaded === true,
       tags: query.tags ? [...query.tags].sort().join(',') : '',
       yearFrom: query.yearFrom ?? '',
       yearTo: query.yearTo ?? '',
