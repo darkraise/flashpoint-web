@@ -18,6 +18,11 @@ COPY frontend/package.json ./frontend/
 # Install frontend dependencies (frozen lockfile for reproducible builds)
 RUN npm ci --workspace=frontend --include-workspace-root --prefer-offline --no-audit
 
+# Release version, passed by CI from the git tag. The image carries no .git, so
+# this build arg is the only way the UI can learn which release it is.
+ARG VERSION=dev
+ENV VITE_APP_VERSION=$VERSION
+
 # Copy frontend source and build static assets
 COPY frontend ./frontend/
 WORKDIR /app/frontend
@@ -48,9 +53,10 @@ RUN npm run build
 FROM node:20.18.2-alpine
 
 # Metadata labels
+ARG VERSION=dev
 LABEL org.opencontainers.image.title="Flashpoint Web"
 LABEL org.opencontainers.image.description="Self-hosted web app for Flashpoint Archive (API + UI)"
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/darkraise/flashpoint-web"
 
 WORKDIR /app

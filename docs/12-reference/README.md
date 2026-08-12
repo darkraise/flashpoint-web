@@ -208,7 +208,10 @@ JWT_EXPIRES_IN=1h
 ```env
 # No environment variables required for local development
 # API calls are proxied through Vite (dev) or Nginx (production)
-VITE_APP_VERSION=1.0.0  # Optional: displayed app version
+# Optional: displayed app version. Defaults to the release tag via `git
+# describe`, then to frontend/package.json. The Docker build has no .git, so
+# CI passes the tag through the VERSION build arg instead.
+VITE_APP_VERSION=1.0.38
 ```
 
 #### Game Service

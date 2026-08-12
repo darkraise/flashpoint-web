@@ -1,9 +1,48 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import fs from 'fs';
 import path from 'path';
+import { execFileSync } from 'child_process';
 import { visualizer } from 'rollup-plugin-visualizer';
 
+/**
+ * Releases are cut as git tags, and package.json is never bumped along with
+ * them, so the tag is the only honest source. The Docker image has no .git,
+ * which is why CI passes the tag in as VITE_APP_VERSION instead.
+ */
+function resolveAppVersion(): string {
+  const fromEnv = process.env.VITE_APP_VERSION?.trim();
+  if (fromEnv) return fromEnv;
+
+  try {
+    const described = execFileSync('git', ['describe', '--tags', '--always', '--dirty'], {
+      cwd: __dirname,
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (described) return described.replace(/^v/, '');
+  } catch {
+    // Not a git checkout — fall through to package.json.
+  }
+
+  try {
+    const pkg: unknown = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8')
+    );
+    if (pkg && typeof pkg === 'object' && 'version' in pkg && typeof pkg.version === 'string') {
+      return pkg.version;
+    }
+  } catch {
+    // Fall through to the unknown marker.
+  }
+
+  return 'unknown';
+}
+
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(resolveAppVersion()),
+  },
   plugins: [
     react(),
     // Bundle analyzer - run with: npm run build:analyze && open stats.html

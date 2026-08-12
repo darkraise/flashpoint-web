@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
 import { ruffleApi } from '@/lib/api';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { APP_VERSION } from '@/lib/version';
 import { FormattedDate } from '@/components/common/FormattedDate';
 
 import { GeneralSettingsTab } from '@/components/settings/GeneralSettingsTab';
@@ -53,7 +54,6 @@ export function SettingsView() {
   const flashpointVersion = publicSettings?.metadata?.flashpointVersion ?? 'Unknown';
   const packagedAt = publicSettings?.metadata?.flashpointPackagedAt;
   const lastUpdate = publicSettings?.metadata?.flashpointLastUpdate;
-  const webAppVersion = import.meta.env.VITE_APP_VERSION ?? '1.0.0';
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -114,7 +114,7 @@ export function SettingsView() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Web App Version:</span>
-                <span className="font-medium">{webAppVersion}</span>
+                <span className="font-medium">{APP_VERSION}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Ruffle Emulator:</span>

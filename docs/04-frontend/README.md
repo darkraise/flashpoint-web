@@ -142,8 +142,14 @@ calls are automatically proxied through Vite to the backend.
 **Optional (production builds):**
 
 ```bash
-VITE_APP_VERSION=1.0.0  # Displayed app version
+VITE_APP_VERSION=1.0.38  # Displayed app version
 ```
+
+`vite.config.ts` resolves the version at build time: `VITE_APP_VERSION` if set,
+otherwise the release tag via `git describe`, otherwise `package.json`. Set it
+explicitly only where neither is available — the Docker image carries no `.git`,
+so CI passes the tag in through the `VERSION` build arg. Read it in components
+from `@/lib/version`, never from `import.meta.env` directly.
 
 ## Project Structure
 

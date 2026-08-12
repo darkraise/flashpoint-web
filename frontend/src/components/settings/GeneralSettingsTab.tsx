@@ -8,6 +8,7 @@ import { authSettingsApi, ruffleApi, usersApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { useDialog } from '@/contexts/DialogContext';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { APP_VERSION } from '@/lib/version';
 import { UpdateAuthSettingsData } from '@/types/auth';
 import { getErrorMessage } from '@/types/api-error';
 import {
@@ -115,7 +116,7 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Web App Version:</span>
-            <span className="font-medium">{import.meta.env.VITE_APP_VERSION ?? '1.0.0'}</span>
+            <span className="font-medium">{APP_VERSION}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Ruffle Emulator:</span>
