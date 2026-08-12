@@ -119,6 +119,13 @@ export default defineConfig({
         target: 'http://localhost:3100',
         changeOrigin: true,
       },
+      // Without this the startup poll hits Vite's SPA fallback, which answers
+      // 200 with index.html and makes the "server is starting" screen reload
+      // itself every two seconds.
+      '/health': {
+        target: 'http://localhost:3100',
+        changeOrigin: true,
+      },
       '/game-proxy': {
         target: 'http://localhost:3100',
         changeOrigin: true,

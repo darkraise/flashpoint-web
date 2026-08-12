@@ -2,6 +2,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/auth';
 import { useSharedAccessStore } from '@/store/sharedAccess';
+import { useServerStatusStore } from '@/store/serverStatus';
 
 declare module 'axios' {
   export interface InternalAxiosRequestConfig {
@@ -76,6 +77,15 @@ apiClient.interceptors.response.use(
     }
 
     const status = error.response.status;
+
+    // The backend opens its port before startup finishes, so it can explain
+    // itself instead of refusing connections. Surface the starting screen rather
+    // than a generic server-error toast.
+    if (status === 503 && error.response.data?.starting === true) {
+      const phase = error.response.data?.phase;
+      useServerStatusStore.getState().setStarting(typeof phase === 'string' ? phase : null);
+      return Promise.reject(error);
+    }
 
     if (status === 404 && !originalRequest._skip404Toast) {
       toast.error('Resource not found', { id: 'not-found' });

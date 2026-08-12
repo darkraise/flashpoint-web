@@ -35,6 +35,9 @@ import { CachedSystemSettingsService } from './services/CachedSystemSettingsServ
 import { PermissionCache } from './services/PermissionCache';
 import { PerformanceMetrics } from './services/PerformanceMetrics';
 import { RuffleService } from './services/RuffleService';
+import { StartupState } from './services/StartupState';
+import { startupGate } from './middleware/startupGate';
+import { registerPreListenStack } from './middleware/frontendServing';
 import { DownloadManager } from './services/DownloadManager';
 import { ConfigManager } from './game/config';
 import { zipManager } from './game/zip-manager';
@@ -106,8 +109,8 @@ async function startServer() {
     }
     next();
   };
-  app.use('/game-proxy', gameCors, gameProxyRouter);
-  app.use('/game-zip', gameCors, gameZipRouter);
+  app.use('/game-proxy', gameCors, startupGate, gameProxyRouter);
+  app.use('/game-zip', gameCors, startupGate, gameZipRouter);
 
   // When the backend also serves the SPA, allow the app's own resources by
   // hash/keyword rather than the blanket 'unsafe-inline'/'unsafe-eval':
@@ -212,49 +215,23 @@ async function startServer() {
   app.use(cookieParser());
   app.use(compression());
 
-  // Single-image deployment: the backend serves the built frontend and its SPA
-  // fallback. Registered before auth/maintenance so the app shell always loads
-  // (the SPA then reflects login/maintenance state from API responses), and
-  // before the API catch-all 404 in setupRoutes so client routes reach index.html.
-  if (config.serveFrontend) {
-    const distPath = config.frontendDistPath;
-    const indexHtml = path.join(distPath, 'index.html');
+  registerPreListenStack(app);
 
-    if (fs.existsSync(indexHtml)) {
-      app.use(
-        express.static(distPath, {
-          index: false,
-          maxAge: '1y',
-          immutable: true,
-          setHeaders: (res, filePath) => {
-            // Hashed assets are immutable; index.html must always be revalidated.
-            if (filePath.endsWith('index.html')) {
-              res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-            }
-          },
-        })
-      );
+  // Listen before the slow work: on a network mount the database copy and cache
+  // pre-warm can run for minutes, and a closed port shows the user a connection
+  // error instead of a page that explains itself.
+  const server = app.listen(config.port, config.host, () => {
+    logger.info(`🚀 Flashpoint Web API server running on http://${config.host}:${config.port}`);
+    logger.info(`📁 Flashpoint path: ${config.flashpointPath}`);
+    logger.info(`🎮 Game content: /game-proxy/* and /game-zip/* (integrated)`);
+    logger.info(`🌍 Environment: ${config.nodeEnv}`);
+  });
 
-      const backendPrefixes = ['/api/', '/game-proxy/', '/game-zip/', '/proxy/'];
-      app.get('*', (req, res, next) => {
-        if (
-          req.path === '/health' ||
-          backendPrefixes.some((prefix) => req.path.startsWith(prefix))
-        ) {
-          next();
-          return;
-        }
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.sendFile(indexHtml);
-      });
-
-      logger.info(`🖥️  Serving frontend from ${distPath}`);
-    } else {
-      logger.warn(
-        `⚠️  SERVE_FRONTEND is enabled but no build was found at ${indexHtml} — skipping static serving`
-      );
-    }
-  }
+  // Prevent connection exhaustion - critical for handling game file requests
+  server.keepAliveTimeout = 65000; // 65s - slightly above common load balancer timeout
+  server.headersTimeout = 66000; // Must be > keepAliveTimeout
+  server.timeout = 120000; // 2 min max for any request (including game file streaming)
+  server.maxConnections = 500; // Defense-in-depth against connection exhaustion
 
   app.use(requestTimeout(TimeoutConfig.DEFAULT));
 
@@ -278,6 +255,7 @@ async function startServer() {
   app.use(maintenanceMode);
 
   try {
+    StartupState.setPhase('Connecting to the Flashpoint database');
     await DatabaseService.initialize();
     logger.info('Database connection established');
     DownloadedReconciler.reconcile().catch((error: unknown) =>
@@ -289,6 +267,7 @@ async function startServer() {
   }
 
   try {
+    StartupState.setPhase('Preparing application data');
     await UserDatabaseService.initialize();
     logger.info('User database connection established');
   } catch (error) {
@@ -301,6 +280,7 @@ async function startServer() {
     logger.info(`[Edition] Flashpoint version: ${config.flashpointVersionString}`);
   }
 
+  StartupState.setPhase('Warming up game search');
   GameSearchCache.prewarmCache().catch((error) => {
     logger.warn('Failed to pre-warm game search cache:', error);
   });
@@ -374,6 +354,7 @@ async function startServer() {
   }
 
   try {
+    StartupState.setPhase('Loading game service configuration');
     await ConfigManager.loadConfig(config.flashpointPath);
     logger.info('🎮 Game service configuration loaded (integrated)');
   } catch (error) {
@@ -401,6 +382,10 @@ async function startServer() {
   setupRoutes(app);
   app.use(errorHandler);
 
+  // Routes are live from here on, so stop short-circuiting requests.
+  StartupState.markReady();
+  logger.info('✅ Server ready to accept requests');
+
   PermissionCache.startCleanup();
   logger.info('✅ Permission cache initialized');
 
@@ -417,19 +402,6 @@ async function startServer() {
   } else if (loggingStatus.fileError) {
     logger.warn(`File logging unavailable: ${loggingStatus.fileError}`);
   }
-
-  const server = app.listen(config.port, config.host, () => {
-    logger.info(`🚀 Flashpoint Web API server running on http://${config.host}:${config.port}`);
-    logger.info(`📁 Flashpoint path: ${config.flashpointPath}`);
-    logger.info(`🎮 Game content: /game-proxy/* and /game-zip/* (integrated)`);
-    logger.info(`🌍 Environment: ${config.nodeEnv}`);
-  });
-
-  // Prevent connection exhaustion - critical for handling game file requests
-  server.keepAliveTimeout = 65000; // 65s - slightly above common load balancer timeout
-  server.headersTimeout = 66000; // Must be > keepAliveTimeout
-  server.timeout = 120000; // 2 min max for any request (including game file streaming)
-  server.maxConnections = 500; // Defense-in-depth against connection exhaustion
 
   const playTrackingService = new PlayTrackingService();
   const playSessionCleanupInterval = setInterval(

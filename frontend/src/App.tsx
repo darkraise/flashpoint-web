@@ -16,7 +16,9 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { NetworkStatusIndicator } from './components/common/NetworkStatusIndicator';
 import { MobileWarningDialog } from './components/common/MobileWarningDialog';
 import { RouteLoadingFallback } from './components/common/RouteLoadingFallback';
+import { ServerStartingScreen } from './components/common/ServerStartingScreen';
 import { useAuthStore } from './store/auth';
+import { useServerStatusStore } from './store/serverStatus';
 import { authSettingsApi, authApi } from './lib/api';
 import { usePublicSettings } from './hooks/usePublicSettings';
 import { Toaster } from '@/components/ui/sonner';
@@ -92,6 +94,7 @@ const ActivitiesView = lazy(() =>
 
 function App() {
   const { isAuthenticated, isGuest, clearAuth, setGuestMode } = useAuthStore();
+  const isServerStarting = useServerStatusStore((state) => state.isStarting);
   const navigate = useNavigate();
   const location = useLocation();
   const { data: publicSettings } = usePublicSettings();
@@ -176,6 +179,16 @@ function App() {
       navigate('/login', { replace: true });
     }
   }, [isGuest, authSettings, location.pathname, location.search, clearAuth, navigate]);
+
+  // Takes over the whole app: every route needs an API the server cannot serve
+  // yet, so routing on would only render broken shells.
+  if (isServerStarting) {
+    return (
+      <ErrorBoundary>
+        <ServerStartingScreen />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>

@@ -68,7 +68,9 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      # The port opens early and /health reports "starting" until the database
+      # copy and cache pre-warm finish, which is minutes on a network share.
+      start_period: 300s
     logging:
       driver: json-file
       options:
