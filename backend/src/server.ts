@@ -149,9 +149,27 @@ async function startServer() {
         directives: cspDirectives,
       },
       crossOriginEmbedderPolicy: false,
+      // Sent per request instead: browsers ignore COOP on non-secure origins and
+      // log a console warning, and a LAN deployment served over plain HTTP is a
+      // supported setup here.
+      crossOriginOpenerPolicy: false,
+      // Agent-cluster keying is decided once per origin, so every document on it
+      // must agree. Game content is served from /game-proxy and /game-zip, which
+      // are mounted before helmet (they must bypass frameguard and the SPA CSP to
+      // be framed at all) and therefore cannot carry the header. Requesting
+      // origin-keying only from the rest of the origin makes the browser warn.
+      originAgentCluster: false,
       frameguard: { action: 'deny' },
     })
   );
+
+  app.use((req, res, next) => {
+    // req.secure honours X-Forwarded-Proto because `trust proxy` is enabled.
+    if (req.secure) {
+      res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    }
+    next();
+  });
 
   const domainService = DomainService.getInstance();
 
