@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { writeFileAtomic } from '../utils/atomicFile';
 import { GameService, Game } from './GameService';
 
 type PlaylistGameEntry = string | { gameId?: string; [key: string]: unknown };
@@ -210,7 +211,7 @@ export class PlaylistService {
 
       // Write playlist file
       const filePath = path.join(playlistsPath, `${id}.json`);
-      await fs.writeFile(filePath, JSON.stringify(playlist, null, '\t'), 'utf-8');
+      await writeFileAtomic(filePath, JSON.stringify(playlist, null, '\t'));
 
       logger.info(`Created playlist: ${playlist.title} (${id})`);
 
@@ -241,7 +242,7 @@ export class PlaylistService {
       const newGames = newGameIds.map((gameId) => ({ gameId }));
       playlist.games = [...(playlist.games || []), ...newGames];
 
-      await fs.writeFile(filePath, JSON.stringify(playlist, null, '\t'), 'utf-8');
+      await writeFileAtomic(filePath, JSON.stringify(playlist, null, '\t'));
       logger.info(`Added ${newGameIds.length} games to playlist: ${playlist.title}`);
 
       return await this.getPlaylistById(playlistId);
@@ -266,7 +267,7 @@ export class PlaylistService {
         return gameId && !data.gameIds.includes(gameId);
       });
 
-      await fs.writeFile(filePath, JSON.stringify(playlist, null, '\t'), 'utf-8');
+      await writeFileAtomic(filePath, JSON.stringify(playlist, null, '\t'));
       logger.info(`Removed ${data.gameIds.length} games from playlist: ${playlist.title}`);
 
       return await this.getPlaylistById(playlistId);

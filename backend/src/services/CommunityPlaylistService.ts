@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { writeFileAtomic } from '../utils/atomicFile';
 
 const WIKI_BASE_URL = 'https://flashpointarchive.org';
 const PLAYLISTS_WIKI_URL = 'https://flashpointarchive.org/datahub/Playlists';
@@ -159,7 +160,7 @@ export class CommunityPlaylistService {
         // File doesn't exist - good to proceed
       }
 
-      await fs.writeFile(playlistFilePath, JSON.stringify(playlistData, null, '\t'), 'utf-8');
+      await writeFileAtomic(playlistFilePath, JSON.stringify(playlistData, null, '\t'));
 
       logger.info(
         `[CommunityPlaylist] Downloaded playlist: ${playlistData.title} (${playlistData.id})`

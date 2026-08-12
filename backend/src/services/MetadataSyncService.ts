@@ -3,6 +3,7 @@ import path from 'path';
 import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { writeFileAtomic } from '../utils/atomicFile';
 import { AssetDownloadService } from './AssetDownloadService';
 import { CachedSystemSettingsService } from './CachedSystemSettingsService';
 import { MetadataSourceService } from './MetadataSourceService';
@@ -813,7 +814,7 @@ export class MetadataSyncService {
       }
 
       // Write back to preferences.json
-      await fs.writeFile(this.preferencesPath, JSON.stringify(preferences, null, 2), 'utf-8');
+      await writeFileAtomic(this.preferencesPath, JSON.stringify(preferences, null, 2));
 
       // Invalidate preferences cache so next read gets updated values
       PreferencesService.invalidateCache();

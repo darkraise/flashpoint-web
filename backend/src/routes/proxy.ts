@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { config, getExternalImageUrls } from '../config';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
+import { writeFileAtomic } from '../utils/atomicFile';
 import path from 'path';
 import { promises as fsPromises } from 'fs';
 import axios from 'axios';
@@ -144,9 +145,7 @@ async function serveFileWithFallback(
             pendingCacheWrites.add(localPath);
             (async () => {
               try {
-                const dir = path.dirname(localPath);
-                await fsPromises.mkdir(dir, { recursive: true });
-                await fsPromises.writeFile(localPath, imageBuffer);
+                await writeFileAtomic(localPath, imageBuffer);
                 logger.info(`[Proxy] Cached image locally: ${localPath}`);
               } catch (cacheError) {
                 logger.warn(

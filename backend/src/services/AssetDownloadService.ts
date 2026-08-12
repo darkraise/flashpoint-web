@@ -3,6 +3,7 @@ import path from 'path';
 import axios from 'axios';
 import { config, getExternalImageUrls } from '../config';
 import { logger } from '../utils/logger';
+import { writeFileAtomic } from '../utils/atomicFile';
 
 export interface AssetDownloadProgress {
   isRunning: boolean;
@@ -148,12 +149,9 @@ export class AssetDownloadService {
             validateStatus: (status) => status === 200,
           });
 
-          await fs.mkdir(path.dirname(localPath), { recursive: true });
           // Write then rename so a cancelled or crashed run cannot leave a
           // half-written file that later looks present and valid.
-          const tempPath = `${localPath}.tmp`;
-          await fs.writeFile(tempPath, Buffer.from(response.data));
-          await fs.rename(tempPath, localPath);
+          await writeFileAtomic(localPath, Buffer.from(response.data));
 
           this.progress.downloaded += 1;
           return;
