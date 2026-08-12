@@ -120,6 +120,12 @@ export const config = {
 
   userDbPath: process.env.NODE_ENV === 'production' ? '/app/data/user.db' : './user.db',
 
+  // Staging area for in-flight game downloads. Must sit on a mounted volume:
+  // packs run to hundreds of megabytes, and the container's own layer is both
+  // size-constrained and unwritable when PUID moves off the image build UID.
+  tempDownloadsPath:
+    process.env.NODE_ENV === 'production' ? '/app/data/temp-downloads' : './temp-downloads',
+
   jwtSecret: getJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
 

@@ -35,6 +35,7 @@ import { CachedSystemSettingsService } from './services/CachedSystemSettingsServ
 import { PermissionCache } from './services/PermissionCache';
 import { PerformanceMetrics } from './services/PerformanceMetrics';
 import { RuffleService } from './services/RuffleService';
+import { DownloadManager } from './services/DownloadManager';
 import { ConfigManager } from './game/config';
 import { zipManager } from './game/zip-manager';
 import { gameZipServer } from './game/gamezipserver';
@@ -306,6 +307,10 @@ async function startServer() {
 
   GameService.prewarmFilterOptions().catch((error) => {
     logger.warn('Failed to pre-warm filter options cache:', error);
+  });
+
+  DownloadManager.sweepOrphanedTempFiles().catch((error) => {
+    logger.warn('Failed to sweep orphaned download files:', error);
   });
 
   // Ruffle installs in the background: it downloads from GitHub, and awaiting it

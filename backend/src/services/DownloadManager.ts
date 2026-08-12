@@ -2,6 +2,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 import type { GameDataSource } from './PreferencesService';
 import { HashValidator } from './HashValidator';
 import { FileImporter } from './FileImporter';
@@ -33,7 +34,9 @@ type DetailsCallback = (details: DownloadDetails) => void;
  * progress tracking, hash validation, and database updates.
  */
 export class DownloadManager {
-  private static readonly TEMP_DIR = path.join(process.cwd(), 'backend', 'temp-downloads');
+  private static readonly TEMP_DIR = path.resolve(config.tempDownloadsPath);
+  /** Only sweep files old enough that no live download could still own them. */
+  private static readonly ORPHAN_MAX_AGE_MS = 60 * 60 * 1000;
   private static readonly DOWNLOAD_TIMEOUT_MS = 300000; // 5 minutes per source
   private static readonly MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
@@ -391,6 +394,41 @@ export class DownloadManager {
       logger.error('Failed to create temp directory', { error });
       throw new Error('Failed to create temporary download directory');
     }
+  }
+
+  /**
+   * Drop staging files left behind by a crash. Nothing else writes this
+   * directory, but the age guard keeps a second container sharing the data
+   * volume from deleting a download that is still running.
+   */
+  static async sweepOrphanedTempFiles(): Promise<number> {
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(this.TEMP_DIR);
+    } catch {
+      return 0;
+    }
+
+    const cutoff = Date.now() - this.ORPHAN_MAX_AGE_MS;
+    let removed = 0;
+
+    for (const entry of entries) {
+      if (!entry.endsWith('.temp')) continue;
+      const entryPath = path.join(this.TEMP_DIR, entry);
+      try {
+        const stats = await fs.promises.stat(entryPath);
+        if (stats.mtimeMs > cutoff) continue;
+        await fs.promises.unlink(entryPath);
+        removed += 1;
+      } catch (error) {
+        logger.warn('Failed to remove orphaned download file', { entryPath, error });
+      }
+    }
+
+    if (removed > 0) {
+      logger.info(`[DownloadManager] Removed ${removed} orphaned download file(s)`);
+    }
+    return removed;
   }
 
   /**
