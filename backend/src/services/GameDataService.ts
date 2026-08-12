@@ -5,6 +5,7 @@ import { config } from '../config';
 import { DatabaseService } from './DatabaseService';
 import { gameZipServer } from '../game/gamezipserver';
 import { GameDataDownloader } from '../game/services/GameDataDownloader';
+import { HashValidator } from './HashValidator';
 
 interface GameDataEntry {
   id: number;
@@ -40,8 +41,16 @@ export class GameDataService {
    *
    * @returns { mounted: true } if ready, { downloading: true } if download started,
    *          { mounted: false, downloading: false } if no ZIP could be found
+   *
+   * @param options.allowRecovery Quarantine and re-download a ZIP that fails to
+   *   mount and does not match its recorded hash. Only for user-triggered
+   *   launches: on the bulk startup mount it would turn a transient storage
+   *   fault into a re-download of the entire library.
    */
-  async mountGameZip(gameId: string): Promise<{ mounted: boolean; downloading: boolean }> {
+  async mountGameZip(
+    gameId: string,
+    options: { allowRecovery?: boolean } = {}
+  ): Promise<{ mounted: boolean; downloading: boolean }> {
     try {
       const mountId = gameId;
       const gamesPath = config.flashpointGamesPath;
@@ -108,11 +117,63 @@ export class GameDataService {
         logger.warn(
           `[GameDataService] Mount failed for game ${gameId} (status: ${result.statusCode})`
         );
+
+        if (options.allowRecovery && gameDataEntry?.sha256) {
+          const quarantined = await this.quarantineCorruptZip(
+            gameId,
+            zipPath,
+            gameDataEntry.sha256
+          );
+          if (quarantined) {
+            // The bad pack is gone, so this pass reaches the download branch.
+            // Recovery is off to bound it to a single attempt.
+            return this.mountGameZip(gameId, { allowRecovery: false });
+          }
+        }
+
         return { mounted: false, downloading: false };
       }
     } catch (error) {
       logger.error(`[GameDataService] Error mounting ZIP for game ${gameId}:`, error);
       return { mounted: false, downloading: false };
+    }
+  }
+
+  /**
+   * Move a ZIP aside when it fails to mount AND its content does not match the
+   * recorded hash. A hash match means the mount failed for some other reason,
+   * and the Launcher writes this directory too, so anything unverified is left
+   * untouched rather than deleted.
+   */
+  private async quarantineCorruptZip(
+    gameId: string,
+    zipPath: string,
+    expectedSha256: string
+  ): Promise<boolean> {
+    try {
+      if (await HashValidator.validate(zipPath, expectedSha256)) {
+        logger.warn(
+          `[GameDataService] ZIP for ${gameId} matches its hash; leaving it in place despite the mount failure`
+        );
+        return false;
+      }
+    } catch (error) {
+      logger.warn(`[GameDataService] Could not hash ${zipPath}, leaving it in place:`, error);
+      return false;
+    }
+
+    // Windows refuses the rename while the ZIP handle is still open.
+    await gameZipServer.unmountZip(gameId);
+
+    const quarantinePath = `${zipPath}.corrupt`;
+    try {
+      await fs.rm(quarantinePath, { force: true });
+      await fs.rename(zipPath, quarantinePath);
+      logger.warn(`[GameDataService] Quarantined corrupt game data: ${zipPath}`);
+      return true;
+    } catch (error) {
+      logger.error(`[GameDataService] Failed to quarantine ${zipPath}:`, error);
+      return false;
     }
   }
 

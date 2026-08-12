@@ -4,13 +4,18 @@ import { logger } from '../utils/logger';
 import { PreferencesService } from './PreferencesService';
 
 export class FileImporter {
-  /** Format: {gameId}-{timestamp}.zip */
-  static generateFilename(gameId: string): string {
-    const timestamp = Date.now();
-    return `${gameId}-${timestamp}.zip`;
-  }
+  /**
+   * @param filename Launcher-convention name (`{gameId}-{dateAdded timestamp}.zip`).
+   *   Deriving a different name here would hide the pack from the direct-path
+   *   lookup and leave one copy per download attempt on disk.
+   */
+  static async import(gameId: string, tempFilePath: string, filename: string): Promise<string> {
+    // Landing spot in the destination directory, so the final rename is
+    // same-filesystem. Copying straight to finalPath would leave a truncated
+    // pack behind on failure, which later mounts pick up and treat as a
+    // complete download.
+    let partialPath: string | null = null;
 
-  static async import(gameId: string, tempFilePath: string): Promise<string> {
     try {
       if (!fs.existsSync(tempFilePath)) {
         throw new Error(`Temporary file not found: ${tempFilePath}`);
@@ -24,38 +29,40 @@ export class FileImporter {
       });
 
       const dataPacksPath = await PreferencesService.getDataPacksPath();
-      await fs.promises.mkdir(dataPacksPath, { recursive: true });
-
-      const filename = this.generateFilename(gameId);
       const finalPath = path.join(dataPacksPath, filename);
+      partialPath = `${finalPath}.part`;
+
+      await fs.promises.mkdir(dataPacksPath, { recursive: true });
 
       if (fs.existsSync(finalPath)) {
         logger.warn('Destination file already exists, overwriting', { finalPath });
       }
 
-      await fs.promises.copyFile(tempFilePath, finalPath);
-      logger.info('File copied successfully', {
-        gameId,
-        finalPath,
-        size: stats.size,
-      });
+      await fs.promises.copyFile(tempFilePath, partialPath);
 
-      const finalStats = await fs.promises.stat(finalPath);
-      if (finalStats.size !== stats.size) {
+      const partialStats = await fs.promises.stat(partialPath);
+      if (partialStats.size !== stats.size) {
         throw new Error(
-          `File copy verification failed: size mismatch (expected ${stats.size}, got ${finalStats.size})`
+          `File copy verification failed: size mismatch (expected ${stats.size}, got ${partialStats.size})`
         );
       }
+
+      await fs.promises.rename(partialPath, finalPath);
 
       await this.cleanupTempFile(tempFilePath);
 
       logger.info('File import completed successfully', {
         gameId,
         finalPath,
+        size: stats.size,
       });
 
       return finalPath;
     } catch (error) {
+      if (partialPath !== null) {
+        await this.cleanupTempFile(partialPath);
+      }
+
       logger.error('File import failed', {
         gameId,
         tempFilePath,

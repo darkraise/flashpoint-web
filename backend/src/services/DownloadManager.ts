@@ -196,7 +196,7 @@ export class DownloadManager {
           });
 
           // Import to final location
-          const finalPath = await FileImporter.import(gameData.gameId, tempFilePath);
+          const finalPath = await FileImporter.import(gameData.gameId, tempFilePath, filename);
 
           // Update database
           await GameDatabaseUpdater.markAsDownloaded(gameDataId, finalPath);

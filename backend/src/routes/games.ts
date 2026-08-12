@@ -268,7 +268,7 @@ router.get(
 
     // Awaited so local ZIPs are ready before we return the URL.
     // For downloads, returns quickly with { mounted: false, downloading: true }.
-    const mountResult = await gameDataService.mountGameZip(game.id);
+    const mountResult = await gameDataService.mountGameZip(game.id, { allowRecovery: true });
     const downloading = mountResult.downloading || false;
 
     let launchCommand = game.launchCommand || '';
