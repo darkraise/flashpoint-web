@@ -21,6 +21,7 @@ Location: `backend/.env` (local development)
 | ---------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `FLASHPOINT_PATH`      | `D:/Flashpoint` (dev), `/data/flashpoint` (prod) | Root Flashpoint directory. All other paths auto-derived. Edition (Infinity/Ultimate) auto-detected from `version.txt`. |
 | `FLASHPOINT_GAMES_PATH`| `<FLASHPOINT_PATH>/Data/Games`              | Override game ZIP directory (rarely needed).                                                                           |
+| `APP_VERSION`          | set by the Docker build | Release version the server reports on Settings → Update. Baked into the official image from the release tag; set it by hand for a non-Docker deployment, or update checks stay off. |
 
 **Authentication & Security:**
 

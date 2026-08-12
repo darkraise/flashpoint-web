@@ -59,6 +59,10 @@ LABEL org.opencontainers.image.description="Self-hosted web app for Flashpoint A
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/darkraise/flashpoint-web"
 
+# An ARG does not survive into the running container; the server reads this to
+# decide whether it is a released build.
+ENV APP_VERSION=${VERSION}
+
 WORKDIR /app
 
 # Install runtime dependencies

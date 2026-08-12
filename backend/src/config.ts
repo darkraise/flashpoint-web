@@ -179,6 +179,11 @@ export const config = {
   flashpointEdition: flashpointVersion.edition,
   flashpointVersionString: flashpointVersion.versionString,
   flashpointPackagedAt: flashpointVersion.packagedAt,
+
+  // Baked into the image from the VERSION build arg; unset elsewhere, which
+  // marks the build as unreleased. `||` is deliberate: a whitespace-only value
+  // must collapse to null, which `??` would not do.
+  appVersion: process.env.APP_VERSION?.trim() || null,
 } as const;
 
 /** Resolves external image CDN URLs from Flashpoint preferences, with hardcoded fallbacks. */
