@@ -37,6 +37,18 @@ export interface AssetDownloadProgress {
   cancelled: boolean;
 }
 
+export interface AppUpdateInfo {
+  currentVersion: string | null;
+  latestVersion: string | null;
+  updateAvailable: boolean;
+  isUnreleasedBuild: boolean;
+  publishedAt: string | null;
+  releaseUrl: string | null;
+  changelog: string | null;
+  checkedAt: string | null;
+  lastCheckFailed: boolean;
+}
+
 export const updatesApi = {
   getAssetDownloadStatus: async (): Promise<AssetDownloadProgress> => {
     const { data } = await apiClient.get<AssetDownloadProgress>('/updates/metadata/assets/status');
@@ -63,6 +75,13 @@ export const updatesApi = {
 
   getMetadataSyncStatus: async (): Promise<MetadataSyncStatus> => {
     const { data } = await apiClient.get<MetadataSyncStatus>('/updates/metadata/sync/status');
+    return data;
+  },
+
+  getAppUpdate: async (refresh = false): Promise<AppUpdateInfo> => {
+    const { data } = await apiClient.get<AppUpdateInfo>('/updates/app', {
+      params: refresh ? { refresh: 'true' } : undefined,
+    });
     return data;
   },
 };

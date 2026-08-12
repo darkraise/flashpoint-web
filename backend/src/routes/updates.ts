@@ -4,6 +4,7 @@ import { MetadataUpdateService } from '../services/MetadataUpdateService';
 import { MetadataSyncService } from '../services/MetadataSyncService';
 import { AssetDownloadService } from '../services/AssetDownloadService';
 import { SyncStatusService } from '../services/SyncStatusService';
+import { AppUpdateService } from '../services/AppUpdateService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
@@ -15,6 +16,18 @@ const router = Router();
 router.use(rateLimitStandard);
 const metadataUpdateService = new MetadataUpdateService();
 const metadataSyncService = new MetadataSyncService();
+
+router.get(
+  '/app',
+  authenticate,
+  requirePermission('settings.update'),
+  asyncHandler(async (req, res) => {
+    // Any value other than the exact string is falsy here, so no schema is
+    // warranted; the service's own 60s floor is what guards the GitHub quota.
+    const info = await AppUpdateService.getUpdateInfo(req.query.refresh === 'true');
+    res.json(info);
+  })
+);
 
 router.get(
   '/check',

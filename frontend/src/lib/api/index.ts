@@ -41,6 +41,11 @@ export { ruffleApi } from './ruffle';
 export { githubApi } from './github';
 
 export { updatesApi } from './updates';
-export type { MetadataUpdateInfo, MetadataSyncStatus, AssetDownloadProgress } from './updates';
+export type {
+  MetadataUpdateInfo,
+  MetadataSyncStatus,
+  AssetDownloadProgress,
+  AppUpdateInfo,
+} from './updates';
 
 export default apiClient;
