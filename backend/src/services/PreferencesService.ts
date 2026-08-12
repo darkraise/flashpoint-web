@@ -73,15 +73,14 @@ export class PreferencesService {
     }
 
     // Load preferences from disk
-    await this.loadPreferences();
-    return this.preferences!;
+    return this.loadPreferences();
   }
 
   /**
    * Load preferences from the Flashpoint installation directory.
    * Falls back to defaults on failure (graceful degradation).
    */
-  private static async loadPreferences(): Promise<void> {
+  private static async loadPreferences(): Promise<FlashpointPreferences> {
     try {
       const preferencesPath = path.join(config.flashpointPath, 'preferences.json');
 
@@ -92,58 +91,95 @@ export class PreferencesService {
       const content = await fs.promises.readFile(preferencesPath, 'utf-8');
       const parsed = JSON.parse(content);
 
-      // Validate structure
-      this.validatePreferences(parsed);
+      const preferences = this.normalizePreferences(parsed);
 
       // Cache preferences
-      this.preferences = parsed;
+      this.preferences = preferences;
       this.lastLoadTime = Date.now();
       this.lastLoadFailed = false;
 
       logger.info('Preferences loaded successfully', {
-        sourceCount: parsed.gameDataSources?.length || 0,
-        dataPacksPath: parsed.dataPacksFolderPath,
-        imageFolderPath: parsed.imageFolderPath,
-        onDemandBaseUrl: parsed.onDemandBaseUrl,
+        sourceCount: preferences.gameDataSources.length,
+        dataPacksPath: preferences.dataPacksFolderPath,
+        imageFolderPath: preferences.imageFolderPath,
+        onDemandBaseUrl: preferences.onDemandBaseUrl,
       });
+
+      return preferences;
     } catch (error) {
       logger.error('Failed to load preferences, using defaults:', error);
 
       // Graceful degradation: provide defaults
-      this.preferences = {
+      const defaults: FlashpointPreferences = {
         gameDataSources: [],
         dataPacksFolderPath: 'Data/Games',
       };
+
+      this.preferences = defaults;
       this.lastLoadTime = Date.now();
       this.lastLoadFailed = true;
+
+      return defaults;
     }
   }
 
-  private static validatePreferences(prefs: Record<string, unknown>): void {
-    if (!prefs || typeof prefs !== 'object') {
+  private static isGameDataSource(source: unknown): source is GameDataSource {
+    if (!source || typeof source !== 'object') return false;
+
+    const candidate = source as Partial<GameDataSource>;
+    return (
+      typeof candidate.type === 'string' &&
+      candidate.type.length > 0 &&
+      typeof candidate.name === 'string' &&
+      candidate.name.length > 0 &&
+      Array.isArray(candidate.arguments) &&
+      candidate.arguments.length > 0
+    );
+  }
+
+  /**
+   * Fills in the two fields the rest of the app relies on and leaves everything
+   * else as written.
+   *
+   * Only a file that is not an object at all is rejected. Ultimate ships
+   * preferences.json without gameDataSources, so treating a missing key as fatal
+   * threw away that edition's entire configuration — image paths and all — and
+   * silently replaced it with Infinity-shaped defaults.
+   */
+  private static normalizePreferences(prefs: unknown): FlashpointPreferences {
+    if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) {
       throw new Error('Preferences must be an object');
     }
 
-    if (!Array.isArray(prefs.gameDataSources)) {
-      throw new Error('preferences.gameDataSources must be an array');
+    const parsed = prefs as Record<string, unknown>;
+
+    const declaredSources = parsed.gameDataSources;
+    let gameDataSources: GameDataSource[] = [];
+
+    if (Array.isArray(declaredSources)) {
+      gameDataSources = declaredSources.filter((source) => this.isGameDataSource(source));
+
+      if (gameDataSources.length !== declaredSources.length) {
+        logger.warn(
+          `Ignoring ${declaredSources.length - gameDataSources.length} malformed entries in preferences.gameDataSources`
+        );
+      }
+    } else if (declaredSources !== undefined) {
+      logger.warn('Ignoring preferences.gameDataSources: expected an array');
     }
 
-    if (typeof prefs.dataPacksFolderPath !== 'string') {
-      throw new Error('preferences.dataPacksFolderPath must be a string');
+    const declaredPacksPath = parsed.dataPacksFolderPath;
+    const hasPacksPath = typeof declaredPacksPath === 'string' && declaredPacksPath.length > 0;
+
+    if (!hasPacksPath && declaredPacksPath !== undefined) {
+      logger.warn('Ignoring preferences.dataPacksFolderPath: expected a non-empty string');
     }
 
-    // Validate each data source
-    for (const source of prefs.gameDataSources) {
-      if (!source.type || typeof source.type !== 'string') {
-        throw new Error('Each gameDataSource must have a type string');
-      }
-      if (!source.name || typeof source.name !== 'string') {
-        throw new Error('Each gameDataSource must have a name string');
-      }
-      if (!Array.isArray(source.arguments) || source.arguments.length === 0) {
-        throw new Error('Each gameDataSource must have a non-empty arguments array');
-      }
-    }
+    return {
+      ...parsed,
+      gameDataSources,
+      dataPacksFolderPath: hasPacksPath ? declaredPacksPath : 'Data/Games',
+    };
   }
 
   static async getGameDataSources(): Promise<GameDataSource[]> {
