@@ -20,6 +20,11 @@ import { updatesApi, type AppUpdateInfo } from '@/lib/api';
 
 const UPGRADE_COMMAND = 'docker compose pull && docker compose up -d';
 
+/** True once the running build is exactly the latest known release. */
+function versionsMatch(currentVersion: string | null, latestVersion: string | null): boolean {
+  return currentVersion !== null && currentVersion === latestVersion;
+}
+
 export function AppUpdateCard() {
   const { showToast } = useDialog();
   const queryClient = useQueryClient();
@@ -47,8 +52,15 @@ export function AppUpdateCard() {
         showToast('Could not reach GitHub to check for updates', 'error');
       } else if (result.updateAvailable) {
         showToast(`Flashpoint Web ${result.latestVersion} is available`, 'success');
-      } else if (!result.isUnreleasedBuild) {
+      } else if (result.isUnreleasedBuild) {
+        showToast(
+          `Update checks are off for this build (latest release: ${result.latestVersion ?? 'unknown'})`,
+          'info'
+        );
+      } else if (versionsMatch(result.currentVersion, result.latestVersion)) {
         showToast('Flashpoint Web is up to date', 'success');
+      } else {
+        showToast(`Latest release: ${result.latestVersion ?? 'unknown'}`, 'info');
       }
     },
     onError: () => showToast('Could not check for updates', 'error'),
@@ -63,6 +75,9 @@ export function AppUpdateCard() {
 
   const checkFailedEntirely =
     isLoadingError || (info?.lastCheckFailed === true && info.latestVersion === null);
+  const currentVersionMatchesLatest = info
+    ? versionsMatch(info.currentVersion, info.latestVersion)
+    : false;
 
   return (
     <div className="bg-card rounded-lg p-6 border border-border shadow-md">
@@ -90,7 +105,11 @@ export function AppUpdateCard() {
           <Label className="text-sm text-muted-foreground">Current Version</Label>
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">{info?.currentVersion ?? 'Unknown'}</span>
-            {info && !info.isUnreleasedBuild && !info.updateAvailable && !info.lastCheckFailed ? (
+            {info &&
+            !info.isUnreleasedBuild &&
+            !info.updateAvailable &&
+            !info.lastCheckFailed &&
+            currentVersionMatchesLatest ? (
               <CheckCircle2 className="h-5 w-5 text-green-500" aria-hidden="true" />
             ) : null}
           </div>
@@ -136,7 +155,9 @@ export function AppUpdateCard() {
               <p className="font-medium">
                 {info.updateAvailable
                   ? `Update available: ${info.latestVersion}`
-                  : "You're up to date!"}
+                  : currentVersionMatchesLatest
+                    ? "You're up to date!"
+                    : `Latest release: ${info.latestVersion ?? 'unknown'}`}
               </p>
               {info.publishedAt ? (
                 <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
@@ -145,6 +166,11 @@ export function AppUpdateCard() {
                     Released <FormattedDate date={info.publishedAt} type="date" />
                   </span>
                 </div>
+              ) : null}
+              {!info.lastCheckFailed && info.checkedAt ? (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Checked <FormattedDate date={info.checkedAt} type="datetime" />
+                </p>
               ) : null}
               {info.lastCheckFailed && info.checkedAt ? (
                 <p className="text-xs text-muted-foreground mt-2">
@@ -183,6 +209,7 @@ export function AppUpdateCard() {
               <div className="border-t border-border pt-3">
                 <button
                   onClick={() => setShowChangelog(!showChangelog)}
+                  aria-expanded={showChangelog}
                   className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors w-full"
                 >
                   {showChangelog ? (

@@ -223,10 +223,9 @@ describe('AppUpdateService failures', () => {
     expect(info.latestVersion).toBeNull();
   });
 
-  // Adjusted from the brief: with the failure floor in place, a retry right
-  // after a failure is now suppressed rather than firing immediately, so the
-  // clock has to move past FORCED_REFRESH_FLOOR_MS before the recovery call
-  // is allowed to actually reach the network.
+  // The failure floor suppresses an immediate retry, so the clock has to
+  // move past FORCED_REFRESH_FLOOR_MS before a recovery attempt is allowed
+  // to actually reach the network.
   it('clears the failure flag once a later check succeeds', async () => {
     vi.useFakeTimers();
     try {
@@ -246,7 +245,7 @@ describe('AppUpdateService failures', () => {
     }
   });
 
-  it('does not retry within 60 seconds of a failure, even so the check is still flagged failed', async () => {
+  it('does not retry within 60 seconds of a failure, and the check is still flagged failed', async () => {
     vi.useFakeTimers();
     try {
       vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));

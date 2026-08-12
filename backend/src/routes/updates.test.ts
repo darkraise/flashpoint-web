@@ -10,8 +10,17 @@ vi.mock('../utils/logger', () => ({
 vi.mock('../middleware/auth', () => ({
   authenticate: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
+const requirePermissionCalls = vi.hoisted(() => [] as string[]);
 vi.mock('../middleware/rbac', () => ({
-  requirePermission: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+  requirePermission: (permission: string) => {
+    requirePermissionCalls.push(permission);
+    // Tag the returned middleware with the permission it was built for, so
+    // tests can confirm which gate a specific route was registered behind
+    // instead of only that some permission was requested somewhere.
+    return Object.assign((_req: unknown, _res: unknown, next: () => void) => next(), {
+      permission,
+    });
+  },
 }));
 vi.mock('../middleware/activityLogger', () => ({
   logActivity: () => (_req: unknown, _res: unknown, next: () => void) => next(),
@@ -47,6 +56,17 @@ const INFO = {
   checkedAt: '2026-08-12T08:00:00.000Z',
   lastCheckFailed: false,
 };
+
+interface RouteMiddlewareLayer {
+  handle: { permission?: string };
+}
+
+interface RouteLayer {
+  route?: {
+    path: string;
+    stack: RouteMiddlewareLayer[];
+  };
+}
 
 let app: Express;
 
@@ -85,5 +105,15 @@ describe('GET /api/updates/app', () => {
     expect(getUpdateInfo).toHaveBeenNthCalledWith(1, false);
     expect(getUpdateInfo).toHaveBeenNthCalledWith(2, false);
     expect(getUpdateInfo).toHaveBeenNthCalledWith(3, false);
+  });
+
+  it('is registered behind the settings.update permission', () => {
+    const stack = (updatesRouter as unknown as { stack: RouteLayer[] }).stack;
+    const appLayer = stack.find((layer) => layer.route?.path === '/app');
+
+    expect(appLayer).toBeDefined();
+    const permissions = appLayer?.route?.stack.map((layer) => layer.handle.permission) ?? [];
+    expect(permissions).toContain('settings.update');
+    expect(requirePermissionCalls).toContain('settings.update');
   });
 });
