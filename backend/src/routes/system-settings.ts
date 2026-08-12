@@ -5,6 +5,7 @@ import { config } from '../config';
 import { CachedSystemSettingsService } from '../services/CachedSystemSettingsService';
 import { DomainService } from '../services/DomainService';
 import { PermissionCache } from '../services/PermissionCache';
+import { PreferencesService } from '../services/PreferencesService';
 import { authenticate } from '../middleware/auth';
 import { requirePermission } from '../middleware/rbac';
 import { logActivity } from '../middleware/activityLogger';
@@ -90,6 +91,8 @@ router.get(
     }
     publicSettings.metadata.flashpointEdition = config.flashpointEdition;
     publicSettings.metadata.flashpointVersion = config.flashpointVersionString;
+    publicSettings.metadata.flashpointPackagedAt = config.flashpointPackagedAt;
+    publicSettings.metadata.flashpointLastUpdate = await PreferencesService.getLastMetadataUpdate();
 
     // Inject default domain from domains table
     try {

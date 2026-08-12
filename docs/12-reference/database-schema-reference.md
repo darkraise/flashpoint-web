@@ -225,10 +225,11 @@ Global key-value settings.
 - `metadata.sync_tags` — Include tags in sync
 - `metadata.sync_platforms` — Include platforms in sync
 
-**Note:** Flashpoint edition and version are **not** stored in
+**Note:** Flashpoint edition, version, and package date are **not** stored in
 `system_settings`. They are auto-detected from `version.txt` at startup and held
-in the backend `config` object. The frontend receives them via the
-`/api/settings/public` endpoint.
+in the backend `config` object. The last metadata update is not stored either —
+it is read from Flashpoint's `preferences.json`. The frontend receives all of
+them via the `/api/settings/public` endpoint.
 
 ### login_attempts
 

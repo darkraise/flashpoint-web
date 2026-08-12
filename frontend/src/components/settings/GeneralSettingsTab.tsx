@@ -1,6 +1,7 @@
 import { Shield, Calendar } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { FormattedDate } from '@/components/common/FormattedDate';
 import { motion, Variants } from 'framer-motion';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { authSettingsApi, ruffleApi, usersApi } from '@/lib/api';
@@ -28,6 +29,11 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
 
   // Public settings (cached, no extra request) for edition/version
   const { data: publicSettings } = usePublicSettings();
+
+  const flashpointVersion = publicSettings?.metadata?.flashpointVersion ?? 'Unknown';
+  const flashpointEdition = publicSettings?.metadata?.flashpointEdition ?? 'Unknown';
+  const packagedAt = publicSettings?.metadata?.flashpointPackagedAt;
+  const lastUpdate = publicSettings?.metadata?.flashpointLastUpdate;
 
   const { data: authSettings, refetch: refetchAuthSettings } = useQuery({
     queryKey: ['authSettings'],
@@ -89,18 +95,22 @@ export function GeneralSettingsTab({ tabContentVariants }: GeneralSettingsTabPro
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Flashpoint Version:</span>
-            <span className="font-medium">
-              {publicSettings?.metadata?.flashpointVersion
-                ? String(publicSettings.metadata.flashpointVersion)
-                : 'Unknown'}
-            </span>
+            <span className="font-medium">{flashpointVersion}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Flashpoint Edition:</span>
-            <span className="font-medium capitalize">
-              {publicSettings?.metadata?.flashpointEdition
-                ? String(publicSettings.metadata.flashpointEdition)
-                : 'Unknown'}
+            <span className="font-medium capitalize">{flashpointEdition}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Package Date:</span>
+            <span className="font-medium">
+              {packagedAt ? <FormattedDate date={packagedAt} type="date" /> : 'Unknown'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Last Update:</span>
+            <span className="font-medium">
+              {lastUpdate ? <FormattedDate date={lastUpdate} type="datetime" /> : 'Never'}
             </span>
           </div>
           <div className="flex justify-between">

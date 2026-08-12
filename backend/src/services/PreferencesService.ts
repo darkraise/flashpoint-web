@@ -165,6 +165,25 @@ export class PreferencesService {
     return sources.length > 0 && !!sources[0]?.baseUrl;
   }
 
+  /**
+   * When the local metadata was last synced, or null when it never was.
+   * Flashpoint seeds the timestamps of an unsynced source with the Unix epoch,
+   * which is not a date worth showing anyone.
+   */
+  static async getLastMetadataUpdate(): Promise<string | null> {
+    const sources = await this.getGameMetadataSources();
+
+    const syncTimes = sources
+      .map((source) => Date.parse(source.games?.actualUpdateTime ?? ''))
+      .filter((time) => !isNaN(time) && time > 0);
+
+    if (syncTimes.length === 0) {
+      return null;
+    }
+
+    return new Date(Math.max(...syncTimes)).toISOString();
+  }
+
   static async getDataPacksPath(): Promise<string> {
     const prefs = await this.getPreferences();
     const dataPacksPath = prefs.dataPacksFolderPath || 'Data/Games';

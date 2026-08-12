@@ -73,7 +73,12 @@ export interface PublicSettings {
   app: Pick<AppSettings, 'siteName' | 'maintenanceMode' | 'maintenanceMessage' | 'homeRecentHours'>;
   auth: Pick<AuthSettings, 'guestAccessEnabled' | 'userRegistrationEnabled'>;
   features?: Partial<FeatureSettings>;
-  metadata?: { flashpointEdition?: string; flashpointVersion?: string };
+  metadata?: {
+    flashpointEdition?: string;
+    flashpointVersion?: string;
+    flashpointPackagedAt?: string | null;
+    flashpointLastUpdate?: string | null;
+  };
   domains?: { defaultDomain?: string | null };
 }
 

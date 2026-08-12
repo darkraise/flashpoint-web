@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
 import { RefreshCw, Download, CheckCircle, Database, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const DEFAULT_METADATA_SOURCE = 'https://fpfss.flashpointarchive.org';
 
 export function MetadataUpdateCard() {
   const { showToast, showConfirm } = useDialog();
+  const queryClient = useQueryClient();
   const { data: publicSettings } = usePublicSettings();
   const isUltimate = publicSettings?.metadata?.flashpointEdition === 'ultimate';
 
@@ -234,6 +236,9 @@ export function MetadataUpdateCard() {
               const result = status.result;
               const message = `Metadata sync completed! ${result.gamesUpdated} game${result.gamesUpdated !== 1 ? 's' : ''} updated.`;
               showToast(message, 'success');
+              // The sync moves the "Last Update" shown in Version Information,
+              // which is served with the public settings and cached forever.
+              queryClient.invalidateQueries({ queryKey: ['system-settings', 'public'] });
               await checkMetadataUpdates();
             } else if (status.stage === 'failed') {
               throw new Error(status.error || 'Metadata sync failed');

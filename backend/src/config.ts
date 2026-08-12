@@ -49,8 +49,36 @@ const getFlashpointPath = (): string => {
 
 const flashpointPath = getFlashpointPath();
 
-function parseVersionFile(): { edition: 'infinity' | 'ultimate'; versionString: string } {
-  const defaults = { edition: 'infinity' as const, versionString: '' };
+/**
+ * When this Flashpoint package was built, taken from files the package ships but
+ * neither the Launcher nor this app ever rewrites. Ultimate names only a major
+ * version ("Flashpoint 14 Ultimate - Kingfisher"), so the package date is the
+ * only thing that distinguishes one Ultimate snapshot from the next.
+ */
+function readPackagedAt(): string | null {
+  const candidates = ['version.txt', '.preferences.defaults.json'];
+
+  for (const candidate of candidates) {
+    try {
+      const { mtime } = fs.statSync(path.join(flashpointPath, candidate));
+      if (!isNaN(mtime.getTime())) {
+        return mtime.toISOString();
+      }
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  return null;
+}
+
+function parseVersionFile(): {
+  edition: 'infinity' | 'ultimate';
+  versionString: string;
+  packagedAt: string | null;
+} {
+  const packagedAt = readPackagedAt();
+  const defaults = { edition: 'infinity' as const, versionString: '', packagedAt };
 
   try {
     const versionFilePath = path.join(flashpointPath, 'version.txt');
@@ -67,7 +95,7 @@ function parseVersionFile(): { edition: 'infinity' | 'ultimate'; versionString: 
       edition = 'infinity';
     }
 
-    return { edition, versionString: content };
+    return { edition, versionString: content, packagedAt };
   } catch {
     return defaults;
   }
@@ -150,6 +178,7 @@ export const config = {
   // Auto-detected from version.txt; affects metadata sync and image path availability
   flashpointEdition: flashpointVersion.edition,
   flashpointVersionString: flashpointVersion.versionString,
+  flashpointPackagedAt: flashpointVersion.packagedAt,
 } as const;
 
 /** Resolves external image CDN URLs from Flashpoint preferences, with hardcoded fallbacks. */

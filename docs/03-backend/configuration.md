@@ -87,6 +87,11 @@ needed.
    - `config.flashpointEdition` — `"infinity"` or `"ultimate"`
    - `config.flashpointVersionString` — Full version string (e.g.,
      `"Flashpoint 14.0.3 Infinity - Kingfisher"`)
+   - `config.flashpointPackagedAt` — When the package was built, as an ISO
+     string, or `null`. Taken from the modification time of `version.txt`,
+     falling back to `.preferences.defaults.json`. Both are written when the
+     package is built and never rewritten afterwards, unlike `preferences.json`
+     and `flashpoint.sqlite`, which the Launcher and this app both write to.
 4. Backend services (GameService, MetadataSyncService, MetadataUpdateService)
    read `config` directly
 5. The frontend receives edition/version via the `/api/settings/public` endpoint
@@ -97,6 +102,9 @@ needed.
 
 - Infinity: `Flashpoint 14.0.3 Infinity - Kingfisher`
 - Ultimate: `Flashpoint 14 Ultimate - Kingfisher`
+
+Ultimate names only a major version, so `config.flashpointPackagedAt` is what
+distinguishes one Ultimate snapshot from the next.
 
 **Edition differences:**
 

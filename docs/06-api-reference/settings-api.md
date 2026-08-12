@@ -136,22 +136,42 @@ Clears permission cache entries.
 **Validation:** All updates validated against JSON schemas. Type, range, and
 enum validation enforced.
 
-## Public Settings: Domain Injection
+## Public Settings: Runtime Injection
 
-The `GET /api/settings/public` endpoint includes an additional `domains` object
-injected at runtime (not stored in the `system_settings` table):
+The `GET /api/settings/public` endpoint includes `metadata` and `domains`
+objects injected at runtime (not stored in the `system_settings` table):
 
 ```json
 {
   "app": { ... },
   "auth": { ... },
+  "metadata": {
+    "flashpointEdition": "infinity",
+    "flashpointVersion": "Flashpoint 14.0.3 Infinity - Kingfisher",
+    "flashpointPackagedAt": "2025-11-20T12:17:38.000Z",
+    "flashpointLastUpdate": "2026-02-13T10:57:46.117Z"
+  },
   "domains": {
     "defaultDomain": "play.example.com"
   }
 }
 ```
 
-This is managed via the separate `/api/domains` endpoints (see
+| Field                  | Source                                                                                | Null when                                            |
+| ---------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `flashpointEdition`    | `version.txt`, read once at startup                                                     | Never — defaults to `"infinity"`                     |
+| `flashpointVersion`    | `version.txt`, read once at startup                                                     | Never — empty string when the file is missing        |
+| `flashpointPackagedAt` | Modification time of `version.txt` or `.preferences.defaults.json`, read once at startup | Neither file exists                                  |
+| `flashpointLastUpdate` | `preferences.json` → newest `gameMetadataSources[].games.actualUpdateTime`               | No source, unparseable, or the `1970-01-01` placeholder |
+
+Edition, version, and package date come from the backend `config` object (see
+[Flashpoint Edition Auto-Detection](../03-backend/configuration.md#flashpoint-edition-auto-detection));
+a restart is needed to pick up a changed install. The last update is read per
+request through `PreferencesService`, which caches `preferences.json` for 60
+seconds. Clients should render `flashpointLastUpdate: null` as "Never" — the
+epoch placeholder is normalized away server-side.
+
+Domains are managed via the separate `/api/domains` endpoints (see
 [Domains API](./domains-api.md)).
 
 ## Frontend Integration

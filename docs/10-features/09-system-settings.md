@@ -55,8 +55,12 @@ CREATE TABLE system_settings (
 #### General Tab
 
 - **Version Information** - View Flashpoint version and edition (auto-detected
-  from `version.txt`, served via `/api/settings/public`), web app version, and
-  Ruffle emulator version
+  from `version.txt`, served via `/api/settings/public`), package date, last
+  metadata update, web app version, and Ruffle emulator version. The package
+  date is the build date of the Flashpoint install; the last update is when its
+  metadata was last synced, or "Never" when it never was (Ultimate ships no
+  metadata source). See
+  [Flashpoint Edition Auto-Detection](../03-backend/configuration.md#flashpoint-edition-auto-detection)
 - **Date & Time Format** - Choose from 7 date and 4 time formats
 - **Ruffle Emulator Management** - Check for and install updates (admin only)
 - **Authentication Settings** - Control registration and guest access (admin
@@ -177,9 +181,10 @@ All settings use JSON Schema validation:
 - syncTags: true
 - syncPlatforms: true
 
-**Note:** Flashpoint edition and version are not database settings. They are
-auto-detected from `version.txt` at startup and injected into the
-`/api/settings/public` response from the backend `config` object.
+**Note:** Flashpoint edition, version, and package date are not database
+settings. They are auto-detected from `version.txt` at startup and injected into
+the `/api/settings/public` response from the backend `config` object. The last
+metadata update is read per request from `preferences.json`.
 
 **Features Defaults:**
 

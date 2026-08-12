@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
 import { ruffleApi } from '@/lib/api';
 import { usePublicSettings } from '@/hooks/usePublicSettings';
+import { FormattedDate } from '@/components/common/FormattedDate';
 
 import { GeneralSettingsTab } from '@/components/settings/GeneralSettingsTab';
 import { AppSettingsTab } from '@/components/settings/AppSettingsTab';
@@ -50,6 +51,8 @@ export function SettingsView() {
   const { data: publicSettings } = usePublicSettings();
 
   const flashpointVersion = publicSettings?.metadata?.flashpointVersion ?? 'Unknown';
+  const packagedAt = publicSettings?.metadata?.flashpointPackagedAt;
+  const lastUpdate = publicSettings?.metadata?.flashpointLastUpdate;
   const webAppVersion = import.meta.env.VITE_APP_VERSION ?? '1.0.0';
 
   return (
@@ -96,6 +99,18 @@ export function SettingsView() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Flashpoint Version:</span>
                 <span className="font-medium">{flashpointVersion}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Package Date:</span>
+                <span className="font-medium">
+                  {packagedAt ? <FormattedDate date={packagedAt} type="date" /> : 'Unknown'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Last Update:</span>
+                <span className="font-medium">
+                  {lastUpdate ? <FormattedDate date={lastUpdate} type="datetime" /> : 'Never'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Web App Version:</span>
