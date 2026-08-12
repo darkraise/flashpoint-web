@@ -113,7 +113,7 @@ export class GameDataDownloader {
       };
     }
 
-    const targetDir = params.targetPath || (await PreferencesService.getDataPacksFolderPath());
+    const targetDir = params.targetPath ?? (await PreferencesService.getDataPacksFolderPath());
     const targetPath = path.join(targetDir, filename);
     const tempPath = `${targetPath}.temp`;
 
@@ -543,7 +543,7 @@ export class GameDataDownloader {
   async exists(gameId: string, dateAdded: string, targetDir?: string): Promise<boolean> {
     try {
       const filename = GameDataDownloader.getFilename(gameId, dateAdded);
-      const dir = targetDir || (await PreferencesService.getDataPacksFolderPath());
+      const dir = targetDir ?? (await PreferencesService.getDataPacksFolderPath());
       const filePath = path.join(dir, filename);
 
       try {
@@ -561,7 +561,7 @@ export class GameDataDownloader {
   async getFilePath(gameId: string, dateAdded: string, targetDir?: string): Promise<string> {
     try {
       const filename = GameDataDownloader.getFilename(gameId, dateAdded);
-      const dir = targetDir || (await PreferencesService.getDataPacksFolderPath());
+      const dir = targetDir ?? (await PreferencesService.getDataPacksFolderPath());
       return path.join(dir, filename);
     } catch (error) {
       // getFilename() can throw on invalid dateAdded
