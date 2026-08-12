@@ -225,8 +225,10 @@ export class DatabaseService {
         destination: config.localDbPath,
       });
 
-      // Copy to temp file first (atomic operation)
-      fs.copyFileSync(this.sourceDbPath, tempPath);
+      // Async: the file watcher re-copies on every Launcher write, and a
+      // synchronous copy of a multi-hundred-megabyte database stalls every
+      // in-flight request for its full duration.
+      await fs.promises.copyFile(this.sourceDbPath, tempPath);
 
       // Rename temp to final (atomic on most filesystems)
       fs.renameSync(tempPath, config.localDbPath);
