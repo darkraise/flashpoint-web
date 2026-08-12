@@ -47,6 +47,7 @@ export class AppUpdateService {
   private static cached: CachedRelease | null = null;
   private static inFlight: Promise<CachedRelease> | null = null;
   private static lastCheckFailed = false;
+  private static lastFailedAt: number | null = null;
 
   static async getUpdateInfo(force = false): Promise<AppUpdateInfo> {
     // A forced check still respects a 60s floor. Express rate limiting allows
@@ -54,13 +55,20 @@ export class AppUpdateService {
     // hour that this shares with the star count and the Ruffle update check.
     const maxAge = force ? FORCED_REFRESH_FLOOR_MS : CACHE_TTL_MS;
     const age = this.cached === null ? Infinity : Date.now() - this.cached.fetchedAt;
+    // A failure also respects the 60s floor, even when force is true, so a
+    // GitHub outage or rate limit can't be hammered every request while it
+    // still shares the API's blocking timeout with each caller.
+    const failureAge = this.lastFailedAt === null ? Infinity : Date.now() - this.lastFailedAt;
+    const withinFailureFloor = failureAge < FORCED_REFRESH_FLOOR_MS;
 
-    if (age >= maxAge) {
+    if (age >= maxAge && !withinFailureFloor) {
       try {
         await this.fetchLatestRelease();
         this.lastCheckFailed = false;
+        this.lastFailedAt = null;
       } catch (error: unknown) {
         this.lastCheckFailed = true;
+        this.lastFailedAt = Date.now();
         logger.warn('[AppUpdate] Could not reach GitHub for the latest release', {
           error: error instanceof Error ? error.message : 'Unknown error',
         });
@@ -140,5 +148,6 @@ export class AppUpdateService {
     this.cached = null;
     this.inFlight = null;
     this.lastCheckFailed = false;
+    this.lastFailedAt = null;
   }
 }

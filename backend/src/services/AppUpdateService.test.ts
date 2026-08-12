@@ -110,3 +110,213 @@ describe('AppUpdateService.getUpdateInfo', () => {
     );
   });
 });
+
+describe('AppUpdateService caching', () => {
+  it('serves the cached release inside the hour', async () => {
+    vi.mocked(axios.get).mockResolvedValue(release('v1.0.42'));
+
+    await AppUpdateService.getUpdateInfo();
+    await AppUpdateService.getUpdateInfo();
+
+    expect(axios.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches after the cache expires', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockResolvedValue(release('v1.0.42'));
+
+      await AppUpdateService.getUpdateInfo();
+      vi.setSystemTime(new Date('2026-08-12T01:00:01Z'));
+      await AppUpdateService.getUpdateInfo();
+
+      expect(axios.get).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignores a forced refresh inside the 60 second floor', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockResolvedValue(release('v1.0.42'));
+
+      await AppUpdateService.getUpdateInfo();
+      vi.setSystemTime(new Date('2026-08-12T00:00:30Z'));
+      await AppUpdateService.getUpdateInfo(true);
+
+      expect(axios.get).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('honours a forced refresh past the floor', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockResolvedValue(release('v1.0.42'));
+
+      await AppUpdateService.getUpdateInfo();
+      vi.setSystemTime(new Date('2026-08-12T00:01:01Z'));
+      await AppUpdateService.getUpdateInfo(true);
+
+      expect(axios.get).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('makes one request for concurrent callers on a cold cache', async () => {
+    vi.mocked(axios.get).mockResolvedValue(release('v1.0.42'));
+
+    await Promise.all([
+      AppUpdateService.getUpdateInfo(),
+      AppUpdateService.getUpdateInfo(),
+      AppUpdateService.getUpdateInfo(),
+    ]);
+
+    expect(axios.get).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AppUpdateService failures', () => {
+  it('keeps serving the held release and flags the failed check', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockResolvedValue(release('v1.0.42'));
+      await AppUpdateService.getUpdateInfo();
+
+      vi.setSystemTime(new Date('2026-08-12T02:00:00Z'));
+      vi.mocked(axios.get).mockRejectedValue(new Error('getaddrinfo ENOTFOUND'));
+      const info = await AppUpdateService.getUpdateInfo();
+
+      expect(info.lastCheckFailed).toBe(true);
+      expect(info.latestVersion).toBe('1.0.42');
+      expect(info.updateAvailable).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reports a failed check with no release when it has never succeeded', async () => {
+    vi.mocked(axios.get).mockRejectedValue(new Error('getaddrinfo ENOTFOUND'));
+
+    const info = await AppUpdateService.getUpdateInfo();
+
+    expect(info.lastCheckFailed).toBe(true);
+    expect(info.latestVersion).toBeNull();
+    expect(info.checkedAt).toBeNull();
+    expect(info.updateAvailable).toBe(false);
+    expect(info.currentVersion).toBe('1.0.38');
+  });
+
+  it('treats a response with no tag_name as a failed check', async () => {
+    vi.mocked(axios.get).mockResolvedValue({ data: { body: 'no tag here' } });
+
+    const info = await AppUpdateService.getUpdateInfo();
+
+    expect(info.lastCheckFailed).toBe(true);
+    expect(info.latestVersion).toBeNull();
+  });
+
+  // Adjusted from the brief: with the failure floor in place, a retry right
+  // after a failure is now suppressed rather than firing immediately, so the
+  // clock has to move past FORCED_REFRESH_FLOOR_MS before the recovery call
+  // is allowed to actually reach the network.
+  it('clears the failure flag once a later check succeeds', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockRejectedValueOnce(new Error('offline'));
+      const failed = await AppUpdateService.getUpdateInfo();
+      expect(failed.lastCheckFailed).toBe(true);
+
+      vi.setSystemTime(new Date('2026-08-12T00:01:01Z'));
+      vi.mocked(axios.get).mockResolvedValue(release('v1.0.42'));
+      const recovered = await AppUpdateService.getUpdateInfo();
+
+      expect(recovered.lastCheckFailed).toBe(false);
+      expect(recovered.latestVersion).toBe('1.0.42');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry within 60 seconds of a failure, even so the check is still flagged failed', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockRejectedValue(new Error('offline'));
+      await AppUpdateService.getUpdateInfo();
+
+      vi.setSystemTime(new Date('2026-08-12T00:00:30Z'));
+      const info = await AppUpdateService.getUpdateInfo();
+
+      expect(axios.get).toHaveBeenCalledTimes(1);
+      expect(info.lastCheckFailed).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not let a forced refresh bypass the failure floor', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockRejectedValue(new Error('offline'));
+      await AppUpdateService.getUpdateInfo();
+
+      vi.setSystemTime(new Date('2026-08-12T00:00:30Z'));
+      const info = await AppUpdateService.getUpdateInfo(true);
+
+      expect(axios.get).toHaveBeenCalledTimes(1);
+      expect(info.lastCheckFailed).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('retries once more than 60 seconds have passed since the failure', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockRejectedValue(new Error('offline'));
+      await AppUpdateService.getUpdateInfo();
+
+      vi.setSystemTime(new Date('2026-08-12T00:01:01Z'));
+      const info = await AppUpdateService.getUpdateInfo();
+
+      expect(axios.get).toHaveBeenCalledTimes(2);
+      expect(info.lastCheckFailed).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('serves the cache without a new request once a recovered check is still inside the TTL', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-12T00:00:00Z'));
+      vi.mocked(axios.get).mockRejectedValueOnce(new Error('offline'));
+      await AppUpdateService.getUpdateInfo();
+
+      vi.setSystemTime(new Date('2026-08-12T00:01:01Z'));
+      vi.mocked(axios.get).mockResolvedValue(release('v1.0.42'));
+      const recovered = await AppUpdateService.getUpdateInfo();
+      expect(recovered.lastCheckFailed).toBe(false);
+
+      vi.setSystemTime(new Date('2026-08-12T00:30:00Z'));
+      const later = await AppUpdateService.getUpdateInfo();
+
+      expect(axios.get).toHaveBeenCalledTimes(2);
+      expect(later.lastCheckFailed).toBe(false);
+      expect(later.latestVersion).toBe('1.0.42');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
