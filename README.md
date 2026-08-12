@@ -30,6 +30,14 @@ browser.
 
 ---
 
+> [!IMPORTANT]
+>
+> **Already running 1.0.31 or earlier? Updating is a breaking change.** The
+> separate `flashpoint-backend` and `flashpoint-frontend` containers were
+> replaced in 1.0.32 by a single `darkraise/flashpoint-web` image, and the old
+> images are no longer published. Your compose file and `.env` both need changes
+> — see **[Upgrading](#upgrading)** before you pull.
+
 ## What is Flashpoint Web?
 
 Flashpoint Web is a self-hosted web application for accessing your local
@@ -56,6 +64,31 @@ support, play tracking, and an intuitive interface.
 - **Responsive Design** - Works on desktop and mobile devices
 - **Database Hot-Reload** - Automatically syncs when Flashpoint Launcher updates
   metadata
+
+## Upgrading
+
+Routine updates need nothing beyond
+`docker compose pull && docker compose up -d`.
+
+> [!WARNING]
+>
+> **Coming from 1.0.31 or earlier, that is not enough.** 1.0.32 replaced the
+> two-container deployment with a single image, so an existing setup needs:
+>
+> - a new `docker-compose.yml` with one `flashpoint-web` service, mapping
+>   `WEB_PORT` to container port `3100`
+> - `API_PORT`, `BACKEND_HOST`, and `BACKEND_PORT` removed from `.env` — they no
+>   longer do anything
+> - a reverse proxy pointing at one upstream instead of two; any rule sending
+>   `/api` to port 3100 will break
+> - the Flashpoint mount switched to read-write, or the Downloaded page stays
+>   empty
+>
+> Accounts, playlists, and play history are preserved.
+
+Full migration steps, every environment variable added, removed, or changed, and
+per-version release notes are in the
+**[Upgrade Guide](docs/09-deployment/upgrade-guide.md)**.
 
 ## Getting Started
 
@@ -165,24 +198,6 @@ docker compose logs -f                       # Follow logs
 docker compose restart                       # Restart
 docker compose pull && docker compose up -d  # Update to the latest image
 ```
-
-## Upgrading
-
-Routine updates need nothing beyond
-`docker compose pull && docker compose up -d`.
-
-**Coming from 1.0.31 or earlier?** That update is breaking. The separate
-`flashpoint-backend` and `flashpoint-frontend` containers were replaced in
-1.0.32 by a single `darkraise/flashpoint-web` image that serves the UI and the
-API on one port, and the old images are no longer published. Existing
-deployments need a new `docker-compose.yml`, the removal of `API_PORT`,
-`BACKEND_HOST`, and `BACKEND_PORT` from `.env`, and a reverse proxy pointing at
-one upstream instead of two. Accounts, playlists, and play history are
-preserved.
-
-Full migration steps, every environment variable added, removed, or changed, and
-per-version release notes are in the
-**[Upgrade Guide](docs/09-deployment/upgrade-guide.md)**.
 
 ## Documentation
 
