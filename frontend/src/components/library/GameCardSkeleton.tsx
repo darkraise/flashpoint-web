@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 
 export function GameCardSkeleton() {
   return (
-    <Card className="rounded-xl bg-gradient-to-br from-card to-card/80 border-b-4 flex flex-col">
+    <Card className="rounded-xl overflow-hidden bg-gradient-to-br from-card to-card/80 border-b-4 flex flex-col">
       <CardContent className="p-0 aspect-square flex items-center justify-center relative overflow-hidden">
         <Skeleton className="w-full h-full" />
 

@@ -79,7 +79,7 @@ const GameCardComponent = function GameCard({
   };
 
   return (
-    <Card className="group cursor-pointer rounded-xl bg-gradient-to-br from-card to-card/80 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2 border-b-4 hover:border-b-4 hover:border-b-primary transition-all duration-300 ease-out relative flex flex-col">
+    <Card className="group cursor-pointer rounded-xl overflow-hidden bg-gradient-to-br from-card to-card/80 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2 border-b-4 hover:border-b-4 hover:border-b-primary transition-all duration-300 ease-out relative flex flex-col">
       <CardContent
         className="p-0 aspect-square flex items-center justify-center relative overflow-hidden"
         onClick={handleCardClick}
