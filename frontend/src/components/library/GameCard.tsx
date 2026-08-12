@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FavoriteButton } from '@/components/common/FavoriteButton';
+import { LazyImage } from '@/components/common/LazyImage';
 import { StarRating } from '@/components/common/StarRating';
 import type { BatchRatingAggregate } from '@/types/rating';
 import { RemoveFavoriteButton } from '@/components/common/RemoveFavoriteButton';
@@ -48,7 +49,6 @@ const GameCardComponent = function GameCard({
   ratingData,
 }: GameCardProps) {
   const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
 
   const { isAuthenticated } = useAuthStore();
@@ -89,19 +89,14 @@ const GameCardComponent = function GameCard({
       >
         {imageUrl && !imageError ? (
           <>
-            {!imageLoaded ? (
-              <div className="absolute inset-0 bg-gradient-to-br from-muted to-accent animate-pulse z-0" />
-            ) : null}
-
-            <img
+            <LazyImage
               src={imageUrl}
               alt={game.title}
-              className={`w-full h-full object-contain p-2 z-0 transition-all duration-500 ${
-                imageLoaded ? 'opacity-100 blur-0 group-hover:scale-105' : 'opacity-0 blur-sm'
-              }`}
+              skeleton={
+                <div className="absolute inset-0 bg-gradient-to-br from-muted to-accent animate-pulse z-0" />
+              }
+              className="w-full h-full object-contain p-2 z-0 group-hover:scale-105 transition-[opacity,transform] duration-500"
               onError={() => setImageError(true)}
-              onLoad={() => setImageLoaded(true)}
-              loading="lazy"
             />
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10 pointer-events-none" />
@@ -218,13 +213,11 @@ const GameCardComponent = function GameCard({
               className="backdrop-blur-md bg-primary/10 border border-primary/20 h-6 px-2 text-xs font-normal text-primary"
               variant="outline"
             >
-              <img
+              <LazyImage
                 src={`/proxy/logos/${game.platformName}.png`}
                 alt={game.platformName}
+                skeleton={false}
                 className="w-3.5 h-3.5 object-contain mr-1"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
               />
               <span className="truncate">{game.platformName}</span>
             </Badge>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { LazyImage } from '@/components/common/LazyImage';
 import { cn } from '@/lib/utils';
 
 interface PlatformIconProps {
@@ -14,7 +15,6 @@ interface PlatformIconProps {
  */
 export function PlatformIcon({ platformName, size = 20, className = '' }: PlatformIconProps) {
   const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
 
   const logoUrl = `/proxy/logos/${platformName}.png`;
 
@@ -29,22 +29,18 @@ export function PlatformIcon({ platformName, size = 20, className = '' }: Platfo
         className="relative inline-flex items-center justify-center flex-shrink-0"
         style={{ width: size, height: size }}
       >
-        {imageLoading ? (
-          <div
-            className="absolute inset-0 bg-muted rounded animate-pulse"
-            style={{ width: size, height: size }}
-          />
-        ) : null}
-        <img
+        <LazyImage
           src={logoUrl}
           alt={`${platformName} logo`}
+          skeleton={
+            <div
+              className="absolute inset-0 bg-muted rounded animate-pulse"
+              style={{ width: size, height: size }}
+            />
+          }
           className="relative z-10 object-contain"
           style={{ width: size, height: size }}
-          onLoad={() => setImageLoading(false)}
-          onError={() => {
-            setImageError(true);
-            setImageLoading(false);
-          }}
+          onError={() => setImageError(true)}
         />
       </div>
       <span className="font-medium text-sm">{platformName}</span>

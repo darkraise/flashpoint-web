@@ -1,250 +1,120 @@
-import { useState, useEffect, useRef, ImgHTMLAttributes } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ImgHTMLAttributes, ReactEventHandler, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-
-/**
- * Stop a preload that is still in flight.
- *
- * A detached Image keeps downloading after its component unmounts — nothing
- * removes it from a document, so the browser has no reason to abort. Clearing
- * src is what actually cancels the request; without it, navigating away from a
- * grid leaves every thumbnail downloading, occupying the six connections the
- * next page needs and keeping the server busy on results nobody will read.
- */
-function abortImageLoad(img: HTMLImageElement): void {
-  img.onload = null;
-  img.onerror = null;
-  img.src = '';
-}
 
 interface LazyImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'placeholder'> {
   src: string;
   alt: string;
-  placeholder?: string;
-  blurPlaceholder?: boolean;
-  rootMargin?: string;
-  threshold?: number;
-  onLoad?: () => void;
-  onError?: () => void;
-  fallback?: React.ReactNode;
+  /**
+   * Shown until the image loads. `true` renders a pulse fill, `false` renders
+   * nothing, and a node replaces the default. The built-in fill is absolutely
+   * positioned, so the parent must establish a positioning context.
+   */
+  skeleton?: boolean | ReactNode;
+  /** Replaces the image once it fails to load. Nothing renders when omitted. */
+  fallback?: ReactNode;
 }
 
+/**
+ * An image that stops downloading when it goes away.
+ *
+ * Removing an <img> from the DOM does not abort its request: the browser
+ * finishes the download to fill its cache. Navigating away from a grid
+ * therefore left every thumbnail in flight, occupying the six connections and
+ * the server I/O the next page needed. Removing the src attribute runs the
+ * spec's "update the image data" algorithm, which does abort it.
+ */
 export function LazyImage({
   src,
   alt,
-  placeholder,
-  blurPlaceholder = false,
-  rootMargin = '50px',
-  threshold = 0.01,
-  onLoad,
-  onError,
+  skeleton = true,
   fallback,
   className,
-  ...props
-}: LazyImageProps) {
-  const [imageSrc, setImageSrc] = useState<string | undefined>(placeholder);
-  const [imageError, setImageError] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const onLoadRef = useRef(onLoad);
-  const onErrorRef = useRef(onError);
-
-  useEffect(() => {
-    onLoadRef.current = onLoad;
-    onErrorRef.current = onError;
-  }, [onLoad, onError]);
-
-  useEffect(() => {
-    if (!('IntersectionObserver' in window)) {
-      setIsInView(true);
-      return;
-    }
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsInView(true);
-            if (observerRef.current && imgRef.current) {
-              observerRef.current.unobserve(imgRef.current);
-            }
-          }
-        });
-      },
-      {
-        rootMargin,
-        threshold,
-      }
-    );
-
-    if (imgRef.current) {
-      observerRef.current.observe(imgRef.current);
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [rootMargin, threshold]);
-
-  useEffect(() => {
-    if (!isInView || !src) return;
-
-    const img = new Image();
-    let cancelled = false;
-
-    img.onload = () => {
-      if (!cancelled) {
-        setImageSrc(src);
-        setIsLoaded(true);
-        setImageError(false);
-        onLoadRef.current?.();
-      }
-    };
-
-    img.onerror = () => {
-      if (!cancelled) {
-        setImageError(true);
-        onErrorRef.current?.();
-      }
-    };
-
-    img.src = src;
-
-    return () => {
-      cancelled = true;
-      abortImageLoad(img);
-    };
-  }, [isInView, src]);
-
-  if (imageError && fallback) {
-    return <>{fallback}</>;
-  }
-
-  if (imageError) {
-    return (
-      <div
-        className={cn(
-          'flex items-center justify-center bg-muted text-muted-foreground text-sm',
-          className
-        )}
-        role="img"
-        aria-label={alt}
-      >
-        <span className="px-4 py-2">Image not available</span>
-      </div>
-    );
-  }
-
-  return (
-    <img
-      ref={imgRef}
-      src={imageSrc}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      className={cn(
-        'transition-opacity duration-300',
-        {
-          'opacity-0': !isLoaded && blurPlaceholder,
-          'opacity-100': isLoaded || !blurPlaceholder,
-          'blur-sm': !isLoaded && blurPlaceholder && placeholder,
-          'blur-none': isLoaded || !blurPlaceholder,
-        },
-        className
-      )}
-      {...props}
-    />
-  );
-}
-
-export function LazyBackgroundImage({
-  src,
-  children,
-  className,
-  rootMargin = '50px',
-  threshold = 0.01,
   onLoad,
   onError,
-}: {
-  src: string;
-  children?: React.ReactNode;
-  className?: string;
-  rootMargin?: string;
-  threshold?: number;
-  onLoad?: () => void;
-  onError?: () => void;
-}) {
-  const [bgImage, setBgImage] = useState<string>('');
-  const [isInView, setIsInView] = useState(false);
-  const divRef = useRef<HTMLDivElement>(null);
-  const onLoadRef = useRef(onLoad);
-  const onErrorRef = useRef(onError);
+  ...props
+}: LazyImageProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [renderedSrc, setRenderedSrc] = useState(src);
+  const nodeRef = useRef<HTMLImageElement | null>(null);
 
-  useEffect(() => {
-    onLoadRef.current = onLoad;
-    onErrorRef.current = onError;
-  }, [onLoad, onError]);
+  // Reset during render rather than in an effect: an effect would leave the
+  // error fallback of the previous src on screen for a frame before the new
+  // image mounts.
+  if (renderedSrc !== src) {
+    setRenderedSrc(src);
+    setIsLoaded(false);
+    setHasError(false);
+  }
 
-  useEffect(() => {
-    if (!('IntersectionObserver' in window)) {
-      setIsInView(true);
-      return;
+  // Never store the null React passes on detach: the abort below needs the
+  // element after React has released it.
+  const setNode = useCallback((node: HTMLImageElement | null) => {
+    if (node) {
+      nodeRef.current = node;
     }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setIsInView(true);
-            if (divRef.current) {
-              observer.unobserve(divRef.current);
-            }
-          }
-        });
-      },
-      { rootMargin, threshold }
-    );
-
-    if (divRef.current) {
-      observer.observe(divRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [rootMargin, threshold]);
+  }, []);
 
   useEffect(() => {
-    if (!isInView) return;
+    // A cached image can finish before React attaches the load handler, leaving
+    // a permanently invisible image behind the skeleton.
+    if (nodeRef.current?.complete) {
+      setIsLoaded(true);
+    }
+  }, []);
 
-    let cancelled = false;
-    const img = new Image();
-    img.onload = () => {
-      if (!cancelled) {
-        setBgImage(src);
-        onLoadRef.current?.();
-      }
-    };
-    img.onerror = () => {
-      if (!cancelled) {
-        onErrorRef.current?.();
-      }
-    };
-    img.src = src;
+  useEffect(() => {
     return () => {
-      cancelled = true;
-      abortImageLoad(img);
+      const img = nodeRef.current;
+      // React detaches the node in the commit's mutation phase, before this
+      // cleanup runs, so a node that is still connected means StrictMode is
+      // simulating a remount in development — clearing src there would blank an
+      // image that is still on screen, and nothing would put it back.
+      if (img && !img.isConnected) {
+        img.removeAttribute('src');
+      }
     };
-  }, [isInView, src]);
+  }, []);
+
+  const handleLoad: ReactEventHandler<HTMLImageElement> = (event) => {
+    setIsLoaded(true);
+    onLoad?.(event);
+  };
+
+  const handleError: ReactEventHandler<HTMLImageElement> = (event) => {
+    setHasError(true);
+    onError?.(event);
+  };
+
+  if (hasError) {
+    return <>{fallback ?? null}</>;
+  }
 
   return (
-    <div
-      ref={divRef}
-      className={cn('bg-cover bg-center', className)}
-      style={{ backgroundImage: bgImage ? `url("${bgImage}")` : undefined }}
-    >
-      {children}
-    </div>
+    <>
+      {!isLoaded && skeleton !== false ? (
+        skeleton === true ? (
+          <div className="absolute inset-0 bg-muted animate-pulse" aria-hidden="true" />
+        ) : (
+          skeleton
+        )
+      ) : null}
+      <img
+        ref={setNode}
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={handleLoad}
+        onError={handleError}
+        className={cn(
+          'transition-opacity duration-300',
+          isLoaded ? 'opacity-100' : 'opacity-0',
+          className
+        )}
+        {...props}
+      />
+    </>
   );
 }

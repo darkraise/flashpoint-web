@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { logger } from '@/lib/logger';
 import { AlertCircle, Maximize2, Minimize2, Loader2, ArrowLeft } from 'lucide-react';
+import { LazyImage } from '@/components/common/LazyImage';
 import { RufflePlayer } from './RufflePlayer';
 import { PlayerErrorBoundary } from './PlayerErrorBoundary';
 import { PlatformIcon } from '@/components/ui/platform-icon';
@@ -50,7 +51,6 @@ function GamePlayerInternal({
 }: GamePlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(initialFullscreen);
   const [iframeError, setIframeError] = useState<string | null>(null);
-  const [logoLoading, setLogoLoading] = useState(true);
   const [logoError, setLogoError] = useState(false);
 
   const defaultScaleMode = 'showall';
@@ -180,23 +180,19 @@ function GamePlayerInternal({
                   isFullscreen ? 'w-10 h-10 p-1' : 'w-14 h-14 p-1.5'
                 }`}
               >
-                {logoLoading ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
-                    <Loader2
-                      size={isFullscreen ? 14 : 16}
-                      className="text-muted-foreground animate-spin"
-                    />
-                  </div>
-                ) : null}
-                <img
+                <LazyImage
                   src={logoUrl}
                   alt={`${title} logo`}
+                  skeleton={
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                      <Loader2
+                        size={isFullscreen ? 14 : 16}
+                        className="text-muted-foreground animate-spin"
+                      />
+                    </div>
+                  }
                   className="w-full h-full object-contain relative z-10"
-                  onLoad={() => setLogoLoading(false)}
-                  onError={() => {
-                    setLogoError(true);
-                    setLogoLoading(false);
-                  }}
+                  onError={() => setLogoError(true)}
                 />
               </div>
             ) : null}
@@ -218,7 +214,9 @@ function GamePlayerInternal({
                   </>
                 ) : null}
                 <PlatformIcon platformName={platform} size={isFullscreen ? 14 : 16} />
-                {isFullscreen ? <span className="hidden sm:inline">• Press ESC to exit</span> : null}
+                {isFullscreen ? (
+                  <span className="hidden sm:inline">• Press ESC to exit</span>
+                ) : null}
               </div>
             </div>
           </div>

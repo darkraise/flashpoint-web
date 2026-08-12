@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { GameInfoGrid } from '@/components/game/GameInfoGrid';
 import { useDateTimeFormat } from '@/hooks/useDateTimeFormat';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { LazyImage } from '@/components/common/LazyImage';
 import { Breadcrumbs, BreadcrumbContext, BreadcrumbItem } from '@/components/common/Breadcrumbs';
 import { buildSharedGameUrl } from '@/hooks/useSharedPlaylistAccess';
 import { getGameLogoUrl, getGameScreenshotUrl } from '@/utils/gameUtils';
@@ -71,10 +72,7 @@ export function GameDetailView() {
   const { progress, isDownloading, startDownload } = useDownload(id ?? '');
   const { data: gameStatsData } = useGameStats();
   const { formatDate } = useDateTimeFormat();
-  const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
   const [logoError, setLogoError] = useState(false);
-  const [logoLoading, setLogoLoading] = useState(true);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
 
@@ -103,9 +101,6 @@ export function GameDetailView() {
   }, [gameStatsData, id]);
 
   useEffect(() => {
-    setImageLoading(true);
-    setImageError(false);
-    setLogoLoading(true);
     setLogoError(false);
     setDownloadError(null);
     setShouldAutoPlay(false);
@@ -250,22 +245,18 @@ export function GameDetailView() {
             <div className="flex items-start gap-4 flex-1">
               {logoUrl && !logoError ? (
                 <div className="flex-shrink-0 w-20 h-20 bg-muted rounded-lg overflow-hidden flex items-center justify-center p-2 relative">
-                  {logoLoading ? (
-                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
-                      <Loader2 size={20} className="text-muted-foreground animate-spin" />
-                    </div>
-                  ) : null}
-                  <img
+                  <LazyImage
                     src={logoUrl}
                     alt={`${game.title} logo`}
                     width="80"
                     height="80"
+                    skeleton={
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
+                        <Loader2 size={20} className="text-muted-foreground animate-spin" />
+                      </div>
+                    }
                     className="w-full h-full object-contain relative z-10"
-                    onLoad={() => setLogoLoading(false)}
-                    onError={() => {
-                      setLogoError(true);
-                      setLogoLoading(false);
-                    }}
+                    onError={() => setLogoError(true)}
                   />
                 </div>
               ) : null}
@@ -372,33 +363,27 @@ export function GameDetailView() {
 
           {screenshotUrl ? (
             <div className="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center relative">
-              {imageLoading && !imageError ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 size={48} className="text-muted-foreground animate-spin" />
-                    <span className="text-sm text-muted-foreground">Loading screenshot...</span>
+              <LazyImage
+                src={screenshotUrl}
+                alt={`${game.title} screenshot`}
+                width="1280"
+                height="720"
+                skeleton={
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted/50 backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-3">
+                      <Loader2 size={48} className="text-muted-foreground animate-spin" />
+                      <span className="text-sm text-muted-foreground">Loading screenshot...</span>
+                    </div>
                   </div>
-                </div>
-              ) : null}
-              {!imageError ? (
-                <img
-                  src={screenshotUrl}
-                  alt={`${game.title} screenshot`}
-                  width="1280"
-                  height="720"
-                  className="w-full h-full object-contain relative z-10"
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageError(true);
-                    setImageLoading(false);
-                  }}
-                />
-              ) : (
-                <div className="flex flex-col items-center text-muted-foreground">
-                  <ImageIcon size={64} className="mb-2 opacity-50" />
-                  <span className="text-sm">Screenshot not available</span>
-                </div>
-              )}
+                }
+                fallback={
+                  <div className="flex flex-col items-center text-muted-foreground">
+                    <ImageIcon size={64} className="mb-2 opacity-50" />
+                    <span className="text-sm">Screenshot not available</span>
+                  </div>
+                }
+                className="w-full h-full object-contain relative z-10"
+              />
             </div>
           ) : null}
 

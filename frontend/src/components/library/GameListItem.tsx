@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ImageIcon, Play, ListPlus, Heart } from 'lucide-react';
 import { FavoriteButton } from '@/components/common/FavoriteButton';
+import { LazyImage } from '@/components/common/LazyImage';
 import { RemoveFavoriteButton } from '@/components/common/RemoveFavoriteButton';
 import { AddToPlaylistModal } from '@/components/playlist/AddToPlaylistModal';
 import { useAuthStore } from '@/store/auth';
@@ -85,15 +86,14 @@ export const GameListItem = memo(
           <div className="flex items-center gap-3">
             <div
               onClick={handleNavigateToDetails}
-              className="flex-shrink-0 w-24 h-16 bg-muted rounded overflow-hidden border shadow-sm cursor-pointer"
+              className="relative flex-shrink-0 w-24 h-16 bg-muted rounded overflow-hidden border shadow-sm cursor-pointer"
             >
               {imageUrl && !imageError ? (
-                <img
+                <LazyImage
                   src={imageUrl}
                   alt={game.title}
                   className="w-full h-full object-contain"
                   onError={() => setImageError(true)}
-                  loading="lazy"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
