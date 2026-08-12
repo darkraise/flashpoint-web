@@ -12,6 +12,31 @@ interface GitHubAsset {
   browser_download_url: string;
 }
 
+/**
+ * Errors meaning "this rename or unlink can never succeed at this path", as
+ * opposed to a transient I/O failure:
+ *   EXDEV      - overlay2 refuses to rename a directory that still lives in a
+ *                read-only image layer, even within the same parent directory.
+ *   EBUSY      - the path is a mount point (bind-mounted volume): it can be
+ *                emptied but neither renamed nor unlinked.
+ *   EPERM      - the same conditions as reported by Windows and some overlays.
+ *   ENOTEMPTY  - rename onto a non-empty directory.
+ */
+const DIRECTORY_SWAP_FALLBACK_CODES: ReadonlySet<string> = new Set([
+  'EXDEV',
+  'EBUSY',
+  'EPERM',
+  'ENOTEMPTY',
+]);
+
+function swapFallbackCode(error: unknown): string | null {
+  if (!(error instanceof Error) || !('code' in error)) {
+    return null;
+  }
+  const code = (error as NodeJS.ErrnoException).code;
+  return typeof code === 'string' && DIRECTORY_SWAP_FALLBACK_CODES.has(code) ? code : null;
+}
+
 export class RuffleService {
   private readonly frontendPublicPath: string;
   private readonly githubApiUrl = 'https://api.github.com/repos/ruffle-rs/ruffle/releases';
@@ -314,6 +339,128 @@ export class RuffleService {
     }
   }
 
+  /**
+   * Copy a directory tree. Hand-rolled rather than fs.cpSync, which is still
+   * experimental on the Node 20 runtime the container image ships.
+   */
+  private copyDirectory(source: string, target: string): void {
+    fs.mkdirSync(target, { recursive: true });
+    for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+      const from = path.join(source, entry.name);
+      const to = path.join(target, entry.name);
+      if (entry.isDirectory()) {
+        this.copyDirectory(from, to);
+      } else if (entry.isSymbolicLink()) {
+        fs.rmSync(to, { force: true });
+        fs.symlinkSync(fs.readlinkSync(from), to);
+      } else {
+        fs.copyFileSync(from, to);
+      }
+    }
+  }
+
+  /** Empty a directory without unlinking it — the only option for a mount point. */
+  private clearDirectory(dir: string): void {
+    for (const entry of fs.readdirSync(dir)) {
+      fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
+    }
+  }
+
+  private removeDirectory(dir: string): void {
+    if (!fs.existsSync(dir)) {
+      return;
+    }
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch (error: unknown) {
+      if (swapFallbackCode(error) === null) {
+        throw error;
+      }
+      this.clearDirectory(dir);
+    }
+  }
+
+  /**
+   * Move `source` over `target`, replacing whatever is there. Prefers an atomic
+   * rename, then falls back to copying the contents in place: a rename cannot
+   * be the only strategy because it fails with EXDEV when the source is an
+   * unmodified image-layer directory under overlay2, and with EBUSY when either
+   * path is a bind-mounted volume.
+   */
+  private replaceDirectory(source: string, target: string): void {
+    this.removeDirectory(target);
+
+    // An existing target here means removal fell back to emptying a mount
+    // point, so the path cannot be a rename destination either.
+    if (!fs.existsSync(target)) {
+      try {
+        fs.renameSync(source, target);
+        return;
+      } catch (error: unknown) {
+        const code = swapFallbackCode(error);
+        if (code === null) {
+          throw error;
+        }
+        logger.warn(
+          `[RuffleService] Cannot rename ${source} to ${target} (${code}), copying instead`
+        );
+      }
+    }
+
+    this.copyDirectory(source, target);
+
+    // The replace has succeeded once the destination is complete. Failing here
+    // would report failure with a good copy in place, and the caller would roll
+    // back over it; the leftover source is retried by the next removal instead.
+    try {
+      this.removeDirectory(source);
+    } catch (error: unknown) {
+      logger.warn(`[RuffleService] Copied to ${target} but could not remove ${source}:`, error);
+    }
+  }
+
+  /** Relative path -> byte size for every file in a tree. */
+  private describeTree(dir: string, prefix = ''): Map<string, number> {
+    const files = new Map<string, number>();
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        for (const [nested, size] of this.describeTree(fullPath, relativePath)) {
+          files.set(nested, size);
+        }
+      } else if (!entry.isSymbolicLink()) {
+        files.set(relativePath, fs.statSync(fullPath).size);
+      }
+    }
+    return files;
+  }
+
+  /**
+   * Compare the installed tree against what was extracted. `verifyInstallation`
+   * only proves ruffle.js exists, which an interrupted copy can satisfy while
+   * leaving the rest of the tree missing or short.
+   */
+  private findInstallMismatch(expected: ReadonlyMap<string, number>): string | null {
+    let installed: Map<string, number>;
+    try {
+      installed = this.describeTree(this.frontendPublicPath);
+    } catch (error: unknown) {
+      return `installed files could not be read (${error instanceof Error ? error.message : 'unknown error'})`;
+    }
+
+    for (const [relativePath, size] of expected) {
+      const installedSize = installed.get(relativePath);
+      if (installedSize === undefined) {
+        return `missing ${relativePath}`;
+      }
+      if (installedSize !== size) {
+        return `${relativePath} is ${installedSize} bytes, expected ${size}`;
+      }
+    }
+    return null;
+  }
+
   async updateRuffle(): Promise<{
     success: boolean;
     version: string;
@@ -348,9 +495,7 @@ export class RuffleService {
       const tempDir = path.join(this.frontendPublicPath, '../ruffle-temp');
 
       // Clean temp directory if exists
-      if (fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      }
+      this.removeDirectory(tempDir);
       fs.mkdirSync(tempDir, { recursive: true });
 
       // Zip Slip protection: validate all entry paths BEFORE extraction
@@ -361,7 +506,7 @@ export class RuffleService {
           !resolvedEntry.startsWith(resolvedTempDir + path.sep) &&
           resolvedEntry !== resolvedTempDir
         ) {
-          fs.rmSync(tempDir, { recursive: true, force: true });
+          this.removeDirectory(tempDir);
           throw new Error('Zip Slip detected: archive contains path traversal entry');
         }
       }
@@ -373,34 +518,42 @@ export class RuffleService {
 
       // Backup current installation
       const backupDir = path.join(this.frontendPublicPath, '../ruffle-backup');
-      if (fs.existsSync(this.frontendPublicPath)) {
-        if (fs.existsSync(backupDir)) {
-          fs.rmSync(backupDir, { recursive: true, force: true });
+      let backedUp = false;
+
+      const expectedFiles = this.describeTree(tempDir);
+
+      try {
+        if (fs.existsSync(this.frontendPublicPath)) {
+          this.replaceDirectory(this.frontendPublicPath, backupDir);
+          backedUp = true;
         }
-        fs.renameSync(this.frontendPublicPath, backupDir);
-      }
 
-      // Move extracted files to public/ruffle
-      fs.renameSync(tempDir, this.frontendPublicPath);
+        // Move extracted files to public/ruffle
+        this.replaceDirectory(tempDir, this.frontendPublicPath);
 
-      // Verify the installation was successful BEFORE deleting backup
-      const isInstalled = this.verifyInstallation();
-      if (!isInstalled) {
-        // Restore backup if verification fails
-        if (fs.existsSync(backupDir)) {
-          if (fs.existsSync(this.frontendPublicPath)) {
-            fs.rmSync(this.frontendPublicPath, { recursive: true, force: true });
+        // Verify the installation was successful BEFORE deleting backup
+        if (!this.verifyInstallation()) {
+          throw new Error('Ruffle files were not installed successfully');
+        }
+        const mismatch = this.findInstallMismatch(expectedFiles);
+        if (mismatch !== null) {
+          throw new Error(`Ruffle installation is incomplete: ${mismatch}`);
+        }
+      } catch (installError) {
+        this.removeDirectory(tempDir);
+        if (backedUp && fs.existsSync(backupDir)) {
+          try {
+            this.replaceDirectory(backupDir, this.frontendPublicPath);
+            logger.info('[RuffleService] Restored previous installation after failed update');
+          } catch (restoreError) {
+            logger.error('[RuffleService] Failed to restore Ruffle backup:', restoreError);
           }
-          fs.renameSync(backupDir, this.frontendPublicPath);
-          logger.info('[RuffleService] Restored backup after failed verification');
         }
-        throw new Error('Ruffle files were not installed successfully');
+        throw installError;
       }
 
       // Clean up backup only after successful verification
-      if (fs.existsSync(backupDir)) {
-        fs.rmSync(backupDir, { recursive: true, force: true });
-      }
+      this.removeDirectory(backupDir);
 
       logger.info('[RuffleService] Ruffle update completed successfully');
 

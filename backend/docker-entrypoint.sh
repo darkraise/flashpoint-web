@@ -56,6 +56,13 @@ setup_user() {
             fi
             usermod -u "$PUID" $APP_USER 2>/dev/null || true
         fi
+
+        # Image-layer files stay owned by the build UID, which the app user no
+        # longer is. Ruffle installs and updates write here, so without this
+        # they fail with EACCES on any non-default PUID. Skipped when the UID
+        # is unchanged: chown -R copies every file up out of the image layer.
+        echo "🔧 Ensuring correct ownership of served frontend files..."
+        chown -R $APP_USER:$APP_GROUP /app/frontend/dist 2>/dev/null || true
     else
         echo "✅ User UID/GID OK (UID=$PUID, GID=$PGID)"
     fi
