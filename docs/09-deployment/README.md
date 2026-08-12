@@ -9,6 +9,8 @@ production environments.
   with Docker Compose
 - **[Environment Variables](./environment-variables.md)** - Complete environment
   configuration reference
+- **[Upgrade Guide](./upgrade-guide.md)** - Migration steps between versions and
+  per-release notes
 - **[Health Checks](./health-checks.md)** - Health check setup and monitoring
 - **[Security Considerations](./security-considerations.md)** - Production
   security hardening and best practices

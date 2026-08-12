@@ -166,6 +166,24 @@ docker compose restart                       # Restart
 docker compose pull && docker compose up -d  # Update to the latest image
 ```
 
+## Upgrading
+
+Routine updates need nothing beyond
+`docker compose pull && docker compose up -d`.
+
+**Coming from 1.0.31 or earlier?** That update is breaking. The separate
+`flashpoint-backend` and `flashpoint-frontend` containers were replaced in
+1.0.32 by a single `darkraise/flashpoint-web` image that serves the UI and the
+API on one port, and the old images are no longer published. Existing
+deployments need a new `docker-compose.yml`, the removal of `API_PORT`,
+`BACKEND_HOST`, and `BACKEND_PORT` from `.env`, and a reverse proxy pointing at
+one upstream instead of two. Accounts, playlists, and play history are
+preserved.
+
+Full migration steps, every environment variable added, removed, or changed, and
+per-version release notes are in the
+**[Upgrade Guide](docs/09-deployment/upgrade-guide.md)**.
+
 ## Documentation
 
 For architecture details, API reference, development setup, contributing

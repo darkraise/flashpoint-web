@@ -131,6 +131,8 @@ web application for browsing and playing games from the Flashpoint Archive.
 - [Deployment Overview](09-deployment/README.md) - Deployment documentation
 - [Docker Deployment](09-deployment/docker-deployment.md) - Docker Compose setup
 - [Environment Variables](09-deployment/environment-variables.md) - All env vars
+- [Upgrade Guide](09-deployment/upgrade-guide.md) - Migration steps and release
+  notes
 - [Health Checks](09-deployment/health-checks.md) - Health check endpoints
 - [Security Considerations](09-deployment/security-considerations.md) - Security
   best practices
