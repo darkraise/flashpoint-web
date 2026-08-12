@@ -94,6 +94,16 @@ to `window.location.origin`.
 **Permissions:** Requires `settings.update` (admin only) **API:** See
 [Domains API](../06-api-reference/domains-api.md)
 
+#### Update Tab
+
+- **Flashpoint Web** - Compares the running version against the latest GitHub
+  release and shows the changelog and upgrade command. Notify only: it never
+  pulls or restarts anything. A build with no release version — a source
+  checkout, or an image built without the `VERSION` build arg — reports that
+  checks are off rather than claiming to be behind.
+- **Game Metadata** - Sync game metadata from a configured source
+- **Ruffle Emulator Management** - Check for and install Ruffle updates
+
 #### Metadata Tab
 
 - **Auto Sync on Startup** - Automatically sync metadata when server starts

@@ -1,5 +1,6 @@
 import { motion, Variants } from 'framer-motion';
 import { useAuthStore } from '@/store/auth';
+import { AppUpdateCard } from './AppUpdateCard';
 import { MetadataUpdateCard } from './MetadataUpdateCard';
 import { RuffleManagementCard } from './RuffleManagementCard';
 
@@ -20,6 +21,9 @@ export function UpdateSettingsTab({ tabContentVariants }: UpdateSettingsTabProps
       exit="exit"
       className="space-y-6"
     >
+      {/* Web App Updates (Admin Only) */}
+      {isAdmin ? <AppUpdateCard /> : null}
+
       {/* Game Metadata Updates Section (Admin Only) */}
       {isAdmin ? <MetadataUpdateCard /> : null}
 
