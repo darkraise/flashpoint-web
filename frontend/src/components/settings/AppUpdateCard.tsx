@@ -26,7 +26,11 @@ export function AppUpdateCard() {
   const [showChangelog, setShowChangelog] = useState(false);
   const [expandedFor, setExpandedFor] = useState<string | null>(null);
 
-  const { data: info, isLoading } = useQuery({
+  const {
+    data: info,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['appUpdate'],
     queryFn: () => updatesApi.getAppUpdate(),
     staleTime: 5 * 60 * 1000,
@@ -57,7 +61,8 @@ export function AppUpdateCard() {
     setShowChangelog(true);
   }
 
-  const checkFailedEntirely = info?.lastCheckFailed === true && info.latestVersion === null;
+  const checkFailedEntirely =
+    isError || (info?.lastCheckFailed === true && info.latestVersion === null);
 
   return (
     <div className="bg-card rounded-lg p-6 border border-border shadow-md">
