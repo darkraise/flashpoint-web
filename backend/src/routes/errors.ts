@@ -30,8 +30,12 @@ const router = Router();
 const LOG_DIR = config.logFile ? path.dirname(config.logFile) : path.join(__dirname, '../../logs');
 const ERROR_LOG_FILE = path.join(LOG_DIR, 'client-errors.log');
 
-if (!fsSync.existsSync(LOG_DIR)) {
+// Runs at import: an unwritable log directory must degrade to no client-error
+// log, not take down server startup.
+try {
   fsSync.mkdirSync(LOG_DIR, { recursive: true });
+} catch (error) {
+  logger.warn(`[ClientErrors] Cannot create log directory ${LOG_DIR}:`, error);
 }
 
 function getSeverityNumber(type: string): number {
