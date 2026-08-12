@@ -29,7 +29,7 @@ export function AppUpdateCard() {
   const {
     data: info,
     isLoading,
-    isError,
+    isLoadingError,
   } = useQuery({
     queryKey: ['appUpdate'],
     queryFn: () => updatesApi.getAppUpdate(),
@@ -62,7 +62,7 @@ export function AppUpdateCard() {
   }
 
   const checkFailedEntirely =
-    isError || (info?.lastCheckFailed === true && info.latestVersion === null);
+    isLoadingError || (info?.lastCheckFailed === true && info.latestVersion === null);
 
   return (
     <div className="bg-card rounded-lg p-6 border border-border shadow-md">
