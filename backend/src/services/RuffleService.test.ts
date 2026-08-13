@@ -259,3 +259,48 @@ describe('RuffleService.updateRuffle', () => {
     expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('old build');
   });
 });
+
+function installBundledRuffle(): void {
+  const bundled = nodePath.join(distDir, 'ruffle');
+  nodeFs.mkdirSync(bundled, { recursive: true });
+  nodeFs.writeFileSync(nodePath.join(bundled, 'ruffle.js'), 'bundled build');
+  nodeFs.writeFileSync(
+    nodePath.join(bundled, 'package.json'),
+    JSON.stringify({ version: '0.2.0-nightly.2026.1.29' })
+  );
+}
+
+describe('RuffleService.ensureInstalled', () => {
+  it('leaves an existing installation alone', async () => {
+    installExistingRuffle();
+    installBundledRuffle();
+
+    const result = await new RuffleService().ensureInstalled();
+
+    expect(result).toBe('present');
+    expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('old build');
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  it('seeds from the bundled copy when nothing is installed', async () => {
+    installBundledRuffle();
+    const service = new RuffleService();
+
+    const result = await service.ensureInstalled();
+
+    expect(result).toBe('seeded');
+    expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe(
+      'bundled build'
+    );
+    expect(service.getCurrentVersion()).toBe('0.2.0-nightly.2026.1.29');
+    expect(axios.get).not.toHaveBeenCalled();
+  });
+
+  it('downloads when neither an installation nor a bundled copy exists', async () => {
+    const result = await new RuffleService().ensureInstalled();
+
+    expect(result).toBe('downloaded');
+    expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('new build');
+    expect(axios.get).toHaveBeenCalled();
+  });
+});

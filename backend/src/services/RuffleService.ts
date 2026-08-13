@@ -581,4 +581,48 @@ export class RuffleService {
       return false;
     }
   }
+
+  /**
+   * Copy the Ruffle shipped inside the image into the install directory. A fresh
+   * data volume otherwise has no player at all until a download finishes — and
+   * never gets one on a host that cannot reach GitHub.
+   */
+  private seedFromBundle(): boolean {
+    if (this.bundledPath === this.installPath) {
+      return false;
+    }
+    if (!fs.existsSync(path.join(this.bundledPath, 'ruffle.js'))) {
+      return false;
+    }
+    try {
+      this.copyDirectory(this.bundledPath, this.installPath);
+      logger.info(
+        `✅ Ruffle seeded from the bundled copy (version: ${this.getCurrentVersion() ?? 'unknown'})`
+      );
+      return true;
+    } catch (error: unknown) {
+      logger.warn('[RuffleService] Could not seed Ruffle from the bundled copy:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Make a Ruffle available, preferring what is already installed, then the copy
+   * baked into the image, and only then a download.
+   */
+  async ensureInstalled(): Promise<'present' | 'seeded' | 'downloaded'> {
+    if (this.verifyInstallation()) {
+      logger.info(`✅ Ruffle verified (version: ${this.getCurrentVersion() ?? 'unknown'})`);
+      return 'present';
+    }
+
+    if (this.seedFromBundle()) {
+      return 'seeded';
+    }
+
+    logger.info('🎮 Ruffle not found, downloading latest version...');
+    await this.updateRuffle();
+    logger.info('✅ Ruffle installation complete');
+    return 'downloaded';
+  }
 }
