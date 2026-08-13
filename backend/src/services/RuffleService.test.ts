@@ -172,8 +172,8 @@ describe('RuffleService.updateRuffle', () => {
     expect(result.version).toBe(NEW_VERSION);
     expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('new build');
     expect(nodeFs.existsSync(nodePath.join(ruffleDir(), 'stale.js'))).toBe(false);
-    expect(nodeFs.existsSync(nodePath.join(distDir, 'ruffle-backup'))).toBe(false);
-    expect(nodeFs.existsSync(nodePath.join(distDir, 'ruffle-temp'))).toBe(false);
+    expect(nodeFs.existsSync(nodePath.join(dataDir, 'ruffle-backup'))).toBe(false);
+    expect(nodeFs.existsSync(nodePath.join(dataDir, 'ruffle-temp'))).toBe(false);
   });
 
   it('installs when directory renames fail with EXDEV (overlay2 image layer)', async () => {
@@ -185,8 +185,8 @@ describe('RuffleService.updateRuffle', () => {
     expect(result.success).toBe(true);
     expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('new build');
     expect(nodeFs.existsSync(nodePath.join(ruffleDir(), 'stale.js'))).toBe(false);
-    expect(nodeFs.existsSync(nodePath.join(distDir, 'ruffle-backup'))).toBe(false);
-    expect(nodeFs.existsSync(nodePath.join(distDir, 'ruffle-temp'))).toBe(false);
+    expect(nodeFs.existsSync(nodePath.join(dataDir, 'ruffle-backup'))).toBe(false);
+    expect(nodeFs.existsSync(nodePath.join(dataDir, 'ruffle-temp'))).toBe(false);
   });
 
   it('installs into a mount point without unlinking or renaming it', async () => {
@@ -200,7 +200,7 @@ describe('RuffleService.updateRuffle', () => {
     expect(nodeFs.existsSync(ruffleDir())).toBe(true);
     expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('new build');
     expect(nodeFs.existsSync(nodePath.join(ruffleDir(), 'stale.js'))).toBe(false);
-    expect(nodeFs.existsSync(nodePath.join(distDir, 'ruffle-backup'))).toBe(false);
+    expect(nodeFs.existsSync(nodePath.join(dataDir, 'ruffle-backup'))).toBe(false);
   });
 
   it('installs a first-time copy when nothing is present', async () => {
@@ -221,8 +221,8 @@ describe('RuffleService.updateRuffle', () => {
 
     expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('old build');
     expect(nodeFs.existsSync(nodePath.join(ruffleDir(), 'stale.js'))).toBe(true);
-    expect(nodeFs.existsSync(nodePath.join(distDir, 'ruffle-backup'))).toBe(false);
-    expect(nodeFs.existsSync(nodePath.join(distDir, 'ruffle-temp'))).toBe(false);
+    expect(nodeFs.existsSync(nodePath.join(dataDir, 'ruffle-backup'))).toBe(false);
+    expect(nodeFs.existsSync(nodePath.join(dataDir, 'ruffle-temp'))).toBe(false);
   });
 
   it('restores the previous installation when a copied file lands truncated', async () => {
@@ -233,13 +233,13 @@ describe('RuffleService.updateRuffle', () => {
     await expect(new RuffleService().updateRuffle()).rejects.toThrow(/installation is incomplete/);
 
     expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('old build');
-    expect(nodeFs.existsSync(nodePath.join(distDir, 'ruffle-backup'))).toBe(false);
+    expect(nodeFs.existsSync(nodePath.join(dataDir, 'ruffle-backup'))).toBe(false);
   });
 
   it('completes when the staging directory cannot be removed after copying', async () => {
     installExistingRuffle();
     renameFailureCode = 'EXDEV';
-    rmFailure = { path: nodePath.join(distDir, 'ruffle-temp'), code: 'EACCES' };
+    rmFailure = { path: nodePath.join(dataDir, 'ruffle-temp'), code: 'EACCES' };
 
     const result = await new RuffleService().updateRuffle();
 
