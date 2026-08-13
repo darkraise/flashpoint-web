@@ -28,6 +28,8 @@ services:
       # Read-write: the app records downloaded state in flashpoint.sqlite and
       # writes downloaded game data under Data/Games.
       - ${FLASHPOINT_HOST_PATH:?FLASHPOINT_HOST_PATH is required}:/data/flashpoint
+      # Holds user.db and the installed Ruffle. Without this mount an in-app
+      # Ruffle update is lost the next time the container is recreated.
       - ${DATA_PATH:-./data}:/app/data
       - ${LOGS_PATH:-./logs}:/app/logs
     environment:

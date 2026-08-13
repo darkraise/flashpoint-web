@@ -114,6 +114,7 @@ and API share one origin.
 | -------------------- | ----------------------------- | -------------------------------------------------------------- |
 | `SERVE_FRONTEND`     | true in production, else false | Serve the built frontend and SPA fallback from the backend    |
 | `FRONTEND_DIST_PATH` | `<backend>/../frontend/dist`  | Location of the built frontend (rarely needed)                 |
+| `RUFFLE_DATA_PATH`   | `/app/data/ruffle` in production | Where Ruffle is installed. Must sit on a mounted volume, or an in-app update is lost when the container is recreated |
 
 **OpenTelemetry:**
 
