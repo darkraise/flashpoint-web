@@ -65,6 +65,9 @@ support, play tracking, and an intuitive interface.
 - **Database Hot-Reload** - Automatically syncs when Flashpoint Launcher updates
   metadata
 
+## Demo: [flash.quangtc.dev](https://flash.quangtc.dev)
+Register new account and try your favorite flash games
+
 ## Upgrading
 
 Routine updates need nothing beyond
