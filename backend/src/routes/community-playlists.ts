@@ -24,7 +24,7 @@ router.get(
     playlistCount: res.locals.playlistCount || 0,
   })),
   asyncHandler(async (req, res) => {
-    const playlists = await communityPlaylistService.fetchCommunityPlaylists();
+    const playlists = communityPlaylistService.getCommunityPlaylists();
 
     res.locals.playlistCount = playlists.categories.reduce(
       (total, category) => total + category.playlists.length,

@@ -9,7 +9,6 @@ Reference for all npm packages used across the Flashpoint Web monorepo.
 | axios                 | ^1.13.2 | MIT          | HTTP client for external requests                         |
 | bcrypt                | ^6.0.0  | MIT          | Password hashing (cost factor: 10)                        |
 | better-sqlite3        | ^12.6.0 | MIT          | Synchronous SQLite database driver                        |
-| cheerio               | ^1.1.2  | MIT          | Server-side HTML parsing                                  |
 | compression           | ^1.7.4  | MIT          | Gzip/deflate response compression                         |
 | cors                  | ^2.8.5  | MIT          | CORS middleware for Express                               |
 | dotenv                | ^16.4.5 | BSD-2-Clause | Load environment variables from .env                      |

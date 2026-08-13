@@ -7,24 +7,15 @@ export interface CommunityPlaylist {
   description: string;
   downloadUrl: string;
   category: string;
-  subcategory?: string;
 }
 
-export interface CommunityPlaylistCategory {
-  name: string;
-  playlists: CommunityPlaylist[];
-}
-
-export interface CommunityPlaylistsResponse {
-  categories: CommunityPlaylistCategory[];
-  lastFetched: string;
-}
-
-export function useCommunityPlaylists() {
+/** The list is bundled with the server, so it only needs fetching once per session. */
+export function useCommunityPlaylists(enabled: boolean = true) {
   return useQuery({
     queryKey: ['community-playlists'],
     queryFn: () => communityPlaylistsApi.fetchAll(),
-    staleTime: 5 * 60 * 1000,
+    enabled,
+    staleTime: Infinity,
     gcTime: 30 * 60 * 1000,
   });
 }

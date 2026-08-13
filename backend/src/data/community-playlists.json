@@ -1,0 +1,780 @@
+{
+  "source": "https://flashpointarchive.org/datahub/Playlists",
+  "capturedOn": "2026-08-13",
+  "note": "Pre-seeded snapshot of the Flashpoint Datahub playlist index, extracted from a saved copy of the source page. The wiki sits behind a Cloudflare challenge that no plain HTTP client can pass, so the index cannot be fetched at runtime. Entries are limited to download URLs on the ALLOWED_DOWNLOAD_DOMAINS allowlist, so every playlist listed here can also be downloaded; that is why the page's Old Default Playlists section (hosted on download.unstable.life, and in the pre-Flashpoint 10 format) is absent.",
+  "categories": [
+    {
+      "name": "Animations",
+      "playlists": [
+        {
+          "name": "Animal School",
+          "author": "Ekul",
+          "description": "BBC's Animal School",
+          "downloadUrl": "https://flashpointarchive.org/w/images/b/bf/Animal_school_playlist.json",
+          "category": "Animations"
+        },
+        {
+          "name": "Flash365 Stickman Universe",
+          "author": "Listerine99.9",
+          "description": "Animations",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/f9/Flash365_Stickman_Universe.json",
+          "category": "Animations"
+        },
+        {
+          "name": "Hall of Fame",
+          "author": "tomzacz",
+          "description": "Animations",
+          "downloadUrl": "https://flashpointarchive.org/w/images/d/d1/Animation_Hall_of_Fame.json",
+          "category": "Animations"
+        },
+        {
+          "name": "Lenore",
+          "author": "Ekul",
+          "description": "Lenore the Cute Little Dead Girl",
+          "downloadUrl": "https://flashpointarchive.org/w/images/5/52/Lenore_thecutelittledeadgirl_playlist.json",
+          "category": "Animations"
+        },
+        {
+          "name": "Not Your WB",
+          "author": "Ekul",
+          "description": "Non Classic Animations from WB",
+          "downloadUrl": "https://flashpointarchive.org/w/images/b/b8/Not_your_wb_playlist.json",
+          "category": "Animations"
+        },
+        {
+          "name": "The Fear Hole",
+          "author": "Ekul",
+          "description": "Webshow",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/4c/The_fear_hole_playlist.json",
+          "category": "Animations"
+        },
+        {
+          "name": "Weeble's What",
+          "author": "Ekul",
+          "description": "Animations from Weeble's Stuff",
+          "downloadUrl": "https://flashpointarchive.org/w/images/c/c8/Weebles_what_playlist.json",
+          "category": "Animations"
+        },
+        {
+          "name": "Who is Mister Coo",
+          "author": "Ekul",
+          "description": "Animations from www.mistercoo.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/42/Who_is_mister_coo_playlist.json",
+          "category": "Animations"
+        }
+      ]
+    },
+    {
+      "name": "Games - Community favorites",
+      "playlists": [
+        {
+          "name": "A trip down memory lane",
+          "author": "Armata17",
+          "description": "Over 260 awesome games everyone should play. The best way to bring some nostalgia in a single playlist :)",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/4a/A_trip_down_memory_lane.json",
+          "category": "Games - Community favorites"
+        },
+        {
+          "name": "Classroom Hits",
+          "author": "Rollo",
+          "description": "Games me and my friends played during class",
+          "downloadUrl": "https://flashpointarchive.org/w/images/8/8a/Classroom-hits.json",
+          "category": "Games - Community favorites"
+        },
+        {
+          "name": "Episodic Essentials",
+          "author": "Ekulreklawyks",
+          "description": "Must play 1st episode games in a series",
+          "downloadUrl": "https://flashpointarchive.org/w/images/2/2a/Episodic_Essentials.json",
+          "category": "Games - Community favorites"
+        },
+        {
+          "name": "Power Plays",
+          "author": "ThePowerPlayer",
+          "description": "ThePowerPlayers Favorites",
+          "downloadUrl": "https://flashpointarchive.org/w/images/a/a5/Powers-plays.json",
+          "category": "Games - Community favorites"
+        },
+        {
+          "name": "Tomy Show and Tell",
+          "author": "TOMYSSHADOW",
+          "description": "Games which I think are worth playing because they're just really good or interesting",
+          "downloadUrl": "https://flashpointarchive.org/w/images/5/59/Playlist_tomyshowandtell.json",
+          "category": "Games - Community favorites"
+        },
+        {
+          "name": "Ya Like Jazz",
+          "author": "Akte",
+          "description": "Games with the best soundtracks",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/40/Ya_Like_Jazz.json",
+          "category": "Games - Community favorites"
+        },
+        {
+          "name": "Zach Picks",
+          "author": "mathgeniuszach",
+          "description": "Zachs Picks",
+          "downloadUrl": "https://flashpointarchive.org/w/images/3/34/Zach-picks.json",
+          "category": "Games - Community favorites"
+        }
+      ]
+    },
+    {
+      "name": "Games - Developer based",
+      "playlists": [
+        {
+          "name": "Babarageo",
+          "author": "Ekulreklawyks",
+          "description": "Games by Babarageo",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/fb/Babarageo_playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Bart Bonte Classics",
+          "author": "MantraBeeg",
+          "description": "Bart Bonte Hood Classics",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/4e/Bart_Bonte_Classics.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Evil Dog Games",
+          "author": "King Kaiyegi",
+          "description": "Adventures of the Zombie Apocalypse in multiple games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/0/01/Playlist_evildog.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Eat Pierogi!",
+          "author": "Cezarr",
+          "description": "Collection of games from Polish developers and publishers. Everything is playable without knowledge of Polish.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/7/76/Eat_Pierogi.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Eyezmaze",
+          "author": "Ekulreklawyks",
+          "description": "Games from Eyezmaze",
+          "downloadUrl": "https://flashpointarchive.org/w/images/9/93/Eyemaze_Playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Fig Hunter Games / Pseudolonewolf",
+          "author": "Ekulreklawyks",
+          "description": "Games by",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/ff/Fig_hunter_games_playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Firma Studio",
+          "author": "Ekulreklawyks",
+          "description": "Games by Firma Studio",
+          "downloadUrl": "https://flashpointarchive.org/w/images/5/52/Firma_Studios_Playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Foofa Studio",
+          "author": "Ekulreklawyks",
+          "description": "Games by Foofa Studio",
+          "downloadUrl": "https://flashpointarchive.org/w/images/e/e1/Foofa_Studios_Playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Hangame Flash",
+          "author": "Listerine99.9",
+          "description": "Games made by Hangame",
+          "downloadUrl": "https://flashpointarchive.org/w/images/0/00/Hangame_Flash.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Kingart.de (Murphy's Gesetz)",
+          "author": "Ekulreklawyks",
+          "description": "Games from Kingart.de Game Studio",
+          "downloadUrl": "https://flashpointarchive.org/w/images/d/d2/Kingart.de_playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Lorestrome",
+          "author": "Ekulreklawyks",
+          "description": "Games by Lorestrome",
+          "downloadUrl": "https://flashpointarchive.org/w/images/0/04/Lorestrome_Playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Mateusz Skutnik",
+          "author": "Ekulreklawyks",
+          "description": "Games by the Great",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/4b/Mateusz_skutnik_playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Mr.Doob Experiments",
+          "author": "Samsonator",
+          "description": "A collection of digital toys and experiments from three.js programmer Ricardo Cabello.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/f4/Mrdoob_experiments.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "nigoro.jp",
+          "author": "Ekulreklawyks",
+          "description": "Games by nigoro.jp",
+          "downloadUrl": "https://flashpointarchive.org/w/images/7/75/Nigoro_playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Ninja Kiwi Archive",
+          "author": "Rollo",
+          "description": "Every game that's bundled in the Ninja Kiwi Archive on Steam (minus the 4 that require online functionality)",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/f0/Ninja-kiwi-archive.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Pastel Games",
+          "author": "Ekulreklawyks",
+          "description": "Games Pastel Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/5/58/Pastel_Games_Playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Pencil Kids",
+          "author": "Ekulreklawyks",
+          "description": "Games from Pencil Kids",
+          "downloadUrl": "https://flashpointarchive.org/w/images/0/05/Pencil_Kids_Playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "PhET Interactive Simulations",
+          "author": "Tesseract",
+          "description": "All of PhET Interactive Simulations' physics and math Flash applets, excluding \"Estimation\", which has yet to be curated",
+          "downloadUrl": "https://flashpointarchive.org/w/images/2/25/PhET_Interactive_Simulations.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Popcap",
+          "author": "mariteaux",
+          "description": "Popcap Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/e/e5/Popcap.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Ridlake",
+          "author": "Ekulreklawyks",
+          "description": "Games by Ridlake",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/fb/Ridlake_Playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Sarbakan",
+          "author": "Ekulreklawyks",
+          "description": "Games by Sarbakan",
+          "downloadUrl": "https://flashpointarchive.org/w/images/3/34/Sarbakan_Playlist.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "The Huang Collection",
+          "author": "MantraBeeg",
+          "description": "The BFDI Guys Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/6/69/The_huang_collection.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Tom Fulp Collection",
+          "author": "MantraBeeg",
+          "description": "Tom Fulp Collection",
+          "downloadUrl": "https://flashpointarchive.org/w/images/b/b8/Tom_Fulp_Collection.json",
+          "category": "Games - Developer based"
+        },
+        {
+          "name": "Zeebarf",
+          "author": "Ekulreklawyks",
+          "description": "Games by Zeebarf and the rest of the Reemus Series",
+          "downloadUrl": "https://flashpointarchive.org/w/images/3/38/Zeebarf_Playlist_Plus.json",
+          "category": "Games - Developer based"
+        }
+      ]
+    },
+    {
+      "name": "Games - Franchise based",
+      "playlists": [
+        {
+          "name": "AdultSwim",
+          "author": "Souls",
+          "description": "AdultSwim Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/6/6f/Adultswim.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "ClickaMajigs",
+          "author": "drmalouf",
+          "description": "Nicks Click A Majigs",
+          "downloadUrl": "https://flashpointarchive.org/w/images/9/9b/Clickamajigs.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "Happy Tree Experiences",
+          "author": "samuster.pdn",
+          "description": "Happy Tree Friends",
+          "downloadUrl": "https://flashpointarchive.org/w/images/5/52/Happy-Tree-Experiences.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "The Henry Stickmin Collection",
+          "author": "BeyinBedava",
+          "description": "The Henry Stickmin Collection",
+          "downloadUrl": "https://flashpointarchive.org/w/images/d/dd/The_Henry_Stickmin_Collection.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "HomeStarRunner",
+          "author": "Sea Lily",
+          "description": "Collection of games from the H*R website",
+          "downloadUrl": "https://flashpointarchive.org/w/images/a/aa/Videlectrix.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "Hoshi Saga Games",
+          "author": "Eniuu",
+          "description": "Hoshi Saga Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/40/Hoshi_saga_playlist.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "Lego",
+          "author": "MiploloArchiletti",
+          "description": "Lego Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/3/32/Lego.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "Mario",
+          "author": "Awesome_Squid",
+          "description": "Mario Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/9/9e/Mario.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "Neopets",
+          "author": "Ganonthegreat",
+          "description": "Neopets games without promotional content.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/9/98/Neopets.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "Nick Games",
+          "author": "Allanbuzzy",
+          "description": "Nick Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/a/a1/Nickgames.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "Papa's Picks",
+          "author": "Stedro",
+          "description": "Every Papa game (including the platformers) in chronological order",
+          "downloadUrl": "https://flashpointarchive.org/w/images/e/e4/Papas_picks.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "Pico and Gang",
+          "author": "Chef Kawasaki",
+          "description": "A mostly complete collection of ,the titular character, Pico based games. If it has any relation to Pico, It's (hopefully) in!",
+          "downloadUrl": "https://flashpointarchive.org/w/images/d/df/Pico_and_Gang.json",
+          "category": "Games - Franchise based"
+        },
+        {
+          "name": "The Snail Bob Collection",
+          "author": "CheetoRyan",
+          "description": "Enjoy a complete collection of everyone's favorite snail, (no he's not Gary) Snail Bob.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/2/2e/Snailbob.json",
+          "category": "Games - Franchise based"
+        }
+      ]
+    },
+    {
+      "name": "Games - Genre based",
+      "playlists": [
+        {
+          "name": "Adventure Time",
+          "author": "King Kaiyegi",
+          "description": "Engaging Adventures and Impressive Plots",
+          "downloadUrl": "https://flashpointarchive.org/w/images/1/10/Playlist_adventuretime.json",
+          "category": "Games - Genre based"
+        },
+        {
+          "name": "Advertisement",
+          "author": "Pipe smoking garfield",
+          "description": "Adver Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/8/89/Advertisement.json",
+          "category": "Games - Genre based"
+        },
+        {
+          "name": "Bowling",
+          "author": "King Kaiyegi",
+          "description": "Do you like hitting consecutive plenary sessions and becoming the ultimate bowling master?",
+          "downloadUrl": "https://flashpointarchive.org/w/images/1/17/Playlist_bowling.json",
+          "category": "Games - Genre based"
+        },
+        {
+          "name": "Character Creation",
+          "author": "Friendly Floyd",
+          "description": "Games were you create a character",
+          "downloadUrl": "https://flashpointarchive.org/w/images/0/04/Character.json",
+          "category": "Games - Genre based"
+        },
+        {
+          "name": "Multiplayer Magnificents",
+          "author": "Gidd_77",
+          "description": "Multiplayer Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/5/50/MultiplayerMagnificents.json",
+          "category": "Games - Genre based"
+        },
+        {
+          "name": "Pinball Paradise",
+          "author": "appleCider (she/her)",
+          "description": "Pinball Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/e/e9/Pinball.json",
+          "category": "Games - Genre based"
+        },
+        {
+          "name": "Shmups",
+          "author": "Pepperado",
+          "description": "Shumps",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/4c/Shmups.json",
+          "category": "Games - Genre based"
+        },
+        {
+          "name": "Turkey Season",
+          "author": "S. Carp",
+          "description": "Happy Thanksgiving!",
+          "downloadUrl": "https://flashpointarchive.org/w/images/e/e7/Turkey_season_playlist.json",
+          "category": "Games - Genre based"
+        },
+        {
+          "name": "Zombie Gnashers",
+          "author": "Ekulreklawyks",
+          "description": "Just some Zombie Games I like",
+          "downloadUrl": "https://flashpointarchive.org/w/images/3/31/Zombie_Ganshers_playlist.json",
+          "category": "Games - Genre based"
+        }
+      ]
+    },
+    {
+      "name": "Games - Let's Play/Livestreamed",
+      "playlists": [
+        {
+          "name": "D.O.N.G.",
+          "author": "Feromount",
+          "description": "Do Online Now Guys by VSauce",
+          "downloadUrl": "https://flashpointarchive.org/w/images/1/1d/D.O.N.G..json",
+          "category": "Games - Let's Play/Livestreamed"
+        },
+        {
+          "name": "Random Dips",
+          "author": "404_11",
+          "description": "All the randomly sellected games featured in the \"Random Dips into Flashpoint\" video series by BlueMaxima, up to episode 14. Includes 177 games.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/b/bd/RandomDips.json",
+          "category": "Games - Let's Play/Livestreamed"
+        },
+        {
+          "name": "RB Gameplays Youtube",
+          "author": "ki(RB)y",
+          "description": "Games Played on YouTube Their YouTube Stream",
+          "downloadUrl": "https://flashpointarchive.org/w/images/1/17/Rb-gameplays-youtube.json",
+          "category": "Games - Let's Play/Livestreamed"
+        },
+        {
+          "name": "WayneRadioTV's Grand Tour",
+          "author": "tyefyedye",
+          "description": "Collection of games played by Twitch streamer WayneRadioTV during his grand tour stream on 7/23/2020",
+          "downloadUrl": "https://flashpointarchive.org/w/images/e/eb/WayneRadioTVs_Grand_Tour.json",
+          "category": "Games - Let's Play/Livestreamed"
+        },
+        {
+          "name": "Vinny Vinesauce",
+          "author": "mustachecatto",
+          "description": "Playlist of flash games Vinny played on stream",
+          "downloadUrl": "https://flashpointarchive.org/w/images/a/a4/VinnyVinesauce.json",
+          "category": "Games - Let's Play/Livestreamed"
+        }
+      ]
+    },
+    {
+      "name": "Games - Website based",
+      "playlists": [
+        {
+          "name": "AddictingGames Top 100",
+          "author": "Rollo",
+          "description": "The 100 most played games on AddictingGames.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/fe/Addictinggames-top-100.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Andkon Eye-catchers",
+          "author": "chiptuner",
+          "description": "A collection of Andkon games that caught my eye and that I would probably click on as a kid - also featuring games I actually played on Andkon back in the day!",
+          "downloadUrl": "https://flashpointarchive.org/w/images/6/6c/Andkon_Eye-catchers.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Armor Games Top 100",
+          "author": "Rollo",
+          "description": "The 100 most played games on ArmorGames.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/8/8f/Armor-games-top-100.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Club Penguin Games",
+          "author": "Ale32",
+          "description": "Playlist of all club penguin games (not counting beta team, multiplayer and party games ones)",
+          "downloadUrl": "https://flashpointarchive.org/w/images/8/8a/Club_penguin_games.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Coolmath Quintessentials",
+          "author": "chiptuner",
+          "description": "My best-of picks from Cool Math Games!",
+          "downloadUrl": "https://flashpointarchive.org/w/images/b/b9/Coolmath_Quintessentials.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Game Jolts Best Games",
+          "author": "Fat Cat from Nitrome",
+          "description": "Top Rated Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/d/d1/Game_Jolts_Best_Games.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Games from Boneland.com",
+          "author": "Ekulreklawyks",
+          "description": "Games from Boneland.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/a/a1/Boneland.com_playlist.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Gamehouse Games Collection",
+          "author": "RB",
+          "description": "Gamehouse Games Collection",
+          "downloadUrl": "https://flashpointarchive.org/w/images/e/e5/Gamehouse-games-collection.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "King.com Sponsored Games",
+          "author": "childishbeat",
+          "description": "A list of games in King.com's \"Sponsored games\" section, which existed from 2009 to 2013.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/1/18/SponsoredByKing.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Kings of King.com",
+          "author": "childishbeat",
+          "description": "The most popular games sponsored by King.com (500K+ plays).",
+          "downloadUrl": "https://flashpointarchive.org/w/images/3/31/KingsOfKing.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Silvergames.com Most Played",
+          "author": "Ekulreklawyks",
+          "description": "Top 100 Most Played Games from silvergames.com (2011)",
+          "downloadUrl": "https://flashpointarchive.org/w/images/2/20/Silvergames_playlist.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "The best Miniclip games",
+          "author": "Fr4R.Dr.Nk",
+          "description": "The best Miniclip games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/f3/Miniclip.json",
+          "category": "Games - Website based"
+        },
+        {
+          "name": "Toonami",
+          "author": "Ekulreklawyks",
+          "description": "Games featured on Toonami's website",
+          "downloadUrl": "https://flashpointarchive.org/w/images/7/7b/Toonami_playlist.json",
+          "category": "Games - Website based"
+        }
+      ]
+    },
+    {
+      "name": "Games - Other",
+      "playlists": [
+        {
+          "name": "8Bit Wonders",
+          "author": "ThePowerPlayer",
+          "description": "Pixel Based Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/2/22/8-bit-wonders.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "360 Games",
+          "author": "Zaidos",
+          "description": "360 Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/5/57/360_games.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Blast from the Past",
+          "author": "oshaboy (Not Sodium Chloride)",
+          "description": "Remakes and Ports of video games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/1/1c/Past.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Console/PC Favs",
+          "author": "TheMonarch",
+          "description": "I have a playlist of flash games that have been ported to consoles, or PC gaming stores like Steam. Enjoy!",
+          "downloadUrl": "https://flashpointarchive.org/w/images/3/36/Console_PC_Favs.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Demake",
+          "author": "Grump",
+          "description": "A collection of demakes",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/48/Demake.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Fight in the Streets",
+          "author": "King Kaiyegi",
+          "description": "Without rules or time in most cases, you fight to the end.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/a/a4/Playlist_fightinthestreets.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Flashpoint Memes",
+          "author": "RB",
+          "description": "Flashpoint Memes",
+          "downloadUrl": "https://flashpointarchive.org/w/images/6/64/Flashpoint-memes.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Greatness",
+          "author": "Awesome_Squid",
+          "description": "Games Destined for Greatness",
+          "downloadUrl": "https://flashpointarchive.org/w/images/d/db/Greatness.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Going Mobile",
+          "author": "404_11",
+          "description": "Games ported to a mobile platform",
+          "downloadUrl": "https://flashpointarchive.org/w/images/f/f3/GoingMobile.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "North Korean Games",
+          "author": "Souls",
+          "description": "Games that were created in North Korea",
+          "downloadUrl": "https://flashpointarchive.org/w/images/2/2d/North_Korean_Games.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Sara's Cooking Class",
+          "author": "Mizuki",
+          "description": "Sara's Cooking Class Games",
+          "downloadUrl": "https://flashpointarchive.org/w/images/d/d5/Saras_cooking_class_playlist.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Stop Bullying Now",
+          "author": "Friendly Floyd",
+          "description": "Stop Bullying Now",
+          "downloadUrl": "https://flashpointarchive.org/w/images/a/a6/Stop_Bullying_Now.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "Toge",
+          "author": "King Kaiyegi",
+          "description": "Toge",
+          "downloadUrl": "https://flashpointarchive.org/w/images/8/89/Playlist_toge.json",
+          "category": "Games - Other"
+        },
+        {
+          "name": "TV Show Games",
+          "author": "EnzoTheGreatWare",
+          "description": "Games based on TV shows",
+          "downloadUrl": "https://flashpointarchive.org/w/images/c/cf/TV.json",
+          "category": "Games - Other"
+        }
+      ]
+    },
+    {
+      "name": "NSFW",
+      "playlists": [
+        {
+          "name": "NSFW",
+          "author": "Souls",
+          "description": "NSFW",
+          "downloadUrl": "https://flashpointarchive.org/w/images/6/67/NSFW.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "HuggbeesR34Showcase",
+          "author": "404_11",
+          "description": "All browser games from the \"Rule34 Showcase\" video series by Huggbees up to episode 8. Censor bars absolutely not included. NSFW.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/7/79/HuggbeesR34Showcase.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "TRY NOT TO CUM!",
+          "author": "Souls",
+          "description": "Examples of games advertised on pornographic websites as being too hard not to ejaculate during gameplay by how arousing they are. NSFW.",
+          "downloadUrl": "https://flashpointarchive.org/w/images/e/ec/TRY_NOT_TO_CUM.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "Sex in the inner city",
+          "author": "Ekul",
+          "description": "Series from Romp.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/9/96/Sex_in_the_inner_city_romp.com_playlist.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "Wizard of OZ",
+          "author": "Ekul",
+          "description": "Series from Romp.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/1/12/The_wizard_of_oz_romp.com_playlist.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "Tardz",
+          "author": "Ekul",
+          "description": "Series from Romp.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/0/0c/Tardz_romp.com_playlist.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "T.V. Interactive",
+          "author": "Ekul",
+          "description": "Series from Romp.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/3/32/Tv_interactive_romp.com_playlist.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "Crispy & Root",
+          "author": "Ekul",
+          "description": "Series from Romp.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/9/96/Crispyroot_romp.com_playlist.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "Coach Bigot",
+          "author": "Ekul",
+          "description": "Series from Romp.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/0/03/Coach_bigot_romp.com_playlist.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "Bill & Tedd",
+          "author": "Ekul",
+          "description": "Series from Romp.com",
+          "downloadUrl": "https://flashpointarchive.org/w/images/4/4f/Billted_romp.com_playlist.json",
+          "category": "NSFW"
+        },
+        {
+          "name": "Games from PETA",
+          "author": "Ekul",
+          "description": "Games from PETA",
+          "downloadUrl": "https://flashpointarchive.org/w/images/a/ae/PETA_playlist.json",
+          "category": "NSFW"
+        }
+      ]
+    }
+  ]
+}

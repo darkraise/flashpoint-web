@@ -37,7 +37,7 @@ export function BrowseCommunityPlaylistsModal({
   const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
   const [downloadedInSession, setDownloadedInSession] = useState<Set<string>>(new Set());
 
-  const { data, isLoading, error, refetch } = useCommunityPlaylists();
+  const { data, isLoading, error, refetch } = useCommunityPlaylists(isOpen);
   // Fetch all playlists for duplicate detection (use high limit)
   const { data: localPlaylistsData } = usePlaylists(1, 1000);
   const localPlaylists = localPlaylistsData?.data ?? [];
@@ -214,13 +214,20 @@ export function BrowseCommunityPlaylistsModal({
               : null}
           </div>
 
-          {!isLoading && !error && filteredPlaylists.length > 0 ? (
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-sm text-muted-foreground text-center">
-                Showing {filteredPlaylists.length} playlist
-                {filteredPlaylists.length !== 1 ? 's' : ''}
-                {selectedCategory !== 'all' && ` in ${selectedCategory}`}
-              </p>
+          {!isLoading && !error ? (
+            <div className="mt-4 pt-4 border-t border-border space-y-1">
+              {filteredPlaylists.length > 0 ? (
+                <p className="text-sm text-muted-foreground text-center">
+                  Showing {filteredPlaylists.length} playlist
+                  {filteredPlaylists.length !== 1 ? 's' : ''}
+                  {selectedCategory !== 'all' && ` in ${selectedCategory}`}
+                </p>
+              ) : null}
+              {data?.lastUpdated ? (
+                <p className="text-xs text-muted-foreground text-center">
+                  From the Flashpoint Datahub wiki, captured {data.lastUpdated}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </DialogBody>

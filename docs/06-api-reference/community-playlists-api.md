@@ -14,7 +14,17 @@ to your local Flashpoint installation.
 
 `GET /api/community-playlists` - Optional auth
 
-Fetches the list of available community playlists from the Flashpoint Archive.
+Returns the pre-seeded playlist index. The index used to be scraped from
+[the Playlists wiki page](https://flashpointarchive.org/datahub/Playlists) on
+every request, but that page now sits behind a Cloudflare challenge that no
+plain HTTP client can pass. The list ships with the server instead, in
+`backend/src/data/community-playlists.json`, extracted from a saved copy of the
+page.
+
+The seed only lists playlists whose download URL is on the allowlist below, so
+every entry it returns can also be downloaded. That excludes the wiki's "Old
+Default Playlists" section, which is hosted off the allowlist and still uses the
+pre-Flashpoint 10 playlist format.
 
 **Response:**
 
@@ -22,29 +32,30 @@ Fetches the list of available community playlists from the Flashpoint Archive.
 {
   "categories": [
     {
-      "name": "Featured",
-      "description": "Staff picks and popular playlists",
+      "name": "Animations",
       "playlists": [
         {
-          "id": "playlist-uuid",
-          "title": "Best Flash Games 2008",
-          "description": "Top-rated Flash games from 2008",
-          "author": "FlashpointTeam",
-          "gameCount": 50,
-          "downloadUrl": "https://flashpointarchive.org/playlists/best-2008.json",
-          "thumbnailUrl": "https://flashpointarchive.org/thumbnails/best-2008.png"
+          "name": "Animal School",
+          "author": "Ekul",
+          "description": "BBC's Animal School",
+          "downloadUrl": "https://flashpointarchive.org/w/images/b/bf/Animal_school_playlist.json",
+          "category": "Animations"
         }
       ]
     },
     {
-      "name": "By Genre",
-      "description": "Playlists organized by game genre",
-      "playlists": [...]
+      "name": "Games - Community favorites",
+      "playlists": []
     }
   ],
-  "lastUpdated": "2024-01-15T10:00:00.000Z"
+  "lastUpdated": "2026-08-13"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| categories | array | Wiki sections, in page order |
+| lastUpdated | string | Date the bundled snapshot was captured (`YYYY-MM-DD`) |
 
 ## Download Community Playlist
 
@@ -68,9 +79,11 @@ Downloads a community playlist and saves it to the local Flashpoint Data folder.
 
 For security (SSRF protection), downloads are only allowed from these domains:
 
-- `flashpointarchive.org` (and subdomains)
+- `flashpointarchive.org` (and subdomains, including `download.`)
 - `fpfss.unstable.life`
 - `github.com`
+- `raw.githubusercontent.com`
+- `gist.githubusercontent.com`
 
 **Response:** `201 Created`
 

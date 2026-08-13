@@ -11,17 +11,14 @@ export interface CommunityPlaylistsResponse {
       description: string;
       downloadUrl: string;
       category: string;
-      subcategory?: string;
     }>;
   }>;
-  lastFetched: string;
+  /** Date the bundled wiki snapshot was captured, as YYYY-MM-DD. */
+  lastUpdated: string;
 }
 
 export const playlistsApi = {
-  getAll: async (
-    page: number = 1,
-    limit: number = 12
-  ): Promise<PaginatedResponse<Playlist>> => {
+  getAll: async (page: number = 1, limit: number = 12): Promise<PaginatedResponse<Playlist>> => {
     const { data } = await apiClient.get<PaginatedResponse<Playlist>>('/playlists', {
       params: { page, limit },
     });
