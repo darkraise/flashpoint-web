@@ -98,11 +98,15 @@ export function RufflePlayer({
         }
 
         if (!window.RufflePlayer) {
-          const existingScript = document.querySelector('script[src="/ruffle/ruffle.js"]');
+          const existingScript = document.querySelector('script[src^="/ruffle/ruffle.js"]');
 
           if (!existingScript) {
             const script = document.createElement('script');
-            script.src = '/ruffle/ruffle.js';
+            // The query string busts browsers that cached this URL as
+            // `immutable` before the server started sending `no-store` for it.
+            // Never needs bumping again now that the header itself prevents
+            // caching.
+            script.src = '/ruffle/ruffle.js?v=1';
 
             await new Promise<void>((resolve, reject) => {
               script.onload = () => resolve();
