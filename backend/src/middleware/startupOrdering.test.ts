@@ -13,6 +13,7 @@ vi.mock('../config', () => ({
   config: {
     serveFrontend: true,
     frontendDistPath: '/unused-in-tests',
+    ruffleDataPath: '/unused-in-tests/ruffle',
   },
 }));
 
