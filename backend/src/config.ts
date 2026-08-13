@@ -117,6 +117,14 @@ export const config = {
   // copied next to the backend in the image (/app/frontend/dist).
   frontendDistPath:
     process.env.FRONTEND_DIST_PATH ?? path.resolve(__dirname, '../../frontend/dist'),
+  // Ruffle installs here rather than under the served frontend build. That build
+  // is part of the image, so it lives in the container's writable layer and an
+  // in-app update was discarded whenever the container was recreated.
+  ruffleDataPath:
+    process.env.RUFFLE_DATA_PATH ??
+    (process.env.NODE_ENV === 'production'
+      ? '/app/data/ruffle'
+      : path.resolve(__dirname, '../data/ruffle')),
 
   flashpointPath,
   flashpointDbPath: `${flashpointPath}/Data/flashpoint.sqlite`,

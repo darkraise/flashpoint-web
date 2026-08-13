@@ -38,17 +38,19 @@ function swapFallbackCode(error: unknown): string | null {
 }
 
 export class RuffleService {
-  private readonly frontendPublicPath: string;
+  private readonly installPath: string;
+  private readonly bundledPath: string;
   private readonly githubApiUrl = 'https://api.github.com/repos/ruffle-rs/ruffle/releases';
 
   constructor() {
-    // Install into the directory that is actually served. In a built deployment
-    // that is the frontend's dist output; in development Vite serves public/.
-    // Pointing at public/ in a container made every fresh start re-download
-    // Ruffle even though the image already ships it in dist/.
-    this.frontendPublicPath = config.serveFrontend
-      ? path.join(config.frontendDistPath, 'ruffle')
+    // A built deployment installs onto the mounted data volume and serves it
+    // from there: the frontend build is part of the image, so anything written
+    // into it is discarded when the container is recreated. In development Vite
+    // serves public/, which is the only directory reachable there.
+    this.installPath = config.serveFrontend
+      ? config.ruffleDataPath
       : path.resolve(__dirname, '../../../frontend/public/ruffle');
+    this.bundledPath = path.join(config.frontendDistPath, 'ruffle');
   }
 
   /**
@@ -78,7 +80,7 @@ export class RuffleService {
 
   getCurrentVersion(): string | null {
     try {
-      const packageJsonPath = path.join(this.frontendPublicPath, 'package.json');
+      const packageJsonPath = path.join(this.installPath, 'package.json');
       if (!fs.existsSync(packageJsonPath)) {
         return null;
       }
@@ -444,7 +446,7 @@ export class RuffleService {
   private findInstallMismatch(expected: ReadonlyMap<string, number>): string | null {
     let installed: Map<string, number>;
     try {
-      installed = this.describeTree(this.frontendPublicPath);
+      installed = this.describeTree(this.installPath);
     } catch (error: unknown) {
       return `installed files could not be read (${error instanceof Error ? error.message : 'unknown error'})`;
     }
@@ -492,7 +494,7 @@ export class RuffleService {
 
       // Extract zip to temporary directory
       const zip = new AdmZip(zipBuffer);
-      const tempDir = path.join(this.frontendPublicPath, '../ruffle-temp');
+      const tempDir = path.join(this.installPath, '../ruffle-temp');
 
       // Clean temp directory if exists
       this.removeDirectory(tempDir);
@@ -517,19 +519,19 @@ export class RuffleService {
       logger.info('[RuffleService] Extraction complete, installing...');
 
       // Backup current installation
-      const backupDir = path.join(this.frontendPublicPath, '../ruffle-backup');
+      const backupDir = path.join(this.installPath, '../ruffle-backup');
       let backedUp = false;
 
       const expectedFiles = this.describeTree(tempDir);
 
       try {
-        if (fs.existsSync(this.frontendPublicPath)) {
-          this.replaceDirectory(this.frontendPublicPath, backupDir);
+        if (fs.existsSync(this.installPath)) {
+          this.replaceDirectory(this.installPath, backupDir);
           backedUp = true;
         }
 
         // Move extracted files to public/ruffle
-        this.replaceDirectory(tempDir, this.frontendPublicPath);
+        this.replaceDirectory(tempDir, this.installPath);
 
         // Verify the installation was successful BEFORE deleting backup
         if (!this.verifyInstallation()) {
@@ -543,7 +545,7 @@ export class RuffleService {
         this.removeDirectory(tempDir);
         if (backedUp && fs.existsSync(backupDir)) {
           try {
-            this.replaceDirectory(backupDir, this.frontendPublicPath);
+            this.replaceDirectory(backupDir, this.installPath);
             logger.info('[RuffleService] Restored previous installation after failed update');
           } catch (restoreError) {
             logger.error('[RuffleService] Failed to restore Ruffle backup:', restoreError);
@@ -573,7 +575,7 @@ export class RuffleService {
 
   verifyInstallation(): boolean {
     try {
-      const ruffleJsPath = path.join(this.frontendPublicPath, 'ruffle.js');
+      const ruffleJsPath = path.join(this.installPath, 'ruffle.js');
       return fs.existsSync(ruffleJsPath);
     } catch (error) {
       return false;

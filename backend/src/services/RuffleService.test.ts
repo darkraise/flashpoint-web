@@ -5,6 +5,7 @@ import nodePath from 'path';
 import AdmZip from 'adm-zip';
 
 let distDir: string;
+let dataDir: string;
 /** Error code the next directory rename should fail with, or null to allow it. */
 let renameFailureCode: string | null = null;
 /** Path that behaves like a mount point: emptiable, but never unlinkable. */
@@ -81,6 +82,9 @@ vi.mock('../config', () => ({
     get frontendDistPath() {
       return distDir;
     },
+    get ruffleDataPath() {
+      return nodePath.join(dataDir, 'ruffle');
+    },
   },
 }));
 
@@ -122,7 +126,7 @@ function mockDownload(zipBuffer: Buffer): void {
 }
 
 function ruffleDir(): string {
-  return nodePath.join(distDir, 'ruffle');
+  return nodePath.join(dataDir, 'ruffle');
 }
 
 function installExistingRuffle(): void {
@@ -136,7 +140,8 @@ function installExistingRuffle(): void {
 }
 
 beforeEach(() => {
-  distDir = nodeFs.mkdtempSync(nodePath.join(os.tmpdir(), 'fp-ruffle-'));
+  distDir = nodeFs.mkdtempSync(nodePath.join(os.tmpdir(), 'fp-ruffle-dist-'));
+  dataDir = nodeFs.mkdtempSync(nodePath.join(os.tmpdir(), 'fp-ruffle-data-'));
   renameFailureCode = null;
   mountPointPath = null;
   truncateCopyOf = null;
@@ -154,6 +159,7 @@ afterEach(() => {
   mountPointPath = null;
   rmFailure = null;
   nodeFs.rmSync(distDir, { recursive: true, force: true });
+  nodeFs.rmSync(dataDir, { recursive: true, force: true });
 });
 
 describe('RuffleService.updateRuffle', () => {
