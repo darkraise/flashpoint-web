@@ -13,12 +13,21 @@ It allows Flash (.swf) content to run in modern browsers without plugins.
 
 ```
 RufflePlayer Component
-├── Script Loading (ruffle.js from /public/ruffle/)
+├── Script Loading (GET /ruffle/ruffle.js)
 ├── Player Initialization (RufflePlayer.newest())
 ├── Configuration (scale, quality, etc.)
 ├── Cleanup Strategy (destroy on unmount)
 └── UI States (loading, error, success)
 ```
+
+`/ruffle` is served from different places depending on how the app is
+running. In development, Vite serves `frontend/public/ruffle` directly. In a
+container, Ruffle is installed into `config.ruffleDataPath` — `/app/data/ruffle`
+by default, overridable with `RUFFLE_DATA_PATH` — on the persisted data
+volume, and Express serves that directory at `/ruffle` ahead of the copy
+baked into `frontend/dist`. This is what lets an admin's in-app Ruffle update
+survive the container being recreated: the persisted install shadows the
+bundled one instead of being overwritten by it.
 
 ## Installation
 
