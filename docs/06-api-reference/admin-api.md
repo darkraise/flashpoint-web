@@ -154,21 +154,42 @@ Returns paginated logs with timestamp, status, duration, message, details.
 
 ## Ruffle Endpoints
 
+Ruffle ships two release channels. `stable` tracks the tagged `vX.Y.Z` releases
+and is the default; `nightly` tracks the daily `nightly-YYYY-MM-DD` builds. The
+channel is stored as the `ruffle.channel` system setting and applies to both
+manual installs and the scheduled `ruffle-update` job.
+
 ### Get Ruffle Version
 
 `GET /api/ruffle/version` - No auth required
+
+Returns `currentVersion`, `isInstalled`, `installedChannel` (the channel of the
+installed build, or `null`) and `channel` (the configured channel).
 
 ### Check for Ruffle Updates
 
 `GET /api/ruffle/check-update` - Requires `settings.update` permission
 
+Checks the configured channel. Returns the fields above plus `latestVersion`,
+`updateAvailable`, `channelSwitch` (true when the installed build is on the
+other channel), `changelog` and `publishedAt`.
+
+### Set the Ruffle Channel
+
+`PUT /api/ruffle/channel` - Requires `settings.update` permission
+
+Body: `{ "channel": "stable" | "nightly" }`
+
+Persists the channel and returns a fresh check against it. Nothing is
+downloaded — call the update endpoint to install.
+
 ### Update Ruffle
 
 `POST /api/ruffle/update` - Requires `settings.update` permission
 
-Returns `202 Accepted` (download/install in progress)
-
-Error: `409 Conflict` if update already in progress
+Downloads and installs the latest build on the configured channel, then returns
+`{ success, version, channel, message }` once the install is verified. The
+previous installation is restored if verification fails.
 
 ## Updates Endpoints
 

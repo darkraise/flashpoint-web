@@ -220,6 +220,7 @@ const VALID_CATEGORIES = [
   'theme',
   'features',
   'maintenance',
+  'ruffle',
 ] as const;
 
 type ValidCategory = (typeof VALID_CATEGORIES)[number];

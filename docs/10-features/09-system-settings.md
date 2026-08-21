@@ -102,7 +102,12 @@ to `window.location.origin`.
   checkout, or an image built without the `VERSION` build arg — reports that
   checks are off rather than claiming to be behind.
 - **Game Metadata** - Sync game metadata from a configured source
-- **Ruffle Emulator Management** - Check for and install Ruffle updates
+- **Ruffle Emulator Management** - Check for and install Ruffle updates, and
+  pick the release channel. **Stable** (the default) tracks Ruffle's tagged
+  `vX.Y.Z` releases; **Nightly** tracks the daily builds, which carry the newest
+  fixes and the newest regressions. Changing the channel only records the
+  choice — the new build installs when you click install, and the scheduled
+  Ruffle update job then keeps that channel up to date.
 
 #### Metadata Tab
 

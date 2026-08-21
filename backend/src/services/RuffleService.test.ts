@@ -92,6 +92,17 @@ vi.mock('axios', () => ({
   default: { get: vi.fn() },
 }));
 
+const settingsState = vi.hoisted(() => ({ channel: 'nightly' as 'stable' | 'nightly' }));
+
+vi.mock('./CachedSystemSettingsService', () => ({
+  CachedSystemSettingsService: {
+    getInstance: () => ({
+      get: (key: string) => (key === 'ruffle.channel' ? settingsState.channel : null),
+      set: vi.fn(),
+    }),
+  },
+}));
+
 import axios from 'axios';
 import { RuffleService } from './RuffleService';
 
@@ -100,10 +111,41 @@ const RELEASE = {
   tag_name: `nightly-${NEW_VERSION}`,
   published_at: '2026-08-01T00:00:00Z',
   body: 'Nightly build',
+  prerelease: true,
+  draft: false,
   assets: [
     {
       name: 'ruffle-nightly-2026_08_01-web-selfhosted.zip',
       browser_download_url: 'https://example.test/ruffle-web-selfhosted.zip',
+    },
+  ],
+};
+
+const STABLE_VERSION = '0.5.0';
+const STABLE_RELEASE = {
+  tag_name: `v${STABLE_VERSION}`,
+  published_at: '2026-08-03T00:00:00Z',
+  body: 'Stable release',
+  prerelease: false,
+  draft: false,
+  assets: [
+    {
+      name: 'ruffle-0.5.0-web-selfhosted.zip',
+      browser_download_url: 'https://example.test/ruffle-0.5.0-web-selfhosted.zip',
+    },
+  ],
+};
+
+const OLDER_STABLE_RELEASE = {
+  tag_name: 'v0.4.1',
+  published_at: '2026-07-20T00:00:00Z',
+  body: 'Older stable release',
+  prerelease: false,
+  draft: false,
+  assets: [
+    {
+      name: 'ruffle-0.4.1-web-selfhosted.zip',
+      browser_download_url: 'https://example.test/ruffle-0.4.1-web-selfhosted.zip',
     },
   ],
 };
@@ -116,13 +158,23 @@ function buildRuffleZip(files: Record<string, string>): Buffer {
   return zip.toBuffer();
 }
 
-function mockDownload(zipBuffer: Buffer): void {
+function mockDownload(
+  zipBuffer: Buffer,
+  releases: unknown[] = [RELEASE],
+  latestStable: unknown = STABLE_RELEASE
+): void {
   vi.mocked(axios.get).mockImplementation(async (url: string) => {
     if (url.startsWith('https://api.github.com/')) {
-      return { data: [RELEASE] };
+      return url.endsWith('/latest') ? { data: latestStable } : { data: releases };
     }
     return { data: zipBuffer };
   });
+}
+
+function installRuffleVersion(version: string): void {
+  nodeFs.mkdirSync(ruffleDir(), { recursive: true });
+  nodeFs.writeFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'old build');
+  nodeFs.writeFileSync(nodePath.join(ruffleDir(), 'package.json'), JSON.stringify({ version }));
 }
 
 function ruffleDir(): string {
@@ -146,6 +198,7 @@ beforeEach(() => {
   mountPointPath = null;
   truncateCopyOf = null;
   rmFailure = null;
+  settingsState.channel = 'nightly';
   vi.clearAllMocks();
   mockDownload(
     buildRuffleZip({
@@ -257,6 +310,104 @@ describe('RuffleService.updateRuffle', () => {
 
     expect(nodeFs.existsSync(ruffleDir())).toBe(true);
     expect(nodeFs.readFileSync(nodePath.join(ruffleDir(), 'ruffle.js'), 'utf-8')).toBe('old build');
+  });
+});
+
+describe('RuffleService release channels', () => {
+  it('skips a newer stable release while tracking nightlies', async () => {
+    mockDownload(
+      buildRuffleZip({
+        'ruffle.js': 'new build',
+        'package.json': JSON.stringify({ version: '0.6.0-nightly.2026.8.1' }),
+      }),
+      [STABLE_RELEASE, RELEASE]
+    );
+
+    const result = await new RuffleService().updateRuffle();
+
+    expect(result.channel).toBe('nightly');
+    expect(result.version).toBe(NEW_VERSION);
+  });
+
+  it('skips nightlies while tracking stable', async () => {
+    settingsState.channel = 'stable';
+    mockDownload(
+      buildRuffleZip({
+        'ruffle.js': 'new build',
+        'package.json': JSON.stringify({ version: STABLE_VERSION }),
+      }),
+      [RELEASE, STABLE_RELEASE]
+    );
+
+    const result = await new RuffleService().updateRuffle();
+
+    expect(result.channel).toBe('stable');
+    expect(result.version).toBe(STABLE_VERSION);
+  });
+
+  it('falls back to the latest-release endpoint when no stable is in the recent feed', async () => {
+    settingsState.channel = 'stable';
+    mockDownload(
+      buildRuffleZip({
+        'ruffle.js': 'new build',
+        'package.json': JSON.stringify({ version: STABLE_VERSION }),
+      }),
+      [RELEASE]
+    );
+
+    const result = await new RuffleService().updateRuffle();
+
+    expect(result.version).toBe(STABLE_VERSION);
+  });
+
+  it('reports a switch when the installed build is on the other channel', async () => {
+    settingsState.channel = 'stable';
+    installRuffleVersion('0.6.0-nightly.2026.8.1');
+    mockDownload(Buffer.alloc(0), [RELEASE, STABLE_RELEASE]);
+
+    const check = await new RuffleService().checkForUpdate();
+
+    expect(check.installedChannel).toBe('nightly');
+    expect(check.channel).toBe('stable');
+    expect(check.channelSwitch).toBe(true);
+    expect(check.updateAvailable).toBe(true);
+    expect(check.latestVersion).toBe(STABLE_VERSION);
+  });
+
+  it('orders stable versions numerically rather than by date', async () => {
+    settingsState.channel = 'stable';
+    installRuffleVersion('0.4.1');
+    mockDownload(Buffer.alloc(0), [RELEASE, STABLE_RELEASE, OLDER_STABLE_RELEASE]);
+
+    const check = await new RuffleService().checkForUpdate();
+
+    expect(check.channelSwitch).toBe(false);
+    expect(check.updateAvailable).toBe(true);
+    expect(check.changelog).toContain('v0.5.0');
+    expect(check.changelog).not.toContain('v0.4.1');
+    expect(check.changelog).not.toContain('nightly-2026-08-01');
+  });
+
+  it('reports no update when the installed stable is the latest', async () => {
+    settingsState.channel = 'stable';
+    installRuffleVersion(STABLE_VERSION);
+    mockDownload(Buffer.alloc(0), [RELEASE, STABLE_RELEASE]);
+
+    const check = await new RuffleService().checkForUpdate();
+
+    expect(check.updateAvailable).toBe(false);
+  });
+
+  it('compares nightlies by build date', async () => {
+    installRuffleVersion('0.2.0-nightly.2026.1.22');
+    mockDownload(Buffer.alloc(0), [RELEASE, STABLE_RELEASE]);
+
+    const check = await new RuffleService().checkForUpdate();
+
+    expect(check.channel).toBe('nightly');
+    expect(check.channelSwitch).toBe(false);
+    expect(check.updateAvailable).toBe(true);
+    expect(check.latestVersion).toBe(NEW_VERSION);
   });
 });
 

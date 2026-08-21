@@ -6,10 +6,54 @@ import AdmZip from 'adm-zip';
 import { AppError } from '../middleware/errorHandler';
 import { logger } from '../utils/logger';
 import { config } from '../config';
+import { CachedSystemSettingsService } from './CachedSystemSettingsService';
+
+/**
+ * Ruffle publishes both channels into a single releases feed, distinguished by
+ * the GitHub prerelease flag: `nightly-YYYY-MM-DD` builds are prereleases,
+ * `vX.Y.Z` releases are not.
+ */
+export const RUFFLE_CHANNELS = ['stable', 'nightly'] as const;
+export type RuffleChannel = (typeof RUFFLE_CHANNELS)[number];
+export const DEFAULT_RUFFLE_CHANNEL: RuffleChannel = 'stable';
+export const RUFFLE_CHANNEL_SETTING_KEY = 'ruffle.channel';
+
+export function isRuffleChannel(value: unknown): value is RuffleChannel {
+  return RUFFLE_CHANNELS.includes(value as RuffleChannel);
+}
 
 interface GitHubAsset {
   name: string;
   browser_download_url: string;
+}
+
+interface GitHubRelease {
+  tag_name: string;
+  body: string | null;
+  published_at: string;
+  prerelease: boolean;
+  draft: boolean;
+  assets: GitHubAsset[];
+}
+
+export interface RuffleReleaseInfo {
+  channel: RuffleChannel;
+  version: string;
+  downloadUrl: string;
+  checksumUrl: string | null;
+  publishedAt: string;
+  changelog: string;
+}
+
+export interface RuffleUpdateCheck {
+  currentVersion: string | null;
+  installedChannel: RuffleChannel | null;
+  channel: RuffleChannel;
+  latestVersion: string;
+  updateAvailable: boolean;
+  channelSwitch: boolean;
+  changelog?: string;
+  publishedAt?: string;
 }
 
 /**
@@ -41,6 +85,7 @@ export class RuffleService {
   private readonly installPath: string;
   private readonly bundledPath: string;
   private readonly githubApiUrl = 'https://api.github.com/repos/ruffle-rs/ruffle/releases';
+  private readonly settings = CachedSystemSettingsService.getInstance();
 
   constructor() {
     // A built deployment installs onto the mounted data volume and serves it
@@ -94,68 +139,158 @@ export class RuffleService {
     }
   }
 
+  /** Channel a build belongs to, read off the version string it reports. */
+  private channelOfVersion(version: string): RuffleChannel {
+    return /nightly/i.test(version) ? 'nightly' : 'stable';
+  }
+
+  /** Strip the channel prefix off a tag: `nightly-2026-08-01`, `v0.5.0`. */
+  private releaseVersion(tagName: string): string {
+    return tagName.replace(/^nightly-/, '').replace(/^v/, '');
+  }
+
   /**
-   * Get latest Ruffle version info from GitHub releases
+   * Compare two versions of the same channel. Nightlies order by build date,
+   * stable releases by their numeric components — the two formats share no
+   * ordering, which is why a channel switch is never decided by comparison.
+   */
+  private compareVersions(a: string, b: string, channel: RuffleChannel): number {
+    if (channel === 'nightly') {
+      const normalizedA = this.normalizeVersion(a);
+      const normalizedB = this.normalizeVersion(b);
+      return normalizedA < normalizedB ? -1 : normalizedA > normalizedB ? 1 : 0;
+    }
+
+    const parts = (version: string): number[] =>
+      version
+        .replace(/^v/, '')
+        .split('-')[0]
+        .split('.')
+        .map((part) => {
+          const parsed = parseInt(part, 10);
+          return isNaN(parsed) ? 0 : parsed;
+        });
+
+    const partsA = parts(a);
+    const partsB = parts(b);
+    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+      const difference = (partsA[i] ?? 0) - (partsB[i] ?? 0);
+      if (difference !== 0) {
+        return difference < 0 ? -1 : 1;
+      }
+    }
+    return 0;
+  }
+
+  private findSelfhostedAsset(release: GitHubRelease): GitHubAsset | null {
+    return release.assets.find((asset) => asset.name.includes('web-selfhosted.zip')) ?? null;
+  }
+
+  private matchesChannel(release: GitHubRelease, channel: RuffleChannel): boolean {
+    if (release.draft) {
+      return false;
+    }
+    return channel === 'nightly' ? release.prerelease : !release.prerelease;
+  }
+
+  /** The channel configured for downloads, independent of what is installed. */
+  getConfiguredChannel(): RuffleChannel {
+    try {
+      const value = this.settings.get(RUFFLE_CHANNEL_SETTING_KEY);
+      return isRuffleChannel(value) ? value : DEFAULT_RUFFLE_CHANNEL;
+    } catch (error) {
+      logger.warn('[RuffleService] Could not read the Ruffle channel setting:', error);
+      return DEFAULT_RUFFLE_CHANNEL;
+    }
+  }
+
+  setConfiguredChannel(channel: RuffleChannel, updatedBy?: number): void {
+    this.settings.set(RUFFLE_CHANNEL_SETTING_KEY, channel, updatedBy);
+    logger.info(`[RuffleService] Ruffle channel set to ${channel}`);
+  }
+
+  /** Channel of the installed build, or null when nothing is installed. */
+  getInstalledChannel(): RuffleChannel | null {
+    const version = this.getCurrentVersion();
+    return version === null ? null : this.channelOfVersion(version);
+  }
+
+  private async fetchReleases(): Promise<GitHubRelease[]> {
+    // Enough releases to build a combined changelog: roughly a month of nightlies.
+    const response = await axios.get(`${this.githubApiUrl}?per_page=30`, {
+      timeout: 10000,
+      headers: {
+        Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'Flashpoint-Web',
+      },
+    });
+
+    const releases = response.data as GitHubRelease[] | null;
+    if (!releases || releases.length === 0) {
+      throw new Error('No releases found');
+    }
+    return releases;
+  }
+
+  /** GitHub defines this endpoint as the newest non-draft, non-prerelease. */
+  private async fetchLatestStableRelease(): Promise<GitHubRelease> {
+    const response = await axios.get(`${this.githubApiUrl}/latest`, {
+      timeout: 10000,
+      headers: {
+        Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'Flashpoint-Web',
+      },
+    });
+    return response.data as GitHubRelease;
+  }
+
+  /**
+   * Get the latest Ruffle release on a channel
+   * @param channel Channel to look on
    * @param currentVersion Optional current version to build combined changelog from
    */
-  async getLatestVersion(currentVersion?: string | null): Promise<{
-    version: string;
-    downloadUrl: string;
-    checksumUrl: string | null;
-    publishedAt: string;
-    changelog: string;
-  }> {
+  async getLatestVersion(
+    channel: RuffleChannel,
+    currentVersion?: string | null
+  ): Promise<RuffleReleaseInfo> {
     try {
-      // Fetch more releases to build combined changelog (covers ~1 month of nightly releases)
-      const response = await axios.get(`${this.githubApiUrl}?per_page=30`, {
-        timeout: 10000,
-        headers: {
-          Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'Flashpoint-Web',
-        },
-      });
+      const releases = await this.fetchReleases();
 
-      const releases = response.data;
-      if (!releases || releases.length === 0) {
-        throw new Error('No releases found');
-      }
+      let latestRelease =
+        releases.find(
+          (release) =>
+            this.matchesChannel(release, channel) && this.findSelfhostedAsset(release) !== null
+        ) ?? null;
 
-      // Find the latest release with web-selfhosted.zip asset
-      let latestRelease = null;
-      let latestAsset = null;
-
-      for (const release of releases) {
-        const asset = release.assets.find((a: GitHubAsset) =>
-          a.name.includes('web-selfhosted.zip')
-        );
-        if (asset) {
-          latestRelease = release;
-          latestAsset = asset;
-          break;
+      if (latestRelease === null && channel === 'stable') {
+        // Stable releases are months apart, so the newest one can sit outside
+        // the recent page the changelog is built from.
+        const latestStable = await this.fetchLatestStableRelease();
+        if (this.findSelfhostedAsset(latestStable) !== null) {
+          latestRelease = latestStable;
         }
       }
 
-      if (!latestRelease || !latestAsset) {
-        throw new Error('web-selfhosted.zip not found in any release');
+      const latestAsset = latestRelease === null ? null : this.findSelfhostedAsset(latestRelease);
+      if (latestRelease === null || latestAsset === null) {
+        throw new Error(`No ${channel} release with web-selfhosted.zip found`);
       }
 
       // Look for corresponding checksum file
       const checksumAsset = latestRelease.assets.find(
-        (a: GitHubAsset) =>
-          a.name === `${latestAsset.name}.sha256` ||
-          a.name === 'SHA256SUMS' ||
-          a.name === 'checksums.txt'
+        (asset) =>
+          asset.name === `${latestAsset.name}.sha256` ||
+          asset.name === 'SHA256SUMS' ||
+          asset.name === 'checksums.txt'
       );
 
-      // Build combined changelog from all releases since currentVersion
-      const changelog = this.buildCombinedChangelog(releases, currentVersion);
-
       return {
-        version: latestRelease.tag_name.replace('nightly-', ''),
+        channel,
+        version: this.releaseVersion(latestRelease.tag_name),
         downloadUrl: latestAsset.browser_download_url,
         checksumUrl: checksumAsset?.browser_download_url ?? null,
         publishedAt: latestRelease.published_at,
-        changelog,
+        changelog: this.buildCombinedChangelog(releases, channel, latestRelease, currentVersion),
       };
     } catch (error) {
       logger.error('Error fetching latest Ruffle version:', error);
@@ -164,94 +299,86 @@ export class RuffleService {
   }
 
   /**
-   * Build a combined changelog from all releases since the current version
+   * Build a combined changelog from all releases on a channel since the current version
    * @param releases Array of GitHub releases (newest first)
-   * @param currentVersion Optional current version string
+   * @param channel Channel being checked
+   * @param latestRelease The release that would be installed
+   * @param currentVersion Optional current version string, on the same channel
    * @returns Combined changelog markdown with version headers
    */
   private buildCombinedChangelog(
-    releases: Array<{ tag_name: string; body: string | null; assets: GitHubAsset[] }>,
+    releases: GitHubRelease[],
+    channel: RuffleChannel,
+    latestRelease: GitHubRelease,
     currentVersion?: string | null
   ): string {
-    // If no current version, just return the latest changelog
+    const latestBody = latestRelease.body?.trim() || 'No changelog available.';
+
     if (!currentVersion) {
       logger.debug('[RuffleService] No current version, returning latest changelog only');
-      return releases[0]?.body || 'No changelog available.';
+      return latestBody;
     }
 
-    const normalizedCurrent = this.normalizeVersion(currentVersion);
-    logger.debug(
-      `[RuffleService] Current version: ${currentVersion} -> normalized: ${normalizedCurrent}`
-    );
+    logger.debug(`[RuffleService] Building ${channel} changelog since ${currentVersion}`);
 
-    // Filter releases that have web-selfhosted.zip and are newer than current version
     const newerReleases = releases.filter((release) => {
-      // Must have web-selfhosted asset
-      const hasAsset = release.assets.some((a: GitHubAsset) =>
-        a.name.includes('web-selfhosted.zip')
-      );
-      if (!hasAsset) {
-        logger.debug(`[RuffleService] Release ${release.tag_name} skipped - no web-selfhosted.zip`);
+      if (!this.matchesChannel(release, channel) || this.findSelfhostedAsset(release) === null) {
         return false;
       }
-
-      // Must be newer than current version
-      const releaseVersion = this.normalizeVersion(release.tag_name);
-      const isNewer = releaseVersion > normalizedCurrent;
-      logger.debug(
-        `[RuffleService] Release ${release.tag_name} -> ${releaseVersion}, isNewer: ${isNewer}`
+      return (
+        this.compareVersions(this.releaseVersion(release.tag_name), currentVersion, channel) > 0
       );
-      return isNewer;
     });
 
     logger.info(
-      `[RuffleService] Found ${newerReleases.length} releases newer than ${normalizedCurrent}`
+      `[RuffleService] Found ${newerReleases.length} ${channel} releases newer than ${currentVersion}`
     );
 
     if (newerReleases.length === 0) {
-      return releases[0]?.body || 'No changelog available.';
+      return latestBody;
     }
 
-    // Sort by version descending (newest first)
-    const sortedReleases = [...newerReleases].sort((a, b) => {
-      const versionA = this.normalizeVersion(a.tag_name);
-      const versionB = this.normalizeVersion(b.tag_name);
-      return versionB.localeCompare(versionA);
-    });
+    const sortedReleases = [...newerReleases].sort((a, b) =>
+      this.compareVersions(
+        this.releaseVersion(b.tag_name),
+        this.releaseVersion(a.tag_name),
+        channel
+      )
+    );
 
-    // Build combined changelog with version headers
-    const changelogParts = sortedReleases.map((release) => {
-      const version = release.tag_name;
-      const body = release.body?.trim() || 'No changelog available.';
-      return `## ${version}\n\n${body}`;
-    });
-
-    return changelogParts.join('\n\n---\n\n');
+    return sortedReleases
+      .map(
+        (release) =>
+          `## ${release.tag_name}\n\n${release.body?.trim() || 'No changelog available.'}`
+      )
+      .join('\n\n---\n\n');
   }
 
-  async checkForUpdate(): Promise<{
-    currentVersion: string | null;
-    latestVersion: string;
-    updateAvailable: boolean;
-    changelog?: string;
-    publishedAt?: string;
-  }> {
+  async checkForUpdate(channel?: RuffleChannel): Promise<RuffleUpdateCheck> {
+    const targetChannel = channel ?? this.getConfiguredChannel();
     const currentVersion = this.getCurrentVersion();
-    // Pass current version to get combined changelog of all updates since that version
-    const latest = await this.getLatestVersion(currentVersion);
+    const installedChannel = currentVersion === null ? null : this.channelOfVersion(currentVersion);
 
-    // Normalize versions to same format (YYYY-MM-DD) for comparison
-    const normalizedCurrent = currentVersion ? this.normalizeVersion(currentVersion) : null;
-    const normalizedLatest = this.normalizeVersion(latest.version);
+    // A version from the other channel cannot bound this channel's history:
+    // a nightly date says nothing about which stable releases are new.
+    const changelogSince = installedChannel === targetChannel ? currentVersion : null;
+    const latest = await this.getLatestVersion(targetChannel, changelogSince);
+
+    const channelSwitch = installedChannel !== null && installedChannel !== targetChannel;
 
     // Only flag as "update available" when Ruffle is already installed but outdated.
     // When not installed (null), the server auto-installs at startup — no need to show update UI.
-    const updateAvailable = normalizedCurrent !== null && normalizedCurrent !== normalizedLatest;
+    const updateAvailable =
+      currentVersion !== null &&
+      (channelSwitch || this.compareVersions(currentVersion, latest.version, targetChannel) !== 0);
 
     return {
       currentVersion,
+      installedChannel,
+      channel: targetChannel,
       latestVersion: latest.version,
       updateAvailable,
+      channelSwitch,
       changelog: latest.changelog,
       publishedAt: latest.publishedAt,
     };
@@ -463,14 +590,16 @@ export class RuffleService {
     return null;
   }
 
-  async updateRuffle(): Promise<{
+  async updateRuffle(channel?: RuffleChannel): Promise<{
     success: boolean;
     version: string;
+    channel: RuffleChannel;
     message: string;
   }> {
+    const targetChannel = channel ?? this.getConfiguredChannel();
     try {
-      const latest = await this.getLatestVersion();
-      logger.info(`[RuffleService] Downloading Ruffle ${latest.version}...`);
+      const latest = await this.getLatestVersion(targetChannel);
+      logger.info(`[RuffleService] Downloading Ruffle ${latest.version} (${targetChannel})...`);
 
       // Download zip file
       const response = await axios.get(latest.downloadUrl, {
@@ -562,7 +691,8 @@ export class RuffleService {
       return {
         success: true,
         version: latest.version,
-        message: `Successfully updated Ruffle to version ${latest.version}`,
+        channel: targetChannel,
+        message: `Successfully installed Ruffle ${latest.version} (${targetChannel})`,
       };
     } catch (error) {
       logger.error('[RuffleService] Error updating Ruffle:', error);
@@ -620,7 +750,9 @@ export class RuffleService {
       return 'seeded';
     }
 
-    logger.info('🎮 Ruffle not found, downloading latest version...');
+    logger.info(
+      `🎮 Ruffle not found, downloading the latest ${this.getConfiguredChannel()} build...`
+    );
     await this.updateRuffle();
     logger.info('✅ Ruffle installation complete');
     return 'downloaded';

@@ -10,44 +10,61 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FormattedDate } from '@/components/common/FormattedDate';
 import { useDialog } from '@/contexts/DialogContext';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ruffleApi } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { AxiosError } from 'axios';
+import type { RuffleChannel, RuffleUpdateCheck } from '@/lib/api/ruffle';
 
-interface UpdateCheckResult {
-  latestVersion: string;
-  updateAvailable: boolean;
-  changelog?: string;
-  publishedAt?: string;
-}
+const CHANNEL_LABELS: Record<RuffleChannel, string> = {
+  stable: 'Stable',
+  nightly: 'Nightly',
+};
 
 export function RuffleManagementCard() {
   const { showToast } = useDialog();
+  const queryClient = useQueryClient();
 
-  const [updateCheckResult, setUpdateCheckResult] = useState<UpdateCheckResult | null>(null);
+  const [updateCheckResult, setUpdateCheckResult] = useState<RuffleUpdateCheck | null>(null);
   const [showChangelog, setShowChangelog] = useState(false);
 
   // Fetch Ruffle version (public - accessible to all users)
-  const { data: ruffleVersion, refetch: refetchRuffleVersion } = useQuery({
+  const { data: ruffleVersion } = useQuery({
     queryKey: ['ruffleVersion'],
     queryFn: () => ruffleApi.getVersion(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  const invalidateVersion = (): void => {
+    queryClient.invalidateQueries({ queryKey: ['ruffleVersion'] });
+  };
+
+  const toastError = (error: unknown, fallback: string): void => {
+    const axiosError = error instanceof AxiosError ? error : null;
+    const message = axiosError?.response?.data?.error?.message || fallback;
+    showToast(message, 'error');
+  };
+
   const checkRuffleUpdate = useMutation({
     mutationFn: () => ruffleApi.checkUpdate(),
     onSuccess: (data) => {
-      setUpdateCheckResult({
-        latestVersion: data.latestVersion,
-        updateAvailable: data.updateAvailable,
-        changelog: data.changelog,
-        publishedAt: data.publishedAt,
-      });
-      if (data.updateAvailable) {
+      setUpdateCheckResult(data);
+      if (data.channelSwitch) {
+        showToast(
+          `${CHANNEL_LABELS[data.channel]} ${data.latestVersion} is ready to install. Current: ${data.currentVersion}`,
+          'success'
+        );
+      } else if (data.updateAvailable) {
         showToast(
           `Ruffle ${data.latestVersion} is available! Current: ${data.currentVersion}`,
           'success'
@@ -56,25 +73,27 @@ export function RuffleManagementCard() {
         showToast('Ruffle is up to date!', 'success');
       }
     },
-    onError: (error: unknown) => {
-      const axiosError = error instanceof AxiosError ? error : null;
-      const message = axiosError?.response?.data?.error?.message || 'Failed to check for updates';
-      showToast(message, 'error');
+    onError: (error: unknown) => toastError(error, 'Failed to check for updates'),
+  });
+
+  const setChannel = useMutation({
+    mutationFn: (channel: RuffleChannel) => ruffleApi.setChannel(channel),
+    onSuccess: (data) => {
+      setUpdateCheckResult(data);
+      invalidateVersion();
+      showToast(`Ruffle channel set to ${CHANNEL_LABELS[data.channel]}`, 'success');
     },
+    onError: (error: unknown) => toastError(error, 'Failed to change the Ruffle channel'),
   });
 
   const updateRuffle = useMutation({
     mutationFn: () => ruffleApi.update(),
     onSuccess: (data) => {
       showToast(`${data.message}. Please refresh the page to use the new version.`, 'success');
-      refetchRuffleVersion();
+      invalidateVersion();
       setUpdateCheckResult(null);
     },
-    onError: (error: unknown) => {
-      const axiosError = error instanceof AxiosError ? error : null;
-      const message = axiosError?.response?.data?.error?.message || 'Failed to update Ruffle';
-      showToast(message, 'error');
-    },
+    onError: (error: unknown) => toastError(error, 'Failed to update Ruffle'),
   });
 
   // Auto-expand changelog if new version is available with changelog
@@ -89,6 +108,11 @@ export function RuffleManagementCard() {
   if (!ruffleVersion) {
     return null;
   }
+
+  const isSwitch = updateCheckResult?.channelSwitch ?? false;
+  const targetChannel = updateCheckResult?.channel ?? ruffleVersion.channel;
+  const actionLabel = isSwitch ? `Install ${CHANNEL_LABELS[targetChannel]}` : 'Update Now';
+  const isBusy = setChannel.isPending || checkRuffleUpdate.isPending || updateRuffle.isPending;
 
   return (
     <div className="bg-card rounded-lg p-6 border border-border shadow-md">
@@ -105,6 +129,11 @@ export function RuffleManagementCard() {
               <span className="text-lg font-semibold">
                 {ruffleVersion.currentVersion || 'Not installed'}
               </span>
+              {ruffleVersion.installedChannel ? (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  {CHANNEL_LABELS[ruffleVersion.installedChannel]}
+                </span>
+              ) : null}
               {ruffleVersion.isInstalled ? (
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
               ) : (
@@ -116,7 +145,7 @@ export function RuffleManagementCard() {
             variant="outline"
             size="sm"
             onClick={() => checkRuffleUpdate.mutate()}
-            disabled={checkRuffleUpdate.isPending}
+            disabled={isBusy}
           >
             {checkRuffleUpdate.isPending ? (
               <>
@@ -132,19 +161,47 @@ export function RuffleManagementCard() {
           </Button>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="ruffle-channel" className="text-sm text-muted-foreground">
+            Release Channel
+          </Label>
+          <Select
+            value={ruffleVersion.channel}
+            onValueChange={(value: string) => setChannel.mutate(value as RuffleChannel)}
+            disabled={isBusy}
+          >
+            <SelectTrigger id="ruffle-channel" className="w-full sm:w-64">
+              <SelectValue placeholder="Select release channel" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="stable">Stable</SelectItem>
+              <SelectItem value="nightly">Nightly</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Stable releases are tested and published every few months. Nightly builds are cut daily
+            and carry the newest fixes along with the newest regressions. Changing the channel only
+            selects what to install — nothing is downloaded until you install it.
+          </p>
+        </div>
+
         {updateCheckResult ? (
           <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="font-medium">
-                  {updateCheckResult.updateAvailable
-                    ? `Update Available: ${updateCheckResult.latestVersion}`
-                    : "You're up to date!"}
+                  {isSwitch
+                    ? `${CHANNEL_LABELS[targetChannel]} ${updateCheckResult.latestVersion} is available`
+                    : updateCheckResult.updateAvailable
+                      ? `Update Available: ${updateCheckResult.latestVersion}`
+                      : "You're up to date!"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {updateCheckResult.updateAvailable
-                    ? 'A new version of Ruffle is available for download.'
-                    : 'You have the latest version of Ruffle installed.'}
+                  {isSwitch
+                    ? `Installing replaces the current ${CHANNEL_LABELS[updateCheckResult.installedChannel ?? 'stable']} build.`
+                    : updateCheckResult.updateAvailable
+                      ? 'A new version of Ruffle is available for download.'
+                      : 'You have the latest version of Ruffle installed.'}
                 </p>
                 {updateCheckResult.publishedAt ? (
                   <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
@@ -156,16 +213,16 @@ export function RuffleManagementCard() {
                 ) : null}
               </div>
               {updateCheckResult.updateAvailable ? (
-                <Button onClick={() => updateRuffle.mutate()} disabled={updateRuffle.isPending}>
+                <Button onClick={() => updateRuffle.mutate()} disabled={isBusy}>
                   {updateRuffle.isPending ? (
                     <>
                       <Download className="mr-2 h-4 w-4 animate-pulse" />
-                      Updating...
+                      Installing...
                     </>
                   ) : (
                     <>
                       <Download className="mr-2 h-4 w-4" />
-                      Update Now
+                      {actionLabel}
                     </>
                   )}
                 </Button>

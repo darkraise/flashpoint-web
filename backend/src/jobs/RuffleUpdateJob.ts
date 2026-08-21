@@ -32,13 +32,15 @@ export class RuffleUpdateJob {
 
       if (!updateInfo.updateAvailable) {
         logger.info(
-          `[RuffleUpdateJob] Ruffle is up to date (current: ${updateInfo.currentVersion})`
+          `[RuffleUpdateJob] Ruffle is up to date (current: ${updateInfo.currentVersion}, channel: ${updateInfo.channel})`
         );
         return `Ruffle is up to date (${updateInfo.currentVersion})`;
       }
 
       logger.info(
-        `[RuffleUpdateJob] Update available - Current: ${updateInfo.currentVersion}, Latest: ${updateInfo.latestVersion}`
+        updateInfo.channelSwitch
+          ? `[RuffleUpdateJob] Channel switch pending - Current: ${updateInfo.currentVersion} (${updateInfo.installedChannel}), Target: ${updateInfo.latestVersion} (${updateInfo.channel})`
+          : `[RuffleUpdateJob] Update available - Current: ${updateInfo.currentVersion}, Latest: ${updateInfo.latestVersion}`
       );
 
       // Install update
@@ -46,8 +48,10 @@ export class RuffleUpdateJob {
       const result = await this.ruffleService.updateRuffle();
 
       if (result.success) {
-        logger.info(`[RuffleUpdateJob] Update completed successfully - Version: ${result.version}`);
-        return `Ruffle updated to ${result.version}`;
+        logger.info(
+          `[RuffleUpdateJob] Update completed successfully - Version: ${result.version} (${result.channel})`
+        );
+        return `Ruffle updated to ${result.version} (${result.channel})`;
       } else {
         logger.error(`[RuffleUpdateJob] Update failed: ${result.message}`);
         throw new Error(result.message || 'Ruffle update failed');
