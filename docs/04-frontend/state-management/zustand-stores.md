@@ -107,8 +107,8 @@ Enables guest mode with limited permissions:
 const { setGuestMode } = useAuthStore();
 
 setGuestMode();
-// Creates a guest user with permissions: ['games.read', 'playlists.read']
-// Note: guests cannot play games (games.play requires authentication)
+// Creates a guest user with permissions:
+// ['games.read', 'playlists.read', 'games.play']
 ```
 
 #### clearAuth

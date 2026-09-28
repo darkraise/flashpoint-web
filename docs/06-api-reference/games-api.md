@@ -90,7 +90,8 @@ Error: `404 Not Found`
 
 ## Get Launch Data
 
-`GET /api/games/:id/launch` - No auth required
+`GET /api/games/:id/launch` - Requires `games.play` (granted to guests when
+guest access is enabled)
 
 Returns gameId, title, platform, launchCommand, contentUrl (proxied through
 backend on `/game-proxy/` and `/game-zip/` routes), applicationPath, playMode,

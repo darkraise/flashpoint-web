@@ -472,8 +472,9 @@ export const ProtectedRoute = ({ children, requiredPermission }) => {
 ## 7. Guest Mode
 
 When `auth.guest_access_enabled` is true in system settings, unauthenticated
-users can browse games with limited permissions. **Note:** Guests cannot play
-games — only authenticated users have the `games.play` permission.
+users can browse and play games with limited permissions. Guests get
+`games.play` but no write permissions, and their plays are not recorded in
+play statistics.
 
 ```typescript
 // Frontend
@@ -481,7 +482,7 @@ const guestUser: User = {
   id: 0,
   username: 'Guest',
   role: 'guest',
-  permissions: ['games.read', 'playlists.read'],  // No games.play
+  permissions: ['games.read', 'playlists.read', 'games.play'],
 };
 
 // Backend
@@ -501,7 +502,7 @@ export const optionalAuth = async (req, res, next) => {
       id: 0,
       username: 'guest',
       role: 'guest',
-      permissions: ['games.read', 'playlists.read'],  // Read-only access
+      permissions: ['games.read', 'playlists.read', 'games.play'],
     };
   }
 

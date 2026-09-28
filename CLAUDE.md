@@ -233,8 +233,8 @@ if (!closed) {
 - **Verify checksums** — for downloaded files, throw on verification failure
 - **Re-validate after async operations** — file paths after download, tokens
   after refresh
-- **Guest users (id=0) have restricted permissions** — read-only, no
-  `games.play`
+- **Guest users (id=0) have restricted permissions** — `games.read`,
+  `playlists.read`, and `games.play` only; no writes
 
 ```typescript
 // WRONG - path traversal vulnerability
@@ -816,7 +816,7 @@ frontend/
 | Permission         | Description                 |
 | ------------------ | --------------------------- |
 | `games.read`       | View game list and details  |
-| `games.play`       | Play games (not for guests) |
+| `games.play`       | Play games                  |
 | `playlists.create` | Create playlists            |
 | `playlists.delete` | Delete own playlists        |
 | `users.read`       | View user list              |

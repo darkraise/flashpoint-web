@@ -165,8 +165,8 @@ Get current authenticated user information.
 
 **Guest (priority: 0):**
 
-- games.read, playlists.read
-- Read-only access only (no games.play — playing requires authentication)
+- games.read, playlists.read, games.play
+- Can browse and play games; no write access, and plays are not tracked
 
 ## Permissions
 
