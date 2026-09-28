@@ -9,6 +9,8 @@ import { getAccessTokenFromCookie } from '../utils/cookies';
 const authService = new AuthService();
 const playlistService = new UserPlaylistService();
 
+const GUEST_PERMISSIONS: readonly string[] = ['games.read', 'playlists.read', 'games.play'];
+
 function getAccessToken(req: Request): string | undefined {
   const cookieToken = getAccessTokenFromCookie(req.cookies);
   if (cookieToken) return cookieToken;
@@ -55,14 +57,12 @@ export const optionalAuth = asyncHandler(
         throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
       }
 
-      // Guest users get no permissions - they can only browse, not play
-      // (authentication is required for games.play permission)
       req.user = {
         id: 0,
         username: 'guest',
         email: '',
         role: 'guest',
-        permissions: ['games.read', 'playlists.read'],
+        permissions: [...GUEST_PERMISSIONS],
       };
     }
 
@@ -151,13 +151,12 @@ export const sharedAccessAuth = asyncHandler(
       throw new AppError(401, 'Authentication required', true, 'AUTH_REQUIRED');
     }
 
-    // Guest users without a shared access token can only browse, not play
     req.user = {
       id: 0,
       username: 'guest',
       email: '',
       role: 'guest',
-      permissions: ['games.read', 'playlists.read'],
+      permissions: [...GUEST_PERMISSIONS],
     };
 
     next();
@@ -199,7 +198,7 @@ export const validateSharedGameAccess = (gameIdParam: string = 'id') => {
       return next();
     }
 
-    // Guest users (id=0, no sharedAccess) can view game details in read-only mode
+    // Guest users (id=0, no sharedAccess) can access any game
     if (req.user && req.user.id === 0 && req.user.permissions?.includes('games.read')) {
       return next();
     }

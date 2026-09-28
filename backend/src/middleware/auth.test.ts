@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
-import { authenticate, optionalAuth } from './auth';
+import { authenticate, optionalAuth, sharedAccessAuth } from './auth';
 import { AppError } from './errorHandler';
 import { AuthService } from '../services/AuthService';
 
@@ -95,4 +95,51 @@ describe('optionalAuth middleware', () => {
   // Note: Full optionalAuth tests with guest access require complex mocking of AuthService
   // instantiation within the middleware. These are better tested as integration tests
   // where the full dependency chain is available.
+});
+
+// The middleware module instantiates AuthService at import time, so stub via the
+// automocked prototype rather than a per-test mockImplementation.
+describe.each([
+  ['optionalAuth', optionalAuth],
+  ['sharedAccessAuth', sharedAccessAuth],
+])('%s guest fallback', (_name, middleware) => {
+  let req: Partial<Request>;
+  let res: Partial<Response>;
+  let next: ReturnType<typeof vi.fn>;
+
+  // asyncHandler doesn't return its promise, so wait for next() instead.
+  const run = (): Promise<void> =>
+    new Promise((resolve) => {
+      next.mockImplementation(() => resolve());
+      middleware(req as Request, res as Response, next as NextFunction);
+    });
+
+  beforeEach(() => {
+    req = { headers: {}, cookies: {} };
+    res = {};
+    next = vi.fn();
+    vi.clearAllMocks();
+  });
+
+  it('grants guests games.play when guest access is enabled', async () => {
+    vi.mocked(AuthService.prototype.isGuestAccessEnabled).mockReturnValue(true);
+
+    await run();
+
+    expect(next).toHaveBeenCalledWith();
+    expect(req.user?.id).toBe(0);
+    expect(req.user?.role).toBe('guest');
+    expect(req.user?.permissions).toEqual(
+      expect.arrayContaining(['games.read', 'playlists.read', 'games.play'])
+    );
+  });
+
+  it('rejects anonymous requests when guest access is disabled', async () => {
+    vi.mocked(AuthService.prototype.isGuestAccessEnabled).mockReturnValue(false);
+
+    await run();
+
+    expect(req.user).toBeUndefined();
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401 }));
+  });
 });

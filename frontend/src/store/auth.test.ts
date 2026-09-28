@@ -86,6 +86,7 @@ describe('Auth Store', () => {
       const state = useAuthStore.getState();
       expect(state.user?.permissions).toContain('games.read');
       expect(state.user?.permissions).toContain('playlists.read');
+      expect(state.user?.permissions).toContain('games.play');
     });
 
     it('should persist guest session to sessionStorage', () => {
