@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { sharedAccessAuth, validateSharedGameAccess } from '../middleware/auth';
 import { logActivity } from '../middleware/activityLogger';
+import { requirePermission } from '../middleware/rbac';
 import { rateLimitStandard } from '../middleware/rateLimiter';
 import { z } from 'zod';
 
@@ -252,6 +253,7 @@ router.get(
 
 router.get(
   '/:id/launch',
+  requirePermission('games.play'),
   validateSharedGameAccess('id'),
   logActivity('games.launch.request', 'games', (req, res) => ({
     platform: res.locals.platform,
